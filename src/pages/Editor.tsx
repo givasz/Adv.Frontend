@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { allAreas } from '@/lib/mockData'
 import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LIMIT, CHAR_LIMITS } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX, OAB_MAX } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -212,6 +212,7 @@ export default function Editor() {
             >
               <TextInput
                 value={profile.name}
+                maxLength={NAME_MAX}
                 onChange={(e) => set({ name: e.target.value, slug: slugify(e.target.value) })}
               />
             </Field>
@@ -219,6 +220,7 @@ export default function Editor() {
               <Field label="Número da OAB" hint="ex: OAB/SP 123.456">
                 <TextInput
                   value={profile.oabNumber}
+                  maxLength={OAB_MAX}
                   onChange={(e) => set({ oabNumber: e.target.value })}
                 />
               </Field>

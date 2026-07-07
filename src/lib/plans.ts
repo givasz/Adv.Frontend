@@ -16,3 +16,7 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 
 // Número máximo de áreas de atuação por plano (usado no editor).
 export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
+
+// Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
+export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
+export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"
