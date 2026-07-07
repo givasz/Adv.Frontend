@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+
+# variáveis de ambiente locais (mantém só o exemplo)
+.env
+.env.*
+!.env.example
+*.local
+
+# testes/ferramentas
+playwright-report
+test-results
+coverage
+
+.DS_Store
+*.log
