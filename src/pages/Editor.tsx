@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { allAreas } from '@/lib/mockData'
 import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
+import { AREA_LIMIT, CHAR_LIMITS } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -60,7 +61,14 @@ export default function Editor() {
     if (!profile) return
     setSaved(false)
     const t = setTimeout(() => {
-      api.saveDraft(profile).then(() => setSaved(true))
+      api.saveDraft(profile).then((saved) => {
+        setSaved(true)
+        // No modo real, o backend resolve o slug definitivo (nomes iguais / perk do Max).
+        // Sincroniza de volta só o slug, sem sobrescrever edições em andamento.
+        if (saved?.slug) {
+          setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
+        }
+      })
     }, 700)
     return () => clearTimeout(t)
   }, [profile])
@@ -84,7 +92,8 @@ export default function Editor() {
   }
 
   const set = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
-  const areaLimit = profile.plan === 'free' ? 2 : profile.plan === 'pro' ? 6 : 20
+  const areaLimit = AREA_LIMIT[profile.plan]
+  const lim = CHAR_LIMITS[profile.plan] // limites de caracteres do plano atual
 
   // Wizard: uma etapa por vez (a última é a revisão/publicação).
   const STEPS = ['Identidade', 'Bio', 'Atuação', 'Localização', 'Contato', 'Aparência', 'Revisar']
@@ -217,6 +226,21 @@ export default function Editor() {
                 <TextInput value={`advoc.me/${profile.slug}`} readOnly className="!bg-paper-deep text-ink-faint" />
               </Field>
             </div>
+            <p className="-mt-1 text-[11.5px] leading-relaxed text-ink-faint">
+              O endereço vem do seu nome. Se já houver outro advogado com o mesmo nome, adicionamos um
+              número (ex.: <span className="font-medium">marina-sales-2</span>).{' '}
+              {profile.plan === 'premium' ? (
+                <span className="text-brass-deep">
+                  Seu plano <span className="font-semibold">Max</span> garante o nome limpo (sem número),
+                  se estiver disponível.
+                </span>
+              ) : (
+                <>
+                  No plano <span className="font-semibold">Max</span>, você fica com o nome limpo (sem
+                  número), se disponível.
+                </>
+              )}
+            </p>
             <OabVerifyRow status={oabStatus} onRequest={requestOab} />
             <Field label="Foto (URL)" hint="upload no backend real">
               <TextInput
@@ -227,10 +251,12 @@ export default function Editor() {
             </Field>
             <Field
               label="Frase de apresentação"
+              hint={`${profile.headline.length}/${lim.headline}`}
               info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.headline} title="O que a OAB permite na frase" />}
             >
               <TextInput
                 value={profile.headline}
+                maxLength={lim.headline}
                 onChange={(e) => set({ headline: e.target.value })}
                 placeholder="Advogada · Direito de Família"
               />
@@ -245,12 +271,13 @@ export default function Editor() {
           >
             <Field
               label="Sobre você"
-              hint={`${profile.bio.length} caracteres`}
+              hint={`${profile.bio.length}/${lim.bio}`}
               info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.bio} title="O que a OAB permite na bio" />}
             >
               <TextArea
                 rows={4}
                 value={profile.bio}
+                maxLength={lim.bio}
                 onChange={(e) => set({ bio: e.target.value })}
                 placeholder="Escreva ou gere com IA…"
               />
@@ -308,6 +335,7 @@ export default function Editor() {
               <AreaEditor
                 key={area.id}
                 area={area}
+                descLimit={lim.areaDesc}
                 onChange={(patch) =>
                   set({
                     areas: profile.areas.map((a) => (a.id === area.id ? { ...a, ...patch } : a)),
@@ -407,6 +435,7 @@ export default function Editor() {
               <div key={h.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
                 <TextInput
                   value={h.title}
+                  maxLength={lim.highlightTitle}
                   placeholder="12 anos de atuação"
                   onChange={(e) =>
                     set({
@@ -418,6 +447,7 @@ export default function Editor() {
                 />
                 <TextInput
                   value={h.detail}
+                  maxLength={lim.highlightDetail}
                   placeholder="Detalhe genérico, sem identificar clientes"
                   onChange={(e) =>
                     set({
@@ -772,11 +802,13 @@ function ReviewStep({
 
 function AreaEditor({
   area,
+  descLimit,
   onChange,
   onRemove,
   onAi,
 }: {
   area: PracticeArea
+  descLimit: number
   onChange: (patch: Partial<PracticeArea>) => void
   onRemove: () => void
   onAi: () => void
@@ -802,12 +834,18 @@ function AreaEditor({
         />
         <AiButton onClick={onAi} />
       </div>
-      <TextArea
-        rows={2}
-        value={area.description}
-        placeholder="Descrição do que você faz nessa área…"
-        onChange={(e) => onChange({ description: e.target.value })}
-      />
+      <div>
+        <TextArea
+          rows={2}
+          value={area.description}
+          maxLength={descLimit}
+          placeholder="Descrição do que você faz nessa área…"
+          onChange={(e) => onChange({ description: e.target.value })}
+        />
+        <p className="mt-1 text-right text-[11px] text-ink-faint">
+          {area.description.length}/{descLimit}
+        </p>
+      </div>
       <button
         type="button"
         onClick={onRemove}

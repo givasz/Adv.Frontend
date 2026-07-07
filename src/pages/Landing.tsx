@@ -153,7 +153,13 @@ export default function Landing() {
             name="Free"
             price="R$ 0"
             period="para sempre"
-            features={['1 perfil público', 'Até 2 áreas de atuação', 'WhatsApp e redes sociais', 'Marca d’água advoc.me']}
+            features={[
+              '1 perfil público',
+              'Até 2 áreas de atuação',
+              'Bio até 300 caracteres',
+              'WhatsApp e redes sociais',
+              'Marca d’água advoc.me',
+            ]}
           />
           <PlanCard
             name="Pro"
@@ -162,6 +168,7 @@ export default function Landing() {
             featured
             features={[
               'Até 6 áreas com descrição',
+              'Bio até 600 · textos ampliados',
               'Sem marca d’água',
               'Agendamento e QR Code',
               'Analytics de visitas e cliques',
@@ -174,6 +181,8 @@ export default function Landing() {
             period="/mês"
             features={[
               'Tudo do Pro',
+              'URL com seu nome, sem número',
+              'Bio até 1000 caracteres',
               'Domínio próprio (.adv.br)',
               'Galeria e vídeo de apresentação',
               'Blog jurídico',

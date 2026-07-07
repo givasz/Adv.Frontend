@@ -1,0 +1,18 @@
+import type { Plan } from './types'
+
+// Limites de caracteres por campo, escalando com o plano ("Proposto").
+// ⚠️ MANTER EM SINCRONIA com backend/src/plans.ts (o backend é a fonte da verdade).
+export type LimitedField = 'headline' | 'bio' | 'areaDesc' | 'highlightTitle' | 'highlightDetail'
+
+export const CHAR_LIMITS: Record<Plan, Record<LimitedField, number>> = {
+  free: { headline: 60, bio: 300, areaDesc: 160, highlightTitle: 40, highlightDetail: 80 },
+  pro: { headline: 90, bio: 600, areaDesc: 280, highlightTitle: 60, highlightDetail: 140 },
+  premium: { headline: 120, bio: 1000, areaDesc: 400, highlightTitle: 80, highlightDetail: 200 },
+}
+
+export function charLimit(plan: Plan, field: LimitedField): number {
+  return CHAR_LIMITS[plan][field]
+}
+
+// Número máximo de áreas de atuação por plano (usado no editor).
+export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
