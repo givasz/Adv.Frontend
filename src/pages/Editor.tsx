@@ -229,17 +229,18 @@ export default function Editor() {
               </Field>
             </div>
             <p className="-mt-1 text-[11.5px] leading-relaxed text-ink-faint">
-              O endereço vem do seu nome. Se já houver outro advogado com o mesmo nome, adicionamos um
-              número (ex.: <span className="font-medium">marina-sales-2</span>).{' '}
-              {profile.plan === 'premium' ? (
+              O endereço vem do seu nome. No plano <span className="font-semibold">Free</span>, se já
+              houver outro advogado com o mesmo nome, adicionamos um número (ex.:{' '}
+              <span className="font-medium">marina-sales-2</span>).{' '}
+              {profile.plan === 'pro' || profile.plan === 'premium' ? (
                 <span className="text-brass-deep">
-                  Seu plano <span className="font-semibold">Max</span> garante o nome limpo (sem número),
-                  se estiver disponível.
+                  Seu plano <span className="font-semibold">{profile.plan === 'premium' ? 'Max' : 'Pro'}</span>{' '}
+                  garante o nome limpo (sem número), se estiver disponível.
                 </span>
               ) : (
                 <>
-                  No plano <span className="font-semibold">Max</span>, você fica com o nome limpo (sem
-                  número), se disponível.
+                  A partir do <span className="font-semibold">Pro</span>, você fica com o nome limpo (sem
+                  número); no <span className="font-semibold">Max</span>, ainda ganha domínio próprio.
                 </>
               )}
             </p>

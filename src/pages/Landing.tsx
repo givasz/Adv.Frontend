@@ -168,6 +168,7 @@ export default function Landing() {
             featured
             features={[
               'Até 6 áreas com descrição',
+              'URL com seu nome limpo (sem número)',
               'Bio até 600 · textos ampliados',
               'Sem marca d’água',
               'Agendamento e QR Code',
@@ -181,9 +182,8 @@ export default function Landing() {
             period="/mês"
             features={[
               'Tudo do Pro',
-              'URL com seu nome, sem número',
-              'Bio até 1000 caracteres',
               'Domínio próprio (.adv.br)',
+              'Bio até 1000 caracteres',
               'Galeria e vídeo de apresentação',
               'Blog jurídico',
               'Exportar perfil em PDF (conformidade)',
