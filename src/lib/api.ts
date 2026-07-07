@@ -54,8 +54,17 @@ export const api = {
 
   async getDraft(): Promise<Profile> {
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/me`)
-      return res.json()
+      // Blindagem: banco vazio / resposta vazia não pode travar o editor.
+      // Se o backend não devolver um perfil válido, começa com um rascunho local.
+      try {
+        const res = await fetch(`${API_BASE}/api/profiles/me`)
+        const text = res.ok ? await res.text() : ''
+        const data = text ? (JSON.parse(text) as Partial<Profile>) : null
+        if (data && data.slug) return { ...loadDraft(), ...data } as Profile
+      } catch {
+        /* rede/JSON inválido → cai no rascunho local */
+      }
+      return loadDraft()
     }
     await wait(120)
     return loadDraft()
