@@ -194,7 +194,8 @@ export default function Landing() {
             name="Escritório"
             price={`R$ ${FIRM_PRICING.basePrice}`}
             period="/mês"
-            ctaLabel="Começar"
+            ctaTo="/escritorio/editar"
+            ctaLabel="Criar escritório"
             secondaryTo="/escritorio/andrade-vieira"
             secondaryLabel="Ver exemplo"
             features={[

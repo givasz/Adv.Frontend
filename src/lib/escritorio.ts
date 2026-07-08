@@ -144,3 +144,55 @@ export function lawyersInNeutralOrder(firm: Firm): FirmLawyer[] {
 export function getFirm(slug: string): Firm | null {
   return slug === sampleFirm.slug ? sampleFirm : null
 }
+
+// ---- Helpers de edição/criação ----
+
+/** Slug a partir do nome da sociedade. */
+export function slugifyFirm(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'escritorio'
+  )
+}
+
+// Palavras genéricas ignoradas ao montar o monograma.
+const FIRM_STOPWORDS = new Set(['sociedade', 'advogados', 'advocacia', 'advogadas', 'de', 'e', 'do', 'da'])
+
+/** Monograma (até 3 letras) a partir do nome — ex.: "Andrade & Vieira" → "AV". */
+export function monogramFrom(name: string): string {
+  const words = name
+    .replace(/&/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 1 && !FIRM_STOPWORDS.has(w.toLowerCase()))
+  const letters = words.slice(0, 3).map((w) => w[0]?.toUpperCase() ?? '')
+  return letters.join('') || (name.trim()[0]?.toUpperCase() ?? '')
+}
+
+/** Escritório vazio para começar do zero no editor. */
+export function blankFirm(): Firm {
+  return {
+    slug: '',
+    name: '',
+    oabRegistry: '',
+    oabVerified: false,
+    monogram: '',
+    tagline: '',
+    about: '',
+    city: '',
+    state: '',
+    contact: {},
+    areas: [],
+    lawyers: [],
+  }
+}
+
+let lid = 0
+/** id local para novos advogados no editor. */
+export function nextLawyerId(): string {
+  return `firm-l-${Date.now()}-${lid++}`
+}

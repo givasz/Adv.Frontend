@@ -7,7 +7,7 @@
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { generateWithOllama } from './localAi'
 import { directorySeed, sampleProfile } from './mockData'
-import { getFirm as getMockFirm, type Firm } from './escritorio'
+import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
 import type {
   DirectoryResult,
   GenerateRequest,
@@ -18,6 +18,16 @@ import type {
 } from './types'
 
 const STORAGE_KEY = 'advocme:profile:draft'
+const FIRM_KEY = 'advocme:firm:draft'
+
+function loadFirmDraft(): Firm | null {
+  try {
+    const raw = localStorage.getItem(FIRM_KEY)
+    return raw ? (JSON.parse(raw) as Firm) : null
+  } catch {
+    return null
+  }
+}
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true'
 // URL absoluta do backend (Render) em produção. Vazio em dev → usa caminho relativo
 // `/api` que o proxy do Vite encaminha para localhost:3333. No Netlify, defina
@@ -88,7 +98,40 @@ export const api = {
       return res.ok ? res.json() : null
     }
     await wait(280)
+    // No mock, o escritório criado pelo usuário (localStorage) tem prioridade.
+    const mine = loadFirmDraft()
+    if (mine && mine.slug === slug) return mine
     return getMockFirm(slug)
+  },
+
+  // Escritório do usuário (dono) — para o editor. Mock: localStorage; real: /firms/me.
+  async getMyFirm(): Promise<Firm | null> {
+    if (USE_REAL_API) {
+      try {
+        const res = await fetch(`${API_BASE}/api/firms/me`)
+        const text = res.ok ? await res.text() : ''
+        return text ? (JSON.parse(text) as Firm) : null
+      } catch {
+        return loadFirmDraft()
+      }
+    }
+    await wait(120)
+    return loadFirmDraft()
+  },
+
+  async saveFirm(firm: Firm): Promise<Firm> {
+    if (USE_REAL_API) {
+      const res = await fetch(`${API_BASE}/api/firms/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(firm),
+      })
+      return res.json()
+    }
+    await wait(200)
+    const resolved: Firm = { ...firm, slug: firm.name ? slugifyFirm(firm.name) : '' }
+    localStorage.setItem(FIRM_KEY, JSON.stringify(resolved))
+    return resolved
   },
 
   async getDraft(): Promise<Profile> {
