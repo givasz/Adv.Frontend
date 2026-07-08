@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
+import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { ReportDialog } from '@/components/profile/ReportDialog'
 import { ShareBar } from '@/components/profile/ShareBar'
@@ -21,7 +22,6 @@ export default function PublicProfile() {
       if (p) {
         setProfile(p)
         setState('ready')
-        document.title = `${p.name} · ${p.oabNumber} · advoc.me`
       } else {
         setState('notfound')
       }
@@ -30,6 +30,12 @@ export default function PublicProfile() {
       alive = false
     }
   }, [slug])
+
+  // SEO local automático — título, meta e JSON-LD (Attorney) a partir do perfil.
+  useEffect(() => {
+    if (!profile) return
+    return applyProfileSeo(profile)
+  }, [profile])
 
   if (state === 'loading') {
     return (
@@ -56,7 +62,7 @@ export default function PublicProfile() {
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-x-hidden">
-      <ShareBar slug={profile.slug} name={profile.name} />
+      <ShareBar slug={profile.slug} name={profile.name} profile={profile} />
       <ProfileView profile={profile} />
 
       {/* Denúncia — canal discreto de conformidade (Prov. 205/2021) */}

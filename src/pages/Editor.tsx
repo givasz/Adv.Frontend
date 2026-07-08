@@ -11,7 +11,9 @@ import type {
 } from '@/lib/types'
 import { api } from '@/lib/api'
 import { allAreas } from '@/lib/mockData'
-import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
+import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD, policyOutdated, RULESET_REV } from '@/lib/oab'
+import { validateSocialUrl } from '@/lib/socials'
+import { openAuditReport } from '@/lib/auditReport'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
 import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX, OAB_MAX } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
@@ -20,7 +22,13 @@ import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fi
 import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanBadge } from '@/components/editor/PlanBadge'
 import { ThemePicker } from '@/components/editor/ThemePicker'
-import { ChevronDown, CheckIcon, ScaleIcon, TrashIcon, XIcon } from '@/components/ui/icons'
+import { ProtectionIntro } from '@/components/editor/ProtectionIntro'
+import { PolicyUpdateBanner } from '@/components/editor/PolicyUpdateBanner'
+import { EditorialIdeas } from '@/components/editor/EditorialIdeas'
+import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
+import { BrandingCard } from '@/components/editor/BrandingCard'
+import { MarginNotes } from '@/components/editor/MarginNotes'
+import { ChevronDown, CheckIcon, DotIcon, InfoIcon, ScaleIcon, TrashIcon, XIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
 type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string } | null
@@ -172,9 +180,18 @@ export default function Editor() {
             tab === 'preview' ? 'hidden lg:block' : ''
           }`}
         >
+          <ProtectionIntro />
+
           <Stepper steps={STEPS} current={step} onGo={setStep} />
 
           <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
+
+          {policyOutdated(profile.policyRevChecked) && (
+            <PolicyUpdateBanner
+              reviewCount={reviewIssues.length}
+              onReviewed={() => set({ policyRevChecked: RULESET_REV })}
+            />
+          )}
 
           {step === 5 && (
             <>
@@ -210,6 +227,12 @@ export default function Editor() {
               Clicar num tema bloqueado simula o upgrade neste protótipo.
             </p>
           </Card>
+
+          <BrandingCard
+            plan={profile.plan}
+            branding={profile.branding}
+            onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
+          />
             </>
           )}
 
@@ -326,7 +349,7 @@ export default function Editor() {
                 placeholder="Escreva ou gere com IA…"
               />
             </Field>
-            <ComplianceHint issues={bioIssues} />
+            <MarginNotes issues={bioIssues} />
           </Card>
           )}
 
@@ -411,20 +434,37 @@ export default function Editor() {
 
           {step === 4 && (
           <Card title="Redes e contato">
+            <p className="-mt-1 flex items-start gap-2 rounded-lg bg-brass/[0.08] px-3 py-2 text-[11.5px] leading-relaxed text-brass-deep">
+              <InfoIcon width={14} height={14} className="mt-0.5 shrink-0" />
+              <span>
+                Use apenas <span className="font-semibold">canais profissionais</span> — o perfil que
+                você divulga como advogado(a), não o pessoal. É o que o Provimento 205/2021 exige dos
+                links de contato.
+              </span>
+            </p>
             <div className="grid gap-3">
               {(Object.keys(socialMeta) as SocialKind[]).map((kind) => {
                 const existing = profile.socials.find((s) => s.kind === kind)
+                const check = validateSocialUrl(kind, existing?.url ?? '')
+                const warn = check.status === 'invalid' || check.status === 'mismatch'
                 return (
                   <Field key={kind} label={socialMeta[kind].label}>
                     <TextInput
                       value={existing?.url ?? ''}
                       placeholder={`https://…`}
+                      aria-invalid={warn}
                       onChange={(e) => {
                         const url = e.target.value
                         const rest = profile.socials.filter((s) => s.kind !== kind)
                         set({ socials: url ? [...rest, { kind, url }] : rest })
                       }}
                     />
+                    {warn && (
+                      <p className="mt-1 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-brass-deep">
+                        <InfoIcon width={13} height={13} className="mt-0.5 shrink-0" />
+                        {check.message}
+                      </p>
+                    )}
                   </Field>
                 )
               })}
@@ -472,6 +512,8 @@ export default function Editor() {
             </p>
           </Card>
           )}
+
+          {step === 4 && <LegalDocsCard profile={profile} />}
 
           {step === 2 && (
           <Card title="Experiência / destaques">
@@ -523,6 +565,8 @@ export default function Editor() {
             </button>
           </Card>
           )}
+
+          {step === 2 && <EditorialIdeas areas={profile.areas.map((a) => a.label).filter(Boolean)} />}
 
           {step === 6 && (
             <ReviewStep
@@ -783,7 +827,20 @@ function WhatsappInput({ value, onChange }: { value: string; onChange: (digits: 
   )
 }
 
-// Etapa final: resumo por seção + status de conformidade. Publicar fica no StepNav.
+// Estado NEUTRO de um item do checklist — evita o "semáforo" (vermelho/amarelo/verde)
+// que parece alarme de erro. 'pending' usa grafite neutro, não vermelho.
+type CheckTone = 'ok' | 'review' | 'pending'
+
+const CHECK_UI: Record<
+  CheckTone,
+  { Icon: (p: React.ComponentProps<typeof CheckIcon>) => JSX.Element; chip: string; label: string }
+> = {
+  ok: { Icon: CheckIcon, chip: 'bg-brass/20 text-brass-deep', label: 'ok' },
+  review: { Icon: InfoIcon, chip: 'bg-brass/10 text-brass-deep', label: 'revisar' },
+  pending: { Icon: DotIcon, chip: 'bg-ink/[0.07] text-ink-faint', label: 'pendente' },
+}
+
+// Etapa final: progresso + checklist neutro (pendente/revisar/ok) + detalhe de conformidade.
 function ReviewStep({
   profile,
   issues,
@@ -795,7 +852,7 @@ function ReviewStep({
   blocked: boolean
   onEdit: (step: number) => void
 }) {
-  const rows = [
+  const sections: { step: number; label: string; ok: boolean; value: string }[] = [
     { step: 0, label: 'Identidade', ok: !!(profile.name && profile.oabNumber), value: profile.name || '—' },
     {
       step: 1,
@@ -828,66 +885,127 @@ function ReviewStep({
             : 'nenhum',
     },
   ]
+
+  const blockIssues = issues.filter((i) => i.severity === 'block')
+  const warnIssues = issues.filter((i) => i.severity === 'warn')
+  const compTone: CheckTone = blocked ? 'pending' : warnIssues.length ? 'review' : 'ok'
+
+  const rows: { key: string; step: number; label: string; tone: CheckTone; value: string }[] = [
+    ...sections.map((r) => ({
+      key: `s${r.step}`,
+      step: r.step,
+      label: r.label,
+      tone: (r.ok ? 'ok' : 'pending') as CheckTone,
+      value: r.value,
+    })),
+    {
+      key: 'compliance',
+      step: 1,
+      label: 'Conformidade OAB',
+      tone: compTone,
+      value: blocked ? 'há termos vedados' : warnIssues.length ? 'revisar o tom' : 'sem pendências',
+    },
+  ]
+
+  const total = rows.length
+  const done = rows.filter((r) => r.tone === 'ok').length
+  const remaining = total - done
+  const pct = Math.round((done / total) * 100)
+
   return (
     <Card title="Revisar e publicar">
+      {/* Barra de progresso — motiva concluir sem "nota" fria */}
+      <div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-[13px] font-semibold text-ink">
+            {remaining === 0
+              ? 'Perfil completo e em conformidade'
+              : `Falta${remaining > 1 ? 'm' : ''} ${remaining} ite${remaining > 1 ? 'ns' : 'm'}`}
+          </span>
+          <span className="text-[12px] font-medium text-ink-faint">
+            {done}/{total}
+          </span>
+        </div>
+        <div
+          className="mt-2 h-2 overflow-hidden rounded-full bg-ink/10"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progresso do perfil"
+        >
+          <div
+            className="h-full rounded-full bg-brass-deep transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
       <ul className="divide-y divide-ink/10">
-        {rows.map((r) => (
-          <li key={r.step} className="flex items-center justify-between gap-3 py-2.5">
-            <span className="flex min-w-0 items-center gap-2 text-[13.5px]">
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-                  r.ok ? 'bg-brass/20 text-brass-deep' : 'bg-ink/[0.08] text-ink-faint'
-                }`}
-              >
-                {r.ok ? (
-                  <CheckIcon width={12} height={12} strokeWidth={2.6} />
-                ) : (
-                  <XIcon width={11} height={11} strokeWidth={2.2} />
-                )}
+        {rows.map((r) => {
+          const ui = CHECK_UI[r.tone]
+          return (
+            <li key={r.key} className="flex items-center justify-between gap-3 py-2.5">
+              <span className="flex min-w-0 items-center gap-2 text-[13.5px]">
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${ui.chip}`}
+                  title={ui.label}
+                >
+                  <ui.Icon width={12} height={12} strokeWidth={2.4} />
+                </span>
+                <span className="font-medium text-ink">{r.label}</span>
+                <span className="truncate text-ink-faint">· {r.value}</span>
               </span>
-              <span className="font-medium text-ink">{r.label}</span>
-              <span className="truncate text-ink-faint">· {r.value}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => onEdit(r.step)}
-              className="shrink-0 text-[12.5px] font-medium text-burgundy hover:underline"
-            >
-              editar
-            </button>
-          </li>
-        ))}
+              <button
+                type="button"
+                onClick={() => onEdit(r.step)}
+                className="shrink-0 text-[12.5px] font-medium text-burgundy hover:underline"
+              >
+                editar
+              </button>
+            </li>
+          )
+        })}
       </ul>
 
-      <div
-        className={`rounded-lg border px-3 py-2.5 text-[12.5px] ${
-          blocked
-            ? 'border-burgundy/30 bg-burgundy/5 text-burgundy-deep'
-            : 'border-brass/30 bg-brass/[0.08] text-brass-deep'
-        }`}
+      {/* Detalhe de conformidade — tom neutro, sem alarme vermelho */}
+      {(blockIssues.length > 0 || warnIssues.length > 0) && (
+        <div className="rounded-lg border border-ink/12 bg-ink/[0.03] px-3 py-2.5 text-[12.5px] text-ink-soft">
+          {blockIssues.length > 0 ? (
+            <p className="font-semibold text-ink">
+              Itens pendentes de conformidade — ajuste antes de publicar:
+            </p>
+          ) : (
+            <p className="font-semibold text-ink">Sugestões de revisão (não bloqueiam a publicação):</p>
+          )}
+          <ul className="mt-1.5 space-y-1">
+            {[...blockIssues, ...warnIssues].slice(0, 5).map((i, idx) => (
+              <li key={idx} className="flex items-start gap-1.5">
+                <DotIcon width={12} height={12} className="mt-0.5 shrink-0 text-ink-faint" />
+                <span>
+                  “{i.term}” — {i.reason}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          if (!openAuditReport(profile, issues)) {
+            alert('Não foi possível abrir o relatório. Permita pop-ups para este site e tente de novo.')
+          }
+        }}
+        className="btn-ghost w-full"
       >
-        {blocked ? (
-          <>
-            <span className="font-semibold">Conformidade OAB: pendências.</span> Há termos vedados na
-            bio ou nas áreas — corrija antes de publicar.
-            <ul className="mt-1.5 list-disc space-y-0.5 pl-4">
-              {issues
-                .filter((i) => i.severity === 'block')
-                .slice(0, 4)
-                .map((i, idx) => (
-                  <li key={idx}>
-                    “{i.term}” — {i.reason}
-                  </li>
-                ))}
-            </ul>
-          </>
-        ) : (
-          <span className="font-semibold">Conformidade OAB: OK ✓</span>
-        )}
-      </div>
+        Exportar relatório de conformidade (PDF)
+      </button>
 
       <p className="text-[11.5px] leading-relaxed text-ink-faint">
         Ao publicar, o backend roda a mesma checagem (fonte da verdade) e bloqueia texto irregular.
+        O relatório registra as regras vigentes na data — guarde como comprovante.
       </p>
     </Card>
   )
@@ -953,26 +1071,6 @@ function AreaEditor({
           <option key={a} value={a} />
         ))}
       </datalist>
-    </div>
-  )
-}
-
-function ComplianceHint({ issues }: { issues: ReturnType<typeof checkCompliance> }) {
-  if (!issues.length) return null
-  const blocked = issues.some((i) => i.severity === 'block')
-  return (
-    <div
-      className={`rounded-lg border p-3 text-[12.5px] ${
-        blocked
-          ? 'border-burgundy/30 bg-burgundy/5 text-burgundy-deep'
-          : 'border-brass/40 bg-brass/10 text-brass-deep'
-      }`}
-    >
-      {issues.map((i, idx) => (
-        <p key={idx}>
-          <span className="font-semibold">“{i.term}”</span> — {i.reason}
-        </p>
-      ))}
     </div>
   )
 }

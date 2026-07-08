@@ -119,6 +119,19 @@ export const ArrowRight = (p: IconProps) => (
   </svg>
 )
 
+export const ExternalLinkIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14 4h6v6M20 4l-9 9M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" />
+  </svg>
+)
+
+// Círculo vazado — marcador NEUTRO de item "pendente" (sem conotação de erro/semáforo).
+export const DotIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="7" />
+  </svg>
+)
+
 export const SearchIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="7" />

@@ -114,6 +114,16 @@ export function hasBlockingIssue(text: string): boolean {
   return checkCompliance(text).some((i) => i.severity === 'block')
 }
 
+/**
+ * Monitor de mudanças normativas: true quando o perfil foi conferido sob uma
+ * revisão anterior do conjunto de regras. Nesse caso o editor reavalia o conteúdo
+ * e avisa o advogado (ver PolicyUpdateBanner). `undefined` = perfil antigo, nunca
+ * carimbado → considera desatualizado para forçar uma revisão.
+ */
+export function policyOutdated(policyRevChecked?: number): boolean {
+  return (policyRevChecked ?? 0) < RULESET_REV
+}
+
 export type ComplianceStatus = 'ok' | 'warn' | 'block'
 
 /** Status agregado de um texto sob a política vigente. */

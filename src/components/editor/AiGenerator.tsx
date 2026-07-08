@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { GenerateKind } from '@/lib/types'
 import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
+import { templatesFor } from '@/lib/templates'
 import { useDialog } from '@/lib/a11y'
 import { SparkIcon } from '@/components/ui/icons'
 import { TextInput } from './fields'
@@ -24,6 +25,7 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
 
   const issues = draft ? checkCompliance(draft) : []
   const blocked = issues.some((i) => i.severity === 'block')
+  const templates = templatesFor(kind, areaLabel)
 
   async function run() {
     const list = keywords
@@ -85,6 +87,26 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
             {loading ? '…' : 'Gerar'}
           </button>
         </div>
+
+        {/* Modelos pré-aprovados (Prov. 205/2021) — atalho sem escrever palavras-chave.
+            O texto escolhido ainda passa pelo checkCompliance() abaixo. */}
+        {templates.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[11.5px] font-medium text-ink-faint">Ou comece de um modelo pronto:</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setDraft(t.text)}
+                  className="rounded-full border border-brass/40 bg-brass/[0.08] px-2.5 py-1 text-[12px] font-medium text-brass-deep transition-colors hover:bg-brass/20"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {loading && (

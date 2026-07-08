@@ -77,6 +77,22 @@ export interface ServiceMode {
   online: boolean
 }
 
+/**
+ * Identidade visual própria (white-label) — recurso do plano Premium/Escritório.
+ * Permite domínio próprio, cor de destaque e ocultar a marca "advoc.me". Não afeta
+ * regras de conformidade: o conteúdo continua sujeito ao Prov. 205/2021.
+ */
+export interface Branding {
+  /** nome do escritório exibido no rodapé no lugar de "advoc.me" */
+  brandName?: string
+  /** cor de destaque personalizada (hex, ex.: "#8a5a2b") */
+  accent?: string
+  /** ocultar o selo "criado com advoc.me" (só Premium) */
+  hideWatermark?: boolean
+  /** domínio próprio (ex.: "silva.adv.br") — informativo no protótipo (sem DNS real) */
+  customDomain?: string
+}
+
 export interface Profile {
   slug: string
   name: string
@@ -107,6 +123,14 @@ export interface Profile {
   moderationNote?: string
   /** true no perfil PÚBLICO quando alguma seção foi ocultada pela moderação. */
   contentModerated?: boolean
+  /** identidade visual própria (white-label) — Premium/Escritório. */
+  branding?: Branding
+  /**
+   * Revisão do conjunto de regras (RULESET_REV) conferida na última edição.
+   * Usada pelo monitor de mudanças normativas: se a revisão vigente for maior,
+   * o perfil é reavaliado e o advogado é avisado. Ver lib/oab.ts.
+   */
+  policyRevChecked?: number
 }
 
 export interface DirectoryResult

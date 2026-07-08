@@ -20,8 +20,21 @@ interface ProfileViewProps {
   preview?: boolean
 }
 
+// Converte "#rrggbb" em "rgba(r,g,b,a)" para a variável de destaque suave.
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return `rgba(150,116,63,${alpha})`
+  const n = parseInt(m[1], 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+}
+
 export function ProfileView({ profile, preview = false }: ProfileViewProps) {
   const s = getTheme(profile.theme).style
+  const brand = profile.branding
+  // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
+  const brandVars = brand?.accent
+    ? ({ '--c-accent': brand.accent, '--c-accent-soft': hexToRgba(brand.accent, 0.14) } as React.CSSProperties)
+    : undefined
   const tile = s.tile === 'card' ? 't-tile' : `t-tile tv-${s.tile}`
   const foil = s.finish === 'foil'
   const left = s.header === 'editorial'
@@ -57,12 +70,15 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
   const identity = (
     <>
       <span className="t-accent text-sm font-medium">{profile.oabNumber}</span>
-      {profile.oabVerified && <VerifiedBadge compact />}
+      {profile.oabVerified && <VerifiedBadge compact linkCna interactive={!preview} />}
     </>
   )
 
   return (
-    <div className={`themed w-full flex-1 surf-${s.surface}`} style={themeStyle(profile.theme)}>
+    <div
+      className={`themed w-full flex-1 surf-${s.surface}`}
+      style={{ ...themeStyle(profile.theme), ...brandVars }}
+    >
       <motion.div
         variants={container}
         initial="hidden"
@@ -241,7 +257,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
 
         {/* Marca d'água (plano gratuito) */}
         <motion.footer variants={item} className="mt-12 flex flex-col items-center gap-1">
-          {profile.plan === 'free' && (
+          {profile.plan === 'free' && !brand?.hideWatermark && (
             <a
               href="/"
               onClick={stop}
@@ -250,6 +266,9 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               <ScaleIcon width={14} height={14} />
               criado com <span className="font-semibold">advoc.me</span>
             </a>
+          )}
+          {brand?.brandName && (
+            <p className="t-faint text-[11px] font-medium tracking-wide">{brand.brandName}</p>
           )}
           {!preview && profile.contentModerated && (
             <p className="t-faint text-[10.5px] leading-relaxed opacity-80">
