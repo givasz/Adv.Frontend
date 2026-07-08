@@ -281,7 +281,7 @@ export default function Editor() {
                 }}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-4">
               <Field label="Número da OAB" hint="UF + número">
                 <OabNumberInput
                   value={profile.oabNumber}
@@ -833,7 +833,7 @@ function OabNumberInput({ value, onChange }: { value: string; onChange: (v: stri
   const { uf, digits } = parseOab(value)
   return (
     <div className="flex items-stretch gap-2">
-      <div className="flex items-stretch overflow-hidden rounded-lg border border-ink/15 bg-paper-soft transition-colors focus-within:border-burgundy focus-within:ring-2 focus-within:ring-burgundy/15">
+      <div className="flex shrink-0 items-stretch overflow-hidden rounded-lg border border-ink/15 bg-paper-soft transition-colors focus-within:border-burgundy focus-within:ring-2 focus-within:ring-burgundy/15">
         <span className="flex select-none items-center bg-paper-deep px-2.5 text-[13px] font-medium text-ink-faint">
           OAB/
         </span>
@@ -841,7 +841,7 @@ function OabNumberInput({ value, onChange }: { value: string; onChange: (v: stri
           value={uf}
           onChange={(e) => onChange(composeOab(e.target.value, digits))}
           aria-label="Estado (UF) da OAB"
-          className="bg-transparent py-2.5 pl-1 pr-1.5 text-[14px] text-ink focus:outline-none"
+          className="bg-transparent py-2.5 pl-2 pr-2.5 text-[14px] font-medium text-ink focus:outline-none"
         >
           <option value="">UF</option>
           {UF_LIST.map((u) => (
