@@ -15,7 +15,7 @@ import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD, policyOutdated, R
 import { validateSocialUrl } from '@/lib/socials'
 import { openAuditReport } from '@/lib/auditReport'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX, OAB_MAX } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -43,6 +43,29 @@ const slugify = (s: string) =>
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
+
+// ---- OAB: UF (seccional) + número com máscara ----
+const UF_LIST = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+] as const
+
+// Formata só os dígitos com ponto de milhar: "123456" → "123.456". Máx. 6 dígitos.
+function formatOabDigits(d: string): string {
+  const clean = d.replace(/\D/g, '').slice(0, 6)
+  return clean.length <= 3 ? clean : `${clean.slice(0, clean.length - 3)}.${clean.slice(-3)}`
+}
+// Extrai UF e dígitos de "OAB/SP 123.456".
+function parseOab(v: string): { uf: string; digits: string } {
+  const m = /OAB\/([A-Za-z]{2})\s*([\d.]*)/.exec(v || '')
+  return m ? { uf: m[1].toUpperCase(), digits: m[2].replace(/\D/g, '') } : { uf: '', digits: '' }
+}
+// Recompõe "OAB/UF 123.456". Vazio se não houver UF.
+function composeOab(uf: string, digits: string): string {
+  if (!uf) return ''
+  const num = formatOabDigits(digits)
+  return num ? `OAB/${uf} ${num}` : `OAB/${uf}`
+}
 
 // Máscara de telefone BR (parte local, sem DDI): "(11) 99887-7665".
 function maskBrLocal(local: string): string {
@@ -259,11 +282,10 @@ export default function Editor() {
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Número da OAB" hint="ex: OAB/SP 123.456">
-                <TextInput
+              <Field label="Número da OAB" hint="UF + número">
+                <OabNumberInput
                   value={profile.oabNumber}
-                  maxLength={OAB_MAX}
-                  onChange={(e) => set({ oabNumber: e.target.value })}
+                  onChange={(oabNumber) => set({ oabNumber })}
                 />
               </Field>
               <Field
@@ -805,6 +827,43 @@ function OabVerifyRow({ status, onRequest }: { status: OabStatus; onRequest: () 
 
 // Campo de WhatsApp com máscara BR: prefixo fixo +55 e parte local "(DD) 99887-7665".
 // Guarda apenas dígitos com DDI ("5511998877665") — formato usado no link do wa.me.
+// Campo de OAB: seletor de UF (seccional) + número com máscara (ponto de milhar
+// automático, máx. 6 dígitos). Guarda como "OAB/UF 123.456". Começa vazio.
+function OabNumberInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { uf, digits } = parseOab(value)
+  return (
+    <div className="flex items-stretch gap-2">
+      <div className="flex items-stretch overflow-hidden rounded-lg border border-ink/15 bg-paper-soft transition-colors focus-within:border-burgundy focus-within:ring-2 focus-within:ring-burgundy/15">
+        <span className="flex select-none items-center bg-paper-deep px-2.5 text-[13px] font-medium text-ink-faint">
+          OAB/
+        </span>
+        <select
+          value={uf}
+          onChange={(e) => onChange(composeOab(e.target.value, digits))}
+          aria-label="Estado (UF) da OAB"
+          className="bg-transparent py-2.5 pl-1 pr-1.5 text-[14px] text-ink focus:outline-none"
+        >
+          <option value="">UF</option>
+          {UF_LIST.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </select>
+      </div>
+      <input
+        value={formatOabDigits(digits)}
+        onChange={(e) => onChange(composeOab(uf, e.target.value))}
+        inputMode="numeric"
+        placeholder="123.456"
+        aria-label="Número de inscrição na OAB"
+        disabled={!uf}
+        className="w-full rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 transition-colors focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15 disabled:cursor-not-allowed disabled:opacity-60"
+      />
+    </div>
+  )
+}
+
 function WhatsappInput({ value, onChange }: { value: string; onChange: (digits: string) => void }) {
   const local = value.startsWith('55') ? value.slice(2) : value
   return (

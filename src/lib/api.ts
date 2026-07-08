@@ -38,7 +38,9 @@ function loadDraft(): Profile {
   } catch {
     /* ignora storage corrompido */
   }
-  return structuredClone(sampleProfile)
+  // Rascunho novo: parte do modelo de exemplo, mas SEM a OAB preenchida — o número
+  // de inscrição precisa ser o real do advogado (não pode vir de um perfil-modelo).
+  return { ...structuredClone(sampleProfile), oabNumber: '', oabVerified: false, oabStatus: 'none' }
 }
 
 export const api = {
