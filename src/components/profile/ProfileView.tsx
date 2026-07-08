@@ -242,6 +242,55 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
           </motion.section>
         )}
 
+        {/* Conteúdo — artigos educativos (informativo, nunca blog de marketing) */}
+        {profile.articles && profile.articles.length > 0 && (
+          <motion.section variants={item} className="mt-9">
+            <SectionTitle ornament={s.divider}>Conteúdo</SectionTitle>
+            <div className="mt-3 space-y-2.5">
+              {profile.articles.map((art) => {
+                const inner = (
+                  <>
+                    <p className="font-display text-[16px] font-semibold leading-snug">
+                      {art.title}
+                    </p>
+                    <p className="t-muted mt-1 text-[13.5px] leading-relaxed">{art.summary}</p>
+                    <p className="t-faint mt-2 text-[12px] font-medium tracking-wide">
+                      {art.readingMinutes} min de leitura
+                    </p>
+                  </>
+                )
+                return art.url ? (
+                  <a
+                    key={art.id}
+                    href={art.url}
+                    onClick={stop}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="t-border-c block border p-4 transition-colors"
+                    style={{
+                      background: 'var(--c-surface)',
+                      borderRadius: 'var(--tile-radius, 20px)',
+                    }}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <div
+                    key={art.id}
+                    className="t-border-c border p-4"
+                    style={{
+                      background: 'var(--c-surface)',
+                      borderRadius: 'var(--tile-radius, 20px)',
+                    }}
+                  >
+                    {inner}
+                  </div>
+                )
+              })}
+            </div>
+          </motion.section>
+        )}
+
         {/* E-mail */}
         {profile.contact.email && (
           <motion.a
@@ -357,6 +406,9 @@ function AreaCard({
       onClick={() => setOpen((v) => !v)}
       aria-expanded={open}
       className={`${tileClass} flex-col !items-start !gap-1.5`}
+      // Item expandido ganha borda fina de acento (bordô no tema Papel/Toga),
+      // diferenciando-o dos demais que mantêm a borda neutra sutil.
+      style={open ? { borderColor: 'var(--c-accent)' } : undefined}
     >
       <span className="flex w-full items-center justify-between font-semibold">
         {label}

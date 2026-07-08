@@ -7,6 +7,7 @@
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { generateWithOllama } from './localAi'
 import { directorySeed, sampleProfile } from './mockData'
+import { getFirm as getMockFirm, type Firm } from './escritorio'
 import type {
   DirectoryResult,
   GenerateRequest,
@@ -51,6 +52,17 @@ export const api = {
     if (draft.slug === slug) return draft
     if (slug === sampleProfile.slug) return sampleProfile
     return null
+  },
+
+  // Página institucional do escritório (sociedade). Mesmo padrão do getProfile:
+  // API real quando habilitada; senão, mock em memória (escritorio.ts).
+  async getFirm(slug: string): Promise<Firm | null> {
+    if (USE_REAL_API) {
+      const res = await fetch(`${API_BASE}/api/firms/${slug}`)
+      return res.ok ? res.json() : null
+    }
+    await wait(280)
+    return getMockFirm(slug)
   },
 
   async getDraft(): Promise<Profile> {

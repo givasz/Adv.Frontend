@@ -65,6 +65,22 @@ export interface Highlight {
   detail: string
 }
 
+/**
+ * Artigo educativo exibido na seção "Conteúdo" do perfil. Caráter INFORMATIVO
+ * (Prov. 205/2021 admite conteúdo jurídico educativo): título neutro, resumo
+ * curto e tempo de leitura — nunca captação, promessa de resultado ou "case".
+ */
+export interface Article {
+  id: string
+  title: string
+  /** resumo curto e sóbrio — o que o leitor aprende, sem tom promocional */
+  summary: string
+  /** tempo de leitura estimado em minutos */
+  readingMinutes: number
+  /** link externo opcional (blog, Jusbrasil, LinkedIn Artigos, etc.) */
+  url?: string
+}
+
 export interface ContactChannels {
   whatsapp?: string // apenas dígitos, formato internacional: 5511999999999
   email?: string
@@ -109,6 +125,8 @@ export interface Profile {
   serviceMode: ServiceMode
   areas: PracticeArea[]
   highlights: Highlight[]
+  /** artigos educativos (seção "Conteúdo") — informativo, não promocional */
+  articles?: Article[]
   socials: SocialLink[]
   contact: ContactChannels
   plan: Plan

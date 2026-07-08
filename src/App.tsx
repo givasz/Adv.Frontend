@@ -5,6 +5,7 @@ import Directory from './pages/Directory'
 import PublicProfile from './pages/PublicProfile'
 import Preview from './pages/Preview'
 import AdminPanel from './pages/AdminPanel'
+import Escritorio from './pages/Escritorio'
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/buscar" element={<Directory />} />
         <Route path="/__preview/:themeId" element={<Preview />} />
         <Route path={`/${ADMIN_PATH}`} element={<AdminPanel />} />
+        <Route path="/escritorio/:slug" element={<Escritorio />} />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
     </BrowserRouter>

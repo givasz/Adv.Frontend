@@ -45,6 +45,31 @@ export const sampleProfile: Profile = {
       detail: 'Formação em métodos consensuais de resolução de conflitos.',
     },
   ],
+  articles: [
+    {
+      id: 'art1',
+      title: 'Divórcio consensual: quais documentos reunir antes de começar',
+      summary:
+        'Um panorama informativo dos documentos costumeiramente exigidos e das etapas do procedimento consensual.',
+      readingMinutes: 6,
+      url: 'https://marinasales.adv.br/artigos/divorcio-consensual-documentos',
+    },
+    {
+      id: 'art2',
+      title: 'Inventário judicial e extrajudicial: entenda as diferenças',
+      summary:
+        'Explicação geral sobre quando cada via é cabível e o que a lei considera para a escolha entre elas.',
+      readingMinutes: 8,
+      url: 'https://marinasales.adv.br/artigos/inventario-judicial-extrajudicial',
+    },
+    {
+      id: 'art3',
+      title: 'Guarda compartilhada: como a lei trata a rotina dos filhos',
+      summary:
+        'Conceitos básicos sobre convivência, responsabilidades e os critérios que a legislação prioriza.',
+      readingMinutes: 5,
+    },
+  ],
   socials: [
     { kind: 'instagram', url: 'https://instagram.com/marinasales.adv' },
     { kind: 'linkedin', url: 'https://linkedin.com/in/marinasales' },
