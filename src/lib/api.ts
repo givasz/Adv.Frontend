@@ -43,6 +43,30 @@ function loadDraft(): Profile {
   return { ...structuredClone(sampleProfile), oabNumber: '', oabVerified: false, oabStatus: 'none' }
 }
 
+function slugifyName(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'perfil'
+  )
+}
+
+// Espelha resolveSlug do backend para o modo mock (usuário único, sem colisão real):
+//  • Free → SEMPRE nome + número aleatório (ex.: vitor-martins-4827), mesmo sem homônimo.
+//    Mantém o número atual se o slug já for "nome-<dígitos>" do nome vigente (estável).
+//  • Pro/Max → usa o endereço editável como está (limpo).
+function resolveMockSlug(p: Profile): string {
+  const base = slugifyName(p.name)
+  if (p.plan === 'pro' || p.plan === 'premium') {
+    return slugifyName(p.slug || p.name)
+  }
+  if (p.slug && new RegExp(`^${base}-\\d+$`).test(p.slug)) return p.slug
+  return `${base}-${Math.floor(1000 + Math.random() * 9000)}`
+}
+
 export const api = {
   async getProfile(slug: string): Promise<Profile | null> {
     if (USE_REAL_API) {
@@ -95,8 +119,10 @@ export const api = {
       return res.json()
     }
     await wait(200)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
-    return profile
+    // Resolve o endereço com a mesma regra do backend (Free sempre numerado).
+    const resolved = { ...profile, slug: resolveMockSlug(profile) }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
+    return resolved
   },
 
   // Solicita a conferência da OAB (não concede a marca — só a plataforma promove a 'verified').
