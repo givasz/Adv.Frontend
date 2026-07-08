@@ -194,8 +194,9 @@ export default function Landing() {
             name="Escritório"
             price={`R$ ${FIRM_PRICING.basePrice}`}
             period="/mês"
-            ctaTo="/escritorio/andrade-vieira"
-            ctaLabel="Ver exemplo"
+            ctaLabel="Começar"
+            secondaryTo="/escritorio/andrade-vieira"
+            secondaryLabel="Ver exemplo"
             features={[
               'Página institucional da sociedade',
               `Até ${FIRM_PRICING.includedSeats} advogados inclusos`,
@@ -237,6 +238,8 @@ function PlanCard({
   featured = false,
   ctaTo = '/editor',
   ctaLabel = 'Começar',
+  secondaryTo,
+  secondaryLabel,
 }: {
   name: string
   price: string
@@ -245,6 +248,8 @@ function PlanCard({
   featured?: boolean
   ctaTo?: string
   ctaLabel?: string
+  secondaryTo?: string
+  secondaryLabel?: string
 }) {
   return (
     <div
@@ -286,6 +291,16 @@ function PlanCard({
       >
         {ctaLabel}
       </Link>
+      {secondaryTo && secondaryLabel && (
+        <Link
+          to={secondaryTo}
+          className={`mt-2 block text-center text-[13px] font-medium transition-colors ${
+            featured ? 'text-paper/80 hover:text-paper' : 'text-ink-faint hover:text-burgundy'
+          }`}
+        >
+          {secondaryLabel}
+        </Link>
+      )}
     </div>
   )
 }
