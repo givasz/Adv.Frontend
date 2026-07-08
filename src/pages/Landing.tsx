@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
+import { FIRM_PRICING } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { ArrowRight, CheckIcon, ScaleIcon, SparkIcon } from '@/components/ui/icons'
 
@@ -148,7 +149,7 @@ export default function Landing() {
         <h2 className="text-center font-display text-3xl font-semibold sm:text-4xl">
           Planos que crescem com você
         </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           <PlanCard
             name="Free"
             price="R$ 0"
@@ -189,6 +190,21 @@ export default function Landing() {
               'Exportar perfil em PDF (conformidade)',
             ]}
           />
+          <PlanCard
+            name="Escritório"
+            price={`R$ ${FIRM_PRICING.basePrice}`}
+            period="/mês"
+            ctaTo="/escritorio/andrade-vieira"
+            ctaLabel="Ver exemplo"
+            features={[
+              'Página institucional da sociedade',
+              `Até ${FIRM_PRICING.includedSeats} advogados inclusos`,
+              `+ R$ ${FIRM_PRICING.extraSeatPrice}/mês por advogado extra`,
+              'Perfil Pro para cada advogado',
+              'Triagem de WhatsApp por área',
+              'Marca própria (white-label)',
+            ]}
+          />
         </div>
       </section>
 
@@ -219,12 +235,16 @@ function PlanCard({
   period,
   features,
   featured = false,
+  ctaTo = '/editor',
+  ctaLabel = 'Começar',
 }: {
   name: string
   price: string
   period: string
   features: string[]
   featured?: boolean
+  ctaTo?: string
+  ctaLabel?: string
 }) {
   return (
     <div
@@ -257,14 +277,14 @@ function PlanCard({
         ))}
       </ul>
       <Link
-        to="/editor"
+        to={ctaTo}
         className={`mt-6 block w-full rounded-full py-3 text-center font-semibold transition-colors ${
           featured
             ? 'bg-paper-soft text-burgundy hover:bg-paper'
             : 'border border-ink/15 hover:border-ink/40'
         }`}
       >
-        Começar
+        {ctaLabel}
       </Link>
     </div>
   )
