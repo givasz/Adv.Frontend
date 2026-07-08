@@ -75,6 +75,19 @@ export interface PendingOab {
   updatedAt: string
 }
 
+export interface AdminProfile {
+  id: string
+  name: string
+  slug: string
+  oabNumber: string
+  city: string
+  state: string
+  plan: 'free' | 'pro' | 'premium'
+  published: boolean
+  moderationStatus: ModerationStatus
+  oabStatus: string
+}
+
 // ---- Auth ----
 
 export async function adminLogin(username: string, password: string): Promise<void> {
@@ -116,6 +129,12 @@ export async function moderateProfile(
 
 export async function dismissReport(id: string): Promise<{ ok: boolean }> {
   return json(await adminFetch(`/admin/reports/${id}/dismiss`, { method: 'POST' }))
+}
+
+// ---- Busca de advogados (painel) ----
+
+export async function searchProfiles(q: string): Promise<AdminProfile[]> {
+  return json(await adminFetch(`/admin/profiles?q=${encodeURIComponent(q)}`))
 }
 
 // ---- Fila de OAB (reaproveita endpoints existentes) ----

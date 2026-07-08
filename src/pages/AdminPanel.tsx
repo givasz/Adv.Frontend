@@ -9,13 +9,15 @@ import {
   listPendingOab,
   listReports,
   moderateProfile,
+  searchProfiles,
+  type AdminProfile,
   type ModerationProfile,
   type PendingOab,
   type ReportGroup,
 } from '@/lib/adminApi'
 import { REASON_LABEL } from '@/lib/reportReasons'
 import type { ModerationStatus } from '@/lib/types'
-import { CheckIcon, LockIcon, ScaleIcon, XIcon } from '@/components/ui/icons'
+import { CheckIcon, ExternalLinkIcon, LockIcon, ScaleIcon, SearchIcon, XIcon } from '@/components/ui/icons'
 
 const STATUS_META: Record<ModerationStatus, { label: string; cls: string }> = {
   active: { label: 'Ativo', cls: 'bg-ink/[0.06] text-ink-faint' },
@@ -115,7 +117,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ---- Dashboard ----
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<'reports' | 'oab'>('reports')
+  const [tab, setTab] = useState<'reports' | 'search' | 'oab'>('reports')
+  const TAB_LABEL = { reports: 'Denúncias', search: 'Advogados', oab: 'Conferência OAB' } as const
 
   return (
     <div className="min-h-dvh bg-paper-deep">
@@ -130,7 +133,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </button>
         </div>
         <div className="mx-auto flex max-w-4xl gap-1 px-4">
-          {(['reports', 'oab'] as const).map((t) => (
+          {(['reports', 'search', 'oab'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -140,14 +143,14 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                   : 'border-transparent text-ink-faint hover:text-ink'
               }`}
             >
-              {t === 'reports' ? 'Denúncias' : 'Conferência OAB'}
+              {TAB_LABEL[t]}
             </button>
           ))}
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {tab === 'reports' ? <ReportsTab /> : <OabTab />}
+        {tab === 'reports' ? <ReportsTab /> : tab === 'search' ? <SearchTab /> : <OabTab />}
       </main>
     </div>
   )
@@ -513,6 +516,111 @@ function ProfileSnapshot({ profile }: { profile: ModerationProfile }) {
         )}
       </div>
     </details>
+  )
+}
+
+// ---- Aba: Advogados (busca) ----
+
+function SearchTab() {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<AdminProfile[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
+  const [tick, setTick] = useState(0) // bump para re-buscar após moderar
+
+  useEffect(() => {
+    const term = q.trim()
+    setError(null)
+    if (term.length < 2) {
+      setResults(null)
+      return
+    }
+    setLoading(true)
+    const t = setTimeout(() => {
+      searchProfiles(term)
+        .then((r) => setResults(r))
+        .catch((e) => setError(e instanceof Error ? e.message : 'Falha na busca.'))
+        .finally(() => setLoading(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [q, tick])
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-2 rounded-full border border-ink/15 bg-paper px-4 py-1 shadow-card focus-within:border-burgundy">
+        <SearchIcon width={18} height={18} className="text-ink-faint" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por nome, OAB, cidade ou endereço…"
+          aria-label="Buscar advogados"
+          autoFocus
+          className="w-full bg-transparent py-2.5 text-[14px] placeholder:text-ink-faint/60 focus:outline-none"
+        />
+      </div>
+
+      {error && (
+        <p className="rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
+          {error}
+        </p>
+      )}
+
+      {q.trim().length < 2 ? (
+        <p className="py-10 text-center text-[13px] text-ink-faint">
+          Digite ao menos 2 caracteres para buscar.
+        </p>
+      ) : loading && !results ? (
+        <p className="py-10 text-center text-[13px] text-ink-faint">Buscando…</p>
+      ) : results && results.length === 0 ? (
+        <p className="py-10 text-center text-[13px] text-ink-faint">Nenhum advogado encontrado.</p>
+      ) : (
+        <ul className="space-y-2.5">
+          {(results ?? []).map((p) => (
+            <li key={p.id} className="overflow-hidden rounded-xl2 border border-ink/10 bg-paper">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <button
+                  onClick={() => setOpen(open === p.id ? null : p.id)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="truncate font-medium text-ink">{p.name}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${STATUS_META[p.moderationStatus].cls}`}
+                    >
+                      {STATUS_META[p.moderationStatus].label}
+                    </span>
+                    {!p.published && (
+                      <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-ink-faint">
+                        não publicado
+                      </span>
+                    )}
+                    <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-ink-faint uppercase">
+                      {p.plan}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block truncate text-[12px] text-ink-faint">
+                    advoc.me/{p.slug} · {p.oabNumber} · {p.city}/{p.state}
+                  </span>
+                </button>
+                <a
+                  href={`/${p.slug}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-brass/50 hover:text-brass-deep"
+                >
+                  Ver perfil
+                  <ExternalLinkIcon width={12} height={12} strokeWidth={1.8} />
+                </a>
+              </div>
+              {open === p.id && (
+                <ModerationDetail profileId={p.id} onChanged={() => setTick((n) => n + 1)} />
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
