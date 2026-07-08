@@ -168,7 +168,7 @@ export default function Landing() {
             featured
             features={[
               'Até 6 áreas com descrição',
-              'URL com seu nome limpo (sem número)',
+              'Endereço personalizável (advoc.me/seu-nome)',
               'Bio até 600 · textos ampliados',
               'Sem marca d’água',
               'Agendamento e QR Code',

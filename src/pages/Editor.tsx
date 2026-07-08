@@ -213,7 +213,17 @@ export default function Editor() {
               <TextInput
                 value={profile.name}
                 maxLength={NAME_MAX}
-                onChange={(e) => set({ name: e.target.value, slug: slugify(e.target.value) })}
+                onChange={(e) => {
+                  const name = e.target.value
+                  setProfile((p) => {
+                    if (!p) return p
+                    // Free: endereço sempre segue o nome. Pro/Max: só segue enquanto não
+                    // for personalizado (ou seja, enquanto o slug ainda espelhar o nome).
+                    const untouched = p.slug === slugify(p.name)
+                    const slug = p.plan === 'free' || untouched ? slugify(name) : p.slug
+                    return { ...p, name, slug }
+                  })
+                }}
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -224,24 +234,46 @@ export default function Editor() {
                   onChange={(e) => set({ oabNumber: e.target.value })}
                 />
               </Field>
-              <Field label="Endereço do perfil" hint="gerado do nome">
-                <TextInput value={`advoc.me/${profile.slug}`} readOnly className="!bg-paper-deep text-ink-faint" />
+              <Field
+                label="Endereço do perfil"
+                hint={profile.plan === 'free' ? 'gerado do nome' : 'personalizável'}
+              >
+                {profile.plan === 'free' ? (
+                  <TextInput
+                    value={`advoc.me/${profile.slug}`}
+                    readOnly
+                    className="!bg-paper-deep text-ink-faint"
+                  />
+                ) : (
+                  <div className="flex items-stretch overflow-hidden rounded-lg border border-ink/15 bg-paper-soft transition-colors focus-within:border-burgundy focus-within:ring-2 focus-within:ring-burgundy/15">
+                    <span className="flex select-none items-center bg-paper-deep px-3 text-[13px] text-ink-faint">
+                      advoc.me/
+                    </span>
+                    <input
+                      value={profile.slug}
+                      onChange={(e) => set({ slug: slugify(e.target.value) })}
+                      placeholder="seu-nome"
+                      aria-label="Endereço personalizado do perfil"
+                      className="w-full bg-transparent px-2 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 focus:outline-none"
+                    />
+                  </div>
+                )}
               </Field>
             </div>
             <p className="-mt-1 text-[11.5px] leading-relaxed text-ink-faint">
-              O endereço vem do seu nome. No plano <span className="font-semibold">Free</span>, se já
-              houver outro advogado com o mesmo nome, adicionamos um número (ex.:{' '}
-              <span className="font-medium">marina-sales-2</span>).{' '}
-              {profile.plan === 'pro' || profile.plan === 'premium' ? (
-                <span className="text-brass-deep">
-                  Seu plano <span className="font-semibold">{profile.plan === 'premium' ? 'Max' : 'Pro'}</span>{' '}
-                  garante o nome limpo (sem número), se estiver disponível.
-                </span>
-              ) : (
+              {profile.plan === 'free' ? (
                 <>
-                  A partir do <span className="font-semibold">Pro</span>, você fica com o nome limpo (sem
-                  número); no <span className="font-semibold">Max</span>, ainda ganha domínio próprio.
+                  No <span className="font-semibold">Free</span>, o endereço vem do seu nome +{' '}
+                  <span className="font-medium">números</span> (ex.: <span className="font-medium">marina-sales-4827</span>).
+                  A partir do <span className="font-semibold">Pro</span> você pode{' '}
+                  <span className="font-medium">editar</span> e deixar limpo (se disponível); no{' '}
+                  <span className="font-semibold">Max</span>, ainda ganha domínio próprio.
                 </>
+              ) : (
+                <span className="text-brass-deep">
+                  Você pode personalizar o endereço. Se estiver disponível, ele fica exatamente como você
+                  digitou; se já estiver em uso, adicionamos um número. O endereço final é confirmado ao salvar.
+                </span>
               )}
             </p>
             <OabVerifyRow status={oabStatus} onRequest={requestOab} />
