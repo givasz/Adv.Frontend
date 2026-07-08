@@ -7,6 +7,36 @@ export type Plan = 'free' | 'pro' | 'premium'
 /** Estado da conferência de OAB (workflow). A marca "OAB conferida" só quando 'verified'. */
 export type OabStatus = 'none' | 'pending' | 'verified' | 'rejected'
 
+/** Estado de moderação do perfil (resultado de denúncias avaliadas pelo admin). */
+export type ModerationStatus = 'active' | 'warned' | 'partial' | 'restricted'
+
+/** Situação de uma denúncia na fila do admin. */
+export type ReportStatus = 'open' | 'resolved' | 'dismissed'
+
+/** Motivos de denúncia pré-prontos (ver lib/reportReasons.ts). */
+export type ReportReason =
+  | 'oab_invalid'
+  | 'result_promise'
+  | 'pricing'
+  | 'self_aggrandizement'
+  | 'solicitation'
+  | 'client_exposure'
+  | 'impersonation'
+  | 'offensive'
+  | 'other'
+
+export interface Report {
+  id: string
+  profileId: string
+  reason: ReportReason
+  details: string
+  reporterEmail?: string | null
+  status: ReportStatus
+  resolution?: string | null
+  createdAt: string
+  handledAt?: string | null
+}
+
 export type SocialKind =
   | 'instagram'
   | 'linkedin'
@@ -71,6 +101,12 @@ export interface Profile {
   views?: number
   /** perfil publicado (visível no diretório/público). Espelha Profile.published no backend. */
   published?: boolean
+  /** estado de moderação — presente no perfil do próprio dono (getMine). */
+  moderationStatus?: ModerationStatus
+  /** aviso do admin visível ao dono (motivo do aviso/restrição). */
+  moderationNote?: string
+  /** true no perfil PÚBLICO quando alguma seção foi ocultada pela moderação. */
+  contentModerated?: boolean
 }
 
 export interface DirectoryResult

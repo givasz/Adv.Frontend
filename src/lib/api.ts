@@ -13,6 +13,7 @@ import type {
   GenerateResult,
   OabStatus,
   Profile,
+  ReportReason,
 } from './types'
 
 const STORAGE_KEY = 'advocme:profile:draft'
@@ -92,6 +93,28 @@ export const api = {
     }
     await wait(300)
     return { oabStatus: 'pending' }
+  },
+
+  // Denúncia de um perfil — qualquer visitante pode. Sem backend real (dev),
+  // apenas simula o envio (a denúncia não é persistida no mock em memória).
+  async reportProfile(
+    slug: string,
+    input: { reason: ReportReason; details: string; reporterEmail?: string },
+  ): Promise<{ ok: boolean }> {
+    if (USE_REAL_API || API_BASE) {
+      const res = await fetch(`${API_BASE}/api/profiles/${slug}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '')
+        throw new Error(msg || 'Falha ao enviar a denúncia.')
+      }
+      return res.json()
+    }
+    await wait(300)
+    return { ok: true }
   },
 
   async searchDirectory(query: string, area: string | null): Promise<DirectoryResult[]> {

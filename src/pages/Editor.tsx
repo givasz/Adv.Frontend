@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
-import type { GenerateKind, OabStatus, PracticeArea, Profile, SocialKind } from '@/lib/types'
+import type {
+  GenerateKind,
+  ModerationStatus,
+  OabStatus,
+  PracticeArea,
+  Profile,
+  SocialKind,
+} from '@/lib/types'
 import { api } from '@/lib/api'
 import { allAreas } from '@/lib/mockData'
 import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
@@ -166,6 +173,8 @@ export default function Editor() {
           }`}
         >
           <Stepper steps={STEPS} current={step} onGo={setStep} />
+
+          <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
 
           {step === 5 && (
             <>
@@ -555,6 +564,55 @@ export default function Editor() {
           />
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+// Aviso de moderação — mostrado ao dono quando o perfil recebeu aviso, censura
+// parcial ou restrição por decisão do moderador (denúncias avaliadas).
+function ModerationBanner({
+  status,
+  note,
+}: {
+  status?: ModerationStatus
+  note?: string
+}) {
+  if (!status || status === 'active') return null
+  const meta = {
+    warned: {
+      title: 'Aviso da moderação',
+      body: 'Seu perfil recebeu um aviso sobre conformidade. Ajuste o conteúdo indicado.',
+      danger: false,
+    },
+    partial: {
+      title: 'Parte do perfil foi ocultada',
+      body: 'A moderação ocultou uma ou mais seções do seu perfil por violarem as normas. Corrija o conteúdo para solicitar revisão.',
+      danger: false,
+    },
+    restricted: {
+      title: 'Perfil retirado do ar',
+      body: 'Seu perfil foi restringido pela moderação e não está visível ao público. Fale com o suporte para revisão.',
+      danger: true,
+    },
+  }[status]
+
+  return (
+    <div
+      className={`rounded-xl2 border px-4 py-3 ${
+        meta.danger
+          ? 'border-burgundy/30 bg-burgundy/[0.06]'
+          : 'border-brass/30 bg-brass/[0.08]'
+      }`}
+    >
+      <p className={`text-[13px] font-semibold ${meta.danger ? 'text-burgundy-deep' : 'text-brass-deep'}`}>
+        {meta.title}
+      </p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{meta.body}</p>
+      {note && (
+        <p className="mt-2 rounded-lg bg-paper/70 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
+          <span className="font-medium text-ink-faint">Moderador:</span> {note}
+        </p>
+      )}
     </div>
   )
 }

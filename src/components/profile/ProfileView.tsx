@@ -251,6 +251,11 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               criado com <span className="font-semibold">advoc.me</span>
             </a>
           )}
+          {!preview && profile.contentModerated && (
+            <p className="t-faint text-[10.5px] leading-relaxed opacity-80">
+              Parte do conteúdo deste perfil foi ocultada por moderação de conformidade.
+            </p>
+          )}
           <p className="t-faint text-[10.5px] leading-relaxed opacity-85">
             Perfil informativo · em conformidade com o Provimento 205/2021 da OAB
           </p>

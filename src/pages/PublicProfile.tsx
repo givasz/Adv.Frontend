@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { ProfileView } from '@/components/profile/ProfileView'
+import { ReportDialog } from '@/components/profile/ReportDialog'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { ScaleIcon } from '@/components/ui/icons'
 
@@ -10,6 +11,7 @@ export default function PublicProfile() {
   const { slug = '' } = useParams()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'notfound'>('loading')
+  const [reporting, setReporting] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -56,6 +58,21 @@ export default function PublicProfile() {
     <main className="relative flex min-h-dvh flex-col overflow-x-hidden">
       <ShareBar slug={profile.slug} name={profile.name} />
       <ProfileView profile={profile} />
+
+      {/* Denúncia — canal discreto de conformidade (Prov. 205/2021) */}
+      <div className="flex justify-center pb-10 pt-2">
+        <button
+          type="button"
+          onClick={() => setReporting(true)}
+          className="text-[11.5px] font-medium text-ink-faint/70 underline-offset-2 transition-colors hover:text-burgundy hover:underline"
+        >
+          Denunciar este perfil
+        </button>
+      </div>
+
+      {reporting && (
+        <ReportDialog slug={profile.slug} name={profile.name} onClose={() => setReporting(false)} />
+      )}
     </main>
   )
 }
