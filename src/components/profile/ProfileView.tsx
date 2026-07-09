@@ -157,9 +157,9 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
                   >
                     {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
                     <Icon
-                      width={20}
-                      height={20}
-                      className={meta.color ? '' : 't-muted'}
+                      width={24}
+                      height={24}
+                      className={`shrink-0 ${meta.color ? '' : 't-muted'}`}
                       style={meta.color ? { color: meta.color } : undefined}
                     />
                     {meta.label}
@@ -227,21 +227,27 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
           </motion.section>
         )}
 
-        {/* Destaques / experiência */}
+        {/* Destaques / experiência — lista editorial em coluna única (marcador + divisória) */}
         {profile.highlights.length > 0 && (
           <motion.section variants={item} className="mt-9">
             <SectionTitle ornament={s.divider}>Experiência</SectionTitle>
-            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-              {profile.highlights.map((h) => (
+            <div className="mt-2">
+              {profile.highlights.map((h, i) => (
                 <div
                   key={h.id}
-                  className="t-border-c border p-4"
-                  style={{ background: 'var(--c-surface)', borderRadius: 'var(--tile-radius, 20px)' }}
+                  className={`flex gap-3 py-3.5 ${i > 0 ? 't-border-c border-t' : ''}`}
                 >
-                  <p className="t-accent font-display text-lg font-semibold leading-snug">
-                    {h.title}
-                  </p>
-                  <p className="t-faint mt-1 text-[13.5px] leading-relaxed">{h.detail}</p>
+                  <span
+                    className="mt-[9px] h-1.5 w-1.5 shrink-0 rotate-45"
+                    style={{ background: 'var(--c-accent)' }}
+                    aria-hidden
+                  />
+                  <div className="min-w-0">
+                    <p className="t-accent font-display text-[18px] font-semibold leading-snug">
+                      {h.title}
+                    </p>
+                    <p className="t-muted mt-1 text-[14px] leading-relaxed">{h.detail}</p>
+                  </div>
                 </div>
               ))}
             </div>
