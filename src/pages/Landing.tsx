@@ -96,9 +96,10 @@ export default function Landing() {
             variants={fade}
             initial="hidden"
             animate="show"
-            className="mt-4 text-[13px] text-ink-faint"
+            className="mt-4 text-[13.5px] text-ink-faint"
           >
-            Grátis para começar · sem cartão · pronto em 5 minutos
+            <span className="font-semibold text-ink">Crie seu escritório em 5 minutos</span> · grátis ·
+            sem cartão
           </motion.p>
         </div>
 
@@ -254,7 +255,7 @@ function PlanCard({
 }) {
   return (
     <div
-      className={`relative rounded-xl2 border p-6 ${
+      className={`relative flex h-full flex-col rounded-xl2 border p-6 ${
         featured
           ? 'border-burgundy bg-burgundy text-paper-soft shadow-lift'
           : 'border-ink/10 bg-paper-soft'
@@ -266,42 +267,48 @@ function PlanCard({
         </span>
       )}
       <h3 className="font-display text-2xl font-semibold">{name}</h3>
-      <p className="mt-2">
+      <p className="mt-2 flex items-baseline gap-1">
         <span className="font-display text-4xl font-semibold">{price}</span>
-        <span className={featured ? 'text-paper/70' : 'text-ink-faint'}> {period}</span>
+        <span className={`text-[14px] ${featured ? 'text-paper/70' : 'text-ink-faint'}`}>
+          {period}
+        </span>
       </p>
-      <ul className="mt-5 space-y-2.5 text-[14px]">
+      <ul className="mt-6 space-y-2.5 text-[14px] leading-snug">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2">
+          <li key={f} className="flex items-start gap-2.5">
             <CheckIcon
-              width={17}
-              height={17}
+              width={16}
+              height={16}
+              strokeWidth={2.4}
               className={`mt-0.5 shrink-0 ${featured ? 'text-brass-light' : 'text-brass-deep'}`}
             />
-            {f}
+            <span className={featured ? 'text-paper-soft/95' : 'text-ink-soft'}>{f}</span>
           </li>
         ))}
       </ul>
-      <Link
-        to={ctaTo}
-        className={`mt-6 block w-full rounded-full py-3 text-center font-semibold transition-colors ${
-          featured
-            ? 'bg-paper-soft text-burgundy hover:bg-paper'
-            : 'border border-ink/15 hover:border-ink/40'
-        }`}
-      >
-        {ctaLabel}
-      </Link>
-      {secondaryTo && secondaryLabel && (
+      {/* mt-auto empurra o CTA para a base → botões alinhados entre os cards */}
+      <div className="mt-auto pt-7">
         <Link
-          to={secondaryTo}
-          className={`mt-2 block text-center text-[13px] font-medium transition-colors ${
-            featured ? 'text-paper/80 hover:text-paper' : 'text-ink-faint hover:text-burgundy'
+          to={ctaTo}
+          className={`block w-full rounded-full py-3 text-center font-semibold transition-colors ${
+            featured
+              ? 'bg-paper-soft text-burgundy hover:bg-paper'
+              : 'border border-ink/15 hover:border-burgundy/40 hover:text-burgundy'
           }`}
         >
-          {secondaryLabel}
+          {ctaLabel}
         </Link>
-      )}
+        {secondaryTo && secondaryLabel && (
+          <Link
+            to={secondaryTo}
+            className={`mt-2.5 block text-center text-[13px] font-medium transition-colors ${
+              featured ? 'text-paper/80 hover:text-paper' : 'text-ink-faint hover:text-burgundy'
+            }`}
+          >
+            {secondaryLabel}
+          </Link>
+        )}
+      </div>
     </div>
   )
 }
