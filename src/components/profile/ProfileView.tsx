@@ -134,6 +134,43 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
           </motion.p>
         )}
 
+        {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
+        {profile.socials.length > 0 && (
+          <motion.section variants={item} className="mt-6">
+            <SectionTitle ornament={s.divider}>Redes e site</SectionTitle>
+            <div
+              className={`mt-3 grid gap-2.5 ${
+                s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
+              }`}
+            >
+              {profile.socials.map((soc) => {
+                const meta = socialMeta[soc.kind]
+                const Icon = meta.Icon
+                return (
+                  <a
+                    key={soc.kind + soc.url}
+                    href={soc.url}
+                    onClick={stop}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`${tile} !py-3 text-sm font-medium`}
+                  >
+                    {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
+                    <Icon
+                      width={20}
+                      height={20}
+                      className={meta.color ? '' : 't-muted'}
+                      style={meta.color ? { color: meta.color } : undefined}
+                    />
+                    {meta.label}
+                    <ArrowRight width={15} height={15} className="t-faint ml-auto" />
+                  </a>
+                )
+              })}
+            </div>
+          </motion.section>
+        )}
+
         <motion.div variants={item}>
           <ThemeDivider type={s.divider} />
         </motion.div>
@@ -159,7 +196,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               rel="noreferrer noopener"
               className="t-btn w-full text-[15px]"
             >
-              <WhatsappIcon width={19} height={19} />
+              <WhatsappIcon width={24} height={24} />
               Conversar no WhatsApp
             </motion.a>
           )}
@@ -186,37 +223,6 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               {profile.areas.map((a) => (
                 <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
               ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Redes sociais */}
-        {profile.socials.length > 0 && (
-          <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Redes e site</SectionTitle>
-            <div
-              className={`mt-3 grid gap-2.5 ${
-                s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
-              }`}
-            >
-              {profile.socials.map((soc) => {
-                const meta = socialMeta[soc.kind]
-                const Icon = meta.Icon
-                return (
-                  <a
-                    key={soc.kind + soc.url}
-                    href={soc.url}
-                    onClick={stop}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={`${tile} !py-3 text-sm font-medium`}
-                  >
-                    <Icon width={18} height={18} className="t-muted" />
-                    {meta.label}
-                    <ArrowRight width={15} height={15} className="t-faint ml-auto" />
-                  </a>
-                )
-              })}
             </div>
           </motion.section>
         )}

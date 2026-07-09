@@ -179,14 +179,16 @@ export const InfoIcon = (p: IconProps) => (
   </svg>
 )
 
+// `color`: cor OFICIAL da marca da rede — aplicada SÓ no ícone (logo). O resto do
+// tile (texto, borda) segue o tema. "Site" é neutro (não é uma rede específica).
 export const socialMeta: Record<
   SocialKind,
-  { label: string; Icon: (p: IconProps) => JSX.Element }
+  { label: string; Icon: (p: IconProps) => JSX.Element; color?: string }
 > = {
-  instagram: { label: 'Instagram', Icon: InstagramIcon },
-  linkedin: { label: 'LinkedIn', Icon: LinkedinIcon },
+  instagram: { label: 'Instagram', Icon: InstagramIcon, color: '#E4405F' },
+  linkedin: { label: 'LinkedIn', Icon: LinkedinIcon, color: '#0A66C2' },
   website: { label: 'Site', Icon: GlobeIcon },
-  facebook: { label: 'Facebook', Icon: FacebookIcon },
-  youtube: { label: 'YouTube', Icon: YoutubeIcon },
-  tiktok: { label: 'TikTok', Icon: TiktokIcon },
+  facebook: { label: 'Facebook', Icon: FacebookIcon, color: '#1877F2' },
+  youtube: { label: 'YouTube', Icon: YoutubeIcon, color: '#FF0000' },
+  tiktok: { label: 'TikTok', Icon: TiktokIcon, color: '#111111' },
 }

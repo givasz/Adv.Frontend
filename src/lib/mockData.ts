@@ -73,6 +73,7 @@ export const sampleProfile: Profile = {
   socials: [
     { kind: 'instagram', url: 'https://instagram.com/marinasales.adv' },
     { kind: 'linkedin', url: 'https://linkedin.com/in/marinasales' },
+    { kind: 'youtube', url: 'https://youtube.com/@marinasales' },
     { kind: 'website', url: 'https://marinasales.adv.br' },
   ],
   contact: {
