@@ -86,6 +86,65 @@ export const sampleProfile: Profile = {
   views: 1284,
 }
 
+// Conta de exemplo com a AGENDA NATIVA ativada — para demonstração do agendamento.
+export const guilhermeSales: Profile = {
+  slug: 'guilherme-sales23',
+  name: 'Guilherme Sales',
+  oabNumber: 'OAB/SP 398.214',
+  oabVerified: false,
+  oabStatus: 'none',
+  headline: 'Advogado · Direito do Trabalho e Previdenciário',
+  bio: 'Atuo com orientação clara em questões trabalhistas e previdenciárias. Busco explicar cada etapa do processo e os caminhos possíveis, para que você tome decisões bem informadas sobre seus direitos.',
+  avatarUrl:
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
+  city: 'São Paulo',
+  state: 'SP',
+  regionNote: 'Atendimento presencial e online',
+  serviceMode: { inPerson: true, online: true },
+  areas: [
+    {
+      id: 'g-a1',
+      label: 'Direito do Trabalho',
+      description:
+        'Orientação sobre verbas rescisórias, horas extras, reconhecimento de vínculo e demais direitos decorrentes da relação de emprego.',
+    },
+    {
+      id: 'g-a2',
+      label: 'Direito Previdenciário',
+      description:
+        'Esclarecimentos sobre aposentadorias, auxílios e benefícios do INSS, com análise dos requisitos previstos em lei.',
+    },
+  ],
+  highlights: [
+    {
+      id: 'g-h1',
+      title: '9 anos de atuação',
+      detail: 'Dedicação a causas trabalhistas e previdenciárias desde 2016.',
+    },
+  ],
+  socials: [{ kind: 'linkedin', url: 'https://linkedin.com/in/guilherme-sales' }],
+  contact: {
+    whatsapp: '5511991234567',
+    email: 'contato@guilhermesales.adv.br',
+  },
+  // Agenda própria do advoc.me ligada (seg–sex, 09h–18h, consultas de 45 min).
+  schedulingMode: 'native',
+  booking: {
+    weekdays: [1, 2, 3, 4, 5],
+    startMin: 540,
+    endMin: 1080,
+    slotMin: 45,
+    leadHours: 12,
+    horizonDays: 30,
+  },
+  plan: 'pro',
+  theme: 'papel',
+  views: 342,
+}
+
+// Perfis de exemplo servidos pelo mock (públicos, por slug).
+export const exampleProfiles: Profile[] = [sampleProfile, guilhermeSales]
+
 export const directorySeed: DirectoryResult[] = [
   {
     slug: 'marina-sales',

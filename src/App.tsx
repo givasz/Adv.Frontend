@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Editor from './pages/Editor'
+import Agenda from './pages/Agenda'
+import Agendar from './pages/Agendar'
 import Directory from './pages/Directory'
 import PublicProfile from './pages/PublicProfile'
 import Preview from './pages/Preview'
@@ -18,6 +20,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/editor" element={<Editor />} />
+        <Route path="/agenda" element={<Agenda />} />
+        <Route path="/agendar/:slug" element={<Agendar />} />
         <Route path="/buscar" element={<Directory />} />
         <Route path="/__preview/:themeId" element={<Preview />} />
         <Route path={`/${ADMIN_PATH}`} element={<AdminPanel />} />

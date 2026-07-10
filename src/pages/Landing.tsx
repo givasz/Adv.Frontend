@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
 import { FIRM_PRICING } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
+import { AccountMenu } from '@/components/auth/AccountMenu'
 import { ArrowRight, CheckIcon, ScaleIcon, SparkIcon } from '@/components/ui/icons'
 
 const fade = {
@@ -32,6 +33,7 @@ export default function Landing() {
           <Link to="/buscar" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Buscar advogados
           </Link>
+          <AccountMenu />
           <Link to="/editor" className="btn-primary !py-2.5 !px-5 text-[14px]">
             Criar meu perfil
           </Link>
@@ -168,6 +170,8 @@ export default function Landing() {
             price="R$ 19"
             period="/mês"
             featured
+            ctaTo="/editor?plan=pro"
+            ctaLabel="Assinar Pro"
             features={[
               'Até 6 áreas com descrição',
               'Endereço personalizável (advoc.me/seu-nome)',
@@ -182,6 +186,8 @@ export default function Landing() {
             name="Premium"
             price="R$ 39"
             period="/mês"
+            ctaTo="/editor?plan=premium"
+            ctaLabel="Assinar Premium"
             features={[
               'Tudo do Pro',
               'Domínio próprio (.adv.br)',

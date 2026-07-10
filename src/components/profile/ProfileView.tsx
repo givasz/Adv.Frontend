@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type ThemeStyle } from '@/lib/themes'
+import { resolveSchedulingMode } from '@/lib/booking'
 import { Avatar } from '@/components/ui/Avatar'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import {
@@ -29,6 +30,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 export function ProfileView({ profile, preview = false }: ProfileViewProps) {
+  const schedulingMode = resolveSchedulingMode(profile)
   const s = getTheme(profile.theme).style
   const brand = profile.branding
   // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
@@ -200,7 +202,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               Conversar no WhatsApp
             </motion.a>
           )}
-          {profile.contact.scheduling && (
+          {schedulingMode === 'external' && profile.contact.scheduling && (
             <motion.a
               variants={item}
               href={profile.contact.scheduling}
@@ -213,6 +215,26 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               Agendar uma consulta
             </motion.a>
           )}
+          {schedulingMode === 'native' &&
+            (preview ? (
+              <motion.button
+                variants={item}
+                type="button"
+                className={`${tile} justify-center !py-3.5 font-semibold`}
+              >
+                <CalendarIcon width={19} height={19} className="t-accent" />
+                Agendar uma consulta
+              </motion.button>
+            ) : (
+              <motion.a
+                variants={item}
+                href={`/agendar/${profile.slug}`}
+                className={`${tile} justify-center !py-3.5 font-semibold`}
+              >
+                <CalendarIcon width={19} height={19} className="t-accent" />
+                Agendar uma consulta
+              </motion.a>
+            ))}
         </div>
 
         {/* Áreas de atuação */}

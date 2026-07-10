@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import type {
   GenerateKind,
   ModerationStatus,
   OabStatus,
+  Plan,
   PracticeArea,
   Profile,
   SocialKind,
 } from '@/lib/types'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
+import { AuthModal } from '@/components/auth/AuthModal'
+import { AccountMenu } from '@/components/auth/AccountMenu'
 import { allAreas } from '@/lib/mockData'
+import { resolveSchedulingMode } from '@/lib/booking'
 import { checkCompliance, OAB_GUIDANCE, OAB_GUIDANCE_BY_FIELD, policyOutdated, RULESET_REV } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { openAuditReport } from '@/lib/auditReport'
@@ -27,8 +32,9 @@ import { PolicyUpdateBanner } from '@/components/editor/PolicyUpdateBanner'
 import { EditorialIdeas } from '@/components/editor/EditorialIdeas'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
+import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
-import { ChevronDown, CheckIcon, DotIcon, InfoIcon, ScaleIcon, TrashIcon, XIcon } from '@/components/ui/icons'
+import { CalendarIcon, ChevronDown, CheckIcon, DotIcon, InfoIcon, ScaleIcon, TrashIcon, XIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
 type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string } | null
@@ -88,11 +94,41 @@ export default function Editor() {
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   const [step, setStep] = useState(0)
+  const [pendingBookings, setPendingBookings] = useState(0)
+  const { isAuthed } = useAuth()
+  // Plano pago escolhido enquanto deslogado → segura (com o tema desejado, se houver)
+  // até criar conta/entrar. Aplicado no onSuccess do cadastro.
+  const [planGate, setPlanGate] = useState<{ plan: Plan; theme?: Profile['theme'] } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
     api.getDraft().then(setProfile)
     document.title = 'Editor · advoc.me'
   }, [])
+
+  // Contador de solicitações pendentes — alimenta o badge do link "Agenda".
+  useEffect(() => {
+    api
+      .getMyBookings()
+      .then((list) => setPendingBookings(list.filter((b) => b.status === 'pending').length))
+      .catch(() => setPendingBookings(0))
+  }, [])
+
+  // Consome ?plan=pro|premium (vindo da Landing): aplica o plano escolhido ou,
+  // se deslogado, abre o cadastro (conta é obrigatória nos planos pagos).
+  useEffect(() => {
+    if (!profile) return
+    const wanted = searchParams.get('plan')
+    if (wanted !== 'pro' && wanted !== 'premium') return
+    searchParams.delete('plan') // consome para não reaplicar
+    setSearchParams(searchParams, { replace: true })
+    if (!isAuthed) {
+      setPlanGate({ plan: wanted })
+    } else {
+      const stillOk = isThemeUnlocked(getTheme(profile.theme), wanted)
+      setProfile((p) => (p ? { ...p, plan: wanted, theme: stillOk ? p.theme : 'papel' } : p))
+    }
+  }, [profile, isAuthed, searchParams, setSearchParams])
 
   // salva com debounce quando o rascunho muda
   useEffect(() => {
@@ -130,6 +166,21 @@ export default function Editor() {
   }
 
   const set = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
+  // Aplica o plano de fato — mantém o tema só se ainda estiver desbloqueado no novo plano.
+  const applyPlan = (plan: Plan) => {
+    const stillOk = isThemeUnlocked(getTheme(profile.theme), plan)
+    set({ plan, theme: stillOk ? profile.theme : 'papel' })
+  }
+  // Troca de plano: assinar um plano PAGO exige conta. Deslogado → abre o cadastro
+  // e segura o plano escolhido; aplica após entrar. Free nunca exige conta.
+  const changePlan = (plan: Plan) => {
+    if (plan !== 'free' && !isAuthed) {
+      setPlanGate({ plan })
+      return
+    }
+    applyPlan(plan)
+  }
+  const schedulingMode = resolveSchedulingMode(profile)
   const areaLimit = AREA_LIMIT[profile.plan]
   const lim = CHAR_LIMITS[profile.plan] // limites de caracteres do plano atual
 
@@ -167,9 +218,23 @@ export default function Editor() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-ink-faint" aria-live="polite">
+            <span className="hidden text-[12px] text-ink-faint sm:inline" aria-live="polite">
               {saved ? 'Tudo salvo' : 'Salvando…'}
             </span>
+            {schedulingMode === 'native' && (
+              <Link
+                to="/agenda"
+                className="relative inline-flex items-center gap-1.5 rounded-lg border border-ink/15 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-burgundy/50"
+              >
+                <CalendarIcon width={16} height={16} className="text-burgundy" />
+                Agenda
+                {pendingBookings > 0 && (
+                  <span className="ml-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-burgundy px-1 text-[11px] font-bold text-paper-soft">
+                    {pendingBookings}
+                  </span>
+                )}
+              </Link>
+            )}
             <Link
               to={`/${profile.slug}`}
               className="btn-primary !py-2 !px-4 text-[13px]"
@@ -177,6 +242,7 @@ export default function Editor() {
             >
               Ver perfil
             </Link>
+            <AccountMenu compact />
           </div>
         </div>
       </header>
@@ -205,6 +271,17 @@ export default function Editor() {
         >
           <ProtectionIntro />
 
+          {/* Plano atual — sempre visível e trocável a qualquer momento */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between px-1">
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
+                Seu plano
+              </span>
+              <span className="text-[11px] text-ink-faint">troque quando quiser</span>
+            </div>
+            <PlanBadge plan={profile.plan} onChange={changePlan} />
+          </div>
+
           <Stepper steps={STEPS} current={step} onGo={setStep} />
 
           <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
@@ -218,15 +295,6 @@ export default function Editor() {
 
           {step === 5 && (
             <>
-          <PlanBadge
-            plan={profile.plan}
-            onChange={(plan) => {
-              // ao trocar de plano, mantém o tema só se ainda estiver desbloqueado
-              const stillOk = isThemeUnlocked(getTheme(profile.theme), plan)
-              set({ plan, theme: stillOk ? profile.theme : 'papel' })
-            }}
-          />
-
           <Card
             title="Aparência"
             action={
@@ -240,7 +308,11 @@ export default function Editor() {
               plan={profile.plan}
               onChange={(theme) => set({ theme })}
               onWantUpgrade={(theme, tier) => {
-                // demo: "assinar" o plano desbloqueia e já aplica o tema
+                // "Assinar" o plano exige conta: deslogado → cadastro (segura plano + tema).
+                if (!isAuthed) {
+                  setPlanGate({ plan: tier, theme })
+                  return
+                }
                 set({ plan: tier, theme })
               }}
             />
@@ -330,7 +402,8 @@ export default function Editor() {
                 </span>
               )}
             </p>
-            <OabVerifyRow status={oabStatus} onRequest={requestOab} />
+            {/* Conferência de OAB é recurso dos planos pagos — no Free não aparece. */}
+            {profile.plan !== 'free' && <OabVerifyRow status={oabStatus} onRequest={requestOab} />}
             <Field label="Foto (URL)" hint="upload no backend real">
               <TextInput
                 value={profile.avatarUrl ?? ''}
@@ -505,33 +578,11 @@ export default function Editor() {
                 onChange={(e) => set({ contact: { ...profile.contact, email: e.target.value } })}
               />
             </Field>
-            <Field
-              label="Link de agendamento"
-              hint="opcional"
-              info={
-                <InfoTip
-                  title="Qual link usar aqui"
-                  align="left"
-                  label="Ajuda sobre o link de agendamento"
-                  items={[
-                    'Cole um link de agendamento — o cliente escolhe um horário livre e marca sozinho, pelo seu perfil.',
-                    'Funciona com Calendly (ex.: calendly.com/seu-nome/30min).',
-                    'Funciona com o Google: use "Horários de agendamento" (gera um link público de reserva).',
-                    'Não use o link de uma agenda compartilhada do Google — ela só mostra a agenda, não deixa marcar.',
-                  ]}
-                />
-              }
-            >
-              <TextInput
-                value={profile.contact.scheduling ?? ''}
-                onChange={(e) => set({ contact: { ...profile.contact, scheduling: e.target.value } })}
-                placeholder="https://calendly.com/seu-nome/consulta"
-              />
-            </Field>
-            <p className="-mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-              Página de agendamento (Calendly ou “Horários de agendamento” do Google) — não a agenda
-              compartilhada. Se ficar em branco, o botão “Agendar” não aparece no perfil.
-            </p>
+            <div className="rule-brass my-1" />
+            <div>
+              <span className="mb-2 block text-[13px] font-semibold text-ink">Agendamento</span>
+              <SchedulingCard profile={profile} set={set} />
+            </div>
           </Card>
           )}
 
@@ -627,6 +678,21 @@ export default function Editor() {
             name={profile.name}
             onApply={applyAi}
             onClose={() => setAi(null)}
+          />
+        )}
+        {planGate && (
+          <AuthModal
+            initialMode="signup"
+            reason={`Para assinar o plano ${planGate.plan === 'pro' ? 'Pro' : 'Premium'} é preciso ter uma conta. Crie a sua (ou entre) para continuar.`}
+            onClose={() => setPlanGate(null)}
+            onSuccess={() => {
+              applyPlan(planGate.plan)
+              // Aplica o tema desejado (se veio do ThemePicker e estiver desbloqueado no plano).
+              if (planGate.theme && isThemeUnlocked(getTheme(planGate.theme), planGate.plan)) {
+                set({ theme: planGate.theme })
+              }
+              setPlanGate(null)
+            }}
           />
         )}
       </AnimatePresence>

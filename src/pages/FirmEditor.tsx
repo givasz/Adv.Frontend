@@ -90,7 +90,7 @@ export default function FirmEditor() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-ink-faint" aria-live="polite">
+            <span className="hidden text-[12px] text-ink-faint sm:inline" aria-live="polite">
               {!firm.name.trim() ? 'Dê um nome à sociedade' : saved ? 'Tudo salvo' : 'Salvando…'}
             </span>
             {firm.slug && (
@@ -315,7 +315,7 @@ function LawyerEditor({
 }) {
   return (
     <div className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
         <input
           value={lawyer.name}
           placeholder="Nome do advogado"
@@ -347,7 +347,7 @@ function LawyerEditor({
         aria-label="Bio do advogado"
         className="resize-none rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] leading-relaxed focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
       />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
         <input
           value={lawyer.avatarUrl ?? ''}
           placeholder="Foto (URL)"

@@ -84,8 +84,56 @@ export interface Article {
 export interface ContactChannels {
   whatsapp?: string // apenas dígitos, formato internacional: 5511999999999
   email?: string
-  /** link de agendamento externo (Calendly, Google Agenda, etc.) */
+  /** link de agendamento externo (Calendly, Google Agenda, etc.) — usado no modo "external" */
   scheduling?: string
+}
+
+/**
+ * Como o botão "Agendar" se comporta no perfil:
+ *   'off'      → sem botão de agendamento
+ *   'external' → abre um link externo (Calendly/Google) — usa contact.scheduling
+ *   'native'   → agenda própria do advoc.me (o cliente marca dia/hora e o advogado confirma)
+ */
+export type SchedulingMode = 'off' | 'external' | 'native'
+
+/** Configuração da agenda nativa (disponibilidade do advogado). */
+export interface BookingConfig {
+  /** dias da semana atendidos — 0=domingo … 6=sábado */
+  weekdays: number[]
+  /** início do expediente em minutos desde a meia-noite (ex.: 540 = 09:00) */
+  startMin: number
+  /** fim do expediente em minutos (ex.: 1080 = 18:00) */
+  endMin: number
+  /** duração de cada horário, em minutos */
+  slotMin: number
+  /** antecedência mínima para marcar, em horas */
+  leadHours: number
+  /** até quantos dias à frente é possível marcar */
+  horizonDays: number
+}
+
+export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+
+/** Uma solicitação de consulta na agenda nativa. */
+export interface Booking {
+  id: string
+  clientName: string
+  clientWhats: string // só dígitos
+  note?: string
+  /** ISO — início do horário escolhido */
+  startAt: string
+  /** ISO — fim do horário (startAt + slotMin) */
+  endAt: string
+  status: BookingStatus
+  createdAt: string
+}
+
+/** Resposta pública de disponibilidade — config + horários já ocupados. */
+export interface Availability {
+  mode: SchedulingMode
+  config: BookingConfig
+  /** ISO dos horários ocupados (pending/confirmed futuros) */
+  busy: string[]
 }
 
 export interface ServiceMode {
@@ -129,6 +177,10 @@ export interface Profile {
   articles?: Article[]
   socials: SocialLink[]
   contact: ContactChannels
+  /** comportamento do botão "Agendar" (ver SchedulingMode). Ausente = derivar de contact.scheduling. */
+  schedulingMode?: SchedulingMode
+  /** config da agenda nativa (só relevante no modo 'native') */
+  booking?: BookingConfig
   plan: Plan
   /** tema visual escolhido pelo advogado — desbloqueado por plano (ver lib/themes.ts) */
   theme: ThemeId

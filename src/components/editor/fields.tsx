@@ -33,12 +33,12 @@ export function Field({
       : children
   return (
     <Wrapper className="block">
-      <span className="mb-1.5 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+      <span className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2">
+        <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-ink">
           <span id={labelId}>{label}</span>
           {info}
         </span>
-        {hint && <span className="text-[11px] text-ink-faint">{hint}</span>}
+        {hint && <span className="shrink-0 text-[11px] text-ink-faint">{hint}</span>}
       </span>
       {child}
     </Wrapper>

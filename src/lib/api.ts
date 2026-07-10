@@ -4,11 +4,15 @@
 // Amanhã: basta implementar as mesmas assinaturas apontando para `/api/...`
 // (o proxy do Vite já encaminha para o NestJS na porta 3333).
 
+import { authHeader } from './auth'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { generateWithOllama } from './localAi'
-import { directorySeed, sampleProfile } from './mockData'
+import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
 import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
+import { DEFAULT_BOOKING_CONFIG, resolveSchedulingMode } from './booking'
 import type {
+  Availability,
+  Booking,
   DirectoryResult,
   GenerateRequest,
   GenerateResult,
@@ -19,6 +23,29 @@ import type {
 
 const STORAGE_KEY = 'advocme:profile:draft'
 const FIRM_KEY = 'advocme:firm:draft'
+const BOOKINGS_KEY = 'advocme:bookings'
+
+// ---- Mock de agenda (localStorage) — espelha o backend BookingsService ----
+type StoredBooking = Booking & { profileSlug: string }
+
+function loadBookings(): StoredBooking[] {
+  try {
+    const raw = localStorage.getItem(BOOKINGS_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+function saveBookings(list: StoredBooking[]) {
+  localStorage.setItem(BOOKINGS_KEY, JSON.stringify(list))
+}
+// Resolve o perfil (rascunho ou modelo) por slug para ler a config da agenda.
+function profileForSlug(slug: string): Profile | null {
+  const draft = loadDraft()
+  if (draft.slug === slug) return draft
+  return exampleProfiles.find((p) => p.slug === slug) ?? null
+}
 
 function loadFirmDraft(): Firm | null {
   try {
@@ -43,6 +70,8 @@ function loadDraft(): Profile {
       const draft = JSON.parse(raw) as Profile
       // backfill de campos novos em rascunhos antigos
       if (!draft.theme) draft.theme = 'papel'
+      if (!draft.schedulingMode) draft.schedulingMode = draft.contact?.scheduling ? 'external' : 'off'
+      if (!draft.booking) draft.booking = { ...DEFAULT_BOOKING_CONFIG }
       return draft
     }
   } catch {
@@ -86,8 +115,7 @@ export const api = {
     await wait(280)
     const draft = loadDraft()
     if (draft.slug === slug) return draft
-    if (slug === sampleProfile.slug) return sampleProfile
-    return null
+    return exampleProfiles.find((p) => p.slug === slug) ?? null
   },
 
   // Página institucional do escritório (sociedade). Mesmo padrão do getProfile:
@@ -108,7 +136,7 @@ export const api = {
   async getMyFirm(): Promise<Firm | null> {
     if (USE_REAL_API) {
       try {
-        const res = await fetch(`${API_BASE}/api/firms/me`)
+        const res = await fetch(`${API_BASE}/api/firms/me`, { headers: { ...authHeader() } })
         const text = res.ok ? await res.text() : ''
         return text ? (JSON.parse(text) as Firm) : null
       } catch {
@@ -123,7 +151,7 @@ export const api = {
     if (USE_REAL_API) {
       const res = await fetch(`${API_BASE}/api/firms/me`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(firm),
       })
       return res.json()
@@ -139,7 +167,7 @@ export const api = {
       // Blindagem: banco vazio / resposta vazia não pode travar o editor.
       // Se o backend não devolver um perfil válido, começa com um rascunho local.
       try {
-        const res = await fetch(`${API_BASE}/api/profiles/me`)
+        const res = await fetch(`${API_BASE}/api/profiles/me`, { headers: { ...authHeader() } })
         const text = res.ok ? await res.text() : ''
         const data = text ? (JSON.parse(text) as Partial<Profile>) : null
         if (data && data.slug) return { ...loadDraft(), ...data } as Profile
@@ -156,7 +184,7 @@ export const api = {
     if (USE_REAL_API) {
       const res = await fetch(`${API_BASE}/api/profiles/me`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(profile),
       })
       return res.json()
@@ -171,7 +199,10 @@ export const api = {
   // Solicita a conferência da OAB (não concede a marca — só a plataforma promove a 'verified').
   async requestOabCheck(): Promise<{ oabStatus: OabStatus }> {
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/me/oab/request`, { method: 'POST' })
+      const res = await fetch(`${API_BASE}/api/profiles/me/oab/request`, {
+        method: 'POST',
+        headers: { ...authHeader() },
+      })
       return res.json()
     }
     await wait(300)
@@ -198,6 +229,114 @@ export const api = {
     }
     await wait(300)
     return { ok: true }
+  },
+
+  // ---- Agenda nativa ----
+
+  // Disponibilidade pública (config + horários ocupados) para o slug.
+  async getAvailability(slug: string): Promise<Availability> {
+    if (USE_REAL_API || API_BASE) {
+      const res = await fetch(`${API_BASE}/api/profiles/${slug}/availability`)
+      if (!res.ok) throw new Error('Não foi possível carregar a agenda.')
+      return res.json()
+    }
+    await wait(200)
+    const profile = profileForSlug(slug)
+    const mode = profile ? resolveSchedulingMode(profile) : 'off'
+    const config = profile?.booking ?? DEFAULT_BOOKING_CONFIG
+    const now = Date.now()
+    const busy = loadBookings()
+      .filter(
+        (b) =>
+          b.profileSlug === slug &&
+          (b.status === 'pending' || b.status === 'confirmed') &&
+          new Date(b.startAt).getTime() >= now,
+      )
+      .map((b) => b.startAt)
+    return { mode, config, busy }
+  },
+
+  // Cliente cria uma solicitação (status pending).
+  async createBooking(
+    slug: string,
+    input: { clientName: string; clientWhats: string; note?: string; startAt: string },
+  ): Promise<Booking> {
+    if (USE_REAL_API || API_BASE) {
+      const res = await fetch(`${API_BASE}/api/profiles/${slug}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '')
+        throw new Error(msg || 'Não foi possível enviar a solicitação.')
+      }
+      return res.json()
+    }
+    await wait(320)
+    const profile = profileForSlug(slug)
+    const slotMin = profile?.booking?.slotMin ?? DEFAULT_BOOKING_CONFIG.slotMin
+    const list = loadBookings()
+    const start = new Date(input.startAt).getTime()
+    const clash = list.some(
+      (b) =>
+        b.profileSlug === slug &&
+        (b.status === 'pending' || b.status === 'confirmed') &&
+        new Date(b.startAt).getTime() === start,
+    )
+    if (clash) throw new Error('Esse horário acabou de ser reservado. Escolha outro.')
+    const booking: StoredBooking = {
+      id: `bk-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`,
+      profileSlug: slug,
+      clientName: input.clientName.trim(),
+      clientWhats: input.clientWhats.replace(/\D/g, ''),
+      note: (input.note ?? '').trim(),
+      startAt: input.startAt,
+      endAt: new Date(start + slotMin * 60_000).toISOString(),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+    saveBookings([...list, booking])
+    const { profileSlug: _drop, ...pub } = booking
+    return pub
+  },
+
+  // Solicitações do advogado dono (mock: todas; real: as do DEMO_USER).
+  async getMyBookings(): Promise<Booking[]> {
+    if (USE_REAL_API || API_BASE) {
+      const res = await fetch(`${API_BASE}/api/profiles/me/bookings`, { headers: { ...authHeader() } })
+      return res.ok ? res.json() : []
+    }
+    await wait(160)
+    return loadBookings()
+      .slice()
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      .map(({ profileSlug: _drop, ...b }) => b)
+  },
+
+  // Decisão do advogado: aceitar / recusar / cancelar.
+  async decideBooking(id: string, decision: 'confirm' | 'decline' | 'cancel'): Promise<Booking> {
+    if (USE_REAL_API || API_BASE) {
+      const res = await fetch(`${API_BASE}/api/profiles/me/bookings/${id}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ decision }),
+      })
+      if (!res.ok) throw new Error('Não foi possível atualizar a solicitação.')
+      return res.json()
+    }
+    await wait(160)
+    const status =
+      decision === 'confirm' ? 'confirmed' : decision === 'decline' ? 'declined' : 'cancelled'
+    const list = loadBookings()
+    const next = list.map((b) =>
+      b.id === id ? { ...b, status: status as Booking['status'] } : b,
+    )
+    saveBookings(next)
+    const found = next.find((b) => b.id === id)
+    if (!found) throw new Error('Solicitação não encontrada.')
+    const { profileSlug: _drop, ...pub } = found
+    return pub
   },
 
   async searchDirectory(query: string, area: string | null): Promise<DirectoryResult[]> {
