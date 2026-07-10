@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Landing from './pages/Landing'
+import AuthPage from './pages/AuthPage'
 import Editor from './pages/Editor'
 import Agenda from './pages/Agenda'
 import Agendar from './pages/Agendar'
@@ -19,6 +20,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/entrar" element={<AuthPage mode="login" />} />
+        <Route path="/criar-conta" element={<AuthPage mode="signup" />} />
         <Route path="/editor" element={<Editor />} />
         <Route path="/agenda" element={<Agenda />} />
         <Route path="/agendar/:slug" element={<Agendar />} />

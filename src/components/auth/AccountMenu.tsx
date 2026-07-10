@@ -1,37 +1,26 @@
 import { useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
-import { AuthModal } from './AuthModal'
 
-// Widget de conta para a barra de navegação. Deslogado: botão "Entrar".
-// Logado: e-mail (primeira parte) + menu com "Sair". Autocontido (gerencia o modal).
+// Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
+// página /entrar). Logado: e-mail + menu com "Sair". Sem modal.
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { user, isAuthed, logout } = useAuth()
-  const [showAuth, setShowAuth] = useState(false)
   const [open, setOpen] = useState(false)
+  const location = useLocation()
 
   if (!isAuthed || !user) {
+    // Volta para a página atual após entrar.
+    const next = encodeURIComponent(location.pathname + location.search)
     return (
-      <>
-        <button
-          type="button"
-          onClick={() => setShowAuth(true)}
-          className={`font-medium text-ink-soft transition-colors hover:text-ink ${
-            compact ? 'text-[13px]' : 'text-sm'
-          }`}
-        >
-          Entrar
-        </button>
-        <AnimatePresence>
-          {showAuth && (
-            <AuthModal
-              initialMode="login"
-              onClose={() => setShowAuth(false)}
-              onSuccess={() => setShowAuth(false)}
-            />
-          )}
-        </AnimatePresence>
-      </>
+      <Link
+        to={`/entrar?next=${next}`}
+        className={`font-medium text-ink-soft transition-colors hover:text-ink ${
+          compact ? 'text-[13px]' : 'text-sm'
+        }`}
+      >
+        Entrar
+      </Link>
     )
   }
 

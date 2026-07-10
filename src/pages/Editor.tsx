@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import type {
   GenerateKind,
@@ -12,7 +12,6 @@ import type {
 } from '@/lib/types'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { AuthModal } from '@/components/auth/AuthModal'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { allAreas } from '@/lib/mockData'
 import { resolveSchedulingMode } from '@/lib/booking'
@@ -96,10 +95,13 @@ export default function Editor() {
   const [step, setStep] = useState(0)
   const [pendingBookings, setPendingBookings] = useState(0)
   const { isAuthed } = useAuth()
-  // Plano pago escolhido enquanto deslogado → segura (com o tema desejado, se houver)
-  // até criar conta/entrar. Aplicado no onSuccess do cadastro.
-  const [planGate, setPlanGate] = useState<{ plan: Plan; theme?: Profile['theme'] } | null>(null)
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Manda para a página de cadastro (conta é obrigatória nos planos pagos) e volta
+  // ao editor já aplicando o plano escolhido via ?plan=.
+  const gotoSignupForPlan = (plan: Plan) =>
+    navigate(`/criar-conta?next=${encodeURIComponent(`/editor?plan=${plan}`)}`)
 
   useEffect(() => {
     api.getDraft().then(setProfile)
@@ -120,14 +122,16 @@ export default function Editor() {
     if (!profile) return
     const wanted = searchParams.get('plan')
     if (wanted !== 'pro' && wanted !== 'premium') return
+    // Deslogado → vai criar conta (mantém o ?plan= no next para reaplicar ao voltar).
+    if (!isAuthed) {
+      gotoSignupForPlan(wanted)
+      return
+    }
     searchParams.delete('plan') // consome para não reaplicar
     setSearchParams(searchParams, { replace: true })
-    if (!isAuthed) {
-      setPlanGate({ plan: wanted })
-    } else {
-      const stillOk = isThemeUnlocked(getTheme(profile.theme), wanted)
-      setProfile((p) => (p ? { ...p, plan: wanted, theme: stillOk ? p.theme : 'papel' } : p))
-    }
+    const stillOk = isThemeUnlocked(getTheme(profile.theme), wanted)
+    setProfile((p) => (p ? { ...p, plan: wanted, theme: stillOk ? p.theme : 'papel' } : p))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, isAuthed, searchParams, setSearchParams])
 
   // salva com debounce quando o rascunho muda
@@ -175,7 +179,7 @@ export default function Editor() {
   // e segura o plano escolhido; aplica após entrar. Free nunca exige conta.
   const changePlan = (plan: Plan) => {
     if (plan !== 'free' && !isAuthed) {
-      setPlanGate({ plan })
+      gotoSignupForPlan(plan)
       return
     }
     applyPlan(plan)
@@ -308,9 +312,9 @@ export default function Editor() {
               plan={profile.plan}
               onChange={(theme) => set({ theme })}
               onWantUpgrade={(theme, tier) => {
-                // "Assinar" o plano exige conta: deslogado → cadastro (segura plano + tema).
+                // "Assinar" o plano exige conta: deslogado → página de cadastro.
                 if (!isAuthed) {
-                  setPlanGate({ plan: tier, theme })
+                  gotoSignupForPlan(tier)
                   return
                 }
                 set({ plan: tier, theme })
@@ -678,21 +682,6 @@ export default function Editor() {
             name={profile.name}
             onApply={applyAi}
             onClose={() => setAi(null)}
-          />
-        )}
-        {planGate && (
-          <AuthModal
-            initialMode="signup"
-            reason={`Para assinar o plano ${planGate.plan === 'pro' ? 'Pro' : 'Premium'} é preciso ter uma conta. Crie a sua (ou entre) para continuar.`}
-            onClose={() => setPlanGate(null)}
-            onSuccess={() => {
-              applyPlan(planGate.plan)
-              // Aplica o tema desejado (se veio do ThemePicker e estiver desbloqueado no plano).
-              if (planGate.theme && isThemeUnlocked(getTheme(planGate.theme), planGate.plan)) {
-                set({ theme: planGate.theme })
-              }
-              setPlanGate(null)
-            }}
           />
         )}
       </AnimatePresence>

@@ -12,6 +12,7 @@ import {
 } from '@/lib/escritorio'
 import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
+import { AccountMenu } from '@/components/auth/AccountMenu'
 import { ScaleIcon, TrashIcon } from '@/components/ui/icons'
 
 const UF_LIST = [
@@ -98,6 +99,7 @@ export default function FirmEditor() {
                 Ver página
               </Link>
             )}
+            <AccountMenu compact />
           </div>
         </div>
       </header>
