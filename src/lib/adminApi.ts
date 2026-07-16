@@ -75,6 +75,17 @@ export interface PendingOab {
   updatedAt: string
 }
 
+// Um evento do histórico de conferência de OAB (append-only no backend).
+export interface OabEvent {
+  id: string
+  fromStatus: string
+  toStatus: string
+  method: string
+  reviewer: string
+  reason: string
+  createdAt: string
+}
+
 export interface AdminProfile {
   id: string
   name: string
@@ -152,4 +163,8 @@ export async function decideOab(
     method: 'POST',
     body: JSON.stringify({ decision, reason }),
   }))
+}
+
+export async function oabHistory(id: string): Promise<OabEvent[]> {
+  return json(await adminFetch(`/admin/profiles/${id}/oab/history`))
 }

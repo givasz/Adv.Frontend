@@ -5,7 +5,16 @@ import { sampleProfile } from '@/lib/mockData'
 import { FIRM_PRICING } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { ArrowRight, CheckIcon, ScaleIcon, SparkIcon } from '@/components/ui/icons'
+import { LEGAL_DOCS } from '@/lib/legalContent'
+import {
+  ArrowRight,
+  CheckIcon,
+  ChevronDown,
+  InfoIcon,
+  LockIcon,
+  ScaleIcon,
+  SparkIcon,
+} from '@/components/ui/icons'
 
 const fade = {
   hidden: { opacity: 0, y: 24 },
@@ -16,9 +25,15 @@ const fade = {
   }),
 }
 
+// Anima uma seção ao entrar na viewport (sóbrio, sem exageros).
+const rise = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+}
+
 export default function Landing() {
   useEffect(() => {
-    document.title = 'advoc.me — o link na bio, para advogados'
+    document.title = 'advoc.me — presença digital profissional para advogados'
   }, [])
 
   return (
@@ -30,11 +45,14 @@ export default function Landing() {
           advoc.me
         </span>
         <div className="flex items-center gap-2 sm:gap-4">
+          <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
+            Como funciona
+          </a>
           <Link to="/buscar" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Buscar advogados
           </Link>
           <AccountMenu />
-          <Link to="/editor" className="btn-primary !py-2.5 !px-5 text-[14px]">
+          <Link to="/comecar" className="btn-primary !py-2.5 !px-5 text-[14px]">
             Criar meu perfil
           </Link>
         </div>
@@ -51,7 +69,7 @@ export default function Landing() {
             className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[12.5px] font-semibold text-brass-deep"
           >
             <CheckIcon width={14} height={14} />
-            Dentro das normas da OAB (Prov. 205/2021)
+            Dentro das regras da OAB
           </motion.span>
 
           <motion.h1
@@ -59,11 +77,13 @@ export default function Landing() {
             variants={fade}
             initial="hidden"
             animate="show"
-            className="mt-5 font-display text-[36px] font-semibold leading-[1.02] tracking-tight min-[380px]:text-[44px] sm:text-6xl"
+            className="mt-5 font-display text-[34px] font-semibold leading-[1.04] tracking-tight min-[380px]:text-[42px] sm:text-[56px]"
           >
-            Seu escritório,
+            Presença digital
             <br />
-            <span className="italic text-burgundy">em um só link.</span>
+            profissional,
+            <br />
+            <span className="italic text-burgundy">dentro das regras.</span>
           </motion.h1>
 
           <motion.p
@@ -73,8 +93,8 @@ export default function Landing() {
             animate="show"
             className="mt-5 max-w-md text-[17px] leading-relaxed text-ink-soft"
           >
-            A página de perfil compartilhável feita para advogados. Áreas de atuação, contato,
-            agendamento e prova social — reunidos com a sobriedade que a advocacia exige.
+            Tenha um perfil profissional sem decorar as regras da OAB. A gente confere seu conteúdo
+            antes de publicar — e mostra o que ajustar.
           </motion.p>
 
           <motion.div
@@ -84,8 +104,8 @@ export default function Landing() {
             animate="show"
             className="mt-7 flex flex-wrap items-center gap-3"
           >
-            <Link to="/editor" className="btn-primary">
-              Montar meu perfil grátis
+            <Link to="/comecar" className="btn-primary">
+              Criar meu perfil grátis
               <ArrowRight width={18} height={18} />
             </Link>
             <Link to={`/${sampleProfile.slug}`} className="btn-ghost">
@@ -100,8 +120,8 @@ export default function Landing() {
             animate="show"
             className="mt-4 text-[13.5px] text-ink-faint"
           >
-            <span className="font-semibold text-ink">Crie seu escritório em 5 minutos</span> · grátis ·
-            sem cartão
+            <span className="font-semibold text-ink">Pronto em minutos</span> · grátis · sem cartão ·
+            não é aconselhamento jurídico
           </motion.p>
         </div>
 
@@ -115,15 +135,50 @@ export default function Landing() {
         </motion.div>
       </header>
 
-      {/* Features */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="rule-brass mx-auto mb-12 max-w-xs" />
+      {/* Problema */}
+      <Section id="problema" eyebrow="O problema" title="Divulgar-se como advogado tem regra — e risco.">
+        <p className="mx-auto mb-10 max-w-2xl text-center text-[15.5px] leading-relaxed text-ink-soft">
+          A publicidade na advocacia tem regras próprias. Um descuido de linguagem pode virar uma
+          questão disciplinar — e as ferramentas genéricas de “link na bio” não foram pensadas para isso.
+        </p>
         <div className="grid gap-6 sm:grid-cols-3">
           {[
             {
-              icon: <SparkIcon width={22} height={22} />,
-              title: 'Bio escrita por IA',
-              body: 'Digite palavras-chave da sua atuação. A IA redige um texto sóbrio, e você aprova antes de publicar.',
+              title: 'Regras extensas',
+              body: 'Promessa de resultado, preços, superlativos, captação, sigilo… são muitas vedações para memorizar a cada texto.',
+            },
+            {
+              title: 'Risco disciplinar',
+              body: 'Um anúncio fora das normas pode levar a advertência, censura ou suspensão. A responsabilidade é do advogado.',
+            },
+            {
+              title: 'Ferramentas genéricas',
+              body: 'Linktrees e criadores de site tratam advocacia como qualquer negócio — incentivam justamente o que a OAB veda.',
+            },
+          ].map((c) => (
+            <Panel key={c.title}>
+              <h3 className="font-display text-lg font-semibold text-ink">{c.title}</h3>
+              <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">{c.body}</p>
+            </Panel>
+          ))}
+        </div>
+      </Section>
+
+      {/* Solução */}
+      <Section
+        eyebrow="A solução"
+        title="A conformidade vira uma funcionalidade do produto."
+      >
+        <p className="mx-auto mb-10 max-w-2xl text-center text-[15.5px] leading-relaxed text-ink-soft">
+          Em vez de você aprender todas as regras, o advoc.me as embute. Você escreve; a plataforma
+          confere e explica. Sóbrio por padrão, seguro por construção.
+        </p>
+        <div className="grid gap-6 sm:grid-cols-3">
+          {[
+            {
+              icon: <ScaleIcon width={22} height={22} />,
+              title: 'Conformidade embutida',
+              body: 'Um revisor mostra, enquanto você digita, quando um texto fere as normas — promessa de resultado, mercantilismo, sigilo — e sugere como ajustar.',
             },
             {
               icon: <CheckIcon width={22} height={22} />,
@@ -131,21 +186,115 @@ export default function Landing() {
               body: 'A plataforma confere seu número de OAB e o exibe como marca informativa — sem selos, logotipos ou símbolos oficiais da OAB.',
             },
             {
-              icon: <ScaleIcon width={22} height={22} />,
-              title: 'Conformidade embutida',
-              body: 'O editor avisa quando um texto fere as regras de publicidade — promessa de resultado, mercantilismo, sigilo.',
+              icon: <SparkIcon width={22} height={22} />,
+              title: 'Bio escrita por IA',
+              body: 'Descreva sua atuação em palavras-chave; a IA redige um texto sóbrio, que passa pela mesma checagem e depende sempre da sua aprovação.',
             },
           ].map((f) => (
-            <div key={f.title} className="rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6">
+            <Panel key={f.title}>
               <div className="flex h-11 w-11 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
                 {f.icon}
               </div>
               <h3 className="mt-4 font-display text-xl font-semibold">{f.title}</h3>
               <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">{f.body}</p>
-            </div>
+            </Panel>
           ))}
         </div>
-      </section>
+      </Section>
+
+      {/* Como funciona */}
+      <Section id="como-funciona" eyebrow="Como funciona" title="Do zero ao perfil publicado, em quatro passos.">
+        <ol className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
+          {[
+            {
+              n: 1,
+              title: 'Monte o essencial',
+              body: 'Nome, OAB, cidade, área principal. O necessário para um perfil útil — em poucos minutos.',
+            },
+            {
+              n: 2,
+              title: 'Escreva com apoio da IA',
+              body: 'Gere uma bio sóbria a partir de palavras-chave, ou escreva você mesmo. Você sempre revisa e aprova.',
+            },
+            {
+              n: 3,
+              title: 'O revisor confere',
+              body: 'A checagem de conformidade aponta o que precisa de ajuste e explica o porquê, com a base normativa.',
+            },
+            {
+              n: 4,
+              title: 'Publique e compartilhe',
+              body: 'Um endereço único (advoc.me/seu-nome) e QR Code para reunir seus canais com sobriedade.',
+            },
+          ].map((s) => (
+            <li key={s.n} className="flex gap-4 rounded-xl2 border border-ink/10 bg-paper-soft/60 p-5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-burgundy font-display text-[15px] font-semibold text-paper-soft">
+                {s.n}
+              </span>
+              <div>
+                <h3 className="font-display text-lg font-semibold text-ink">{s.title}</h3>
+                <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* Conformidade OAB */}
+      <Section eyebrow="Conformidade OAB" title="O que o revisor observa por você.">
+        <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6">
+            <p className="mb-4 text-[14.5px] leading-relaxed text-ink-soft">
+              Codificamos as regras da OAB. Antes de publicar, a própria plataforma confere de novo —
+              é a fonte da verdade, não só um aviso visual.
+            </p>
+            <ul className="grid gap-2.5 sm:grid-cols-2">
+              {[
+                'Promessa de resultado',
+                'Preços, honorários e descontos',
+                'Superlativos e comparações',
+                'Chamadas de contratação',
+                'Depoimentos e lista de clientes',
+                'Exposição de casos (sigilo)',
+                'Selos ou símbolos oficiais da OAB',
+                'Apelos de urgência e brindes',
+              ].map((v) => (
+                <li key={v} className="flex items-start gap-2 text-[13.5px] text-ink-soft">
+                  <CheckIcon
+                    width={16}
+                    height={16}
+                    strokeWidth={2.2}
+                    className="mt-0.5 shrink-0 text-brass-deep"
+                  />
+                  {v}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex flex-col justify-center gap-4">
+            <div className="flex items-start gap-3">
+              <LockIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
+              <p className="text-[14px] leading-relaxed text-ink-soft">
+                <span className="font-semibold text-ink">Trilha de auditoria.</span> Cada versão
+                registra a data e a política vigente — exportável em PDF como comprovante de
+                conformidade.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <InfoIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
+              <p className="text-[14px] leading-relaxed text-ink-soft">
+                <span className="font-semibold text-ink">A palavra final é sua.</span> A IA e o
+                revisor auxiliam; a decisão de publicar e a responsabilidade pelo conteúdo continuam
+                do advogado.
+              </p>
+            </div>
+            <p className="text-[12px] leading-relaxed text-ink-faint">
+              O advoc.me não constitui aconselhamento jurídico e não é filiado à OAB. “OAB conferida”
+              indica uma conferência feita pela plataforma, sem endosso oficial.
+            </p>
+          </div>
+        </div>
+      </Section>
 
       {/* Planos */}
       <section className="mx-auto max-w-6xl px-5 py-12">
@@ -170,7 +319,7 @@ export default function Landing() {
             price="R$ 19"
             period="/mês"
             featured
-            ctaTo="/editor?plan=pro"
+            ctaTo="/comecar?plan=pro"
             ctaLabel="Assinar Pro"
             features={[
               'Até 6 áreas com descrição',
@@ -186,7 +335,7 @@ export default function Landing() {
             name="Premium"
             price="R$ 39"
             period="/mês"
-            ctaTo="/editor?plan=premium"
+            ctaTo="/comecar?plan=premium"
             ctaLabel="Assinar Premium"
             features={[
               'Tudo do Pro',
@@ -217,26 +366,126 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <Section eyebrow="Dúvidas frequentes" title="Perguntas frequentes">
+        <div className="mx-auto max-w-2xl divide-y divide-ink/10 rounded-xl2 border border-ink/10 bg-paper-soft/60">
+          {FAQ.map((item) => (
+            <FaqItem key={item.q} {...item} />
+          ))}
+        </div>
+      </Section>
+
       {/* CTA final */}
       <section className="mx-auto max-w-4xl px-5 py-20 text-center">
+        <div className="rule-brass mx-auto mb-8 max-w-xs" />
         <h2 className="font-display text-3xl font-semibold sm:text-5xl">
-          O único “link na bio”
+          Uma presença digital
           <br />
-          <span className="italic text-burgundy">pensado para a advocacia.</span>
+          <span className="italic text-burgundy">à altura da sua toga.</span>
         </h2>
-        <Link to="/editor" className="btn-primary mt-8">
+        <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
+          Comece grátis. Construa autoridade com sobriedade e a segurança de estar dentro das normas.
+        </p>
+        <Link to="/comecar" className="btn-primary mt-8">
           Criar meu perfil agora
           <ArrowRight width={18} height={18} />
         </Link>
       </section>
 
-      <footer className="border-t border-ink/10 py-8 text-center text-[13px] text-ink-faint">
+      <footer className="border-t border-ink/10 py-10 text-center text-[13px] text-ink-faint">
+        <nav className="mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-5">
+          {LEGAL_DOCS.map((d) => (
+            <Link key={d.slug} to={`/legal/${d.slug}`} className="hover:text-ink">
+              {d.navLabel}
+            </Link>
+          ))}
+        </nav>
         <p>advoc.me · perfis em conformidade com o Provimento 205/2021 do CFOAB</p>
-        <p className="mt-1">Não constitui aconselhamento jurídico.</p>
+        <p className="mt-1">Não constitui aconselhamento jurídico. Não filiado à OAB.</p>
       </footer>
     </div>
   )
 }
+
+// Seção padrão da landing — eyebrow (rótulo), título e conteúdo, com animação sóbria.
+function Section({
+  id,
+  eyebrow,
+  title,
+  children,
+}: {
+  id?: string
+  eyebrow: string
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <motion.section
+      id={id}
+      variants={rise}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-80px' }}
+      className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16"
+    >
+      <p className="text-center text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
+        {eyebrow}
+      </p>
+      <h2 className="mx-auto mt-2 max-w-2xl text-center font-display text-3xl font-semibold leading-tight sm:text-4xl">
+        {title}
+      </h2>
+      <div className="mt-10">{children}</div>
+    </motion.section>
+  )
+}
+
+function Panel({ children }: { children: React.ReactNode }) {
+  return <div className="rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6">{children}</div>
+}
+
+// Item de FAQ acessível (nativo <details>), sem estado — expande/recolhe.
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group px-5">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-[15px] font-semibold text-ink marker:hidden">
+        {q}
+        <ChevronDown
+          width={18}
+          height={18}
+          className="shrink-0 text-ink-faint transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <p className="pb-4 text-[14px] leading-relaxed text-ink-soft">{a}</p>
+    </details>
+  )
+}
+
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: 'O advoc.me é filiado à OAB?',
+    a: 'Não. Somos uma plataforma independente. A marca “OAB conferida” indica que conferimos seu número de inscrição — não é selo, chancela ou endosso oficial da OAB, o que as regras vedam.',
+  },
+  {
+    q: 'A checagem de conformidade substitui um advogado ou a OAB?',
+    a: 'Não. É um guarda-corpo que reduz violações óbvias e explica o porquê, mas não é aconselhamento jurídico. A decisão de publicar e a responsabilidade pelo conteúdo são sempre suas.',
+  },
+  {
+    q: 'A bio gerada por IA já sai dentro das regras?',
+    a: 'A IA é orientada pelas normas e o texto passa pela mesma checagem de conformidade. Ainda assim, nada é publicado sem a sua revisão e aprovação.',
+  },
+  {
+    q: 'Como funciona a conferência da OAB?',
+    a: 'Você solicita a conferência; a plataforma verifica seu número no Cadastro Nacional dos Advogados (CNA) da OAB. Só então o perfil exibe a marca informativa “OAB conferida”.',
+  },
+  {
+    q: 'Posso usar de graça?',
+    a: 'Sim. O plano Free permite publicar um perfil em conformidade, sem cartão. Os planos pagos adicionam personalização, agendamento, analytics e recursos para escritórios.',
+  },
+  {
+    q: 'O que acontece se eu escrever algo fora das normas?',
+    a: 'O editor sinaliza o trecho, explica a vedação e sugere um ajuste. Termos que bloqueiam a publicação impedem o envio até serem corrigidos — a mesma checagem roda de novo antes de publicar.',
+  },
+]
 
 function PlanCard({
   name,
@@ -244,7 +493,7 @@ function PlanCard({
   period,
   features,
   featured = false,
-  ctaTo = '/editor',
+  ctaTo = '/comecar',
   ctaLabel = 'Começar',
   secondaryTo,
   secondaryLabel,

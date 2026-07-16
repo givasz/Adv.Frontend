@@ -9,9 +9,11 @@ import {
   listPendingOab,
   listReports,
   moderateProfile,
+  oabHistory,
   searchProfiles,
   type AdminProfile,
   type ModerationProfile,
+  type OabEvent,
   type PendingOab,
   type ReportGroup,
 } from '@/lib/adminApi'
@@ -626,10 +628,28 @@ function SearchTab() {
 
 // ---- Aba: Conferência OAB ----
 
+// Rótulo neutro para o método de conferência (sem insinuar chancela oficial da OAB).
+const OAB_METHOD_LABEL: Record<string, string> = {
+  manual: 'conferência manual',
+  cna_ws: 'assistente CNA',
+  confirmadv: 'ConfirmADV',
+}
+const OAB_STATUS_LABEL: Record<string, string> = {
+  none: 'sem conferência',
+  pending: 'em análise',
+  verified: 'conferida',
+  rejected: 'rejeitada',
+}
+
 function OabTab() {
   const [pending, setPending] = useState<PendingOab[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  // Id do item cuja rejeição está sendo justificada (fluxo de motivo).
+  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+  // Histórico carregado por perfil (toggle).
+  const [history, setHistory] = useState<Record<string, OabEvent[]>>({})
 
   async function reload() {
     setError(null)
@@ -644,13 +664,31 @@ function OabTab() {
     reload()
   }, [])
 
-  async function decide(id: string, decision: 'verify' | 'reject') {
+  async function decide(id: string, decision: 'verify' | 'reject', why?: string) {
     setBusy(id)
     try {
-      await decideOab(id, decision)
+      await decideOab(id, decision, why)
+      setRejecting(null)
+      setReason('')
       await reload()
     } finally {
       setBusy(null)
+    }
+  }
+
+  async function toggleHistory(id: string) {
+    if (history[id]) {
+      setHistory((h) => {
+        const { [id]: _drop, ...rest } = h
+        return rest
+      })
+      return
+    }
+    try {
+      const events = await oabHistory(id)
+      setHistory((h) => ({ ...h, [id]: events }))
+    } catch {
+      /* silencioso: histórico é auxiliar */
     }
   }
 
@@ -663,27 +701,80 @@ function OabTab() {
   return (
     <ul className="space-y-2.5">
       {pending.map((p) => (
-        <li key={p.id} className="flex items-center justify-between gap-3 rounded-xl2 border border-ink/10 bg-paper px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate font-medium text-ink">{p.name}</p>
-            <p className="truncate text-[12px] text-ink-faint">{p.oabNumber} · {p.city}/{p.state} · advoc.me/{p.slug}</p>
+        <li key={p.id} className="rounded-xl2 border border-ink/10 bg-paper px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium text-ink">{p.name}</p>
+              <p className="truncate text-[12px] text-ink-faint">{p.oabNumber} · {p.city}/{p.state} · advoc.me/{p.slug}</p>
+              <p className="mt-1 text-[11.5px] text-ink-faint">
+                Confira a inscrição no CNA (cna.oab.org.br) antes de aprovar.{' '}
+                <button onClick={() => toggleHistory(p.id)} className="font-medium text-brass-deep hover:underline">
+                  {history[p.id] ? 'Ocultar histórico' : 'Ver histórico'}
+                </button>
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => decide(p.id, 'verify')}
+                disabled={busy === p.id}
+                className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep hover:bg-brass/30 disabled:opacity-50"
+              >
+                <CheckIcon width={13} height={13} strokeWidth={2.6} /> Conferir
+              </button>
+              <button
+                onClick={() => {
+                  setRejecting((r) => (r === p.id ? null : p.id))
+                  setReason('')
+                }}
+                disabled={busy === p.id}
+                className="inline-flex items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-faint hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
+              >
+                <XIcon width={13} height={13} /> Rejeitar
+              </button>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <button
-              onClick={() => decide(p.id, 'verify')}
-              disabled={busy === p.id}
-              className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep hover:bg-brass/30 disabled:opacity-50"
-            >
-              <CheckIcon width={13} height={13} strokeWidth={2.6} /> Conferir
-            </button>
-            <button
-              onClick={() => decide(p.id, 'reject')}
-              disabled={busy === p.id}
-              className="inline-flex items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-faint hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
-            >
-              <XIcon width={13} height={13} /> Rejeitar
-            </button>
-          </div>
+
+          {rejecting === p.id && (
+            <div className="mt-3 rounded-lg border border-ink/10 bg-paper-soft p-3">
+              <label className="text-[12px] font-medium text-ink-soft">Motivo da rejeição (visível na auditoria)</label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
+                placeholder="Ex.: nome não confere com o CNA; inscrição suspensa."
+                className="mt-1.5 w-full resize-none rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[12.5px] outline-none focus:border-burgundy/40"
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <button onClick={() => setRejecting(null)} className="rounded-full px-3 py-1.5 text-[12px] text-ink-faint hover:text-ink">Cancelar</button>
+                <button
+                  onClick={() => decide(p.id, 'reject', reason.trim())}
+                  disabled={busy === p.id || !reason.trim()}
+                  className="rounded-full bg-burgundy px-3 py-1.5 text-[12px] font-semibold text-paper-soft hover:bg-burgundy-deep disabled:opacity-50"
+                >
+                  Confirmar rejeição
+                </button>
+              </div>
+            </div>
+          )}
+
+          {history[p.id] && (
+            <ul className="mt-3 space-y-1.5 border-t border-ink/10 pt-3">
+              {history[p.id].length === 0 && (
+                <li className="text-[12px] text-ink-faint">Sem eventos registrados.</li>
+              )}
+              {history[p.id].map((ev) => (
+                <li key={ev.id} className="text-[12px] text-ink-soft">
+                  <span className="font-medium text-ink">{OAB_STATUS_LABEL[ev.toStatus] ?? ev.toStatus}</span>
+                  {' · '}
+                  {new Date(ev.createdAt).toLocaleString('pt-BR')}
+                  {' · '}
+                  {OAB_METHOD_LABEL[ev.method] ?? ev.method}
+                  {ev.reviewer && <> · por {ev.reviewer}</>}
+                  {ev.reason && <span className="text-ink-faint"> — {ev.reason}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </li>
       ))}
     </ul>
