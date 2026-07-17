@@ -1,9 +1,9 @@
 import type { Plan } from '@/lib/types'
 
 const plans: { id: Plan; label: string; note: string }[] = [
-  { id: 'free', label: 'Free', note: '2 áreas · marca d’água' },
-  { id: 'pro', label: 'Pro', note: '6 áreas · sem marca · analytics' },
-  { id: 'premium', label: 'Premium', note: 'domínio próprio · todos os temas' },
+  { id: 'free', label: 'Free', note: 'Seu perfil no ar' },
+  { id: 'pro', label: 'Pro', note: 'Receba clientes e veja visitas' },
+  { id: 'premium', label: 'Max', note: 'Sua marca e domínio próprios' },
 ]
 
 /** Simula troca de plano no editor (no produto real vem da assinatura ativa) */

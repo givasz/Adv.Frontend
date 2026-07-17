@@ -306,6 +306,7 @@ export default function Landing() {
             name="Free"
             price="R$ 0"
             period="para sempre"
+            pitch="Um perfil profissional, no ar em minutos."
             features={[
               '1 perfil público',
               'Até 2 áreas de atuação',
@@ -318,38 +319,41 @@ export default function Landing() {
             name="Pro"
             price="R$ 19"
             period="/mês"
+            pitch="Receba clientes e acompanhe seu alcance."
             featured
             ctaTo="/comecar?plan=pro"
             ctaLabel="Assinar Pro"
             features={[
-              'Até 6 áreas com descrição',
-              'Endereço personalizável (advoc.me/seu-nome)',
-              'Bio até 600 · textos ampliados',
-              'Sem marca d’água',
-              'Agendamento e QR Code',
-              'Analytics de visitas e cliques',
-              'Temas visuais adicionais',
+              'Receba pedidos de atendimento pelo perfil',
+              'Descubra como as pessoas encontram você',
+              'Compartilhe com QR Code',
+              'Seu perfil sem a marca advoc.me',
+              'Endereço personalizado (advoc.me/seu-nome)',
+              'Até 6 áreas e bio ampliada',
+              'Mais temas visuais',
             ]}
           />
           <PlanCard
-            name="Premium"
+            name="Max"
             price="R$ 39"
             period="/mês"
+            pitch="Sua marca, seu domínio, sua autoridade."
             ctaTo="/comecar?plan=premium"
-            ctaLabel="Assinar Premium"
+            ctaLabel="Assinar Max"
             features={[
               'Tudo do Pro',
-              'Domínio próprio (.adv.br)',
-              'Bio até 1000 caracteres',
+              'Use seu próprio domínio (.adv.br)',
+              'Publique artigos e amplie sua autoridade',
               'Galeria e vídeo de apresentação',
-              'Blog jurídico',
-              'Exportar perfil em PDF (conformidade)',
+              'Comprovante de conformidade em PDF',
+              'Bio ainda mais longa',
             ]}
           />
           <PlanCard
             name="Escritório"
             price={`R$ ${FIRM_PRICING.basePrice}`}
             period="/mês"
+            pitch="Toda a equipe reunida numa página."
             ctaTo="/escritorio/editar"
             ctaLabel="Criar escritório"
             secondaryTo="/escritorio/andrade-vieira"
@@ -491,6 +495,7 @@ function PlanCard({
   name,
   price,
   period,
+  pitch,
   features,
   featured = false,
   ctaTo = '/comecar',
@@ -501,6 +506,7 @@ function PlanCard({
   name: string
   price: string
   period: string
+  pitch: string
   features: string[]
   featured?: boolean
   ctaTo?: string
@@ -527,6 +533,9 @@ function PlanCard({
         <span className={`text-[14px] ${featured ? 'text-paper/70' : 'text-ink-faint'}`}>
           {period}
         </span>
+      </p>
+      <p className={`mt-2 text-[13.5px] font-medium leading-snug ${featured ? 'text-paper-soft/95' : 'text-burgundy'}`}>
+        {pitch}
       </p>
       <ul className="mt-6 space-y-2.5 text-[14px] leading-snug">
         {features.map((f) => (

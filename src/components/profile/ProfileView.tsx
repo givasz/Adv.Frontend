@@ -31,6 +31,10 @@ function hexToRgba(hex: string, alpha: number): string {
 
 export function ProfileView({ profile, preview = false }: ProfileViewProps) {
   const schedulingMode = resolveSchedulingMode(profile)
+  // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome / artigos sem
+  // título não viram card — nada de caixa vazia.
+  const areas = profile.areas.filter((a) => a.label.trim())
+  const articles = (profile.articles ?? []).filter((a) => a.title.trim())
   const s = getTheme(profile.theme).style
   const brand = profile.branding
   // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
@@ -94,7 +98,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
             <div className="min-w-0">
               <h1 className={nameCls}>{profile.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">{identity}</div>
-              <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>
+              {profile.headline && <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>}
             </div>
           </motion.header>
         ) : (
@@ -105,7 +109,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               {identity}
             </div>
-            <p className="t-muted mt-2 text-[15px]">{profile.headline}</p>
+            {profile.headline && <p className="t-muted mt-2 text-[15px]">{profile.headline}</p>}
             {s.header === 'letterhead' && <div className="t-rule mt-4 w-16" />}
           </motion.header>
         )}
@@ -238,11 +242,11 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
         </div>
 
         {/* Áreas de atuação */}
-        {profile.areas.length > 0 && (
+        {areas.length > 0 && (
           <motion.section variants={item} className="mt-9">
             <SectionTitle ornament={s.divider}>Áreas de atuação</SectionTitle>
             <div className="mt-3 space-y-2.5">
-              {profile.areas.map((a) => (
+              {areas.map((a) => (
                 <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
               ))}
             </div>
@@ -277,11 +281,11 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
         )}
 
         {/* Conteúdo — artigos educativos (informativo, nunca blog de marketing) */}
-        {profile.articles && profile.articles.length > 0 && (
+        {articles.length > 0 && (
           <motion.section variants={item} className="mt-9">
             <SectionTitle ornament={s.divider}>Conteúdo</SectionTitle>
             <div className="mt-3 space-y-2.5">
-              {profile.articles.map((art) => {
+              {articles.map((art) => {
                 const inner = (
                   <>
                     <p className="font-display text-[16px] font-semibold leading-snug">
@@ -434,6 +438,17 @@ function AreaCard({
   tileClass: string
 }) {
   const [open, setOpen] = useState(false)
+  const hasDesc = description.trim().length > 0
+
+  // Área sem descrição: tile estático, sem "+" que expandiria vazio.
+  if (!hasDesc) {
+    return (
+      <div className={`${tileClass} font-semibold`}>
+        {label}
+      </div>
+    )
+  }
+
   return (
     <button
       type="button"

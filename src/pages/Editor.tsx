@@ -18,7 +18,7 @@ import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -30,8 +30,9 @@ import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
+import { UpsellCard } from '@/components/editor/UpsellCard'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
-import { CheckIcon, ScaleIcon, TrashIcon } from '@/components/ui/icons'
+import { CheckIcon, ScaleIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
 type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string } | null
@@ -45,6 +46,8 @@ type SectionId =
   | 'oab'
   | 'destaques'
   | 'conteudo'
+  | 'analytics'
+  | 'qrcode'
   | 'plano'
 
 let uid = 0
@@ -61,7 +64,9 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
   destaques: { title: 'Seus destaques', subtitle: 'Experiência e formação, sem citar clientes.' },
-  conteudo: { title: 'Conteúdo e documentos', subtitle: 'Ideias de publicação e seus termos legais.' },
+  conteudo: { title: 'Conteúdo e documentos', subtitle: 'Publique artigos e reúna seus termos legais.' },
+  analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
+  qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
   plano: { title: 'Seu plano', subtitle: 'Troque quando quiser. Mais recursos, mais alcance.' },
 }
 
@@ -235,11 +240,23 @@ export default function Editor() {
                 <ContactSection profile={profile} set={set} />
               )}
 
-              {section === 'agenda' && (
-                <Card title="Agendamento">
-                  <SchedulingCard profile={profile} set={set} />
-                </Card>
-              )}
+              {section === 'agenda' &&
+                (canUseScheduling(profile.plan) ? (
+                  <Card title="Agendamento">
+                    <SchedulingCard profile={profile} set={set} />
+                  </Card>
+                ) : (
+                  <UpsellCard
+                    plan="pro"
+                    title="Agenda inteligente"
+                    body="Receba pedidos de atendimento direto pelo seu perfil. O cliente escolhe um horário e você confirma."
+                    bullets={[
+                      'Botão “Agendar” no seu perfil',
+                      'Você aceita ou recusa cada pedido',
+                      'Sem trocar dezenas de mensagens',
+                    ]}
+                  />
+                ))}
 
               {section === 'aparencia' && (
                 <Card
@@ -266,11 +283,21 @@ export default function Editor() {
               )}
 
               {section === 'marca' && (
-                <BrandingCard
-                  plan={profile.plan}
-                  branding={profile.branding}
-                  onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
-                />
+                <>
+                  {profile.plan !== 'premium' && (
+                    <UpsellCard
+                      plan="premium"
+                      title="Sua marca, seu domínio"
+                      body={`Hoje seu endereço é advoc.me/${profile.slug}. No Max ele pode ser o seu próprio: ${slugify(profile.name) || 'seunome'}.adv.br — sem a marca advoc.me.`}
+                      bullets={['Domínio próprio (.adv.br)', 'Cor de destaque personalizada', 'Sem marca d’água advoc.me']}
+                    />
+                  )}
+                  <BrandingCard
+                    plan={profile.plan}
+                    branding={profile.branding}
+                    onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
+                  />
+                </>
               )}
 
               {section === 'oab' && (
@@ -292,8 +319,13 @@ export default function Editor() {
                 <HighlightsSection profile={profile} set={set} lim={lim} />
               )}
 
+              {section === 'analytics' && <AnalyticsSection profile={profile} />}
+
+              {section === 'qrcode' && <QrSection profile={profile} />}
+
               {section === 'conteudo' && (
                 <>
+                  <ArticlesSection profile={profile} set={set} />
                   <EditorialIdeas areas={profile.areas.map((a) => a.label).filter(Boolean)} />
                   <LegalDocsCard profile={profile} />
                 </>
@@ -594,6 +626,156 @@ function HighlightsSection({
         + Adicionar destaque
       </button>
     </Card>
+  )
+}
+
+// Editor de artigos educativos — alimenta a seção "Conteúdo" do perfil público
+// (que só existe quando há artigos). Caráter informativo, nunca marketing/captação.
+function ArticlesSection({
+  profile,
+  set,
+}: {
+  profile: Profile
+  set: (patch: Partial<Profile>) => void
+}) {
+  const articles = profile.articles ?? []
+  const update = (id: string, patch: Partial<(typeof articles)[number]>) =>
+    set({ articles: articles.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
+
+  return (
+    <Card
+      title="Conteúdo"
+      action={<span className="text-[12px] text-ink-faint">{articles.length} artigo(s)</span>}
+    >
+      <p className="-mt-1 text-[12px] leading-relaxed text-ink-faint">
+        Artigos informativos aparecem no seu perfil e aumentam sua autoridade. Tom educativo, sem
+        prometer resultado nem citar clientes.
+      </p>
+      {articles.map((art) => (
+        <div key={art.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
+          <TextInput
+            value={art.title}
+            maxLength={90}
+            placeholder="Título do artigo"
+            onChange={(e) => update(art.id, { title: e.target.value })}
+          />
+          <TextArea
+            rows={2}
+            value={art.summary}
+            maxLength={200}
+            placeholder="Resumo curto — o que o leitor aprende"
+            onChange={(e) => update(art.id, { summary: e.target.value })}
+          />
+          <div className="flex gap-2">
+            <input
+              value={art.readingMinutes || ''}
+              inputMode="numeric"
+              placeholder="min"
+              aria-label="Minutos de leitura"
+              onChange={(e) =>
+                update(art.id, { readingMinutes: Math.max(0, Number(e.target.value.replace(/\D/g, '')) || 0) })
+              }
+              className="w-20 rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+            />
+            <TextInput
+              value={art.url ?? ''}
+              placeholder="Link (opcional) — https://…"
+              onChange={(e) => update(art.id, { url: e.target.value || undefined })}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => set({ articles: articles.filter((a) => a.id !== art.id) })}
+            aria-label="Remover artigo"
+            className="inline-flex items-center gap-1.5 justify-self-start rounded-lg border border-ink/10 px-2.5 py-1.5 text-[12px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:bg-burgundy/[0.06] hover:text-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/20"
+          >
+            <TrashIcon width={13} height={13} />
+            Remover
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          set({
+            articles: [...articles, { id: nextId(), title: '', summary: '', readingMinutes: 5 }],
+          })
+        }
+        className="btn-ghost w-full border-dashed"
+      >
+        + Adicionar artigo
+      </button>
+    </Card>
+  )
+}
+
+// Analytics — mostra o valor real (visitas) e convida ao PRO para os detalhes.
+// Nunca esconde: o número já aparece; o upgrade é para "descobrir mais".
+function AnalyticsSection({ profile }: { profile: Profile }) {
+  const views = profile.views ?? 0
+  return (
+    <div className="space-y-4">
+      <Card title="Visitas ao seu perfil">
+        <div className="flex items-baseline gap-2">
+          <span className="font-display text-[40px] font-semibold leading-none text-ink">{views}</span>
+          <span className="text-[15px] text-ink-faint">{views === 1 ? 'visita' : 'visitas'}</span>
+        </div>
+        {profile.plan !== 'free' && (
+          <p className="mt-2 text-[12.5px] leading-relaxed text-ink-faint">
+            Em breve: origem das visitas, horários de pico e páginas mais acessadas.
+          </p>
+        )}
+      </Card>
+      {profile.plan === 'free' && (
+        <UpsellCard
+          plan="pro"
+          title="Descubra quem visita você"
+          body={`Você já recebeu ${views} ${views === 1 ? 'visita' : 'visitas'}. Atualize para entender de onde elas vêm.`}
+          bullets={['Origem das visitas', 'Horários de maior movimento', 'Botões e links mais clicados']}
+        />
+      )}
+    </div>
+  )
+}
+
+// QR Code / cartão digital — compartilhar funciona para todos; QR personalizado é PRO.
+function QrSection({ profile }: { profile: Profile }) {
+  const [copied, setCopied] = useState(false)
+  const url = `advoc.me/${profile.slug}`
+  const copy = () => {
+    navigator.clipboard?.writeText(`https://${url}`).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1600)
+      },
+      () => {},
+    )
+  }
+  return (
+    <div className="space-y-4">
+      <Card title="Seu endereço">
+        <div className="flex items-stretch gap-2">
+          <div className="flex flex-1 items-center rounded-lg border border-ink/15 bg-paper-soft px-3.5 text-[14px] text-ink">
+            {url}
+          </div>
+          <button type="button" onClick={copy} className="btn-ghost shrink-0">
+            <CopyIcon width={15} height={15} />
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+        <Link to={`/${profile.slug}`} target="_blank" className="btn-ghost w-full">
+          Ver meu cartão digital
+        </Link>
+      </Card>
+      {profile.plan === 'free' && (
+        <UpsellCard
+          plan="pro"
+          title="Um QR Code com a sua cara"
+          body="Compartilhe seu perfil com um QR Code personalizado — perfeito para cartões, vitrines e assinaturas."
+          bullets={['QR Code personalizado', 'Cartão de contato (vCard)', 'Pronto para imprimir']}
+        />
+      )}
+    </div>
   )
 }
 

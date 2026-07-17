@@ -45,6 +45,7 @@ function blankEssentials(p: Profile): Profile {
     plan: 'free',
     theme: 'papel',
     published: false,
+    views: 0,
   }
 }
 
