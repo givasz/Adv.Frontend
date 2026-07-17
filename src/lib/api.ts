@@ -63,6 +63,61 @@ const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+// Rascunho novo nasce VAZIO — o perfil só mostra o que o advogado preencher.
+// Nunca clonar o perfil-modelo (Marina): isso vazava áreas/experiência/contato dela.
+function emptyDraft(): Profile {
+  return {
+    slug: '',
+    name: '',
+    oabNumber: '',
+    oabVerified: false,
+    oabStatus: 'none',
+    headline: '',
+    bio: '',
+    city: '',
+    state: '',
+    serviceMode: { inPerson: true, online: true },
+    areas: [],
+    highlights: [],
+    articles: [],
+    socials: [],
+    contact: {},
+    schedulingMode: 'off',
+    booking: { ...DEFAULT_BOOKING_CONFIG },
+    plan: 'free',
+    theme: 'papel',
+    views: 0,
+    published: false,
+  }
+}
+
+// IDs/valores fixos do perfil-modelo — usados só para reconhecer e remover resíduos
+// da Marina em rascunhos antigos (dado real do usuário tem id "id-…", nunca "a1"/"h1").
+const SAMPLE_AREA_IDS = new Set(sampleProfile.areas.map((a) => a.id))
+const SAMPLE_HL_IDS = new Set(sampleProfile.highlights.map((h) => h.id))
+const SAMPLE_ART_IDS = new Set((sampleProfile.articles ?? []).map((a) => a.id))
+
+// Remove APENAS o que casa exatamente com o modelo — idempotente e seguro:
+// um usuário real jamais teria a área "a1" ou o avatar/e-mail literais da Marina.
+function stripSampleLeftovers(d: Profile): Profile {
+  const contact = { ...d.contact }
+  if (contact.email === sampleProfile.contact.email) delete contact.email
+  if (contact.whatsapp === sampleProfile.contact.whatsapp) delete contact.whatsapp
+  if (contact.scheduling === sampleProfile.contact.scheduling) delete contact.scheduling
+  return {
+    ...d,
+    areas: d.areas.filter((a) => !SAMPLE_AREA_IDS.has(a.id)),
+    highlights: d.highlights.filter((h) => !SAMPLE_HL_IDS.has(h.id)),
+    articles: (d.articles ?? []).filter((a) => !SAMPLE_ART_IDS.has(a.id)),
+    socials: d.socials.filter((s) => !/marinasales/i.test(s.url)),
+    headline: d.headline === sampleProfile.headline ? '' : d.headline,
+    bio: d.bio === sampleProfile.bio ? '' : d.bio,
+    avatarUrl: d.avatarUrl === sampleProfile.avatarUrl ? undefined : d.avatarUrl,
+    regionNote: d.regionNote === sampleProfile.regionNote ? undefined : d.regionNote,
+    contact,
+  }
+}
+
 function loadDraft(): Profile {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -72,14 +127,12 @@ function loadDraft(): Profile {
       if (!draft.theme) draft.theme = 'papel'
       if (!draft.schedulingMode) draft.schedulingMode = draft.contact?.scheduling ? 'external' : 'off'
       if (!draft.booking) draft.booking = { ...DEFAULT_BOOKING_CONFIG }
-      return draft
+      return stripSampleLeftovers(draft)
     }
   } catch {
     /* ignora storage corrompido */
   }
-  // Rascunho novo: parte do modelo de exemplo, mas SEM a OAB preenchida — o número
-  // de inscrição precisa ser o real do advogado (não pode vir de um perfil-modelo).
-  return { ...structuredClone(sampleProfile), oabNumber: '', oabVerified: false, oabStatus: 'none' }
+  return emptyDraft()
 }
 
 function slugifyName(s: string): string {
