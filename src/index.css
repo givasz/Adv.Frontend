@@ -258,6 +258,30 @@
     background: var(--c-accent-soft, rgba(176, 141, 87, 0.14));
   }
 
+/* Revelação escalonada — usada no preenchimento (onboarding). Cada filho sobe
+   suavemente com um pequeno atraso crescente. Barato (só CSS) e re-executa a
+   cada troca de passo (o container é remontado). Desligado em reduced-motion. */
+.stagger > * {
+  animation: rise-in 0.5s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(6) { animation-delay: 0.34s; }
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* esconde a barra de rolagem (usado no mockup de celular) */
 .no-scrollbar {
   -ms-overflow-style: none;

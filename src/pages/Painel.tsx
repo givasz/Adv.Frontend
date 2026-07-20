@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { AccountMenu } from '@/components/auth/AccountMenu'
+import { UnlockMore } from '@/components/editor/UnlockMore'
 import { Avatar } from '@/components/ui/Avatar'
 import { ArrowRight, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
 
@@ -80,6 +81,8 @@ export default function Painel() {
   }
 
   const firstName = profile.name.split(' ')[0] || 'você'
+  // Passos disponíveis no plano atual (os travados por plano viram upsell abaixo).
+  const freeSteps = trust.next.filter((f) => !trust.locked(f))
 
   return (
     <div className="min-h-dvh bg-paper-deep">
@@ -139,16 +142,30 @@ export default function Painel() {
           <p className="mt-3 text-[13.5px] leading-relaxed text-ink-soft">{motivator(trust.score)}</p>
         </div>
 
-        {/* Próximos passos */}
-        {trust.next.length > 0 && (
+        {/* Próximos passos — só o que dá pra fazer no plano atual (sem cadeados).
+            Os itens de planos pagos vão para a seção de upsell abaixo. */}
+        {freeSteps.length > 0 && (
           <>
             <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
               Próximos passos
             </h2>
             <div className="mt-3 space-y-2.5">
-              {trust.next.map((f) => (
-                <StepCard key={f.key} factor={f} locked={trust.locked(f)} />
+              {freeSteps.map((f) => (
+                <StepCard key={f.key} factor={f} locked={false} />
               ))}
+            </div>
+          </>
+        )}
+
+        {/* Adicione mais ao seu perfil — instiga os planos pagos como "mais itens
+            pra colocar no perfil", não como recursos abstratos. */}
+        {profile.plan !== 'premium' && (
+          <>
+            <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
+              Adicione mais ao seu perfil
+            </h2>
+            <div className="mt-3">
+              <UnlockMore plan={profile.plan} />
             </div>
           </>
         )}

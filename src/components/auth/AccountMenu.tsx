@@ -1,28 +1,15 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 
-// Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
-// página /entrar). Logado: e-mail + menu com "Sair". Sem modal.
-export function AccountMenu({ compact = false }: { compact?: boolean }) {
+// Widget de conta para a barra de navegação. Logado: e-mail + menu com "Sair".
+// NOTA: login por e-mail desligado na fase de teste — o link "Entrar" (deslogado)
+// está oculto por enquanto. Reativar quando o auth voltar (ver App.tsx).
+export function AccountMenu({ compact: _compact = false }: { compact?: boolean }) {
   const { user, isAuthed, logout } = useAuth()
   const [open, setOpen] = useState(false)
-  const location = useLocation()
 
-  if (!isAuthed || !user) {
-    // Volta para a página atual após entrar.
-    const next = encodeURIComponent(location.pathname + location.search)
-    return (
-      <Link
-        to={`/entrar?next=${next}`}
-        className={`font-medium text-ink-soft transition-colors hover:text-ink ${
-          compact ? 'text-[13px]' : 'text-sm'
-        }`}
-      >
-        Entrar
-      </Link>
-    )
-  }
+  // Enquanto o login está desligado, nada é exibido para o visitante deslogado.
+  if (!isAuthed || !user) return null
 
   const shortName = user.name?.split(' ')[0] || user.email.split('@')[0]
   const initial = (user.name || user.email).charAt(0).toUpperCase()

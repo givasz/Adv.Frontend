@@ -11,7 +11,6 @@ import type {
   SocialKind,
 } from '@/lib/types'
 import { api } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
@@ -77,7 +76,6 @@ export default function Editor() {
   const [saved, setSaved] = useState(true)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
-  const { isAuthed } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -85,9 +83,6 @@ export default function Editor() {
   const section: SectionId = SECTION_IDS.includes(sectionParam as SectionId)
     ? (sectionParam as SectionId)
     : 'identidade'
-
-  const gotoSignupForPlan = (plan: Plan) =>
-    navigate(`/criar-conta?next=${encodeURIComponent(`/editor?section=plano&plan=${plan}`)}`)
 
   useEffect(() => {
     api.getDraft().then(setProfile)
@@ -124,13 +119,9 @@ export default function Editor() {
     const stillOk = isThemeUnlocked(getTheme(profile.theme), plan)
     set({ plan, theme: stillOk ? profile.theme : 'papel' })
   }
-  const changePlan = (plan: Plan) => {
-    if (plan !== 'free' && !isAuthed) {
-      gotoSignupForPlan(plan)
-      return
-    }
-    applyPlan(plan)
-  }
+  // Login por e-mail desligado na fase de teste: a troca de plano é imediata,
+  // sem exigir cadastro. Reativar o gate de conta quando o auth voltar.
+  const changePlan = (plan: Plan) => applyPlan(plan)
   const areaLimit = AREA_LIMIT[profile.plan]
   const lim = CHAR_LIMITS[profile.plan]
 
@@ -271,13 +262,7 @@ export default function Editor() {
                     value={profile.theme}
                     plan={profile.plan}
                     onChange={(theme) => set({ theme })}
-                    onWantUpgrade={(theme, tier) => {
-                      if (!isAuthed) {
-                        gotoSignupForPlan(tier)
-                        return
-                      }
-                      set({ plan: tier, theme })
-                    }}
+                    onWantUpgrade={(theme, tier) => set({ plan: tier, theme })}
                   />
                 </Card>
               )}

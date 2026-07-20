@@ -221,6 +221,10 @@ export interface GenerateRequest {
   /** rótulo da área quando kind === 'area' */
   areaLabel?: string
   name?: string
+  /** cidade/UF do advogado — dá contexto e naturalidade ao texto */
+  city?: string
+  /** rótulos das áreas de atuação do perfil — enriquecem a bio */
+  areas?: string[]
 }
 
 export interface GenerateResult {

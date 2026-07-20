@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Landing from './pages/Landing'
-import AuthPage from './pages/AuthPage'
+// Login por e-mail desligado na fase de teste — rotas /entrar e /criar-conta
+// comentadas (ver abaixo). Reativar junto com o AccountMenu quando o auth voltar.
+// import AuthPage from './pages/AuthPage'
 import Onboarding from './pages/Onboarding'
 import Painel from './pages/Painel'
 import Editor from './pages/Editor'
@@ -23,8 +25,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        {/* Login por e-mail desligado na fase de teste. Reativar quando o auth voltar:
         <Route path="/entrar" element={<AuthPage mode="login" />} />
-        <Route path="/criar-conta" element={<AuthPage mode="signup" />} />
+        <Route path="/criar-conta" element={<AuthPage mode="signup" />} /> */}
         <Route path="/comecar" element={<Onboarding />} />
         <Route path="/painel" element={<Painel />} />
         <Route path="/editor" element={<Editor />} />
