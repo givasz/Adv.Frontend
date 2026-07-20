@@ -17,7 +17,8 @@ import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LIMIT, CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
+import { CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
+import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -30,6 +31,8 @@ import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { UpsellCard } from '@/components/editor/UpsellCard'
+import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
+import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { CheckIcon, ScaleIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
@@ -76,6 +79,8 @@ export default function Editor() {
   const [saved, setSaved] = useState(true)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
+  // Recurso que motivou o modal de upsell contextual (null = fechado).
+  const [upsell, setUpsell] = useState<UpsellFeature | null>(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -122,7 +127,6 @@ export default function Editor() {
   // Login por e-mail desligado na fase de teste: a troca de plano é imediata,
   // sem exigir cadastro. Reativar o gate de conta quando o auth voltar.
   const changePlan = (plan: Plan) => applyPlan(plan)
-  const areaLimit = AREA_LIMIT[profile.plan]
   const lim = CHAR_LIMITS[profile.plan]
 
   const oabStatus: OabStatus = profile.oabStatus ?? (profile.oabVerified ? 'verified' : 'none')
@@ -205,14 +209,21 @@ export default function Editor() {
               className="space-y-5"
             >
               {section === 'identidade' && (
-                <IdentitySection profile={profile} set={set} setProfile={setProfile} lim={lim} areaLimit={areaLimit} onAi={setAi} />
+                <IdentitySection
+                  profile={profile}
+                  set={set}
+                  setProfile={setProfile}
+                  lim={lim}
+                  onAi={setAi}
+                  onUpsell={setUpsell}
+                />
               )}
 
               {section === 'bio' && (
                 <Card title="Bio" action={<AiButton onClick={() => setAi({ kind: 'bio' })} />}>
                   <Field
                     label="Sobre você"
-                    hint={`${profile.bio.length}/${lim.bio}`}
+                    hint={<QuotaCounter quota={charQuota(profile.plan, 'bio', profile.bio.length)} />}
                     info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.bio} title="O que a OAB permite na bio" />}
                   >
                     <TextArea
@@ -231,23 +242,23 @@ export default function Editor() {
                 <ContactSection profile={profile} set={set} />
               )}
 
-              {section === 'agenda' &&
-                (canUseScheduling(profile.plan) ? (
-                  <Card title="Agendamento">
+              {section === 'agenda' && (
+                <Card title="Agendamento">
+                  {canUseScheduling(profile.plan) ? (
                     <SchedulingCard profile={profile} set={set} />
-                  </Card>
-                ) : (
-                  <UpsellCard
-                    plan="pro"
-                    title="Agenda inteligente"
-                    body="Receba pedidos de atendimento direto pelo seu perfil. O cliente escolhe um horário e você confirma."
-                    bullets={[
-                      'Botão “Agendar” no seu perfil',
-                      'Você aceita ou recusa cada pedido',
-                      'Sem trocar dezenas de mensagens',
-                    ]}
-                  />
-                ))}
+                  ) : (
+                    // Free: a seção continua no lugar, com o espectro real da agenda
+                    // borrado sob o cadeado — o advogado vê o que teria.
+                    <LockedFeature
+                      unlockPlan={nextPlan(profile.plan) ?? 'pro'}
+                      points={featurePoints('agenda')}
+                      onOpen={() => setUpsell('agenda')}
+                    >
+                      <SchedulingCard profile={profile} set={() => {}} preview />
+                    </LockedFeature>
+                  )}
+                </Card>
+              )}
 
               {section === 'aparencia' && (
                 <Card
@@ -262,7 +273,7 @@ export default function Editor() {
                     value={profile.theme}
                     plan={profile.plan}
                     onChange={(theme) => set({ theme })}
-                    onWantUpgrade={(theme, tier) => set({ plan: tier, theme })}
+                    onWantUpgrade={() => setUpsell('themes')}
                   />
                 </Card>
               )}
@@ -288,12 +299,21 @@ export default function Editor() {
               {section === 'oab' && (
                 <Card title="Conferência da OAB">
                   {profile.plan === 'free' ? (
-                    <p className="rounded-lg bg-brass/[0.08] px-3 py-2.5 text-[13px] leading-relaxed text-brass-deep">
-                      A conferência da OAB faz parte dos planos pagos.{' '}
-                      <Link to="/editor?section=plano" className="font-semibold underline">
-                        Ver planos
-                      </Link>
-                    </p>
+                    <div className="space-y-3 rounded-lg border border-brass/25 bg-brass/[0.06] px-3.5 py-3">
+                      <p className="text-[13px] leading-relaxed text-ink-soft">
+                        A conferência da OAB e o selo{' '}
+                        <span className="font-semibold text-brass-deep">“OAB conferida”</span> fazem
+                        parte dos planos pagos.
+                      </p>
+                      <TrustPointsChip points={featurePoints('oab')} />
+                      <button
+                        type="button"
+                        onClick={() => setUpsell('oab')}
+                        className="btn-primary !py-2 !px-4 text-[13px]"
+                      >
+                        Ver o que muda
+                      </button>
+                    </div>
                   ) : (
                     <OabVerifyRow status={oabStatus} onRequest={requestOab} />
                   )}
@@ -355,6 +375,13 @@ export default function Editor() {
           />
         )}
       </AnimatePresence>
+
+      {/* Modal de upsell focado no recurso que bateu o limite */}
+      <AnimatePresence>
+        {upsell && (
+          <FeatureUpsellModal feature={upsell} plan={profile.plan} onClose={() => setUpsell(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -366,16 +393,17 @@ function IdentitySection({
   set,
   setProfile,
   lim,
-  areaLimit,
   onAi,
+  onUpsell,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
   setProfile: React.Dispatch<React.SetStateAction<Profile | null>>
   lim: (typeof CHAR_LIMITS)[Plan]
-  areaLimit: number
   onAi: (t: AiTarget) => void
+  onUpsell: (f: UpsellFeature) => void
 }) {
+  const areasQuota = areaQuota(profile.plan, profile.areas.length)
   return (
     <>
       <Card title="Identidade">
@@ -477,7 +505,7 @@ function IdentitySection({
 
       <Card
         title="Áreas de atuação"
-        action={<span className="text-[12px] text-ink-faint">{profile.areas.length}/{areaLimit}</span>}
+        action={<QuotaCounter quota={areasQuota} />}
       >
         {profile.areas.map((area) => (
           <AreaEditor
@@ -491,7 +519,7 @@ function IdentitySection({
             onAi={() => onAi({ kind: 'area', areaId: area.id, areaLabel: area.label })}
           />
         ))}
-        {profile.areas.length < areaLimit ? (
+        {!areasQuota.atLimit ? (
           <button
             type="button"
             onClick={() => set({ areas: [...profile.areas, { id: nextId(), label: '', description: '' }] })}
@@ -499,12 +527,17 @@ function IdentitySection({
           >
             + Adicionar área
           </button>
+        ) : areasQuota.unlockPlan ? (
+          // No limite do plano: em vez de só avisar, mostra o próximo slot como
+          // fantasma (cadeado). Clicar abre o modal focado em "áreas".
+          <GhostSlot
+            unlockPlan={areasQuota.unlockPlan}
+            points={featurePoints('areas')}
+            onOpen={() => onUpsell('areas')}
+          />
         ) : (
           <p className="rounded-lg bg-brass/10 px-3 py-2 text-[12.5px] text-brass-deep">
-            Limite do plano {profile.plan.toUpperCase()} atingido.{' '}
-            <Link to="/editor?section=plano" className="font-semibold underline">
-              Ver planos
-            </Link>
+            Você chegou ao máximo de áreas do maior plano.
           </p>
         )}
       </Card>
@@ -576,22 +609,32 @@ function HighlightsSection({
     <Card title="Experiência / destaques">
       {profile.highlights.map((h) => (
         <div key={h.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
-          <TextInput
-            value={h.title}
-            maxLength={lim.highlightTitle}
-            placeholder="12 anos de atuação"
-            onChange={(e) =>
-              set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, title: e.target.value } : x)) })
-            }
-          />
-          <TextInput
-            value={h.detail}
-            maxLength={lim.highlightDetail}
-            placeholder="Detalhe genérico, sem identificar clientes"
-            onChange={(e) =>
-              set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, detail: e.target.value } : x)) })
-            }
-          />
+          <div>
+            <TextInput
+              value={h.title}
+              maxLength={lim.highlightTitle}
+              placeholder="12 anos de atuação"
+              onChange={(e) =>
+                set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, title: e.target.value } : x)) })
+              }
+            />
+            <div className="mt-1 flex justify-end">
+              <QuotaCounter quota={charQuota(profile.plan, 'highlightTitle', h.title.length)} />
+            </div>
+          </div>
+          <div>
+            <TextInput
+              value={h.detail}
+              maxLength={lim.highlightDetail}
+              placeholder="Detalhe genérico, sem identificar clientes"
+              onChange={(e) =>
+                set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, detail: e.target.value } : x)) })
+              }
+            />
+            <div className="mt-1 flex justify-end">
+              <QuotaCounter quota={charQuota(profile.plan, 'highlightDetail', h.detail.length)} />
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => set({ highlights: profile.highlights.filter((x) => x.id !== h.id) })}

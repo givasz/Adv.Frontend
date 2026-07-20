@@ -1,9 +1,8 @@
 import type { Plan } from '@/lib/types'
 import type { ThemeId } from '@/lib/themes'
 import { THEMES, getTheme, isThemeUnlocked } from '@/lib/themes'
+import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckSeal, LockIcon } from '@/components/ui/icons'
-
-const tierLabel: Record<'pro' | 'premium', string> = { pro: 'Pro', premium: 'Premium' }
 
 export function ThemePicker({
   value,
@@ -57,7 +56,7 @@ export function ThemePicker({
                 <span className="absolute inset-0 flex items-center justify-center bg-ink/45 backdrop-blur-[1px]">
                   <span className="inline-flex items-center gap-1 rounded-full bg-paper px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-burgundy">
                     <LockIcon width={11} height={11} strokeWidth={2} />
-                    {tierLabel[t.tier as 'pro' | 'premium']}
+                    {PLAN_LABEL[t.tier as 'pro' | 'premium']}
                   </span>
                 </span>
               )}

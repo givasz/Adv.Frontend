@@ -15,7 +15,8 @@ export function Field({
   children,
 }: {
   label: string
-  hint?: string
+  /** dica à direita do rótulo — texto simples ou um nó (ex.: contador de cota) */
+  hint?: ReactNode
   /** slot opcional à direita do rótulo (ex.: botão de ajuda InfoTip) */
   info?: ReactNode
   children: ReactNode

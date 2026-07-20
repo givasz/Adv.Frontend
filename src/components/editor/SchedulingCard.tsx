@@ -36,12 +36,20 @@ const selectCls =
 export function SchedulingCard({
   profile,
   set,
+  preview = false,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
+  /** modo espectro: ignora a trava de plano e mostra os controles (usado dentro
+      de um envelope LockedFeature, onde ficam inertes e borrados). */
+  preview?: boolean
 }) {
   const schedulingLocked = !canUseScheduling(profile.plan)
-  const mode: SchedulingMode = profile.schedulingMode ?? (profile.contact.scheduling ? 'external' : 'off')
+  // No preview forçamos "native" para revelar a agenda cheia (o espaço que o
+  // advogado teria); fora do preview, respeitamos o modo real do perfil.
+  const mode: SchedulingMode = preview
+    ? 'native'
+    : profile.schedulingMode ?? (profile.contact.scheduling ? 'external' : 'off')
   const cfg = profile.booking ?? DEFAULT_BOOKING_CONFIG
   const patchCfg = (p: Partial<typeof cfg>) => set({ booking: { ...cfg, ...p } })
   const toggleDay = (d: number) => {
@@ -50,7 +58,9 @@ export function SchedulingCard({
     patchCfg({ weekdays: next })
   }
 
-  if (schedulingLocked) {
+  // Trava de plano: sem preview, mostra só um aviso curto (o Editor envolve isso
+  // num LockedFeature com o espectro real). Com preview, cai direto nos controles.
+  if (schedulingLocked && !preview) {
     return (
       <div className="flex items-start gap-2.5 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-3">
         <LockIcon width={16} height={16} className="mt-0.5 shrink-0 text-brass-deep" />
