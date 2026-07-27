@@ -6,10 +6,14 @@ import { api } from '@/lib/api'
 import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
 import { parseOab } from '@/lib/brFormat'
+import { computeTrust } from '@/lib/trustScore'
+import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { AiGenerator } from '@/components/editor/AiGenerator'
 import { UnlockMore } from '@/components/editor/UnlockMore'
+import { PlanShowcase } from '@/components/editor/PlanShowcase'
 import { PhonePreview } from '@/components/editor/PhonePreview'
+import { Avatar } from '@/components/ui/Avatar'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { SparkIcon, ScaleIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
@@ -134,7 +138,7 @@ export default function Onboarding() {
     setPublished(true)
   }
 
-  if (published) return <DoneScreen slug={profile.slug} />
+  if (published) return <DoneScreen profile={profile} onPickPlan={(p) => set({ plan: p })} />
 
   return (
     <div className="grain flex min-h-dvh flex-col bg-paper-deep">
@@ -494,31 +498,154 @@ function ReviewSummary({ profile, area }: { profile: Profile; area: { label: str
   )
 }
 
-function DoneScreen({ slug }: { slug: string }) {
+// Para onde cada item de melhoria leva no editor (espelha o painel).
+const FACTOR_DEST: Record<string, string> = {
+  foto: '/editor?section=identidade',
+  frase: '/editor?section=identidade',
+  redes: '/editor?section=redes',
+  email: '/editor?section=redes',
+  area2: '/editor?section=identidade',
+  experiencia: '/editor?section=destaques',
+  artigo: '/editor?section=conteudo',
+  oab_conferida: '/editor?section=oab',
+  agenda: '/editor?section=agenda',
+  dominio: '/editor?section=marca',
+  marca: '/editor?section=marca',
+}
+
+// Tela final — o momento de orgulho vira o momento de upsell. Mostra o perfil no
+// ar (rápido), o quão completo está + como melhorar, e a vitrine de planos (todos
+// ativáveis grátis em teste). Mobile-first, sóbrio, mas puxando o "levante" do perfil.
+function DoneScreen({
+  profile,
+  onPickPlan,
+}: {
+  profile: Profile
+  onPickPlan: (p: Plan) => void
+}) {
+  const trust = computeTrust(profile)
+  const steps = trust.next.slice(0, 3)
+  const firstArea = profile.areas.find((a) => a.label.trim())?.label
+
   return (
-    <div className="grain flex min-h-dvh flex-col items-center justify-center bg-paper-deep px-5 text-center">
-      <motion.span
-        initial={{ scale: 0.7, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', damping: 18, stiffness: 260 }}
-        className="flex h-16 w-16 items-center justify-center rounded-full bg-brass/20 text-brass-deep"
-      >
-        <CheckIcon width={34} height={34} strokeWidth={2.4} />
-      </motion.span>
-      <h1 className="mt-6 font-display text-3xl font-semibold text-ink">Seu perfil está no ar.</h1>
-      <div className="rule-brass mx-auto mt-5 w-24" />
-      <p className="mt-5 max-w-sm text-[15.5px] leading-relaxed text-ink-soft">
-        Pronto para compartilhar. Você melhora o resto quando quiser.
-      </p>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link to="/painel" className="btn-primary">
-          Ir para o meu painel
-          <ArrowRight width={18} height={18} />
-        </Link>
-        <Link to={`/${slug}`} className="btn-ghost">
-          Ver meu perfil
-        </Link>
-      </div>
+    <div className="grain min-h-dvh bg-paper-deep">
+      <main className="mx-auto max-w-md px-5 py-8 sm:max-w-xl">
+        {/* Celebração enxuta */}
+        <div className="flex flex-col items-center text-center">
+          <motion.span
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 260 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-brass/20 text-brass-deep"
+          >
+            <CheckIcon width={30} height={30} strokeWidth={2.4} />
+          </motion.span>
+          <h1 className="mt-4 font-display text-[27px] font-semibold leading-tight text-ink">
+            Seu perfil está no ar.
+          </h1>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
+            Já dá para compartilhar. Agora deixe ele ainda mais forte.
+          </p>
+        </div>
+
+        {/* Prévia rápida do perfil */}
+        <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card">
+          <div className="flex items-center gap-3.5">
+            <Avatar name={profile.name} src={profile.avatarUrl} size={54} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-[17px] font-semibold text-ink">{profile.name}</p>
+              <p className="truncate text-[12.5px] text-ink-soft">
+                {profile.headline || firstArea || 'Advogado(a)'}
+              </p>
+              <p className="mt-0.5 truncate text-[11.5px] text-ink-faint">advoc.me/{profile.slug}</p>
+            </div>
+          </div>
+          <Link
+            to={`/${profile.slug}`}
+            target="_blank"
+            className="btn-primary mt-3.5 w-full !py-2.5 text-[14px]"
+          >
+            Ver meu perfil
+            <ArrowRight width={16} height={16} />
+          </Link>
+        </div>
+
+        {/* Estatística: quão completo + como melhorar */}
+        <div className="mt-4 rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
+                Índice de confiança
+              </p>
+              <p className="mt-1 font-display text-[34px] font-semibold leading-none text-ink">
+                {trust.score}
+                <span className="text-[17px] text-ink-faint">/100</span>
+              </p>
+            </div>
+            <span className="rounded-full bg-brass/15 px-2.5 py-1 text-[12px] font-semibold text-brass-deep">
+              {trust.level}
+            </span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/10">
+            <motion.div
+              className="h-full rounded-full bg-brass-deep"
+              initial={{ width: 0 }}
+              animate={{ width: `${trust.score}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </div>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
+            Seu perfil está quase lá. Cada item abaixo transmite mais confiança a quem visita.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            {steps.map((f) => (
+              <Link
+                key={f.key}
+                to={FACTOR_DEST[f.key] ?? '/painel'}
+                className="flex items-center gap-3 rounded-lg border border-ink/10 bg-paper-soft p-2.5 transition-colors hover:border-burgundy/40"
+              >
+                <span className="flex h-8 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-brass/12 leading-none text-brass-deep">
+                  <span className="text-[13px] font-semibold">+{f.points}</span>
+                </span>
+                <span className="min-w-0 flex-1 text-[13.5px] font-medium text-ink">{f.action}</span>
+                {f.plan && (
+                  <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                    {PLAN_LABEL[f.plan]}
+                  </span>
+                )}
+                <ArrowRight width={15} height={15} className="shrink-0 text-ink-faint" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Vitrine de planos — todos liberados em teste */}
+        <div className="mt-8">
+          <div className="flex items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11.5px] font-semibold text-brass-deep">
+              <SparkIcon width={13} height={13} />
+              Em teste · todos os planos liberados
+            </span>
+          </div>
+          <h2 className="mt-3 text-center font-display text-[21px] font-semibold text-ink">
+            Vá além no seu perfil
+          </h2>
+          <p className="mx-auto mt-1.5 max-w-sm text-center text-[13.5px] leading-relaxed text-ink-soft">
+            Mais áreas, agenda, sua marca própria e mais. Ative qualquer plano agora, sem pagar.
+          </p>
+          <div className="mt-5">
+            <PlanShowcase plan={profile.plan} onPick={onPickPlan} />
+          </div>
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <Link to="/painel" className="btn-ghost">
+            Ir para o meu painel
+            <ArrowRight width={16} height={16} />
+          </Link>
+        </div>
+      </main>
     </div>
   )
 }
