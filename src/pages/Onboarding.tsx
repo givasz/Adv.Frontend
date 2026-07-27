@@ -7,6 +7,7 @@ import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
 import { parseOab } from '@/lib/brFormat'
 import { computeTrust } from '@/lib/trustScore'
+import { AREA_LABEL_MAX } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { AiGenerator } from '@/components/editor/AiGenerator'
@@ -14,6 +15,7 @@ import { UnlockMore } from '@/components/editor/UnlockMore'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { Avatar } from '@/components/ui/Avatar'
+import { TrustGauge } from '@/components/ui/TrustGauge'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { SparkIcon, ScaleIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
@@ -238,6 +240,7 @@ export default function Onboarding() {
                   <TextInput
                     value={area.label}
                     autoFocus
+                    maxLength={AREA_LABEL_MAX}
                     onChange={(e) => setArea(e.target.value)}
                     placeholder="Direito de Família"
                   />
@@ -572,33 +575,22 @@ function DoneScreen({
 
         {/* Estatística: quão completo + como melhorar */}
         <div className="mt-4 rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
-          <div className="flex items-end justify-between gap-3">
-            <div>
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:gap-5 sm:text-left">
+            <TrustGauge score={trust.score} size={132} />
+            <div className="min-w-0 flex-1">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
                 Índice de confiança
               </p>
-              <p className="mt-1 font-display text-[34px] font-semibold leading-none text-ink">
-                {trust.score}
-                <span className="text-[17px] text-ink-faint">/100</span>
+              <p className="mt-1 font-display text-[19px] font-semibold leading-tight text-ink">
+                {trust.level}
+              </p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
+                Seu perfil está quase lá. Cada item abaixo transmite mais confiança a quem visita.
               </p>
             </div>
-            <span className="rounded-full bg-brass/15 px-2.5 py-1 text-[12px] font-semibold text-brass-deep">
-              {trust.level}
-            </span>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/10">
-            <motion.div
-              className="h-full rounded-full bg-brass-deep"
-              initial={{ width: 0 }}
-              animate={{ width: `${trust.score}%` }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            />
-          </div>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
-            Seu perfil está quase lá. Cada item abaixo transmite mais confiança a quem visita.
-          </p>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             {steps.map((f) => (
               <Link
                 key={f.key}

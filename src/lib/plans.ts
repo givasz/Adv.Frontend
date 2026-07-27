@@ -20,6 +20,7 @@ export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
 // Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
 export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
 export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"
+export const AREA_LABEL_MAX = 40 // nome da área curto — mantém os tiles alinhados/centrados
 
 // Agendamento (qualquer forma: link externo OU agenda nativa) — recurso dos planos
 // pagos. No Free não há botão "Agendar". MANTER EM SINCRONIA com backend/src/plans.ts.

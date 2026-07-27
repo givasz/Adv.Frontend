@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
+import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { UnlockMore } from '@/components/editor/UnlockMore'
+import { PlanShowcase } from '@/components/editor/PlanShowcase'
 import { Avatar } from '@/components/ui/Avatar'
+import { TrustGauge } from '@/components/ui/TrustGauge'
 import { ArrowRight, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
 
 // Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
@@ -84,6 +85,13 @@ export default function Painel() {
   // Passos disponíveis no plano atual (os travados por plano viram upsell abaixo).
   const freeSteps = trust.next.filter((f) => !trust.locked(f))
 
+  // Ativa um plano (em teste, sem cobrança) e persiste o rascunho.
+  const activatePlan = (p: Plan) => {
+    const next = { ...profile, plan: p }
+    setProfile(next)
+    api.saveDraft(next)
+  }
+
   return (
     <div className="min-h-dvh bg-paper-deep">
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
@@ -110,36 +118,25 @@ export default function Painel() {
           </div>
         </div>
 
-        {/* Índice de Confiança */}
+        {/* Índice de Confiança — roda que esverdeia conforme melhora */}
         <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-6 shadow-card">
-          <div className="flex items-end justify-between gap-4">
-            <div>
+          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:gap-6 sm:text-left">
+            <TrustGauge score={trust.score} size={152} />
+            <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
                 Índice de confiança
               </p>
-              <p className="mt-1 font-display text-[40px] font-semibold leading-none text-ink">
-                {trust.score}
-                <span className="text-[20px] text-ink-faint">/100</span>
+              <p className="mt-1 font-display text-[22px] font-semibold leading-tight text-ink">
+                {trust.level}
               </p>
-            </div>
-            <div className="text-right">
-              <p className="font-display text-[15px] font-semibold text-brass-deep">{trust.level}</p>
               {delta > 0 && (
-                <p className="mt-0.5 text-[12px] font-medium text-brass-deep">
+                <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-brass/15 px-2.5 py-0.5 text-[12px] font-semibold text-brass-deep">
                   ▲ +{delta} desde a última visita
                 </p>
               )}
+              <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">{motivator(trust.score)}</p>
             </div>
           </div>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-ink/10">
-            <motion.div
-              className="h-full rounded-full bg-brass-deep"
-              initial={{ width: 0 }}
-              animate={{ width: `${trust.score}%` }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            />
-          </div>
-          <p className="mt-3 text-[13.5px] leading-relaxed text-ink-soft">{motivator(trust.score)}</p>
         </div>
 
         {/* Próximos passos — só o que dá pra fazer no plano atual (sem cadeados).
@@ -157,17 +154,25 @@ export default function Painel() {
           </>
         )}
 
-        {/* Adicione mais ao seu perfil — instiga os planos pagos como "mais itens
-            pra colocar no perfil", não como recursos abstratos. */}
+        {/* Planos — vitrine atraente com ativação simulada (em teste, sem cobrança) */}
         {profile.plan !== 'premium' && (
-          <>
-            <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
-              Adicione mais ao seu perfil
-            </h2>
-            <div className="mt-3">
-              <UnlockMore plan={profile.plan} />
+          <section className="mt-10 rounded-xl2 border border-brass/25 bg-gradient-to-b from-brass/[0.06] to-transparent p-5 sm:p-6">
+            <div className="text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11.5px] font-semibold text-brass-deep">
+                Em teste · todos os planos liberados
+              </span>
+              <h2 className="mt-3 font-display text-[22px] font-semibold text-ink">
+                Leve seu perfil além
+              </h2>
+              <p className="mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed text-ink-soft">
+                Mais áreas, agenda de consultas, sua marca própria e o que falta para chegar aos 100.
+                Ative agora, sem pagar.
+              </p>
             </div>
-          </>
+            <div className="mt-5">
+              <PlanShowcase plan={profile.plan} onPick={activatePlan} />
+            </div>
+          </section>
         )}
 
         {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}

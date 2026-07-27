@@ -17,7 +17,7 @@ import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
+import { AREA_LABEL_MAX, CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
@@ -903,6 +903,7 @@ function AreaEditor({
         <input
           list="area-suggestions"
           value={area.label}
+          maxLength={AREA_LABEL_MAX}
           placeholder="Direito de Família"
           aria-label="Nome da área de atuação"
           onChange={(e) => onChange({ label: e.target.value })}

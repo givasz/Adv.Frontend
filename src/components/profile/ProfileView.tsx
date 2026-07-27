@@ -440,10 +440,10 @@ function AreaCard({
   const [open, setOpen] = useState(false)
   const hasDesc = description.trim().length > 0
 
-  // Área sem descrição: tile estático, sem "+" que expandiria vazio.
+  // Área sem descrição: tile estático, centralizado, sem "+" que expandiria vazio.
   if (!hasDesc) {
     return (
-      <div className={`${tileClass} font-semibold`}>
+      <div className={`${tileClass} justify-center text-center font-semibold`}>
         {label}
       </div>
     )
