@@ -13,6 +13,7 @@ import { AccountMenu } from '@/components/auth/AccountMenu'
 import { AiGenerator } from '@/components/editor/AiGenerator'
 import { UnlockMore } from '@/components/editor/UnlockMore'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
@@ -294,28 +295,14 @@ export default function Onboarding() {
 
             {step === PHOTO && (
               <StepShell eyebrow={STEP_META[PHOTO].eyebrow} title="Sua foto" subtitle="Um rosto aproxima quem chega. Dá para adicionar depois.">
-                <div className="flex flex-col items-center gap-4 py-2">
-                  <div className="h-28 w-28 overflow-hidden rounded-full border border-ink/12 bg-paper-soft">
-                    {profile.avatarUrl ? (
-                      <img
-                        src={profile.avatarUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        onError={(e) => (e.currentTarget.style.display = 'none')}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-ink-faint/50">
-                        <ScaleIcon width={30} height={30} />
-                      </div>
-                    )}
-                  </div>
-                  <Field label="Link da foto">
-                    <TextInput
-                      value={profile.avatarUrl ?? ''}
-                      onChange={(e) => set({ avatarUrl: e.target.value })}
-                      placeholder="https://…"
-                    />
-                  </Field>
+                <div className="py-2">
+                  <AvatarUpload
+                    name={profile.name}
+                    value={profile.avatarUrl}
+                    onChange={(avatarUrl) => set({ avatarUrl })}
+                    size={112}
+                    align="stack"
+                  />
                 </div>
               </StepShell>
             )}

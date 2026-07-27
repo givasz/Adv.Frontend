@@ -30,6 +30,7 @@ import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
+import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
 import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
@@ -460,13 +461,15 @@ function IdentitySection({
             )}
           </Field>
         </div>
-        <Field label="Foto (URL)" hint="upload no backend real">
-          <TextInput
-            value={profile.avatarUrl ?? ''}
-            onChange={(e) => set({ avatarUrl: e.target.value })}
-            placeholder="https://…"
+        <div>
+          <span className="mb-1.5 block text-[13px] font-semibold text-ink">Foto de perfil</span>
+          <AvatarUpload
+            name={profile.name}
+            value={profile.avatarUrl}
+            onChange={(avatarUrl) => set({ avatarUrl })}
+            size={72}
           />
-        </Field>
+        </div>
         <Field
           label="Frase de apresentação"
           hint={`${profile.headline.length}/${lim.headline}`}
