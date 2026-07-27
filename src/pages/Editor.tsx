@@ -90,7 +90,16 @@ export default function Editor() {
     : 'identidade'
 
   useEffect(() => {
-    api.getDraft().then(setProfile)
+    api.getDraft().then((d) => {
+      // Auto-correção de endereço órfão: um slug auto-gerado (nome-1234, do tempo
+      // de Free) que não foi personalizado à mão e não bate mais com o nome atual
+      // volta a seguir o nome. Evita mostrar o nome antigo depois de renomear.
+      if (!d.slugCustom && d.plan !== 'free' && /-\d{4}$/.test(d.slug) && d.slug !== slugify(d.name)) {
+        setProfile({ ...d, slug: slugify(d.name) })
+        return
+      }
+      setProfile(d)
+    })
     document.title = 'Editar · advoc.me'
   }, [])
 
@@ -418,8 +427,11 @@ function IdentitySection({
               const name = e.target.value
               setProfile((p) => {
                 if (!p) return p
-                const untouched = p.slug === slugify(p.name)
-                const slug = p.plan === 'free' || untouched ? slugify(name) : p.slug
+                // O endereço acompanha o nome, a menos que o usuário já tenha
+                // personalizado à mão (slugCustom). No Free, sempre segue o nome
+                // (o número único é aplicado no save).
+                const keep = p.plan !== 'free' && p.slugCustom
+                const slug = keep ? p.slug : slugify(name)
                 return { ...p, name, slug }
               })
             }}
@@ -439,7 +451,7 @@ function IdentitySection({
                 </span>
                 <input
                   value={profile.slug}
-                  onChange={(e) => set({ slug: slugify(e.target.value) })}
+                  onChange={(e) => set({ slug: slugify(e.target.value), slugCustom: true })}
                   placeholder="seu-nome"
                   aria-label="Endereço personalizado do perfil"
                   className="w-full bg-transparent px-2 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 focus:outline-none"

@@ -159,6 +159,9 @@ export interface Branding {
 
 export interface Profile {
   slug: string
+  /** true quando o usuário editou o endereço à mão — aí o slug para de seguir o
+   *  nome automaticamente. Sem isso, o endereço acompanha o nome (estilo linktree). */
+  slugCustom?: boolean
   name: string
   oabNumber: string // ex: "OAB/SP 123.456"
   oabVerified: boolean // espelha (oabStatus === 'verified') — controlado pela plataforma
