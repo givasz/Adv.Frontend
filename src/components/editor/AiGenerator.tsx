@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { GenerateKind } from '@/lib/types'
+import type { GenerateKind, Plan } from '@/lib/types'
 import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
 import { templatesFor } from '@/lib/templates'
@@ -12,11 +12,48 @@ interface AiGeneratorProps {
   kind: GenerateKind
   areaLabel?: string
   name?: string
+  plan?: Plan
+  city?: string
+  areas?: string[]
+  /** texto atual — usado quando kind === 'improve' */
+  currentText?: string
   onApply: (text: string) => void
   onClose: () => void
 }
 
-export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGeneratorProps) {
+const TITLES: Record<GenerateKind, string> = {
+  bio: 'Gerar bio',
+  area: 'Descrição da área',
+  headline: 'Frase de apresentação',
+  improve: 'Melhorar meu texto',
+  article: 'Rascunho de artigo',
+}
+const HINTS: Record<GenerateKind, string> = {
+  bio: 'Escreva palavras-chave sobre sua atuação. A IA redige um texto sóbrio e dentro das normas da OAB — você revisa antes de aplicar.',
+  area: 'Palavras-chave sobre o que você faz nessa área. A IA descreve de forma clara e factual.',
+  headline: 'Uma frase curta sob o seu nome. Pode dar palavras-chave ou deixar a IA usar suas áreas.',
+  improve: 'A IA reescreve seu texto atual mais claro e sóbrio, mantendo o sentido e dentro da OAB.',
+  article: 'Um tema e a IA sugere um rascunho de artigo educativo (título + parágrafos) para o seu perfil.',
+}
+const PLACEHOLDERS: Record<GenerateKind, string> = {
+  bio: 'ex: divórcio, guarda, acordo, mediação',
+  area: 'ex: inventário, testamento, partilha',
+  headline: 'ex: família, sucessões (opcional)',
+  improve: '',
+  article: 'ex: pensão alimentícia, guarda compartilhada',
+}
+
+export function AiGenerator({
+  kind,
+  areaLabel,
+  name,
+  plan,
+  city,
+  areas,
+  currentText,
+  onApply,
+  onClose,
+}: AiGeneratorProps) {
   const [keywords, setKeywords] = useState('')
   const [loading, setLoading] = useState(false)
   const [draft, setDraft] = useState('')
@@ -25,23 +62,28 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
 
   const issues = draft ? checkCompliance(draft) : []
   const blocked = issues.some((i) => i.severity === 'block')
-  const templates = templatesFor(kind, areaLabel)
+  const templates = kind === 'bio' || kind === 'area' ? templatesFor(kind, areaLabel) : []
+  const needsKeywords = kind === 'bio' || kind === 'area'
+  const isImprove = kind === 'improve'
+  const enriched = plan === 'premium' && (kind === 'bio' || kind === 'area')
 
   async function run() {
     const list = keywords
       .split(/[,\n]/)
       .map((k) => k.trim())
       .filter(Boolean)
-    if (!list.length) return
+    if (needsKeywords && !list.length) return
     setLoading(true)
     setDraft('')
     try {
-      const res = await api.generate({ kind, keywords: list, areaLabel, name })
+      const res = await api.generate({ kind, keywords: list, areaLabel, name, plan, city, areas, currentText })
       setDraft(res.text)
     } finally {
       setLoading(false)
     }
   }
+
+  const title = kind === 'area' && areaLabel ? `Descrição — ${areaLabel}` : TITLES[kind]
 
   return (
     <motion.div
@@ -66,30 +108,47 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
         <div className="flex items-center gap-2 text-burgundy">
           <SparkIcon width={20} height={20} />
           <h3 id="aigen-title" className="font-display text-xl font-semibold">
-            Gerar {kind === 'bio' ? 'bio' : `descrição — ${areaLabel}`}
+            {title}
           </h3>
+          {enriched && (
+            <span className="ml-auto rounded-full bg-brass/20 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-brass-deep">
+              IA Max
+            </span>
+          )}
         </div>
-        <p className="mt-1 text-sm text-ink-faint">
-          Escreva palavras-chave sobre sua atuação. A IA redige um texto sóbrio e dentro das normas
-          da OAB — você revisa antes de aplicar.
-        </p>
+        <p className="mt-1 text-sm text-ink-faint">{HINTS[kind]}</p>
 
-        <div className="mt-4 flex gap-2">
-          <TextInput
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && run()}
-            placeholder="ex: divórcio, guarda, acordo, mediação"
-            aria-label="Palavras-chave da sua atuação"
-            autoFocus
-          />
-          <button type="button" onClick={run} disabled={loading} className="btn-primary shrink-0 !px-4">
-            {loading ? '…' : 'Gerar'}
-          </button>
-        </div>
+        {isImprove ? (
+          <div className="mt-4">
+            <div className="rounded-lg border border-ink/12 bg-paper-soft px-3.5 py-3 text-[13.5px] leading-relaxed text-ink-soft">
+              {currentText?.trim() ? currentText : 'Escreva algo primeiro para a IA melhorar.'}
+            </div>
+            <button
+              type="button"
+              onClick={run}
+              disabled={loading || !currentText?.trim()}
+              className="btn-primary mt-3 w-full disabled:opacity-50"
+            >
+              {loading ? '…' : 'Melhorar com IA'}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-2">
+            <TextInput
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && run()}
+              placeholder={PLACEHOLDERS[kind]}
+              aria-label="Palavras-chave"
+              autoFocus
+            />
+            <button type="button" onClick={run} disabled={loading} className="btn-primary shrink-0 !px-4">
+              {loading ? '…' : 'Gerar'}
+            </button>
+          </div>
+        )}
 
-        {/* Modelos pré-aprovados (Prov. 205/2021) — atalho sem escrever palavras-chave.
-            O texto escolhido ainda passa pelo checkCompliance() abaixo. */}
+        {/* Modelos pré-aprovados (Prov. 205/2021) — só bio/área. */}
         {templates.length > 0 && (
           <div className="mt-3">
             <p className="text-[11.5px] font-medium text-ink-faint">Ou comece de um modelo pronto:</p>
@@ -118,26 +177,17 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
               className="mt-4 space-y-2"
             >
               {[100, 92, 78].map((w) => (
-                <div
-                  key={w}
-                  className="h-3.5 animate-pulse rounded bg-ink/10"
-                  style={{ width: `${w}%` }}
-                />
+                <div key={w} className="h-3.5 animate-pulse rounded bg-ink/10" style={{ width: `${w}%` }} />
               ))}
             </motion.div>
           )}
 
           {!loading && draft && (
-            <motion.div
-              key="draft"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4"
-            >
+            <motion.div key="draft" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                rows={5}
+                rows={kind === 'article' ? 8 : 5}
                 aria-label="Texto gerado — edite se quiser antes de aplicar"
                 className="w-full resize-none rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-3 text-[14px] leading-relaxed focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
               />
@@ -150,9 +200,7 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
                       : 'border-brass/40 bg-brass/10 text-brass-deep'
                   }`}
                 >
-                  <p className="mb-1 font-semibold">
-                    {blocked ? 'Ajuste necessário (OAB)' : 'Atenção (OAB)'}
-                  </p>
+                  <p className="mb-1 font-semibold">{blocked ? 'Ajuste necessário (OAB)' : 'Atenção (OAB)'}</p>
                   <ul className="list-disc space-y-0.5 pl-4">
                     {issues.map((i, idx) => (
                       <li key={idx}>
@@ -197,7 +245,7 @@ export function AiGenerator({ kind, areaLabel, name, onApply, onClose }: AiGener
 }
 
 /** Botãozinho "gerar com IA" reutilizável ao lado de campos de texto */
-export function AiButton({ onClick }: { onClick: () => void }) {
+export function AiButton({ onClick, label = 'IA' }: { onClick: () => void; label?: string }) {
   return (
     <button
       type="button"
@@ -205,7 +253,7 @@ export function AiButton({ onClick }: { onClick: () => void }) {
       className="inline-flex items-center gap-1 rounded-full border border-brass/40 bg-brass/10 px-2.5 py-1 text-[12px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
     >
       <SparkIcon width={13} height={13} />
-      IA
+      {label}
     </button>
   )
 }

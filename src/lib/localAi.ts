@@ -16,11 +16,21 @@ Responda apenas com o texto final, sem aspas nem comentários.`
 
 function buildPrompt(req: GenerateRequest): string {
   const kws = req.keywords.map((k) => k.trim()).filter(Boolean).join(', ')
+  const areas = req.areas?.filter(Boolean).join(', ')
   if (req.kind === 'area') {
     return `Escreva a descrição da área de atuação "${req.areaLabel}" de um(a) advogado(a), abordando estes temas: ${kws}. Explique de forma clara e factual o que o(a) advogado(a) faz nessa área. No máximo 3 frases, sem emojis.`
   }
+  if (req.kind === 'headline') {
+    return `Escreva UMA frase de apresentação curta (headline) para um(a) advogado(a), indicando a atuação em: ${kws || areas}. Máximo de 8 palavras, factual, sem ponto final. Responda apenas a frase.`
+  }
+  if (req.kind === 'improve') {
+    return `Revise e reescreva o texto abaixo para ficar mais claro, sóbrio e dentro das normas da OAB, mantendo o sentido. No máximo 3 frases, sem emojis.\n\nTexto:\n"""${req.currentText ?? ''}"""`
+  }
+  if (req.kind === 'article') {
+    return `Sugira um rascunho de artigo informativo${req.areaLabel ? ` sobre ${req.areaLabel}` : ''}${kws ? `, abordando: ${kws}` : ''}. Título curto na primeira linha e 2 a 3 parágrafos curtos, tom educativo, sem promessas nem captação.`
+  }
   const who = req.name ? `de ${req.name}, que é advogado(a) no Brasil` : 'de um(a) advogado(a) brasileiro(a)'
-  return `Escreva, em primeira pessoa, a bio de apresentação ${who}. Atua nas áreas: ${kws}. No máximo 3 frases, sem emojis.`
+  return `Escreva, em primeira pessoa, a bio de apresentação ${who}. Atua nas áreas: ${kws || areas}. No máximo 3 frases, sem emojis.`
 }
 
 /** true se o Ollama responder na porta local (via proxy). */

@@ -84,6 +84,7 @@ export type UpsellFeature =
   | 'themes'
   | 'oab'
   | 'branding'
+  | 'ai'
 
 // Recurso do editor → fatores do Índice que um upgrade destravaria. Só os
 // fatores gated por plano em trustScore.ts pontuam; recursos sem fator gated
@@ -93,6 +94,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   bio: [],
   highlights: [],
   themes: [],
+  ai: [],
   agenda: ['agenda'],
   oab: ['oab_conferida'],
   branding: ['dominio', 'marca'],
@@ -157,6 +159,16 @@ const FEATURE_META: Record<
     title: 'Marca e domínio próprios',
     subtitle: 'Domínio .adv.br e perfil sem a marca advoc.me.',
     value: (p) => (p === 'premium' ? 'Incluído' : '—'),
+  },
+  ai: {
+    title: 'Assistente de IA',
+    subtitle: 'A IA escreve e revisa os textos do seu perfil, dentro da OAB.',
+    value: (p) =>
+      p === 'free'
+        ? 'Bio e áreas'
+        : p === 'pro'
+          ? '+ Frase e revisão de texto'
+          : '+ Artigos e bio enriquecida',
   },
 }
 

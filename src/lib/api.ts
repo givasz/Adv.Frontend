@@ -474,6 +474,23 @@ function draftText(req: GenerateRequest): string {
     return `Atuo em ${area} com foco em ${list}. Ofereço orientação clara sobre direitos e alternativas em cada etapa, buscando o caminho mais adequado a cada situação. O objetivo é que você compreenda o processo e tome decisões bem informadas.`
   }
 
+  if (req.kind === 'headline') {
+    const area = req.areaLabel || req.areas?.filter(Boolean)[0] || req.keywords.filter(Boolean)[0] || 'Direito'
+    return `Advogado(a) · ${area}`
+  }
+
+  if (req.kind === 'improve') {
+    return (
+      req.currentText?.trim() ||
+      `Advogado(a) inscrito(a) na OAB, com atuação em ${list}. O trabalho é conduzido de forma técnica e informativa, orientando cada pessoa sobre seus direitos e os caminhos possíveis.`
+    )
+  }
+
+  if (req.kind === 'article') {
+    const area = req.areaLabel || req.areas?.filter(Boolean)[0] || 'o tema'
+    return `Entenda melhor: ${area}\n\nEste texto explica, de forma geral e informativa, conceitos e direitos relacionados a ${area}. O objetivo é orientar o leitor sobre como o tema funciona e quais caminhos existem, sem substituir a análise de um caso concreto.`
+  }
+
   const name = req.name?.split(' ')[0]
   const opening = name ? `Sou ${name}, advogad(a) dedicad(a) a` : 'Dedico minha atuação a'
   return `${opening} ${list}. Meu trabalho une técnica e escuta para orientar cada pessoa sobre seus direitos e os caminhos possíveis, com informação transparente do início ao fim. Acredito em uma advocacia próxima, que reduz a insegurança de quem precisa de apoio jurídico.`

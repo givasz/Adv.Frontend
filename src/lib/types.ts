@@ -216,7 +216,7 @@ export interface DirectoryResult
 
 // ---- Geração de conteúdo por IA ----
 
-export type GenerateKind = 'bio' | 'area'
+export type GenerateKind = 'bio' | 'area' | 'headline' | 'improve' | 'article'
 
 export interface GenerateRequest {
   kind: GenerateKind
@@ -228,6 +228,10 @@ export interface GenerateRequest {
   city?: string
   /** rótulos das áreas de atuação do perfil — enriquecem a bio */
   areas?: string[]
+  /** texto atual a revisar quando kind === 'improve' */
+  currentText?: string
+  /** plano do perfil — controla profundidade/enriquecimento no backend */
+  plan?: Plan
 }
 
 export interface GenerateResult {

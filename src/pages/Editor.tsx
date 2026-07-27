@@ -19,6 +19,7 @@ import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
 import { AREA_LABEL_MAX, CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
+import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
@@ -35,10 +36,10 @@ import { UpsellCard } from '@/components/editor/UpsellCard'
 import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
 import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
-import { CheckIcon, ScaleIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
+import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
-type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string } | null
+type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string; currentText?: string } | null
 type SectionId =
   | 'identidade'
   | 'bio'
@@ -145,13 +146,30 @@ export default function Editor() {
     set({ oabStatus: res.oabStatus })
   }
 
+  // Abre o gerador de IA se o plano permite o recurso; senão, abre o upsell.
+  function openAi(target: NonNullable<AiTarget>) {
+    if (canUseAi(target.kind, profile!.plan)) setAi(target)
+    else setUpsell('ai')
+  }
+
   function applyAi(text: string) {
     if (!ai) return
-    if (ai.kind === 'bio') set({ bio: text })
-    else
+    if (ai.kind === 'bio' || ai.kind === 'improve') set({ bio: text })
+    else if (ai.kind === 'headline') set({ headline: text.replace(/[.]+$/, '').trim() })
+    else if (ai.kind === 'area')
+      set({ areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: text } : a)) })
+    else if (ai.kind === 'article') {
+      // "Título\n\ncorpo" → novo artigo (título na 1ª linha, resto no resumo).
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+      const title = (lines[0] ?? 'Novo artigo').slice(0, 90)
+      const summary = lines.slice(1).join(' ').slice(0, 200)
       set({
-        areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: text } : a)),
+        articles: [
+          ...(profile!.articles ?? []),
+          { id: nextId(), title, summary, readingMinutes: 4 },
+        ],
       })
+    }
   }
 
   const meta = SECTIONS[section]
@@ -224,13 +242,13 @@ export default function Editor() {
                   set={set}
                   setProfile={setProfile}
                   lim={lim}
-                  onAi={setAi}
+                  onAi={openAi}
                   onUpsell={setUpsell}
                 />
               )}
 
               {section === 'bio' && (
-                <Card title="Bio" action={<AiButton onClick={() => setAi({ kind: 'bio' })} />}>
+                <Card title="Bio" action={<AiButton label="Gerar" onClick={() => openAi({ kind: 'bio' })} />}>
                   <Field
                     label="Sobre você"
                     hint={<QuotaCounter quota={charQuota(profile.plan, 'bio', profile.bio.length)} />}
@@ -245,6 +263,17 @@ export default function Editor() {
                     />
                   </Field>
                   <MarginNotes issues={bioIssues} />
+                  {profile.bio.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => openAi({ kind: 'improve', currentText: profile.bio })}
+                      className="inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+                    >
+                      <SparkIcon width={14} height={14} />
+                      Melhorar com IA
+                      {!canUseAi('improve', profile.plan) && <LockIcon width={11} height={11} />}
+                    </button>
+                  )}
                 </Card>
               )}
 
@@ -340,7 +369,7 @@ export default function Editor() {
 
               {section === 'conteudo' && (
                 <>
-                  <ArticlesSection profile={profile} set={set} />
+                  <ArticlesSection profile={profile} set={set} onAi={openAi} />
                   <EditorialIdeas areas={profile.areas.map((a) => a.label).filter(Boolean)} />
                   <LegalDocsCard profile={profile} />
                 </>
@@ -380,6 +409,10 @@ export default function Editor() {
             kind={ai.kind}
             areaLabel={ai.areaLabel}
             name={profile.name}
+            plan={profile.plan}
+            city={[profile.city, profile.state].filter(Boolean).join('/')}
+            areas={profile.areas.map((a) => a.label).filter(Boolean)}
+            currentText={ai.currentText}
             onApply={applyAi}
             onClose={() => setAi(null)}
           />
@@ -410,7 +443,7 @@ function IdentitySection({
   set: (patch: Partial<Profile>) => void
   setProfile: React.Dispatch<React.SetStateAction<Profile | null>>
   lim: (typeof CHAR_LIMITS)[Plan]
-  onAi: (t: AiTarget) => void
+  onAi: (t: NonNullable<AiTarget>) => void
   onUpsell: (f: UpsellFeature) => void
 }) {
   const areasQuota = areaQuota(profile.plan, profile.areas.length)
@@ -482,6 +515,15 @@ function IdentitySection({
             placeholder="Advogada · Direito de Família"
           />
         </Field>
+        <button
+          type="button"
+          onClick={() => onAi({ kind: 'headline' })}
+          className="-mt-1 inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+        >
+          <SparkIcon width={14} height={14} />
+          Gerar frase com IA
+          {!canUseAi('headline', profile.plan) && <LockIcon width={11} height={11} />}
+        </button>
       </Card>
 
       <Card title="Localização e atendimento">
@@ -677,9 +719,11 @@ function HighlightsSection({
 function ArticlesSection({
   profile,
   set,
+  onAi,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
+  onAi: (t: NonNullable<AiTarget>) => void
 }) {
   const articles = profile.articles ?? []
   const update = (id: string, patch: Partial<(typeof articles)[number]>) =>
@@ -694,6 +738,15 @@ function ArticlesSection({
         Artigos informativos aparecem no seu perfil e aumentam sua autoridade. Tom educativo, sem
         prometer resultado nem citar clientes.
       </p>
+      <button
+        type="button"
+        onClick={() => onAi({ kind: 'article', areaLabel: profile.areas.find((a) => a.label.trim())?.label })}
+        className="inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+      >
+        <SparkIcon width={14} height={14} />
+        Sugerir artigo com IA
+        {!canUseAi('article', profile.plan) && <LockIcon width={11} height={11} />}
+      </button>
       {articles.map((art) => (
         <div key={art.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
           <TextInput
