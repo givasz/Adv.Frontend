@@ -35,7 +35,7 @@ import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
 import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
-import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
+import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
 import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
@@ -532,11 +532,7 @@ function IdentitySection({
             <TextInput value={profile.city} onChange={(e) => set({ city: e.target.value })} />
           </Field>
           <Field label="UF">
-            <TextInput
-              value={profile.state}
-              maxLength={2}
-              onChange={(e) => set({ state: e.target.value.toUpperCase() })}
-            />
+            <UfSelect value={profile.state} onChange={(state) => set({ state })} />
           </Field>
         </div>
         <Field label="Observação de região" hint="opcional">

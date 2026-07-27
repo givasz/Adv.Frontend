@@ -18,7 +18,7 @@ import { PhonePreview } from '@/components/editor/PhonePreview'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
-import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
+import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
 import { SparkIcon, ScaleIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
 
 let uid = 0
@@ -224,12 +224,7 @@ export default function Onboarding() {
                     />
                   </Field>
                   <Field label="Estado">
-                    <TextInput
-                      value={profile.state}
-                      maxLength={2}
-                      onChange={(e) => set({ state: e.target.value.toUpperCase() })}
-                      placeholder="SP"
-                    />
+                    <UfSelect value={profile.state} onChange={(state) => set({ state })} />
                   </Field>
                 </div>
               </StepShell>

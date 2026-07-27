@@ -38,6 +38,33 @@ export function OabNumberInput({ value, onChange }: { value: string; onChange: (
   )
 }
 
+// Seletor de UF (estado) com as 27 siglas já prontas — o usuário só marca qual.
+export function UfSelect({
+  value,
+  onChange,
+  ariaLabel = 'Estado (UF)',
+}: {
+  value: string
+  onChange: (uf: string) => void
+  ariaLabel?: string
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={ariaLabel}
+      className="w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] text-ink transition-colors focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+    >
+      <option value="">UF</option>
+      {UF_LIST.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 // Campo de WhatsApp com máscara BR: prefixo fixo +55 e parte local "(DD) 99887-7665".
 // Guarda apenas dígitos com DDI ("5511998877665") — formato usado no link do wa.me.
 export function WhatsappInput({
