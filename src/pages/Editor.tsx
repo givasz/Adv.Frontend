@@ -26,7 +26,6 @@ import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fi
 import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanBadge } from '@/components/editor/PlanBadge'
 import { ThemePicker } from '@/components/editor/ThemePicker'
-import { EditorialIdeas } from '@/components/editor/EditorialIdeas'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
@@ -68,7 +67,7 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
   destaques: { title: 'Seus destaques', subtitle: 'Experiência e formação, sem citar clientes.' },
-  conteudo: { title: 'Conteúdo e documentos', subtitle: 'Publique artigos e reúna seus termos legais.' },
+  conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
   qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
   plano: { title: 'Seu plano', subtitle: 'Troque quando quiser. Mais recursos, mais alcance.' },
@@ -158,18 +157,6 @@ export default function Editor() {
     else if (ai.kind === 'headline') set({ headline: text.replace(/[.]+$/, '').trim() })
     else if (ai.kind === 'area')
       set({ areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: text } : a)) })
-    else if (ai.kind === 'article') {
-      // "Título\n\ncorpo" → novo artigo (título na 1ª linha, resto no resumo).
-      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
-      const title = (lines[0] ?? 'Novo artigo').slice(0, 90)
-      const summary = lines.slice(1).join(' ').slice(0, 200)
-      set({
-        articles: [
-          ...(profile!.articles ?? []),
-          { id: nextId(), title, summary, readingMinutes: 4 },
-        ],
-      })
-    }
   }
 
   const meta = SECTIONS[section]
@@ -367,13 +354,7 @@ export default function Editor() {
 
               {section === 'qrcode' && <QrSection profile={profile} />}
 
-              {section === 'conteudo' && (
-                <>
-                  <ArticlesSection profile={profile} set={set} onAi={openAi} />
-                  <EditorialIdeas areas={profile.areas.map((a) => a.label).filter(Boolean)} />
-                  <LegalDocsCard profile={profile} />
-                </>
-              )}
+              {section === 'conteudo' && <LegalDocsCard profile={profile} />}
 
               {section === 'plano' && (
                 <Card title="Seu plano">
@@ -705,97 +686,6 @@ function HighlightsSection({
         className="btn-ghost w-full border-dashed"
       >
         + Adicionar destaque
-      </button>
-    </Card>
-  )
-}
-
-// Editor de artigos educativos — alimenta a seção "Conteúdo" do perfil público
-// (que só existe quando há artigos). Caráter informativo, nunca marketing/captação.
-function ArticlesSection({
-  profile,
-  set,
-  onAi,
-}: {
-  profile: Profile
-  set: (patch: Partial<Profile>) => void
-  onAi: (t: NonNullable<AiTarget>) => void
-}) {
-  const articles = profile.articles ?? []
-  const update = (id: string, patch: Partial<(typeof articles)[number]>) =>
-    set({ articles: articles.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
-
-  return (
-    <Card
-      title="Conteúdo"
-      action={<span className="text-[12px] text-ink-faint">{articles.length} artigo(s)</span>}
-    >
-      <p className="-mt-1 text-[12px] leading-relaxed text-ink-faint">
-        Artigos informativos aparecem no seu perfil e aumentam sua autoridade. Tom educativo, sem
-        prometer resultado nem citar clientes.
-      </p>
-      <button
-        type="button"
-        onClick={() => onAi({ kind: 'article', areaLabel: profile.areas.find((a) => a.label.trim())?.label })}
-        className="inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
-      >
-        <SparkIcon width={14} height={14} />
-        Sugerir artigo com IA
-        {!canUseAi('article', profile.plan) && <LockIcon width={11} height={11} />}
-      </button>
-      {articles.map((art) => (
-        <div key={art.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
-          <TextInput
-            value={art.title}
-            maxLength={90}
-            placeholder="Título do artigo"
-            onChange={(e) => update(art.id, { title: e.target.value })}
-          />
-          <TextArea
-            rows={2}
-            value={art.summary}
-            maxLength={200}
-            placeholder="Resumo curto — o que o leitor aprende"
-            onChange={(e) => update(art.id, { summary: e.target.value })}
-          />
-          <div className="flex gap-2">
-            <input
-              value={art.readingMinutes || ''}
-              inputMode="numeric"
-              placeholder="min"
-              aria-label="Minutos de leitura"
-              onChange={(e) =>
-                update(art.id, { readingMinutes: Math.max(0, Number(e.target.value.replace(/\D/g, '')) || 0) })
-              }
-              className="w-20 rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-            />
-            <TextInput
-              value={art.url ?? ''}
-              placeholder="Link (opcional) — https://…"
-              onChange={(e) => update(art.id, { url: e.target.value || undefined })}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => set({ articles: articles.filter((a) => a.id !== art.id) })}
-            aria-label="Remover artigo"
-            className="inline-flex items-center gap-1.5 justify-self-start rounded-lg border border-ink/10 px-2.5 py-1.5 text-[12px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:bg-burgundy/[0.06] hover:text-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/20"
-          >
-            <TrashIcon width={13} height={13} />
-            Remover
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() =>
-          set({
-            articles: [...articles, { id: nextId(), title: '', summary: '', readingMinutes: 5 }],
-          })
-        }
-        className="btn-ghost w-full border-dashed"
-      >
-        + Adicionar artigo
       </button>
     </Card>
   )

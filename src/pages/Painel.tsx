@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { ArrowRight, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
@@ -165,12 +165,11 @@ export default function Painel() {
                 Leve seu perfil além
               </h2>
               <p className="mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed text-ink-soft">
-                Mais áreas, agenda de consultas, sua marca própria e o que falta para chegar aos 100.
-                Ative agora, sem pagar.
+                Cada tópico é uma melhoria concreta no seu perfil. Ative agora, sem pagar.
               </p>
             </div>
             <div className="mt-5">
-              <PlanShowcase plan={profile.plan} onPick={activatePlan} />
+              <UpgradeTopics profile={profile} onPick={activatePlan} />
             </div>
           </section>
         )}

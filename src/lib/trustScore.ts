@@ -40,8 +40,7 @@ export const TRUST_FACTORS: TrustFactor[] = [
   { key: 'redes', action: 'Conectar suas redes', label: 'Redes', points: 6, done: (p) => p.socials.length > 0 },
   { key: 'email', action: 'Adicionar um e-mail de contato', label: 'E-mail', points: 3, done: (p) => !!p.contact.email },
   { key: 'area2', action: 'Adicionar uma segunda área de atuação', label: '2ª área', points: 5, done: (p) => filledAreas(p) >= 2 },
-  { key: 'experiencia', action: 'Registrar sua experiência', label: 'Experiência', points: 5, done: (p) => p.highlights.length > 0 },
-  { key: 'artigo', action: 'Publicar seu primeiro artigo', label: 'Artigo', points: 4, done: (p) => !!p.articles?.some((a) => a.title.trim()) },
+  { key: 'experiencia', action: 'Registrar sua experiência', label: 'Experiência', points: 9, done: (p) => p.highlights.length > 0 },
   // ---- Planos pagos ----
   { key: 'oab_conferida', action: 'Solicitar conferência da OAB', label: 'OAB conferida', points: 10, plan: 'pro', done: oabVerified },
   { key: 'agenda', action: 'Ativar sua agenda de atendimento', label: 'Agenda', points: 8, plan: 'pro', done: (p) => resolveSchedulingMode(p) !== 'off' },

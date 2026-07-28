@@ -12,7 +12,7 @@ import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { AiGenerator } from '@/components/editor/AiGenerator'
 import { UnlockMore } from '@/components/editor/UnlockMore'
-import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { Avatar } from '@/components/ui/Avatar'
@@ -603,13 +603,14 @@ function DoneScreen({
             </span>
           </div>
           <h2 className="mt-3 text-center font-display text-[21px] font-semibold text-ink">
-            Vá além no seu perfil
+            Desbloqueie mais no seu perfil
           </h2>
           <p className="mx-auto mt-1.5 max-w-sm text-center text-[13.5px] leading-relaxed text-ink-soft">
-            Mais áreas, agenda, sua marca própria e mais. Ative qualquer plano agora, sem pagar.
+            Cada tópico é uma melhoria concreta — seu nome sem número, seu domínio e mais. Ative agora,
+            sem pagar.
           </p>
           <div className="mt-5">
-            <PlanShowcase plan={profile.plan} onPick={onPickPlan} />
+            <UpgradeTopics profile={profile} onPick={onPickPlan} />
           </div>
         </div>
 

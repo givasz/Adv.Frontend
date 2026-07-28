@@ -85,14 +85,16 @@ export function PhonePreview({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[340px]">
+    // Menor no mobile: reduz o "alvo" do scroll interno (que travava a rolagem da
+    // página) e libera espaço. No desktop volta ao tamanho cheio.
+    <div className="mx-auto w-full max-w-[260px] sm:max-w-[340px]">
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink p-0 shadow-lift">
         {/* notch */}
         <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
         <div className="relative overflow-hidden rounded-[1.8rem]">
           <div
             ref={scrollRef}
-            className="no-scrollbar relative flex h-[620px] max-h-[72svh] flex-col overflow-y-auto overflow-x-hidden"
+            className="no-scrollbar relative flex h-[440px] max-h-[52svh] flex-col overflow-y-auto overflow-x-hidden sm:h-[620px] sm:max-h-[72svh]"
           >
             <ProfileView profile={profile} preview />
           </div>

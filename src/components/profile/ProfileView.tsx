@@ -31,10 +31,9 @@ function hexToRgba(hex: string, alpha: number): string {
 
 export function ProfileView({ profile, preview = false }: ProfileViewProps) {
   const schedulingMode = resolveSchedulingMode(profile)
-  // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome / artigos sem
-  // título não viram card — nada de caixa vazia.
+  // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
+  // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
-  const articles = (profile.articles ?? []).filter((a) => a.title.trim())
   const s = getTheme(profile.theme).style
   const brand = profile.branding
   // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
@@ -276,55 +275,6 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
                   </div>
                 </div>
               ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Conteúdo — artigos educativos (informativo, nunca blog de marketing) */}
-        {articles.length > 0 && (
-          <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Conteúdo</SectionTitle>
-            <div className="mt-3 space-y-2.5">
-              {articles.map((art) => {
-                const inner = (
-                  <>
-                    <p className="font-display text-[16px] font-semibold leading-snug">
-                      {art.title}
-                    </p>
-                    <p className="t-muted mt-1 text-[13.5px] leading-relaxed">{art.summary}</p>
-                    <p className="t-faint mt-2 text-[12px] font-medium tracking-wide">
-                      {art.readingMinutes} min de leitura
-                    </p>
-                  </>
-                )
-                return art.url ? (
-                  <a
-                    key={art.id}
-                    href={art.url}
-                    onClick={stop}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="t-border-c block border p-4 transition-colors"
-                    style={{
-                      background: 'var(--c-surface)',
-                      borderRadius: 'var(--tile-radius, 20px)',
-                    }}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <div
-                    key={art.id}
-                    className="t-border-c border p-4"
-                    style={{
-                      background: 'var(--c-surface)',
-                      borderRadius: 'var(--tile-radius, 20px)',
-                    }}
-                  >
-                    {inner}
-                  </div>
-                )
-              })}
             </div>
           </motion.section>
         )}
