@@ -463,7 +463,18 @@ export const api = {
 // Composição de rascunho OAB-safe a partir de palavras-chave.
 // No backend, isto vira um prompt para o Claude com guardrails do Prov. 205/2021.
 function draftText(req: GenerateRequest): string {
-  const kw = req.keywords.map((k) => k.trim()).filter(Boolean)
+  // Sanitiza as palavras-chave: o fallback nunca pode despejar comparações a
+  // terceiros ("como saul goodman") nem "especialista" crus do usuário.
+  const kw = req.keywords
+    .map((k) =>
+      k
+        .replace(/\b(como|igual a|tipo|feito)\b.*/i, '')
+        .replace(/\bespecialist\w*\b/gi, '')
+        .replace(/\bexpert\w*\b/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim(),
+    )
+    .filter(Boolean)
   const list =
     kw.length > 1
       ? `${kw.slice(0, -1).join(', ')} e ${kw[kw.length - 1]}`
