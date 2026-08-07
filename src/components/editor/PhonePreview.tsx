@@ -88,7 +88,7 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
   return (
     // hero (home): grande e estático (sem scroll interno que prenda a rolagem da
     // página). Padrão (editor/onboarding): menor no mobile, com prévia rolável.
-    <div className={`mx-auto w-full ${hero ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[260px] sm:max-w-[340px]'}`}>
+    <div className={`mx-auto w-full ${hero ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[300px] sm:max-w-[340px]'}`}>
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink p-0 shadow-lift">
         {/* notch */}
         <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
@@ -98,7 +98,7 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
             className={`no-scrollbar relative flex flex-col overflow-x-hidden ${
               hero
                 ? 'h-[560px] max-h-[74svh] overflow-y-hidden'
-                : 'h-[440px] max-h-[52svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
+                : 'h-[540px] max-h-[62svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
             }`}
           >
             <ProfileView profile={profile} preview />

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { GenerateKind, Plan } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -57,8 +57,28 @@ export function AiGenerator({
   const [keywords, setKeywords] = useState('')
   const [loading, setLoading] = useState(false)
   const [draft, setDraft] = useState('')
+  const [typed, setTyped] = useState('') // efeito "IA digitando" (revela o texto aos poucos)
+  const [typing, setTyping] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
   useDialog(dialogRef, onClose)
+
+  // Máquina de escrever: revela o texto do rascunho em ~1s, depois vira editável.
+  useEffect(() => {
+    if (!typing) return
+    if (typed.length >= draft.length) {
+      setTyping(false)
+      return
+    }
+    const step = Math.max(1, Math.ceil(draft.length / 70))
+    const id = setTimeout(() => setTyped(draft.slice(0, typed.length + step)), 18)
+    return () => clearTimeout(id)
+  }, [typing, typed, draft])
+
+  const startReveal = (text: string) => {
+    setDraft(text)
+    setTyped('')
+    setTyping(true)
+  }
 
   const issues = draft ? checkCompliance(draft) : []
   const blocked = issues.some((i) => i.severity === 'block')
@@ -74,10 +94,12 @@ export function AiGenerator({
       .filter(Boolean)
     if (needsKeywords && !list.length) return
     setLoading(true)
+    setTyping(false)
+    setTyped('')
     setDraft('')
     try {
       const res = await api.generate({ kind, keywords: list, areaLabel, name, plan, city, areas, currentText })
-      setDraft(res.text)
+      startReveal(res.text)
     } finally {
       setLoading(false)
     }
@@ -157,7 +179,7 @@ export function AiGenerator({
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setDraft(t.text)}
+                  onClick={() => startReveal(t.text)}
                   className="rounded-full border border-brass/40 bg-brass/[0.08] px-2.5 py-1 text-[12px] font-medium text-brass-deep transition-colors hover:bg-brass/20"
                 >
                   {t.label}
@@ -174,15 +196,32 @@ export function AiGenerator({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mt-4 space-y-2"
+              className="mt-4 space-y-2.5"
             >
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-brass-deep">
+                A IA está redigindo
+                <span className="inline-flex gap-0.5">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brass-deep [animation-delay:-0.25s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brass-deep [animation-delay:-0.12s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brass-deep" />
+                </span>
+              </p>
               {[100, 92, 78].map((w) => (
                 <div key={w} className="h-3.5 animate-pulse rounded bg-ink/10" style={{ width: `${w}%` }} />
               ))}
             </motion.div>
           )}
 
-          {!loading && draft && (
+          {!loading && typing && (
+            <motion.div key="typing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+              <div className="min-h-[7.5rem] w-full whitespace-pre-wrap rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-3 text-[14px] leading-relaxed text-ink">
+                {typed}
+                <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[3px] animate-pulse bg-burgundy" />
+              </div>
+            </motion.div>
+          )}
+
+          {!loading && !typing && draft && (
             <motion.div key="draft" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
               <textarea
                 value={draft}
