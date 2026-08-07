@@ -4,6 +4,8 @@ import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
+import { THEMES, isThemeUnlocked } from '@/lib/themes'
+import { resolveSchedulingMode } from '@/lib/booking'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { Avatar } from '@/components/ui/Avatar'
@@ -84,6 +86,7 @@ export default function Painel() {
   const firstName = profile.name.split(' ')[0] || 'você'
   // Passos disponíveis no plano atual (os travados por plano viram upsell abaixo).
   const freeSteps = trust.next.filter((f) => !trust.locked(f))
+  const unlockedThemes = THEMES.filter((t) => isThemeUnlocked(t, profile.plan)).length
 
   // Ativa um plano (em teste, sem cobrança) e persiste o rascunho.
   const activatePlan = (p: Plan) => {
@@ -101,6 +104,11 @@ export default function Painel() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
+            {resolveSchedulingMode(profile) === 'native' && (
+              <Link to="/agenda" className="btn-ghost !py-2 !px-4 text-[13px]">
+                Minha agenda
+              </Link>
+            )}
             <Link to={`/${profile.slug}`} target="_blank" className="btn-primary !py-2 !px-4 text-[13px]">
               Ver meu perfil
             </Link>
@@ -174,6 +182,48 @@ export default function Painel() {
           </section>
         )}
 
+        {/* A cara do perfil — temas (6 dos 8 são de plano pago → isca natural) */}
+        <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
+          A cara do seu perfil
+        </h2>
+        <Link
+          to="/editor?section=aparencia"
+          className="mt-3 block rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card transition-colors hover:border-burgundy/40"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-display text-[15px] font-semibold text-ink">Escolha um tema</p>
+              <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-soft">
+                {unlockedThemes} de {THEMES.length} liberados no seu plano — os demais são do Pro e do Max.
+              </p>
+            </div>
+            <ArrowRight width={16} height={16} className="shrink-0 text-ink-faint" />
+          </div>
+          <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+            {THEMES.map((t) => {
+              const unlocked = isThemeUnlocked(t, profile.plan)
+              return (
+                <div
+                  key={t.id}
+                  className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink/10"
+                  style={{ background: t.swatch.bg }}
+                  title={t.name}
+                >
+                  <span
+                    className="absolute bottom-1.5 left-1.5 h-1.5 w-5 rounded-full"
+                    style={{ background: t.swatch.accent }}
+                  />
+                  {!unlocked && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-ink/45 backdrop-blur-[1px]">
+                      <LockIcon width={12} height={12} strokeWidth={2} className="text-paper" />
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Link>
+
         {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}
         <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
           Descubra mais
@@ -188,6 +238,16 @@ export default function Painel() {
             to="/editor?section=qrcode"
             title="Seu cartão digital"
             desc="Compartilhe seu perfil com um QR Code."
+          />
+          <DiscoverCard
+            to="/editor?section=oab"
+            title="Conferência da OAB"
+            desc="Solicite a conferência e ganhe o selo no perfil."
+          />
+          <DiscoverCard
+            to="/editor?section=conteudo"
+            title="Documentos e privacidade"
+            desc="Gere sua política de privacidade e termos (LGPD)."
           />
         </div>
 
