@@ -6,7 +6,7 @@ import { ProfileView } from '@/components/profile/ProfileView'
 // SO/navegador (overlay some, temas diferentes). Este thumb é desenhado e controlado por
 // nós: aparece só quando há conteúdo para rolar, acompanha a rolagem e pode ser arrastado
 // (ou clicar no trilho para pular).
-export function PhonePreview({ profile }: { profile: Profile }) {
+export function PhonePreview({ profile, hero = false }: { profile: Profile; hero?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startScroll: number } | null>(null)
   const [thumb, setThumb] = useState({ height: 0, top: 0, show: false })
@@ -25,6 +25,7 @@ export function PhonePreview({ profile }: { profile: Profile }) {
   }
 
   useEffect(() => {
+    if (hero) return // hero (home): estático, sem scroll interno que prenda a página
     const el = scrollRef.current
     if (!el) return
     const update = () => {
@@ -44,7 +45,7 @@ export function PhonePreview({ profile }: { profile: Profile }) {
       el.removeEventListener('scroll', update)
       ro.disconnect()
     }
-  }, [profile])
+  }, [profile, hero])
 
   const onThumbPointerDown = (e: React.PointerEvent) => {
     const el = scrollRef.current
@@ -85,21 +86,25 @@ export function PhonePreview({ profile }: { profile: Profile }) {
   }
 
   return (
-    // Menor no mobile: reduz o "alvo" do scroll interno (que travava a rolagem da
-    // página) e libera espaço. No desktop volta ao tamanho cheio.
-    <div className="mx-auto w-full max-w-[260px] sm:max-w-[340px]">
+    // hero (home): grande e estático (sem scroll interno que prenda a rolagem da
+    // página). Padrão (editor/onboarding): menor no mobile, com prévia rolável.
+    <div className={`mx-auto w-full ${hero ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[260px] sm:max-w-[340px]'}`}>
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink p-0 shadow-lift">
         {/* notch */}
         <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
         <div className="relative overflow-hidden rounded-[1.8rem]">
           <div
             ref={scrollRef}
-            className="no-scrollbar relative flex h-[440px] max-h-[52svh] flex-col overflow-y-auto overflow-x-hidden sm:h-[620px] sm:max-h-[72svh]"
+            className={`no-scrollbar relative flex flex-col overflow-x-hidden ${
+              hero
+                ? 'h-[560px] max-h-[74svh] overflow-y-hidden'
+                : 'h-[440px] max-h-[52svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
+            }`}
           >
             <ProfileView profile={profile} preview />
           </div>
           {/* trilho + thumb interativos (área de toque generosa, thumb fino) */}
-          {thumb.show && (
+          {!hero && thumb.show && (
             <div
               onPointerDown={onTrackPointerDown}
               className="absolute bottom-1.5 right-0.5 top-1.5 w-3.5 cursor-pointer touch-none"

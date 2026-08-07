@@ -131,7 +131,7 @@ export default function Landing() {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="lg:justify-self-end"
         >
-          <PhonePreview profile={sampleProfile} />
+          <PhonePreview profile={sampleProfile} hero />
         </motion.div>
       </header>
 
