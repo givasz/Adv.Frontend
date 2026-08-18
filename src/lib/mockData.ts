@@ -33,18 +33,7 @@ export const sampleProfile: Profile = {
         'Uso de técnicas de mediação para buscar soluções consensuais e reduzir o tempo e o custo emocional dos litígios.',
     },
   ],
-  highlights: [
-    {
-      id: 'h1',
-      title: '12 anos de atuação',
-      detail: 'Dedicação exclusiva a Direito de Família e Sucessões desde 2013.',
-    },
-    {
-      id: 'h2',
-      title: 'Mediadora certificada',
-      detail: 'Formação em métodos consensuais de resolução de conflitos.',
-    },
-  ],
+  highlights: [],
   socials: [
     { kind: 'instagram', url: 'https://instagram.com/marinasales.adv' },
     { kind: 'linkedin', url: 'https://linkedin.com/in/marinasales' },
@@ -90,13 +79,7 @@ export const guilhermeSales: Profile = {
         'Esclarecimentos sobre aposentadorias, auxílios e benefícios do INSS, com análise dos requisitos previstos em lei.',
     },
   ],
-  highlights: [
-    {
-      id: 'g-h1',
-      title: '9 anos de atuação',
-      detail: 'Dedicação a causas trabalhistas e previdenciárias desde 2016.',
-    },
-  ],
+  highlights: [],
   socials: [{ kind: 'linkedin', url: 'https://linkedin.com/in/guilherme-sales' }],
   contact: {
     whatsapp: '5511991234567',

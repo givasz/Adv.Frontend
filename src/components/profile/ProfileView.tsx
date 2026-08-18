@@ -8,6 +8,7 @@ import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import {
   ArrowRight,
   CalendarIcon,
+  ChevronDown,
   MailIcon,
   PinIcon,
   ScaleIcon,
@@ -252,33 +253,6 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
           </motion.section>
         )}
 
-        {/* Destaques / experiência — lista editorial em coluna única (marcador + divisória) */}
-        {profile.highlights.length > 0 && (
-          <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Experiência</SectionTitle>
-            <div className="mt-2">
-              {profile.highlights.map((h, i) => (
-                <div
-                  key={h.id}
-                  className={`flex gap-3 py-3.5 ${i > 0 ? 't-border-c border-t' : ''}`}
-                >
-                  <span
-                    className="mt-[9px] h-1.5 w-1.5 shrink-0 rotate-45"
-                    style={{ background: 'var(--c-accent)' }}
-                    aria-hidden
-                  />
-                  <div className="min-w-0">
-                    <p className="t-accent font-display text-[18px] font-semibold leading-snug">
-                      {h.title}
-                    </p>
-                    <p className="t-muted mt-1 text-[14px] leading-relaxed">{h.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
         {/* E-mail */}
         {profile.contact.email && (
           <motion.a
@@ -390,11 +364,13 @@ function AreaCard({
   const [open, setOpen] = useState(false)
   const hasDesc = description.trim().length > 0
 
-  // Área sem descrição: tile estático, centralizado, sem "+" que expandiria vazio.
+  // Área sem descrição: tile estático, editorial — losango de acento acima e o
+  // nome em serifada de display, centralizado (timbre de escritório).
   if (!hasDesc) {
     return (
-      <div className={`${tileClass} justify-center text-center font-semibold`}>
-        {label}
+      <div className={`${tileClass} flex-col !items-center !gap-2 !py-4 text-center`}>
+        <span className="h-1.5 w-1.5 rotate-45" style={{ background: 'var(--c-accent)' }} aria-hidden />
+        <span className="font-display text-[16.5px] font-semibold leading-tight">{label}</span>
       </div>
     )
   }
@@ -404,25 +380,27 @@ function AreaCard({
       type="button"
       onClick={() => setOpen((v) => !v)}
       aria-expanded={open}
-      className={`${tileClass} flex-col !items-start !gap-1.5`}
-      // Item expandido ganha borda fina de acento (bordô no tema Papel/Toga),
-      // diferenciando-o dos demais que mantêm a borda neutra sutil.
+      className={`${tileClass} flex-col !items-stretch !gap-0 !py-4`}
+      // Item expandido ganha borda fina de acento, diferenciando-o dos demais.
       style={open ? { borderColor: 'var(--c-accent)' } : undefined}
     >
-      <span className="flex w-full items-center justify-between font-semibold">
-        {label}
-        <span
-          className={`t-accent transition-transform duration-300 ${open ? 'rotate-45' : ''}`}
-          aria-hidden
-        >
-          +
+      <span className="flex w-full items-center gap-2.5">
+        <span className="h-1.5 w-1.5 shrink-0 rotate-45" style={{ background: 'var(--c-accent)' }} aria-hidden />
+        <span className="flex-1 text-left font-display text-[16.5px] font-semibold leading-tight">
+          {label}
         </span>
+        <ChevronDown
+          width={16}
+          height={16}
+          className={`t-accent shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
       </span>
       {open && (
         <motion.span
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="t-faint text-[13.5px] font-normal leading-relaxed"
+          className="t-muted mt-2.5 text-left text-[13.5px] font-normal leading-relaxed"
         >
           {description}
         </motion.span>

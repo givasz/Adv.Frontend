@@ -47,7 +47,6 @@ type SectionId =
   | 'aparencia'
   | 'marca'
   | 'oab'
-  | 'destaques'
   | 'conteudo'
   | 'analytics'
   | 'qrcode'
@@ -66,7 +65,6 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
-  destaques: { title: 'Seus destaques', subtitle: 'Experiência e formação, sem citar clientes.' },
   conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
   qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
@@ -346,10 +344,6 @@ export default function Editor() {
                 </Card>
               )}
 
-              {section === 'destaques' && (
-                <HighlightsSection profile={profile} set={set} lim={lim} />
-              )}
-
               {section === 'analytics' && <AnalyticsSection profile={profile} />}
 
               {section === 'qrcode' && <QrSection profile={profile} />}
@@ -626,67 +620,6 @@ function ContactSection({
           onChange={(e) => set({ contact: { ...profile.contact, email: e.target.value } })}
         />
       </Field>
-    </Card>
-  )
-}
-
-function HighlightsSection({
-  profile,
-  set,
-  lim,
-}: {
-  profile: Profile
-  set: (patch: Partial<Profile>) => void
-  lim: (typeof CHAR_LIMITS)[Plan]
-}) {
-  return (
-    <Card title="Experiência / destaques">
-      {profile.highlights.map((h) => (
-        <div key={h.id} className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
-          <div>
-            <TextInput
-              value={h.title}
-              maxLength={lim.highlightTitle}
-              placeholder="12 anos de atuação"
-              onChange={(e) =>
-                set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, title: e.target.value } : x)) })
-              }
-            />
-            <div className="mt-1 flex justify-end">
-              <QuotaCounter quota={charQuota(profile.plan, 'highlightTitle', h.title.length)} />
-            </div>
-          </div>
-          <div>
-            <TextInput
-              value={h.detail}
-              maxLength={lim.highlightDetail}
-              placeholder="Detalhe genérico, sem identificar clientes"
-              onChange={(e) =>
-                set({ highlights: profile.highlights.map((x) => (x.id === h.id ? { ...x, detail: e.target.value } : x)) })
-              }
-            />
-            <div className="mt-1 flex justify-end">
-              <QuotaCounter quota={charQuota(profile.plan, 'highlightDetail', h.detail.length)} />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => set({ highlights: profile.highlights.filter((x) => x.id !== h.id) })}
-            aria-label="Remover destaque"
-            className="inline-flex items-center gap-1.5 justify-self-start rounded-lg border border-ink/10 px-2.5 py-1.5 text-[12px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:bg-burgundy/[0.06] hover:text-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/20"
-          >
-            <TrashIcon width={13} height={13} />
-            Remover
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => set({ highlights: [...profile.highlights, { id: nextId(), title: '', detail: '' }] })}
-        className="btn-ghost w-full border-dashed"
-      >
-        + Adicionar destaque
-      </button>
     </Card>
   )
 }

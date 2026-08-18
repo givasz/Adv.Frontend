@@ -35,12 +35,11 @@ export const TRUST_FACTORS: TrustFactor[] = [
   { key: 'whatsapp', action: 'Adicione seu WhatsApp', label: 'WhatsApp', points: 7, done: (p) => !!p.contact.whatsapp },
   { key: 'area1', action: 'Defina sua área principal', label: 'Área principal', points: 6, done: (p) => filledAreas(p) >= 1 },
   // ---- Evolução (Free) ----
-  { key: 'foto', action: 'Adicionar foto', label: 'Foto', points: 8, done: (p) => !!p.avatarUrl },
-  { key: 'frase', action: 'Escrever uma frase de apresentação', label: 'Frase', points: 3, done: (p) => !!p.headline.trim() },
-  { key: 'redes', action: 'Conectar suas redes', label: 'Redes', points: 6, done: (p) => p.socials.length > 0 },
+  { key: 'foto', action: 'Adicionar foto', label: 'Foto', points: 11, done: (p) => !!p.avatarUrl },
+  { key: 'frase', action: 'Escrever uma frase de apresentação', label: 'Frase', points: 5, done: (p) => !!p.headline.trim() },
+  { key: 'redes', action: 'Conectar suas redes', label: 'Redes', points: 8, done: (p) => p.socials.length > 0 },
   { key: 'email', action: 'Adicionar um e-mail de contato', label: 'E-mail', points: 3, done: (p) => !!p.contact.email },
-  { key: 'area2', action: 'Adicionar uma segunda área de atuação', label: '2ª área', points: 5, done: (p) => filledAreas(p) >= 2 },
-  { key: 'experiencia', action: 'Registrar sua experiência', label: 'Experiência', points: 9, done: (p) => p.highlights.length > 0 },
+  { key: 'area2', action: 'Adicionar uma segunda área de atuação', label: '2ª área', points: 7, done: (p) => filledAreas(p) >= 2 },
   // ---- Planos pagos ----
   { key: 'oab_conferida', action: 'Solicitar conferência da OAB', label: 'OAB conferida', points: 10, plan: 'pro', done: oabVerified },
   { key: 'agenda', action: 'Ativar sua agenda de atendimento', label: 'Agenda', points: 8, plan: 'pro', done: (p) => resolveSchedulingMode(p) !== 'off' },

@@ -490,7 +490,6 @@ const FACTOR_DEST: Record<string, string> = {
   redes: '/editor?section=redes',
   email: '/editor?section=redes',
   area2: '/editor?section=identidade',
-  experiencia: '/editor?section=destaques',
   artigo: '/editor?section=conteudo',
   oab_conferida: '/editor?section=oab',
   agenda: '/editor?section=agenda',
