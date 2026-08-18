@@ -94,7 +94,9 @@ export interface ContactChannels {
  *   'external' → abre um link externo (Calendly/Google) — usa contact.scheduling
  *   'native'   → agenda própria do advoc.me (o cliente marca dia/hora e o advogado confirma)
  */
-export type SchedulingMode = 'off' | 'external' | 'native'
+// 'whatsapp': o cliente preenche assunto + preferência de horário e a mensagem
+// vai pelo WhatsApp do advogado (sem calendário/slots). 'external': link Calendly/Google.
+export type SchedulingMode = 'off' | 'external' | 'whatsapp'
 
 /** Configuração da agenda nativa (disponibilidade do advogado). */
 export interface BookingConfig {

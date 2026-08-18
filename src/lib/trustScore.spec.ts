@@ -82,7 +82,7 @@ describe('computeTrust', () => {
     const agenda = TRUST_FACTORS.find((f) => f.key === 'agenda')!
     expect(r.locked(agenda)).toBe(true)
     // Mesmo com agenda "configurada", no Free ela não conta (resolveSchedulingMode = off).
-    const withAgendaButFree = computeTrust({ ...essential, schedulingMode: 'native' })
+    const withAgendaButFree = computeTrust({ ...essential, schedulingMode: 'whatsapp' })
     expect(withAgendaButFree.earned.some((f) => f.key === 'agenda')).toBe(false)
   })
 

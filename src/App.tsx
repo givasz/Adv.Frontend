@@ -7,8 +7,6 @@ import Landing from './pages/Landing'
 import Onboarding from './pages/Onboarding'
 import Painel from './pages/Painel'
 import Editor from './pages/Editor'
-import Agenda from './pages/Agenda'
-import Agendar from './pages/Agendar'
 import Directory from './pages/Directory'
 import PublicProfile from './pages/PublicProfile'
 import Preview from './pages/Preview'
@@ -43,8 +41,6 @@ export default function App() {
         <Route path="/comecar" element={<Onboarding />} />
         <Route path="/painel" element={<Painel />} />
         <Route path="/editor" element={<Editor />} />
-        <Route path="/agenda" element={<Agenda />} />
-        <Route path="/agendar/:slug" element={<Agendar />} />
         <Route path="/buscar" element={<Directory />} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />

@@ -40,7 +40,9 @@ export function minToLabel(min: number): string {
 export function resolveSchedulingMode(
   p: Pick<Profile, 'schedulingMode' | 'contact' | 'plan'>,
 ): SchedulingMode {
-  const mode = p.schedulingMode ?? (p.contact?.scheduling ? 'external' : 'off')
+  // Compat: perfis antigos com a agenda-calendário ('native') viram 'whatsapp'.
+  const raw = p.schedulingMode === ('native' as SchedulingMode) ? 'whatsapp' : p.schedulingMode
+  const mode = raw ?? (p.contact?.scheduling ? 'external' : 'off')
   if (mode !== 'off' && !canUseScheduling(p.plan)) return 'off'
   return mode
 }

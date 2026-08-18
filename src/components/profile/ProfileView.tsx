@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { motion, type Variants } from 'framer-motion'
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type ThemeStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { Avatar } from '@/components/ui/Avatar'
+import { SchedulingForm } from '@/components/profile/SchedulingForm'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import {
   ArrowRight,
@@ -31,6 +32,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 export function ProfileView({ profile, preview = false }: ProfileViewProps) {
+  const [schedOpen, setSchedOpen] = useState(false)
   const schedulingMode = resolveSchedulingMode(profile)
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
@@ -219,26 +221,17 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               Agendar uma consulta
             </motion.a>
           )}
-          {schedulingMode === 'native' &&
-            (preview ? (
-              <motion.button
-                variants={item}
-                type="button"
-                className={`${tile} justify-center !py-3.5 font-semibold`}
-              >
-                <CalendarIcon width={19} height={19} className="t-accent" />
-                Agendar uma consulta
-              </motion.button>
-            ) : (
-              <motion.a
-                variants={item}
-                href={`/agendar/${profile.slug}`}
-                className={`${tile} justify-center !py-3.5 font-semibold`}
-              >
-                <CalendarIcon width={19} height={19} className="t-accent" />
-                Agendar uma consulta
-              </motion.a>
-            ))}
+          {schedulingMode === 'whatsapp' && (
+            <motion.button
+              variants={item}
+              type="button"
+              onClick={preview ? undefined : () => setSchedOpen(true)}
+              className={`${tile} justify-center !py-3.5 font-semibold`}
+            >
+              <CalendarIcon width={19} height={19} className="t-accent" />
+              Agendar uma consulta
+            </motion.button>
+          )}
         </div>
 
         {/* Áreas de atuação */}
@@ -291,6 +284,13 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
           </p>
         </motion.footer>
       </motion.div>
+
+      {/* Formulário de agendamento → WhatsApp (não no preview do editor) */}
+      <AnimatePresence>
+        {schedOpen && !preview && (
+          <SchedulingForm profile={profile} onClose={() => setSchedOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

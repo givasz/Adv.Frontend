@@ -86,7 +86,7 @@ export const guilhermeSales: Profile = {
     email: 'contato@guilhermesales.adv.br',
   },
   // Agenda própria do advoc.me ligada (seg–sex, 09h–18h, consultas de 45 min).
-  schedulingMode: 'native',
+  schedulingMode: 'whatsapp',
   booking: {
     weekdays: [1, 2, 3, 4, 5],
     startMin: 540,

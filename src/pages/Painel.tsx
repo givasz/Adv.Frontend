@@ -5,7 +5,6 @@ import { api } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { THEMES, isThemeUnlocked } from '@/lib/themes'
-import { resolveSchedulingMode } from '@/lib/booking'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { Avatar } from '@/components/ui/Avatar'
@@ -103,11 +102,6 @@ export default function Painel() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
-            {resolveSchedulingMode(profile) === 'native' && (
-              <Link to="/agenda" className="btn-ghost !py-2 !px-4 text-[13px]">
-                Minha agenda
-              </Link>
-            )}
             <Link to={`/${profile.slug}`} target="_blank" className="btn-primary !py-2 !px-4 text-[13px]">
               Ver meu perfil
             </Link>
