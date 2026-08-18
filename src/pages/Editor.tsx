@@ -763,6 +763,13 @@ function OabVerifyRow({ status, onRequest }: { status: OabStatus; onRequest: () 
       <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
         A conferência é feita pela plataforma no cadastro da OAB. Você não pode se marcar como conferido.
       </p>
+      <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
+        Declarar registro falso ou apresentar documento falso pode configurar crime (arts. 297 e 304 do
+        Código Penal). A veracidade dos dados é de sua exclusiva responsabilidade.{' '}
+        <Link to="/legal/termos" target="_blank" className="font-medium text-ink-soft underline">
+          Ver Termos
+        </Link>
+      </p>
     </div>
   )
 }

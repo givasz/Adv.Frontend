@@ -26,6 +26,7 @@ export interface LegalDocContent {
 }
 
 const UPDATED = '10 de julho de 2026'
+const TERMS_UPDATED = '18 de agosto de 2026' // Termos revisados (responsabilidade/veracidade)
 const CONTACT = 'contato@advoc.me'
 
 export const LEGAL_DOCS: LegalDocContent[] = [
@@ -92,7 +93,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
     navLabel: 'Termos de Uso',
     title: 'Termos de Uso',
     summary: 'As regras para usar a plataforma advoc.me.',
-    updated: UPDATED,
+    updated: TERMS_UPDATED,
     sections: [
       {
         paragraphs: [
@@ -109,6 +110,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '2. Elegibilidade e veracidade',
         paragraphs: [
           'O serviço destina-se a advogados regularmente inscritos na OAB. Você declara que as informações do perfil (inclusive nome e número de inscrição) são verdadeiras e de sua titularidade. É vedado usar dados de terceiros ou se passar por outro profissional.',
+          'A prestação de dados falsos, a declaração inverídica de inscrição na OAB e a apresentação de documento falso ou adulterado à plataforma são de sua exclusiva responsabilidade e podem configurar ilícito civil e crime — entre outros, os previstos no art. 297 (falsificação de documento público) e no art. 304 (uso de documento falso), bem como no art. 299 (falsidade ideológica), do Código Penal. O advoc.me não atesta a autenticidade de documentos nem responde por informações inverídicas que você fornecer.',
         ],
       },
       {
@@ -146,7 +148,13 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '8. Limitação de responsabilidade',
         paragraphs: [
-          'O serviço é fornecido “no estado em que se encontra”. Não respondemos por sanções disciplinares decorrentes de conteúdo que você optou por publicar, nem por indisponibilidades temporárias.',
+          'O serviço é fornecido “no estado em que se encontra”. A checagem de conformidade é um apoio automatizado que sinaliza e pode bloquear violações — não é garantia de adequação integral do conteúdo às normas. Na máxima extensão permitida pela lei, o advoc.me não se responsabiliza:',
+        ],
+        bullets: [
+          'por conteúdo, dados ou documentos falsos, inverídicos, adulterados ou de titularidade de terceiros que você inserir, declarar ou enviar;',
+          'por conteúdo que você optou por publicar em desacordo com o Provimento 205/2021, o Código de Ética ou a legislação — inclusive quando itens do perfil venham a sair da conformidade após a publicação;',
+          'por sanções disciplinares, administrativas, cíveis ou penais decorrentes do uso que você faz da plataforma ou do conteúdo que publica;',
+          'por indisponibilidades temporárias do serviço.',
         ],
       },
       {
