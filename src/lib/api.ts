@@ -55,11 +55,14 @@ function loadFirmDraft(): Firm | null {
     return null
   }
 }
-const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true'
 // URL absoluta do backend (Render) em produção. Vazio em dev → usa caminho relativo
 // `/api` que o proxy do Vite encaminha para localhost:3333. No Netlify, defina
 // VITE_API_URL=https://<seu-backend>.onrender.com.
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+// Modo real (backend) quando explicitamente ligado OU quando há um backend
+// configurado (VITE_API_URL) — assim o deploy no Netlify usa o Render de ponta a
+// ponta (perfis, conta, IA), sem localStorage. Em dev sem VITE_API_URL, segue mock.
+const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 

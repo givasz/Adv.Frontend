@@ -6,7 +6,6 @@ import AuthPage from './pages/AuthPage'
 import Onboarding from './pages/Onboarding'
 import Painel from './pages/Painel'
 import Editor from './pages/Editor'
-import Directory from './pages/Directory'
 import PublicProfile from './pages/PublicProfile'
 import Preview from './pages/Preview'
 import AdminPanel from './pages/AdminPanel'
@@ -52,7 +51,6 @@ export default function App() {
         <Route path="/comecar" element={<RequireAuth to="/criar-conta"><Onboarding /></RequireAuth>} />
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
         <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
-        <Route path="/buscar" element={<Directory />} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />

@@ -9,7 +9,7 @@ import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
-import { ArrowRight, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
+import { ArrowRight, LockIcon, ScaleIcon } from '@/components/ui/icons'
 
 // Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
 // lá o próprio recurso mostra seu valor antes de pedir upgrade (upsell natural).
@@ -253,9 +253,6 @@ export default function Painel() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-ink-faint">
-          <Link to="/buscar" className="inline-flex items-center gap-1.5 hover:text-ink">
-            <SearchIcon width={14} height={14} /> Ver o diretório
-          </Link>
           <Link to="/legal" className="hover:text-ink">
             Documentos e privacidade
           </Link>

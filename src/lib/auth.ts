@@ -28,10 +28,10 @@ const SESSION_KEY = 'advocme:session'
 const ACCOUNTS_KEY = 'advocme:accounts' // só no modo mock
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-// Segue o MESMO modo dos perfis (api.ts): auth real só quando VITE_USE_REAL_API=true.
-// Assim conta e perfil ficam sempre no mesmo lugar (ambos mock, ou ambos no backend);
-// no deploy Netlify (só VITE_API_URL) os perfis ficam em localStorage → auth idem.
-const useReal = import.meta.env.VITE_USE_REAL_API === 'true'
+// Segue o MESMO modo dos perfis (api.ts): backend real quando VITE_USE_REAL_API=true
+// OU quando há backend configurado (VITE_API_URL). Assim, no Netlify, conta e perfil
+// ficam no backend do Render (sem localStorage). Em dev sem VITE_API_URL, mock.
+const useReal = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

@@ -48,9 +48,6 @@ export default function Landing() {
           <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Como funciona
           </a>
-          <Link to="/buscar" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
-            Buscar advogados
-          </Link>
           <AccountMenu />
           <Link to="/comecar" className="btn-primary !py-2.5 !px-5 text-[14px]">
             Criar meu perfil

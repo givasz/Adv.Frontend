@@ -56,9 +56,6 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
           <ScaleIcon width={22} height={22} className="text-burgundy" />
           advoc.me
         </Link>
-        <Link to="/buscar" className="text-sm font-medium text-ink-soft transition-colors hover:text-ink">
-          Buscar advogados
-        </Link>
       </header>
 
       {/* Cartão central */}
