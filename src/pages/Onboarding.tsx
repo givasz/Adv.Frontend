@@ -77,9 +77,9 @@ export default function Onboarding() {
     api.getDraft().then((d) => setProfile(isUnstarted(d) ? blankEssentials(d) : d))
   }, [])
 
-  // Plano escolhido na landing (?plan=). Aplicado em silêncio ao rascunho.
-  // NOTA: login por e-mail desligado na fase de teste — planos pagos NÃO exigem
-  // conta por enquanto (o gate de cadastro foi comentado). Reativar depois.
+  // Plano escolhido na landing (?plan=). Aplicado em silêncio ao rascunho. O acesso
+  // ao onboarding já exige conta (RequireAuth em App.tsx), então aqui o usuário
+  // sempre está logado.
   useEffect(() => {
     if (!profile) return
     const wanted = searchParams.get('plan')

@@ -20,7 +20,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { isAuthed } = useAuth()
-  const next = params.get('next') || '/editor'
+  // Sem ?next, cai no painel — que redireciona ao onboarding se ainda não há perfil.
+  const next = params.get('next') || '/painel'
   const isSignup = mode === 'signup'
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
           </h1>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
             {isSignup
-              ? 'Sua conta guarda o perfil para você editar depois e é necessária para assinar os planos pagos.'
+              ? 'Crie sua conta para montar, publicar e editar seu perfil. É grátis no plano Free e leva menos de um minuto.'
               : 'Acesse sua conta para editar seu perfil e gerenciar sua assinatura.'}
           </p>
 
@@ -145,9 +146,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
           </p>
 
           <p className="mt-5 border-t border-ink/10 pt-4 text-center text-[11.5px] leading-relaxed text-ink-faint">
-            No plano <span className="font-medium">Free</span> a conta é opcional — serve para você
-            recuperar e editar seu perfil depois. Nos planos pagos, a conta é necessária para a
-            assinatura.
+            A conta é necessária para criar e gerenciar seu perfil — <span className="font-medium">grátis</span>{' '}
+            no plano Free. Ela guarda seu perfil para você editar depois e assinar os planos pagos.
           </p>
         </motion.div>
       </main>

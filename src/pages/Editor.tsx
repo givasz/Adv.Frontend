@@ -132,8 +132,8 @@ export default function Editor() {
     const stillOk = isThemeUnlocked(getTheme(profile.theme), plan)
     set({ plan, theme: stillOk ? profile.theme : 'papel' })
   }
-  // Login por e-mail desligado na fase de teste: a troca de plano é imediata,
-  // sem exigir cadastro. Reativar o gate de conta quando o auth voltar.
+  // O acesso ao editor já exige conta (RequireAuth). A troca de plano é imediata
+  // aqui; no produto real, viria da assinatura ativa.
   const changePlan = (plan: Plan) => applyPlan(plan)
   const lim = CHAR_LIMITS[profile.plan]
 

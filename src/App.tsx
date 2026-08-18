@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, type ReactElement } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useAuth } from '@/lib/auth'
 import Landing from './pages/Landing'
-// Login por e-mail desligado na fase de teste — rotas /entrar e /criar-conta
-// comentadas (ver abaixo). Reativar junto com o AccountMenu quando o auth voltar.
-// import AuthPage from './pages/AuthPage'
+import AuthPage from './pages/AuthPage'
 import Onboarding from './pages/Onboarding'
 import Painel from './pages/Painel'
 import Editor from './pages/Editor'
@@ -29,25 +28,37 @@ function ScrollToTop() {
   return null
 }
 
+// Exige conta para acessar as áreas do app (criar/gerenciar perfil) — inclusive
+// no plano Free. Sem sessão, manda para o cadastro/login guardando o destino.
+function RequireAuth({ children, to = '/entrar' }: { children: ReactElement; to?: string }) {
+  const { isAuthed } = useAuth()
+  const loc = useLocation()
+  if (!isAuthed) {
+    const next = encodeURIComponent(loc.pathname + loc.search)
+    return <Navigate to={`${to}?next=${next}`} replace />
+  }
+  return children
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
-        {/* Login por e-mail desligado na fase de teste. Reativar quando o auth voltar:
         <Route path="/entrar" element={<AuthPage mode="login" />} />
-        <Route path="/criar-conta" element={<AuthPage mode="signup" />} /> */}
-        <Route path="/comecar" element={<Onboarding />} />
-        <Route path="/painel" element={<Painel />} />
-        <Route path="/editor" element={<Editor />} />
+        <Route path="/criar-conta" element={<AuthPage mode="signup" />} />
+        {/* Áreas que exigem conta (mesmo no Free). Criar perfil → cadastro; gerir → login. */}
+        <Route path="/comecar" element={<RequireAuth to="/criar-conta"><Onboarding /></RequireAuth>} />
+        <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
+        <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
         <Route path="/buscar" element={<Directory />} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />
         <Route path="/__preview/:themeId" element={<Preview />} />
         <Route path={`/${ADMIN_PATH}`} element={<AdminPanel />} />
-        <Route path="/escritorio/editar" element={<FirmEditor />} />
+        <Route path="/escritorio/editar" element={<RequireAuth><FirmEditor /></RequireAuth>} />
         <Route path="/escritorio/:slug" element={<Escritorio />} />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
