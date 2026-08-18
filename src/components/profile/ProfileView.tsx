@@ -398,9 +398,10 @@ function AreaCard({
       </span>
       {open && (
         <motion.span
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="t-muted mt-2.5 text-left text-[13.5px] font-normal leading-relaxed"
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="t-muted mt-2.5 block text-left text-[13.5px] font-normal leading-relaxed"
         >
           {description}
         </motion.span>
