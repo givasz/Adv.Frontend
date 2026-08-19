@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import type { Profile } from '@/lib/types'
 import { slugify } from '@/lib/brFormat'
+import { profileUrl, profileUrlLabel } from '@/lib/publicUrl'
 import { buildVCard, dataUrlToBlob, downloadFile } from '@/lib/vcard'
 import { Card } from './fields'
 import { CopyIcon } from '@/components/ui/icons'
@@ -19,7 +20,10 @@ const PRINT_PX = 1024 // resolução de impressão (cartão/banner)
 export function DigitalCard({ profile }: { profile: Profile }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [copied, setCopied] = useState(false)
-  const url = `https://advoc.me/${profile.slug}`
+  // A URL REAL do perfil, não a marca. Ver lib/publicUrl.ts: apontar o QR para
+  // advoc.me gerava um código que não abria nada.
+  const url = profileUrl(profile.slug)
+  const label = profileUrlLabel(profile.slug)
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -62,14 +66,16 @@ export function DigitalCard({ profile }: { profile: Profile }) {
           <canvas
             ref={canvasRef}
             role="img"
-            aria-label={`QR Code do perfil advoc.me/${profile.slug}`}
+            aria-label={`QR Code do perfil ${label}`}
             className="block rounded-md"
           />
         </div>
         <div className="min-w-0 flex-1 space-y-2.5 text-center sm:text-left">
           <div>
             <p className="font-display text-[15px] font-semibold text-ink">{profile.name || 'Seu nome'}</p>
-            <p className="truncate text-[12.5px] text-ink-soft">advoc.me/{profile.slug}</p>
+            {/* Exibe exatamente o que o QR carrega — rótulo e código não podem
+                divergir, senão o advogado imprime uma coisa e entrega outra. */}
+            <p className="truncate text-[12.5px] text-ink-soft">{label}</p>
           </div>
           <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
             <button type="button" onClick={downloadQr} className="btn-ghost !py-2 !px-3 !text-[13px]">

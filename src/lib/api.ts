@@ -24,6 +24,17 @@ import type {
   ReportReason,
 } from './types'
 
+/**
+ * Resultado da consulta de endereço. `available: null` significa NÃO SEI (rede
+ * fora): a interface mostra incerteza em vez de prometer disponibilidade.
+ */
+export interface SlugCheck {
+  slug: string
+  available: boolean | null
+  suggested: string
+  reason: 'free' | 'taken' | 'empty' | 'unknown'
+}
+
 const STORAGE_KEY = 'advocme:profile:draft'
 const FIRM_KEY = 'advocme:firm:draft'
 const BOOKINGS_KEY = 'advocme:bookings'
@@ -287,6 +298,46 @@ export const api = {
     const resolved = { ...withPlan, slug: resolveMockSlug(withPlan) }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
     return resolved
+  },
+
+  /**
+   * O endereço desejado está livre? O painel afirmava "disponível" sem ter
+   * perguntado a ninguém — com dois "joão-silva" no país a promessa quebrava no
+   * primeiro save, e o advogado descobria pelo número grudado no fim.
+   *
+   * `suggested` é o que o servidor realmente gravaria, para a interface oferecer
+   * a alternativa em vez de só dizer não.
+   */
+  async checkSlug(slug: string, name?: string): Promise<SlugCheck> {
+    const desired = slugifyName(slug || '')
+    if (!desired) return { slug: '', available: false, suggested: '', reason: 'empty' }
+
+    if (USE_REAL_API) {
+      const params = new URLSearchParams({ slug: desired })
+      if (name) params.set('name', name)
+      try {
+        const res = await fetch(`${API_BASE}/api/profiles/slug-available?${params}`, {
+          headers: { ...authHeader() },
+        })
+        if (res.ok) return res.json()
+      } catch {
+        /* rede fora → devolve indefinido abaixo em vez de mentir "disponível" */
+      }
+      return { slug: desired, available: null, suggested: desired, reason: 'unknown' }
+    }
+
+    await wait(180)
+    // Mock: os perfis-modelo (Marina, Guilherme) são de OUTROS advogados — sempre
+    // ocupados, mesmo que o rascunho local esteja com o mesmo slug. Deixar o
+    // rascunho "liberar" o endereço faria o mock dizer disponível para um
+    // endereço que o backend recusaria.
+    const taken = exampleProfiles.some((p) => p.slug === desired)
+    return {
+      slug: desired,
+      available: !taken,
+      suggested: taken ? `${desired}-${Math.floor(1000 + Math.random() * 9000)}` : desired,
+      reason: taken ? 'taken' : 'free',
+    }
   },
 
   /**

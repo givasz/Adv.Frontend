@@ -6,6 +6,8 @@ import { PLAN_LABEL } from '@/lib/upsell'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import { CalendarIcon, CheckIcon, GlobeIcon, ScaleIcon, ShieldIcon } from '@/components/ui/icons'
 import { PurchaseSimulator } from './PurchaseSimulator'
+import { useSlugCheck } from '@/lib/useSlugCheck'
+import { BRAND_HOST } from '@/lib/publicUrl'
 
 // Tópicos concretos de "como melhorar o perfil" travados por plano.
 //
@@ -42,18 +44,43 @@ function Addr({ children, muted = false }: { children: ReactNode; muted?: boolea
   )
 }
 
+/** Antes → depois do endereço, com a disponibilidade conferida de verdade. */
+function SlugProof({ profile }: { profile: Profile }) {
+  const alvo = slugify(profile.name) || 'seu-nome'
+  const { available, suggested, checking } = useSlugCheck(alvo, profile.name)
+  const livre = available !== false
+  const final = livre ? alvo : suggested || alvo
+
+  return (
+    <span className="flex flex-col gap-1">
+      <span className="flex flex-wrap items-center gap-1.5">
+        <Addr muted>
+          {BRAND_HOST}/{profile.slug || 'seu-nome-4821'}
+        </Addr>
+        <span className="text-ink-faint">→</span>
+        <Addr>
+          {BRAND_HOST}/{final}
+        </Addr>
+      </span>
+      <span aria-live="polite" className="text-[11.5px] text-ink-faint">
+        {checking && 'conferindo disponibilidade…'}
+        {!checking && available === true && 'disponível para você'}
+        {!checking && available === false && `${alvo} já está em uso — este fica reservado`}
+        {!checking && available === null && 'confirmamos a disponibilidade na ativação'}
+      </span>
+    </span>
+  )
+}
+
 const TOPICS: Topic[] = [
   {
     key: 'slug',
     title: 'Seu nome no endereço, sem número',
     plan: 'pro',
-    proof: (p) => (
-      <span className="flex flex-wrap items-center gap-1.5">
-        <Addr muted>advoc.me/{p.slug || 'seu-nome-4821'}</Addr>
-        <span className="text-ink-faint">→</span>
-        <Addr>advoc.me/{slugify(p.name) || 'seu-nome'}</Addr>
-      </span>
-    ),
+    // A prova CONSULTA o servidor: prometer um endereço sem perguntar a ninguém
+    // é a promessa mais fácil de quebrar do produto — basta existir outro
+    // homônimo, e aí o advogado assina e recebe um número no fim mesmo assim.
+    proof: (p) => <SlugProof profile={p} />,
   },
   {
     key: 'oab',
@@ -92,7 +119,9 @@ const TOPICS: Topic[] = [
       <span className="flex flex-wrap items-center gap-1.5">
         <GlobeIcon width={14} height={14} className="text-brass-deep" />
         <Addr>{slugify(p.name) || 'seu-nome'}.adv.br</Addr>
-        <span className="text-[11.5px] text-ink-faint">disponível</span>
+        {/* Domínio .adv.br é registrado no registro.br, fora daqui: a plataforma
+            não tem como afirmar que está livre. Dizer "disponível" seria inventar. */}
+        <span className="text-[11.5px] text-ink-faint">a registrar no seu nome</span>
       </span>
     ),
   },

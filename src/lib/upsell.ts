@@ -10,6 +10,7 @@ import {
   CHAR_LIMITS,
   HIGHLIGHT_LIMIT,
   canUseArticles,
+  canUseDigitalCard,
   canUseScheduling,
   canUseVideo,
   type LimitedField,
@@ -101,6 +102,7 @@ export type UpsellFeature =
   | 'highlights'
   | 'articles'
   | 'video'
+  | 'qrcode'
   | 'agenda'
   | 'themes'
   | 'oab'
@@ -116,6 +118,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   highlights: [],
   articles: [],
   video: [],
+  qrcode: [],
   themes: [],
   ai: [],
   agenda: ['agenda'],
@@ -167,6 +170,11 @@ const FEATURE_META: Record<
     title: 'Artigos educativos',
     subtitle: 'Textos informativos sobre as suas áreas, publicados no seu perfil.',
     value: (p) => (canUseArticles(p) ? `Até ${ARTICLE_LIMIT[p]} artigos` : '—'),
+  },
+  qrcode: {
+    title: 'Cartão digital',
+    subtitle: 'QR Code em resolução de impressão e o seu contato em vCard.',
+    value: (p) => (canUseDigitalCard(p) ? 'Incluído' : '—'),
   },
   video: {
     title: 'Vídeo de apresentação',

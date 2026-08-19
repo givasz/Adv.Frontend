@@ -22,10 +22,13 @@ import {
   CHAR_LIMITS,
   NAME_MAX,
   canUseArticles,
+  canUseDigitalCard,
   canUseScheduling,
   canUseVideo,
 } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
+import { useSlugCheck } from '@/lib/useSlugCheck'
+import { BRAND_HOST } from '@/lib/publicUrl'
 import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
@@ -454,23 +457,16 @@ export default function Editor() {
 
               {section === 'analytics' && <AnalyticsSection profile={profile} />}
 
-              {section === 'qrcode' && (
-                <>
+              {section === 'qrcode' &&
+                (canUseDigitalCard(profile.plan) ? (
                   <DigitalCard profile={profile} />
-                  {profile.plan === 'free' && (
-                    <UpsellCard
-                      plan="pro"
-                      title="Leve seu cartão para o mundo real"
-                      body="No Pro o seu endereço perde o número aleatório — o QR passa a levar direto para advoc.me/seu-nome, que cabe num cartão de visita sem envergonhar."
-                      bullets={[
-                        'Endereço limpo, sem número',
-                        'QR em alta resolução para impressão',
-                        'Contato em vCard para eventos',
-                      ]}
-                    />
-                  )}
-                </>
-              )}
+                ) : (
+                  // Free vê o cartão real borrado sob o cadeado — inclusive com o
+                  // endereço limpo que ele passaria a ter, que é metade do apelo.
+                  <LockedFeature unlockPlan="pro" onOpen={() => setUpsell('qrcode')}>
+                    <DigitalCard profile={{ ...profile, slug: slugify(profile.name) || profile.slug }} />
+                  </LockedFeature>
+                ))}
 
               {section === 'artigos' &&
                 (canUseArticles(profile.plan) ? (
@@ -644,18 +640,7 @@ function IdentitySection({
             {profile.plan === 'free' ? (
               <TextInput value={`advoc.me/${profile.slug}`} readOnly className="!bg-paper-deep text-ink-faint" />
             ) : (
-              <div className="flex items-stretch overflow-hidden rounded-lg border border-ink/15 bg-paper-soft transition-colors focus-within:border-burgundy focus-within:ring-2 focus-within:ring-burgundy/15">
-                <span className="flex select-none items-center bg-paper-deep px-3 text-[13px] text-ink-faint">
-                  advoc.me/
-                </span>
-                <input
-                  value={profile.slug}
-                  onChange={(e) => set({ slug: slugify(e.target.value), slugCustom: true })}
-                  placeholder="seu-nome"
-                  aria-label="Endereço personalizado do perfil"
-                  className="w-full bg-transparent px-2 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 focus:outline-none"
-                />
-              </div>
+              <SlugField profile={profile} set={set} />
             )}
           </Field>
         </div>
@@ -759,6 +744,80 @@ function IdentitySection({
           </p>
         )}
       </Card>
+    </>
+  )
+}
+
+/**
+ * Endereço editável (Pro/Max) com consulta REAL de disponibilidade.
+ *
+ * O campo antes aceitava qualquer coisa em silêncio e a colisão só aparecia
+ * depois de salvar, na forma de um número grudado no fim do endereço. Agora o
+ * estado é dito enquanto se digita — e, quando ocupado, a alternativa que o
+ * servidor daria vem com um botão para aceitar de uma vez.
+ */
+function SlugField({
+  profile,
+  set,
+}: {
+  profile: Profile
+  set: (patch: Partial<Profile>) => void
+}) {
+  const { available, suggested, checking } = useSlugCheck(profile.slug, profile.name)
+  const taken = available === false
+  const hintId = 'slug-status'
+
+  return (
+    <>
+      <div
+        className={`flex items-stretch overflow-hidden rounded-lg border bg-paper-soft transition-colors focus-within:ring-2 ${
+          taken
+            ? 'border-burgundy/60 focus-within:border-burgundy focus-within:ring-burgundy/15'
+            : 'border-ink/15 focus-within:border-burgundy focus-within:ring-burgundy/15'
+        }`}
+      >
+        <span className="flex select-none items-center bg-paper-deep px-3 text-[13px] text-ink-faint">
+          {BRAND_HOST}/
+        </span>
+        <input
+          value={profile.slug}
+          onChange={(e) => set({ slug: slugify(e.target.value), slugCustom: true })}
+          placeholder="seu-nome"
+          aria-label="Endereço personalizado do perfil"
+          aria-invalid={taken}
+          aria-describedby={hintId}
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full bg-transparent px-2 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 focus:outline-none"
+        />
+      </div>
+      {/* aria-live: quem usa leitor de tela ouve a mudança de estado sem
+          precisar sair do campo para descobrir que o endereço está ocupado. */}
+      <p id={hintId} aria-live="polite" className="mt-1.5 text-[12px] leading-relaxed">
+        {checking && <span className="text-ink-faint">Conferindo se está livre…</span>}
+        {!checking && available === true && (
+          <span className="font-medium text-brass-deep">Endereço disponível.</span>
+        )}
+        {!checking && taken && (
+          <span className="text-burgundy">
+            Esse endereço já é de outro advogado.{' '}
+            {suggested && suggested !== profile.slug && (
+              <button
+                type="button"
+                onClick={() => set({ slug: suggested, slugCustom: true })}
+                className="font-semibold underline underline-offset-2"
+              >
+                Usar {suggested}
+              </button>
+            )}
+          </span>
+        )}
+        {!checking && available === null && profile.slug.trim() && (
+          <span className="text-ink-faint">
+            Não deu para conferir agora — o servidor confirma ao salvar.
+          </span>
+        )}
+      </p>
     </>
   )
 }

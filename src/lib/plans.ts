@@ -31,6 +31,16 @@ export function canUseArticles(plan: Plan): boolean {
   return plan === 'premium'
 }
 
+/**
+ * Cartão digital do advogado: QR em resolução de impressão + contato em vCard.
+ * Recurso dos planos pagos — é material de MARKETING (cartão de visita, vitrine,
+ * assinatura de e-mail), diferente do botão de compartilhar que o visitante usa
+ * no perfil público, que segue livre para qualquer um.
+ */
+export function canUseDigitalCard(plan: Plan): boolean {
+  return plan === 'pro' || plan === 'premium'
+}
+
 /** Vídeo de apresentação no perfil — também exclusivo do Max. */
 export function canUseVideo(plan: Plan): boolean {
   return plan === 'premium'
