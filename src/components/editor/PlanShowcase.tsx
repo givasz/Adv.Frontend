@@ -40,6 +40,7 @@ const PERKS: Record<Plan, string[]> = {
   premium: [
     'Tudo do Pro, e mais:',
     `Até ${ARTICLE_LIMIT.premium} artigos no seu perfil`,
+    'Vídeo de apresentação',
     'Domínio próprio (.adv.br)',
     'Sua marca no lugar da nossa',
     'Comprovante de conformidade em PDF',

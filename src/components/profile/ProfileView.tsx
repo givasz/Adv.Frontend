@@ -3,8 +3,11 @@ import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type ThemeStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
+import { canUseVideo } from '@/lib/plans'
+import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
 import { SchedulingForm } from '@/components/profile/SchedulingForm'
+import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { AssistantChat } from '@/components/profile/AssistantChat'
 import { assistantTitle } from '@/lib/assistant'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
@@ -49,6 +52,9 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
   const areas = profile.areas.filter((a) => a.label.trim())
   const highlights = profile.highlights.filter((h) => h.title.trim())
   const articles = (profile.articles ?? []).filter((a) => a.title.trim())
+  // Vídeo de apresentação (Max): só existe se o link for reconhecido — link
+  // quebrado não vira caixa vazia no perfil de ninguém.
+  const video = canUseVideo(profile.plan) ? parseVideoUrl(profile.videoUrl) : null
   const s = getTheme(profile.theme).style
   const brand = profile.branding
   // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
@@ -355,6 +361,24 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
                   </div>
                 )
               })}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Vídeo de apresentação — fecha o perfil: quem chegou até aqui já leu
+            quem você é, e o vídeo é o que mais aproxima. Fica por último também
+            porque é o único bloco que fala com um servidor de terceiro, e só
+            depois do clique (ver VideoPlayer). */}
+        {video && (
+          <motion.section variants={item} className="mt-9">
+            <SectionTitle ornament={s.divider}>Apresentação</SectionTitle>
+            <div className="mt-3">
+              <VideoPlayer
+                video={video}
+                caption={profile.videoCaption}
+                name={profile.name}
+                inert={preview && !chatEnabled}
+              />
             </div>
           </motion.section>
         )}

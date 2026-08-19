@@ -13,7 +13,7 @@ import { PlanFeaturePeek } from './PlanChecklist'
 const PRICE: Record<Exclude<Plan, 'free'>, string> = { pro: 'R$ 19', premium: 'R$ 39' }
 const PROMISE: Record<Exclude<Plan, 'free'>, string> = {
   pro: 'Assistente de agendamento, selo OAB conferida, endereço sem número e mais espaço.',
-  premium: 'Tudo do Pro + artigos no perfil, domínio próprio e a sua marca no lugar da nossa.',
+  premium: 'Tudo do Pro + artigos e vídeo no perfil, domínio próprio e a sua marca no lugar da nossa.',
 }
 
 type Phase = 'checkout' | 'processing' | 'done'

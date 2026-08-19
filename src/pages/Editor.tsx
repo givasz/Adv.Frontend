@@ -17,7 +17,14 @@ import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LABEL_MAX, CHAR_LIMITS, NAME_MAX, canUseArticles, canUseScheduling } from '@/lib/plans'
+import {
+  AREA_LABEL_MAX,
+  CHAR_LIMITS,
+  NAME_MAX,
+  canUseArticles,
+  canUseScheduling,
+  canUseVideo,
+} from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
 import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
@@ -29,6 +36,7 @@ import { PurchaseSimulator } from '@/components/editor/PurchaseSimulator'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { ExperienceCard } from '@/components/editor/ExperienceCard'
 import { ArticlesCard } from '@/components/editor/ArticlesCard'
+import { VideoCard } from '@/components/editor/VideoCard'
 import { ThemePicker } from '@/components/editor/ThemePicker'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { AuditReportCard } from '@/components/editor/AuditReportCard'
@@ -62,6 +70,7 @@ type SectionId =
   | 'marca'
   | 'oab'
   | 'artigos'
+  | 'video'
   | 'conteudo'
   | 'analytics'
   | 'qrcode'
@@ -69,6 +78,10 @@ type SectionId =
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
+
+// Vídeo institucional do Judiciário usado só como espectro sob o cadeado da
+// seção de vídeo — nunca é salvo no perfil de ninguém.
+const PREVIEW_VIDEO_URL = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'
 
 // Conteúdo de exemplo mostrado BORRADO sob o cadeado da seção de artigos: serve
 // só para o advogado ver o formato do que teria no Max. Nunca é salvo.
@@ -103,6 +116,10 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
   artigos: { title: 'Seus artigos', subtitle: 'Conteúdo educativo sobre as suas áreas, no seu perfil.' },
+  video: {
+    title: 'Seu vídeo',
+    subtitle: 'Um vídeo curto de apresentação, no fim do seu perfil.',
+  },
   conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
   qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
@@ -438,6 +455,17 @@ export default function Editor() {
                       onUpsell={() => {}}
                       preview
                     />
+                  </LockedFeature>
+                ))}
+
+              {section === 'video' &&
+                (canUseVideo(profile.plan) ? (
+                  <VideoCard profile={profile} set={set} />
+                ) : (
+                  // Igual aos artigos: a seção fica no lugar, com o card real
+                  // borrado sob o cadeado, para o advogado ver o que teria.
+                  <LockedFeature unlockPlan="premium" onOpen={() => setUpsell('video')}>
+                    <VideoCard profile={{ ...profile, videoUrl: PREVIEW_VIDEO_URL }} set={() => {}} preview />
                   </LockedFeature>
                 ))}
 

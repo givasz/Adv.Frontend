@@ -11,6 +11,7 @@ import {
   HIGHLIGHT_LIMIT,
   canUseArticles,
   canUseScheduling,
+  canUseVideo,
   type LimitedField,
 } from './plans'
 import { TRUST_FACTORS } from './trustScore'
@@ -99,6 +100,7 @@ export type UpsellFeature =
   | 'bio'
   | 'highlights'
   | 'articles'
+  | 'video'
   | 'agenda'
   | 'themes'
   | 'oab'
@@ -113,6 +115,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   bio: [],
   highlights: [],
   articles: [],
+  video: [],
   themes: [],
   ai: [],
   agenda: ['agenda'],
@@ -164,6 +167,11 @@ const FEATURE_META: Record<
     title: 'Artigos educativos',
     subtitle: 'Textos informativos sobre as suas áreas, publicados no seu perfil.',
     value: (p) => (canUseArticles(p) ? `Até ${ARTICLE_LIMIT[p]} artigos` : '—'),
+  },
+  video: {
+    title: 'Vídeo de apresentação',
+    subtitle: 'Um vídeo curto seu no fim do perfil — é o que mais aproxima quem chega.',
+    value: (p) => (canUseVideo(p) ? 'Incluído' : '—'),
   },
   agenda: {
     title: 'Agendamento de consultas',

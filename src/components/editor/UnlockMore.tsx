@@ -47,6 +47,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     pitch: 'Sua marca e sua autoridade, sem limites.',
     items: [
       'Publique artigos no seu perfil',
+      'Vídeo de apresentação',
       'Seu próprio domínio (.adv.br)',
       'Sem a marca advoc.me',
       'Cor de destaque própria',

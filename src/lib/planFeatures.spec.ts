@@ -92,7 +92,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     const novos = featuresPending(max)
       .map((f) => f.key)
       .filter((k) => !featuresPending(pro).some((f) => f.key === k))
-    expect(novos.sort()).toEqual(['artigos', 'dominio', 'marca'])
+    expect(novos.sort()).toEqual(['artigos', 'dominio', 'marca', 'video'])
   })
 
   it('artigos só existem no Max', () => {
@@ -116,6 +116,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
         { id: 'h2', title: 'B', detail: '' },
       ],
       articles: [{ id: 'ar', title: 'T', summary: 'S', readingMinutes: 4 }],
+      videoUrl: 'https://youtu.be/aqz-KE-bpKQ',
       areas: [
         { id: 'a', label: 'Família', description: '' },
         { id: 'b', label: 'Sucessões', description: '' },

@@ -132,6 +132,12 @@ export const OAB_GUIDANCE_BY_FIELD: Record<string, string[]> = {
     'Não cite casos, processos, clientes ou resultados obtidos (sigilo profissional).',
     'Não use números de "vitórias", percentuais de êxito ou depoimentos.',
   ],
+  video: [
+    'Apresente-se: quem você é, onde atua e como trabalha.',
+    'Explicar um tema jurídico de forma didática também vale.',
+    'Não mencione decisões, resultados obtidos ou casos de clientes — nem em imagem.',
+    'Evite ostentação (carro, viagem, escritório de luxo) e qualquer convite a contratar.',
+  ],
   article: [
     'Escreva conteúdo educativo: explique o tema para quem não é da área.',
     'Título neutro e informativo — nada de chamada para contratar ou consultar.',

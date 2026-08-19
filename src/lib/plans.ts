@@ -31,6 +31,11 @@ export function canUseArticles(plan: Plan): boolean {
   return plan === 'premium'
 }
 
+/** Vídeo de apresentação no perfil — também exclusivo do Max. */
+export function canUseVideo(plan: Plan): boolean {
+  return plan === 'premium'
+}
+
 // Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
 export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
 export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"

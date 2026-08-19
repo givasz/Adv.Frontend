@@ -14,6 +14,7 @@ import type { Plan, Profile } from './types'
 import { AREA_LIMIT, CHAR_LIMITS, HIGHLIGHT_LIMIT } from './plans'
 import { resolveSchedulingMode } from './booking'
 import { THEMES, isThemeUnlocked } from './themes'
+import { parseVideoUrl } from './video'
 
 export interface PlanFeature {
   key: string
@@ -128,6 +129,15 @@ export const PLAN_FEATURES: PlanFeature[] = [
     to: '/editor?section=artigos',
     cta: 'Escrever o primeiro',
     done: (p) => (p.articles ?? []).length > 0,
+  },
+  {
+    key: 'video',
+    plan: 'premium',
+    title: 'Vídeo de apresentação',
+    body: 'Um vídeo curto seu no fim do perfil. Ver e ouvir a pessoa aproxima mais do que qualquer texto.',
+    to: '/editor?section=video',
+    cta: 'Colar meu link',
+    done: (p) => !!parseVideoUrl(p.videoUrl),
   },
   {
     key: 'marca',

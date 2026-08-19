@@ -113,6 +113,13 @@ export const SparkIcon = (p: IconProps) => (
   </svg>
 )
 
+// Triângulo cheio de "play" — capa do vídeo de apresentação.
+export const PlayIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M8 5.5v13l11-6.5-11-6.5z" fill="currentColor" stroke="none" />
+  </svg>
+)
+
 export const ArrowRight = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M5 12h14M13 6l6 6-6 6" />

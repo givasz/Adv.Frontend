@@ -209,6 +209,13 @@ export interface Profile {
   highlights: Highlight[]
   /** artigos educativos (seção "Conteúdo") — informativo, não promocional */
   articles?: Article[]
+  /**
+   * Vídeo de apresentação (plano Max). Guardamos só o LINK de YouTube/Vimeo —
+   * sem upload. Ver lib/video.ts para as formas aceitas e o porquê.
+   */
+  videoUrl?: string
+  /** legenda curta sob o vídeo — passa pela checagem de conformidade */
+  videoCaption?: string
   socials: SocialLink[]
   contact: ContactChannels
   /** comportamento do botão "Agendar" (ver SchedulingMode). Ausente = derivar de contact.scheduling. */

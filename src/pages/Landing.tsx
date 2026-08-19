@@ -412,6 +412,7 @@ export default function Landing() {
             ctaLabel="Assinar Max"
             features={[
               'Tudo do Pro',
+              'Vídeo de apresentação no seu perfil',
               'Publique artigos e amplie sua autoridade',
               'Use seu próprio domínio (.adv.br)',
               'Sua marca no lugar da nossa',

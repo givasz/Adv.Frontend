@@ -273,6 +273,11 @@ export default function Painel() {
             desc="Conteúdo educativo que mantém o perfil vivo."
           />
           <DiscoverCard
+            to="/editor?section=video"
+            title="Seu vídeo"
+            desc="Um vídeo curto de apresentação no fim do perfil."
+          />
+          <DiscoverCard
             to="/editor?section=oab"
             title="Conferência da OAB"
             desc="Solicite a conferência e ganhe o selo no perfil."
