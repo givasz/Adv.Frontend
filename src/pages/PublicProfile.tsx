@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
+import { exampleProfiles } from '@/lib/mockData'
 import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { ReportDialog } from '@/components/profile/ReportDialog'
@@ -32,8 +33,10 @@ export default function PublicProfile() {
   }, [slug])
 
   // SEO local automático — título, meta e JSON-LD (Attorney) a partir do perfil.
+  // Nos perfis de exemplo (fictícios) NÃO injetamos schema de advogado real.
   useEffect(() => {
     if (!profile) return
+    if (exampleProfiles.some((p) => p.slug === profile.slug)) return
     return applyProfileSeo(profile)
   }, [profile])
 
@@ -60,8 +63,18 @@ export default function PublicProfile() {
     )
   }
 
+  // Fixtures de demonstração (marina-sales, guilherme-sales23): rotulados como
+  // exemplo para não serem lidos como advogado real (OAB fictícia).
+  const isExample = exampleProfiles.some((p) => p.slug === profile.slug)
+
   return (
     <main className="relative flex min-h-dvh flex-col overflow-x-hidden">
+      {isExample && (
+        <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
+          <ScaleIcon width={13} height={13} className="shrink-0 text-brass-light" />
+          Perfil de demonstração — pessoa e dados fictícios, apenas para exemplo do advoc.me.
+        </div>
+      )}
       <ShareBar slug={profile.slug} name={profile.name} profile={profile} />
       <ProfileView profile={profile} />
 
