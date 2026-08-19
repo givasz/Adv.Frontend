@@ -16,7 +16,7 @@ import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
-import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
+import { getTheme, isThemeUnlocked, THEMES, type ThemeId } from '@/lib/themes'
 import {
   AREA_LABEL_MAX,
   CHAR_LIMITS,
@@ -38,6 +38,7 @@ import { ExperienceCard } from '@/components/editor/ExperienceCard'
 import { ArticlesCard } from '@/components/editor/ArticlesCard'
 import { VideoCard } from '@/components/editor/VideoCard'
 import { ThemePicker } from '@/components/editor/ThemePicker'
+import { ThemeTrialBar } from '@/components/editor/ThemeTrialBar'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { AuditReportCard } from '@/components/editor/AuditReportCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
@@ -138,6 +139,10 @@ export default function Editor() {
   // Plano no checkout simulado (null = fechado). Assinar acontece AQUI mesmo, sem
   // mandar o advogado procurar outra página.
   const [checkout, setCheckout] = useState<Exclude<Plan, 'free'> | null>(null)
+  // Tema travado que o advogado está PROVANDO: entra só na prévia, nunca no
+  // rascunho. Deixar experimentar antes de pedir a assinatura é o que transforma
+  // um cadeado em vontade — o cadeado continua, mas no salvar.
+  const [tryTheme, setTryTheme] = useState<ThemeId | null>(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -175,6 +180,12 @@ export default function Editor() {
     return () => clearTimeout(t)
   }, [profile])
 
+  // Sair da aparência encerra a prova: nas outras seções a prévia tem de mostrar o
+  // perfil como ele está de verdade.
+  useEffect(() => {
+    if (section !== 'aparencia') setTryTheme(null)
+  }, [section])
+
   const bioIssues = useMemo(() => (profile ? checkCompliance(profile.bio) : []), [profile])
 
   if (!profile) {
@@ -195,9 +206,13 @@ export default function Editor() {
     // caracteres digitados (ainda no debounce) seriam sobrescritos.
     await api.saveDraft(profile)
     const saved = await api.setPlan(plan)
+    // Quem assinou provando um tema fica com ele: obrigar a escolher de novo
+    // depois de pagar seria perder justamente o que motivou a compra.
+    const wanted = tryTheme && isThemeUnlocked(getTheme(tryTheme), plan) ? tryTheme : saved.theme
     // Tema de plano superior não sobrevive a um downgrade — volta ao neutro.
-    const stillOk = isThemeUnlocked(getTheme(saved.theme), plan)
-    setProfile(stillOk ? saved : { ...saved, theme: 'papel' })
+    const theme = isThemeUnlocked(getTheme(wanted), plan) ? wanted : 'papel'
+    setProfile({ ...saved, theme })
+    setTryTheme(null)
     setCheckout(null)
   }
   const lim = CHAR_LIMITS[profile.plan]
@@ -364,11 +379,33 @@ export default function Editor() {
                     </span>
                   }
                 >
+                  {/* No toque não existe hover, então o convite a experimentar
+                      precisa estar escrito: sem isto, num celular o cadeado é a
+                      única mensagem e ninguém descobre que dá para provar. */}
+                  <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
+                    Toque em qualquer tema para vê-lo no seu perfil. Os do Pro e do Max você
+                    experimenta antes de assinar — só o salvar depende do plano.
+                  </p>
+                  <AnimatePresence>
+                    {tryTheme && (
+                      <ThemeTrialBar
+                        trying={tryTheme}
+                        saved={profile.theme}
+                        onSubscribe={setCheckout}
+                        onCancel={() => setTryTheme(null)}
+                        onShowPreview={() => setTab('preview')}
+                      />
+                    )}
+                  </AnimatePresence>
                   <ThemePicker
                     value={profile.theme}
+                    trying={tryTheme}
                     plan={profile.plan}
-                    onChange={(theme) => set({ theme })}
-                    onWantUpgrade={() => setUpsell('themes')}
+                    onChange={(theme) => {
+                      setTryTheme(null)
+                      set({ theme })
+                    }}
+                    onTry={(theme) => setTryTheme(theme)}
                   />
                 </Card>
               )}
@@ -506,7 +543,9 @@ export default function Editor() {
 
         {/* Coluna de prévia */}
         <div className={`lg:sticky lg:top-[80px] lg:self-start ${tab === 'edit' ? 'hidden lg:block' : ''}`}>
-          <PhonePreview profile={profile} />
+          {/* A prova de tema vive AQUI e só aqui: o objeto que vai para o save
+              continua sendo `profile`, com o tema que o plano permite. */}
+          <PhonePreview profile={tryTheme ? { ...profile, theme: tryTheme } : profile} />
         </div>
       </div>
 
