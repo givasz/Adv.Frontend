@@ -5,6 +5,7 @@ import type { Plan } from '@/lib/types'
 import { useDialog } from '@/lib/a11y'
 import {
   featureCompare,
+  nextPlan,
   PLAN_LABEL,
   PLAN_PRICE,
   type UpsellFeature,
@@ -17,6 +18,8 @@ import { ArrowRight, CheckIcon, SparkIcon, XIcon } from '@/components/ui/icons'
 // mais que aparece no perfil, não um jargão de assinatura. Usado enquanto o
 // perfil é montado (onboarding) e no painel de evolução.
 
+const RANK_ORDER: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
+
 type PaidPlan = Exclude<Plan, 'free'>
 type Tier = { id: PaidPlan; tier: string; price: string; pitch: string; items: string[] }
 
@@ -27,11 +30,12 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     price: 'R$ 19',
     pitch: 'Mais espaço e recursos no seu perfil.',
     items: [
-      'Botão de agendamento no perfil',
+      'Assistente virtual que marca horários',
+      'Selo “OAB conferida”',
+      'Endereço advoc.me/seu-nome',
+      'Destaques de experiência',
       'QR Code e cartão de contato',
       'Até 6 áreas de atuação',
-      'Endereço advoc.me/seu-nome',
-      'Selo “OAB conferida”',
       'Bio e textos mais longos',
       'Mais temas visuais',
     ],
@@ -43,10 +47,10 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     pitch: 'Sua marca e sua autoridade, sem limites.',
     items: [
       'Publique artigos no seu perfil',
-      'Galeria e vídeo de apresentação',
       'Seu próprio domínio (.adv.br)',
       'Sem a marca advoc.me',
-      'Bio ainda mais longa',
+      'Cor de destaque própria',
+      'Até 20 áreas e bio de 1000 caracteres',
     ],
   },
 }
@@ -168,21 +172,30 @@ export function UnlockMore({
  * limite no editor. Mostra só o recurso que motivou o bloqueio, comparado entre
  * Free/Pro/Max (valores derivados de lib/upsell.ts → plans.ts). Fecha por Esc,
  * clique fora, X ou "Continuar editando" — nunca força a decisão. O CTA leva à
- * página de planos existente (upgrade real virá com o billing).
+ * página de planos existente. O CTA assina o próximo plano ali mesmo
+ * (`onSubscribe`), sem mandar o advogado procurar onde pagar; sem o callback,
+ * degrada para o link da seção de plano.
  */
 export function FeatureUpsellModal({
   feature,
   plan,
   onClose,
+  onSubscribe,
 }: {
   feature: UpsellFeature
   plan: Plan
   onClose: () => void
+  /** abre o checkout do plano indicado (o Editor é quem monta o checkout) */
+  onSubscribe?: (p: Exclude<Plan, 'free'>) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useDialog(ref, onClose)
   const cmp = featureCompare(feature)
   const titleId = 'feature-upsell-title'
+  // Menor plano que realmente muda este recurso — é ele que o botão assina.
+  const target = (cmp.rows.find(
+    (r) => r.plan !== 'free' && RANK_ORDER[r.plan] > RANK_ORDER[plan] && r.value !== '—',
+  )?.plan ?? nextPlan(plan)) as Exclude<Plan, 'free'> | null
 
   return (
     <motion.div
@@ -271,13 +284,23 @@ export function FeatureUpsellModal({
             <button type="button" onClick={onClose} className="btn-ghost flex-1 !py-2.5">
               Continuar editando
             </button>
-            <Link
-              to="/editor?section=plano"
-              onClick={onClose}
-              className="btn-primary flex-1 !py-2.5 text-[14px]"
-            >
-              Ver planos
-            </Link>
+            {onSubscribe && target ? (
+              <button
+                type="button"
+                onClick={() => onSubscribe(target)}
+                className="btn-primary flex-1 !py-2.5 text-[14px]"
+              >
+                Ativar {PLAN_LABEL[target]} · {PLAN_PRICE[target]}/mês
+              </button>
+            ) : (
+              <Link
+                to="/editor?section=plano"
+                onClick={onClose}
+                className="btn-primary flex-1 !py-2.5 text-[14px]"
+              >
+                Ver planos
+              </Link>
+            )}
           </div>
         </div>
       </motion.div>

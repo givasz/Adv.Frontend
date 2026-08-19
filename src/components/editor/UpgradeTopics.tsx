@@ -53,13 +53,29 @@ const TOPICS: Topic[] = [
 
 const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 
-export function UpgradeTopics({ profile, onPick }: { profile: Profile; onPick: (p: Plan) => void }) {
-  const [pending, setPending] = useState<Exclude<Plan, 'free'> | null>(null)
+export function UpgradeTopics({
+  profile,
+  onPick,
+  initial = null,
+  showIncluded = true,
+}: {
+  profile: Profile
+  onPick: (p: Plan) => void
+  /** abre o checkout já neste plano (ex.: quem clicou "Assinar Pro" na home) */
+  initial?: Exclude<Plan, 'free'> | null
+  /**
+   * Mostra também os tópicos já inclusos no plano atual (com selo "Incluído").
+   * Desligue onde o senso de progresso já vem de outro lugar — no painel, o
+   * checklist do plano cumpre esse papel e repetir aqui vira ruído.
+   */
+  showIncluded?: boolean
+}) {
+  const [pending, setPending] = useState<Exclude<Plan, 'free'> | null>(initial)
 
   return (
     <>
       <div className="space-y-2.5">
-        {TOPICS.map((t) => {
+        {TOPICS.filter((t) => showIncluded || RANK[profile.plan] < RANK[t.plan]).map((t) => {
           const unlocked = RANK[profile.plan] >= RANK[t.plan]
           return (
             <div

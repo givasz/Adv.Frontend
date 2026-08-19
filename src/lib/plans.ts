@@ -17,6 +17,20 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 // Número máximo de áreas de atuação por plano (usado no editor).
 export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
 
+// Destaques de experiência ("15 anos em Direito de Família", "Mestrado em…").
+// O Free tem UM, só para dar o gosto; o teto sobe com o plano.
+export const HIGHLIGHT_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 10 }
+
+// Artigos educativos publicados no perfil — exclusivo do Max.
+export const ARTICLE_LIMIT: Record<Plan, number> = { free: 0, pro: 0, premium: 12 }
+export const ARTICLE_TITLE_MAX = 90
+export const ARTICLE_SUMMARY_MAX = 240
+
+/** Publicar artigos educativos no perfil — recurso exclusivo do Max. */
+export function canUseArticles(plan: Plan): boolean {
+  return plan === 'premium'
+}
+
 // Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
 export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
 export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"

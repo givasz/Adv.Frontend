@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import type { Plan } from '@/lib/types'
@@ -7,6 +7,7 @@ import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { THEMES, isThemeUnlocked } from '@/lib/themes'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
+import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { ArrowRight, LockIcon, ScaleIcon } from '@/components/ui/icons'
@@ -25,7 +26,7 @@ const DEST: Record<string, string> = {
   redes: '/editor?section=redes',
   email: '/editor?section=redes',
   area2: '/editor?section=identidade',
-  artigo: '/editor?section=conteudo',
+  artigo: '/editor?section=artigos',
   oab_conferida: '/editor?section=oab',
   agenda: '/editor?section=agenda',
   dominio: '/editor?section=marca',
@@ -46,7 +47,16 @@ function motivator(score: number): string {
 export default function Painel() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [delta, setDelta] = useState(0)
+  // true logo depois de confirmar uma assinatura — dá o tom de celebração ao
+  // checklist do que abriu (some ao recarregar).
+  const [justUpgraded, setJustUpgraded] = useState(false)
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // "Assinar Pro" clicado na home (ou em qualquer lugar fora do painel) chega como
+  // ?assinar=pro e abre o checkout aqui — sem passar pelo assistente de criação.
+  const wanted = searchParams.get('assinar')
+  const openCheckout: Plan | null = wanted === 'pro' || wanted === 'premium' ? wanted : null
 
   useEffect(() => {
     document.title = 'Evolua seu perfil · advoc.me'
@@ -82,15 +92,25 @@ export default function Painel() {
   }
 
   const firstName = profile.name.split(' ')[0] || 'você'
-  // Passos disponíveis no plano atual (os travados por plano viram upsell abaixo).
-  const freeSteps = trust.next.filter((f) => !trust.locked(f))
+  // Passos do conteúdo básico. Os fatores que dependem de plano (agenda, selo da
+  // OAB, marca, domínio) NÃO entram aqui: eles pertencem ao checklist do plano,
+  // logo acima, e apareceriam duas vezes na mesma tela.
+  const freeSteps = trust.next.filter((f) => !f.plan)
   const unlockedThemes = THEMES.filter((t) => isThemeUnlocked(t, profile.plan)).length
 
-  // Ativa um plano (em teste, sem cobrança) e persiste o rascunho.
-  const activatePlan = (p: Plan) => {
-    const next = { ...profile, plan: p }
-    setProfile(next)
-    api.saveDraft(next)
+  // Ativa um plano (em teste, sem cobrança). O plano é do SERVIDOR: adotamos o
+  // perfil que ele devolve (com endereço e agendamento já reconciliados) em vez de
+  // remendar o objeto local — era isso que fazia o recurso comprado voltar a
+  // aparecer travado no recarregamento seguinte.
+  const activatePlan = async (p: Plan) => {
+    const saved = await api.setPlan(p)
+    setProfile(saved)
+    setJustUpgraded(p !== 'free')
+    if (openCheckout) {
+      searchParams.delete('assinar')
+      setSearchParams(searchParams, { replace: true })
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -140,6 +160,11 @@ export default function Painel() {
           </div>
         </div>
 
+        {/* O que o plano abriu — só o que ainda não foi aproveitado. Some sozinho
+            conforme cada item é configurado, então quem já montou o perfil vê
+            apenas a novidade. */}
+        <PlanChecklist profile={profile} celebrate={justUpgraded} />
+
         {/* Próximos passos — só o que dá pra fazer no plano atual (sem cadeados).
             Os itens de planos pagos vão para a seção de upsell abaixo. */}
         {freeSteps.length > 0 && (
@@ -170,7 +195,12 @@ export default function Painel() {
               </p>
             </div>
             <div className="mt-5">
-              <UpgradeTopics profile={profile} onPick={activatePlan} />
+              <UpgradeTopics
+                profile={profile}
+                onPick={activatePlan}
+                initial={openCheckout as Exclude<Plan, 'free'> | null}
+                showIncluded={false}
+              />
             </div>
           </section>
         )}
@@ -233,6 +263,16 @@ export default function Painel() {
             desc="Compartilhe seu perfil com um QR Code."
           />
           <DiscoverCard
+            to="/editor?section=experiencia"
+            title="Sua experiência"
+            desc="Anos de atuação, formação e titulação em cards curtos."
+          />
+          <DiscoverCard
+            to="/editor?section=artigos"
+            title="Seus artigos"
+            desc="Conteúdo educativo que mantém o perfil vivo."
+          />
+          <DiscoverCard
             to="/editor?section=oab"
             title="Conferência da OAB"
             desc="Solicite a conferência e ganhe o selo no perfil."
@@ -240,7 +280,7 @@ export default function Painel() {
           <DiscoverCard
             to="/editor?section=conteudo"
             title="Documentos e privacidade"
-            desc="Gere sua política de privacidade e termos (LGPD)."
+            desc="Gere sua política de privacidade e o comprovante de conformidade."
           />
         </div>
 

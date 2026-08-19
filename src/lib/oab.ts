@@ -126,4 +126,16 @@ export const OAB_GUIDANCE_BY_FIELD: Record<string, string[]> = {
     'Use seu nome civil / profissional conforme a inscrição na OAB.',
     'Não use nome fantasia ou marca no lugar do nome do advogado.',
   ],
+  highlight: [
+    'Registre fatos verificáveis: tempo de atuação, formação, titulação, cargos.',
+    'Evite superlativos e comparações ("o mais experiente", "referência no estado").',
+    'Não cite casos, processos, clientes ou resultados obtidos (sigilo profissional).',
+    'Não use números de "vitórias", percentuais de êxito ou depoimentos.',
+  ],
+  article: [
+    'Escreva conteúdo educativo: explique o tema para quem não é da área.',
+    'Título neutro e informativo — nada de chamada para contratar ou consultar.',
+    'Evite prometer resultado ou sugerir que o leitor "não perca tempo".',
+    'Não use casos reais como exemplo, nem identifique partes envolvidas.',
+  ],
 }

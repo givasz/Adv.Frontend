@@ -17,36 +17,51 @@ import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { validateSocialUrl } from '@/lib/socials'
 import { getTheme, isThemeUnlocked, THEMES } from '@/lib/themes'
-import { AREA_LABEL_MAX, CHAR_LIMITS, NAME_MAX, canUseScheduling } from '@/lib/plans'
+import { AREA_LABEL_MAX, CHAR_LIMITS, NAME_MAX, canUseArticles, canUseScheduling } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
 import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
 import { InfoTip } from '@/components/editor/InfoTip'
-import { PlanBadge } from '@/components/editor/PlanBadge'
+import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { PurchaseSimulator } from '@/components/editor/PurchaseSimulator'
+import { PlanChecklist } from '@/components/editor/PlanChecklist'
+import { ExperienceCard } from '@/components/editor/ExperienceCard'
+import { ArticlesCard } from '@/components/editor/ArticlesCard'
 import { ThemePicker } from '@/components/editor/ThemePicker'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
+import { AuditReportCard } from '@/components/editor/AuditReportCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
+import { DigitalCard } from '@/components/editor/DigitalCard'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
 import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
 import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
-import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon, CopyIcon } from '@/components/ui/icons'
+import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
-type AiTarget = { kind: GenerateKind; areaId?: string; areaLabel?: string; currentText?: string } | null
+type AiTarget = {
+  kind: GenerateKind
+  areaId?: string
+  areaLabel?: string
+  currentText?: string
+  /** artigo que recebe o rascunho gerado (kind === 'article') */
+  articleId?: string
+} | null
 type SectionId =
   | 'identidade'
   | 'bio'
+  | 'experiencia'
   | 'redes'
   | 'agenda'
   | 'aparencia'
   | 'marca'
   | 'oab'
+  | 'artigos'
   | 'conteudo'
   | 'analytics'
   | 'qrcode'
@@ -55,16 +70,39 @@ type SectionId =
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
 
+// Conteúdo de exemplo mostrado BORRADO sob o cadeado da seção de artigos: serve
+// só para o advogado ver o formato do que teria no Max. Nunca é salvo.
+const PREVIEW_ARTICLES = [
+  {
+    id: 'preview-1',
+    title: 'Como funciona a guarda compartilhada',
+    summary:
+      'O que a lei estabelece, como o convívio é dividido e quais pontos costumam ser definidos em acordo.',
+    readingMinutes: 5,
+  },
+  {
+    id: 'preview-2',
+    title: 'Inventário: extrajudicial ou judicial?',
+    summary: 'As duas vias, os requisitos de cada uma e o que muda no prazo e no custo.',
+    readingMinutes: 8,
+  },
+]
+
 // Cada seção do editor é um passo do assistente, aberto a partir de um card do painel.
 // Título e subtítulo conversam com o advogado — nada de "Configurações".
 const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   identidade: { title: 'Seu perfil', subtitle: 'Seus dados e como você aparece para quem chega.' },
   bio: { title: 'Sua apresentação', subtitle: 'Poucas linhas sobre você. A IA pode começar.' },
+  experiencia: {
+    title: 'Sua experiência',
+    subtitle: 'Anos de atuação, formação, onde você atua — o que sustenta a sua autoridade.',
+  },
   redes: { title: 'Seus canais', subtitle: 'Por onde os clientes falam com você.' },
   agenda: { title: 'Sua agenda', subtitle: 'Deixe que marquem um horário direto no perfil.' },
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
+  artigos: { title: 'Seus artigos', subtitle: 'Conteúdo educativo sobre as suas áreas, no seu perfil.' },
   conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
   qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
@@ -80,6 +118,9 @@ export default function Editor() {
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   // Recurso que motivou o modal de upsell contextual (null = fechado).
   const [upsell, setUpsell] = useState<UpsellFeature | null>(null)
+  // Plano no checkout simulado (null = fechado). Assinar acontece AQUI mesmo, sem
+  // mandar o advogado procurar outra página.
+  const [checkout, setCheckout] = useState<Exclude<Plan, 'free'> | null>(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -128,13 +169,20 @@ export default function Editor() {
   }
 
   const set = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
-  const applyPlan = (plan: Plan) => {
-    const stillOk = isThemeUnlocked(getTheme(profile.theme), plan)
-    set({ plan, theme: stillOk ? profile.theme : 'papel' })
+  // A troca de plano passa pelo servidor (api.setPlan) e o resultado dele é adotado
+  // como novo estado: quem manda é a assinatura vigente, não o objeto local. Sem
+  // isso, o recurso "comprado" destravava só na tela e voltava a travar no reload.
+  const changePlan = async (plan: Plan) => {
+    // Grava o que estiver em voo antes de trocar: setPlan devolve o perfil do
+    // servidor e nós o adotamos por inteiro — sem este flush, os últimos
+    // caracteres digitados (ainda no debounce) seriam sobrescritos.
+    await api.saveDraft(profile)
+    const saved = await api.setPlan(plan)
+    // Tema de plano superior não sobrevive a um downgrade — volta ao neutro.
+    const stillOk = isThemeUnlocked(getTheme(saved.theme), plan)
+    setProfile(stillOk ? saved : { ...saved, theme: 'papel' })
+    setCheckout(null)
   }
-  // O acesso ao editor já exige conta (RequireAuth). A troca de plano é imediata
-  // aqui; no produto real, viria da assinatura ativa.
-  const changePlan = (plan: Plan) => applyPlan(plan)
   const lim = CHAR_LIMITS[profile.plan]
 
   const oabStatus: OabStatus = profile.oabStatus ?? (profile.oabVerified ? 'verified' : 'none')
@@ -264,6 +312,10 @@ export default function Editor() {
                 </Card>
               )}
 
+              {section === 'experiencia' && (
+                <ExperienceCard profile={profile} set={set} onUpsell={setUpsell} />
+              )}
+
               {section === 'redes' && (
                 <ContactSection profile={profile} set={set} />
               )}
@@ -348,18 +400,68 @@ export default function Editor() {
 
               {section === 'analytics' && <AnalyticsSection profile={profile} />}
 
-              {section === 'qrcode' && <QrSection profile={profile} />}
+              {section === 'qrcode' && (
+                <>
+                  <DigitalCard profile={profile} />
+                  {profile.plan === 'free' && (
+                    <UpsellCard
+                      plan="pro"
+                      title="Leve seu cartão para o mundo real"
+                      body="No Pro o seu endereço perde o número aleatório — o QR passa a levar direto para advoc.me/seu-nome, que cabe num cartão de visita sem envergonhar."
+                      bullets={[
+                        'Endereço limpo, sem número',
+                        'QR em alta resolução para impressão',
+                        'Contato em vCard para eventos',
+                      ]}
+                    />
+                  )}
+                </>
+              )}
 
-              {section === 'conteudo' && <LegalDocsCard profile={profile} />}
+              {section === 'artigos' &&
+                (canUseArticles(profile.plan) ? (
+                  <ArticlesCard
+                    profile={profile}
+                    set={set}
+                    onUpsell={setUpsell}
+                    onAi={(topic) =>
+                      openAi({ kind: 'article', areaLabel: topic || profile.areas[0]?.label })
+                    }
+                  />
+                ) : (
+                  // Fora do Max a seção continua no lugar, com o card real borrado
+                  // sob o cadeado — o advogado vê exatamente o que teria.
+                  <LockedFeature unlockPlan="premium" onOpen={() => setUpsell('articles')}>
+                    <ArticlesCard
+                      profile={{ ...profile, plan: 'premium', articles: PREVIEW_ARTICLES }}
+                      set={() => {}}
+                      onUpsell={() => {}}
+                      preview
+                    />
+                  </LockedFeature>
+                ))}
+
+              {section === 'conteudo' && (
+                <>
+                  <LegalDocsCard profile={profile} />
+                  <AuditReportCard profile={profile} onUpsell={() => setUpsell('branding')} />
+                </>
+              )}
 
               {section === 'plano' && (
-                <Card title="Seu plano">
-                  <PlanBadge plan={profile.plan} onChange={changePlan} />
-                  <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                    Trocar de plano libera mais áreas, temas e recursos. Neste protótipo a troca é
-                    imediata; no produto real vem da assinatura ativa.
-                  </p>
-                </Card>
+                <>
+                  {/* Quem já assina vê primeiro o que ainda não usou do que pagou —
+                      não uma vitrine para comprar de novo. */}
+                  <PlanChecklist profile={profile} />
+                  <Card title="Planos">
+                    <PlanShowcase plan={profile.plan} onPick={changePlan} />
+                    <p className="text-[11.5px] leading-relaxed text-ink-faint">
+                      Plataforma em teste: a assinatura é ativada na hora e nenhuma cobrança é
+                      feita. Você pode voltar ao Free quando quiser — seus textos continuam
+                      guardados.
+                    </p>
+                  </Card>
+                </>
               )}
             </motion.div>
           </AnimatePresence>
@@ -399,7 +501,26 @@ export default function Editor() {
       {/* Modal de upsell focado no recurso que bateu o limite */}
       <AnimatePresence>
         {upsell && (
-          <FeatureUpsellModal feature={upsell} plan={profile.plan} onClose={() => setUpsell(null)} />
+          <FeatureUpsellModal
+            feature={upsell}
+            plan={profile.plan}
+            onClose={() => setUpsell(null)}
+            onSubscribe={(p) => {
+              setUpsell(null)
+              setCheckout(p)
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Checkout simulado — do "está travado" ao "está liberado" sem trocar de tela */}
+      <AnimatePresence>
+        {checkout && (
+          <PurchaseSimulator
+            plan={checkout}
+            onClose={() => setCheckout(null)}
+            onConfirmed={() => changePlan(checkout)}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -649,47 +770,6 @@ function AnalyticsSection({ profile }: { profile: Profile }) {
           title="Descubra quem visita você"
           body={`Você já recebeu ${views} ${views === 1 ? 'visita' : 'visitas'}. Atualize para entender de onde elas vêm.`}
           bullets={['Origem das visitas', 'Horários de maior movimento', 'Botões e links mais clicados']}
-        />
-      )}
-    </div>
-  )
-}
-
-// QR Code / cartão digital — compartilhar funciona para todos; QR personalizado é PRO.
-function QrSection({ profile }: { profile: Profile }) {
-  const [copied, setCopied] = useState(false)
-  const url = `advoc.me/${profile.slug}`
-  const copy = () => {
-    navigator.clipboard?.writeText(`https://${url}`).then(
-      () => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1600)
-      },
-      () => {},
-    )
-  }
-  return (
-    <div className="space-y-4">
-      <Card title="Seu endereço">
-        <div className="flex items-stretch gap-2">
-          <div className="flex flex-1 items-center rounded-lg border border-ink/15 bg-paper-soft px-3.5 text-[14px] text-ink">
-            {url}
-          </div>
-          <button type="button" onClick={copy} className="btn-ghost shrink-0">
-            <CopyIcon width={15} height={15} />
-            {copied ? 'Copiado' : 'Copiar'}
-          </button>
-        </div>
-        <Link to={`/${profile.slug}`} target="_blank" className="btn-ghost w-full">
-          Ver meu cartão digital
-        </Link>
-      </Card>
-      {profile.plan === 'free' && (
-        <UpsellCard
-          plan="pro"
-          title="Um QR Code com a sua cara"
-          body="Compartilhe seu perfil com um QR Code personalizado — perfeito para cartões, vitrines e assinaturas."
-          bullets={['QR Code personalizado', 'Cartão de contato (vCard)', 'Pronto para imprimir']}
         />
       )}
     </div>

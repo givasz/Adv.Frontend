@@ -4,7 +4,15 @@
 // visuais NÃO repetem regra de negócio — só consomem estas funções puras.
 
 import type { Plan } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, canUseScheduling, type LimitedField } from './plans'
+import {
+  AREA_LIMIT,
+  ARTICLE_LIMIT,
+  CHAR_LIMITS,
+  HIGHLIGHT_LIMIT,
+  canUseArticles,
+  canUseScheduling,
+  type LimitedField,
+} from './plans'
 import { TRUST_FACTORS } from './trustScore'
 import { THEMES, isThemeUnlocked } from './themes'
 
@@ -55,6 +63,16 @@ export function areaQuota(plan: Plan, used: number): Quota {
   return makeQuota(plan, used, (p) => AREA_LIMIT[p])
 }
 
+/** Cota de destaques de experiência (limite de CONTAGEM por plano). */
+export function highlightQuota(plan: Plan, used: number): Quota {
+  return makeQuota(plan, used, (p) => HIGHLIGHT_LIMIT[p])
+}
+
+/** Cota de artigos educativos (limite de CONTAGEM por plano; 0 fora do Max). */
+export function articleQuota(plan: Plan, used: number): Quota {
+  return makeQuota(plan, used, (p) => ARTICLE_LIMIT[p])
+}
+
 /** Cota de um campo com limite de CARACTERES por plano (bio, destaque, etc.). */
 export function charQuota(plan: Plan, field: LimitedField, used: number): Quota {
   return makeQuota(plan, used, (p) => CHAR_LIMITS[p][field])
@@ -80,6 +98,7 @@ export type UpsellFeature =
   | 'areas'
   | 'bio'
   | 'highlights'
+  | 'articles'
   | 'agenda'
   | 'themes'
   | 'oab'
@@ -93,6 +112,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   areas: [],
   bio: [],
   highlights: [],
+  articles: [],
   themes: [],
   ai: [],
   agenda: ['agenda'],
@@ -137,8 +157,13 @@ const FEATURE_META: Record<
   },
   highlights: {
     title: 'Destaques de experiência',
-    subtitle: 'Espaço para detalhar cada destaque.',
-    value: (p) => `${CHAR_LIMITS[p].highlightDetail} caracteres cada`,
+    subtitle: 'Anos de atuação, formação e titulação, em cards curtos no perfil.',
+    value: (p) => (HIGHLIGHT_LIMIT[p] === 1 ? '1 destaque' : `${HIGHLIGHT_LIMIT[p]} destaques`),
+  },
+  articles: {
+    title: 'Artigos educativos',
+    subtitle: 'Textos informativos sobre as suas áreas, publicados no seu perfil.',
+    value: (p) => (canUseArticles(p) ? `Até ${ARTICLE_LIMIT[p]} artigos` : '—'),
   },
   agenda: {
     title: 'Agendamento de consultas',

@@ -10,6 +10,7 @@ import { generateWithOllama } from './localAi'
 import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
 import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
 import { DEFAULT_BOOKING_CONFIG, resolveSchedulingMode } from './booking'
+import { canUseScheduling } from './plans'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import type {
   Availability,
@@ -18,6 +19,7 @@ import type {
   GenerateRequest,
   GenerateResult,
   OabStatus,
+  Plan,
   Profile,
   ReportReason,
 } from './types'
@@ -156,10 +158,16 @@ function slugifyName(s: string): string {
 //  • Free → SEMPRE nome + número aleatório (ex.: vitor-martins-4827), mesmo sem homônimo.
 //    Mantém o número atual se o slug já for "nome-<dígitos>" do nome vigente (estável).
 //  • Pro/Max → usa o endereço editável como está (limpo).
-function resolveMockSlug(p: Profile): string {
+function resolveMockSlug(p: Profile, stripAutoNumber = false): string {
   const base = slugifyName(p.name)
   if (p.plan === 'pro' || p.plan === 'premium') {
-    return slugifyName(p.slug || p.name)
+    // Só na TROCA de plano: o número do Free é imposto pela plataforma, não
+    // escolhido, então cai fora ao assinar (perk "seu nome sem número"). Num save
+    // comum fica como está, senão um endereço personalizado terminado em número
+    // seria alterado sem o usuário pedir. Espelha resolveSlug do backend.
+    const desired = (p.slug || '').trim()
+    const autoNumbered = stripAutoNumber && !!base && new RegExp(`^${base}-\\d+$`).test(desired)
+    return slugifyName(!desired || autoNumbered ? p.name : desired)
   }
   if (p.slug && new RegExp(`^${base}-\\d+$`).test(p.slug)) return p.slug
   return `${base}-${Math.floor(1000 + Math.random() * 9000)}`
@@ -270,8 +278,48 @@ export const api = {
       return res.json()
     }
     await wait(200)
+    // O PLANO É DO SERVIDOR (ver setPlan): o mock também ignora o `plan` recebido e
+    // mantém o da assinatura vigente. Sem isso, mock e API real divergiriam — e um
+    // plano "ativado" só na tela voltaria a travar tudo no próximo carregamento.
+    const plan = loadDraft().plan
+    const withPlan: Profile = { ...profile, plan }
     // Resolve o endereço com a mesma regra do backend (Free sempre numerado).
-    const resolved = { ...profile, slug: resolveMockSlug(profile) }
+    const resolved = { ...withPlan, slug: resolveMockSlug(withPlan) }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
+    return resolved
+  },
+
+  /**
+   * Ativa um plano (assinatura). É a ÚNICA forma de mudar de plano: o `plan`
+   * enviado no saveDraft é ignorado pelo servidor, senão a "assinatura" evaporava
+   * no recarregar (era exatamente o bug do assistente virtual que continuava
+   * travado depois de assinar). Devolve o perfil já reconciliado pelo servidor —
+   * quem chama deve adotar essa resposta como novo estado, não o objeto local.
+   *
+   * Hoje a cobrança é simulada (plataforma em teste). Com o billing real, o
+   * checkout confirma no provedor e o backend recebe o webhook — a assinatura
+   * desta função não muda.
+   */
+  async setPlan(plan: Plan): Promise<Profile> {
+    if (USE_REAL_API) {
+      const res = await fetch(`${API_BASE}/api/profiles/me/plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ plan }),
+      })
+      if (!res.ok) throw new Error('Não foi possível ativar o plano.')
+      return res.json()
+    }
+    await wait(220)
+    // Mock: espelha a reconciliação do servidor (agendamento é recurso pago; o
+    // endereço segue a escada de plano).
+    const draft = loadDraft()
+    const next: Profile = {
+      ...draft,
+      plan,
+      schedulingMode: canUseScheduling(plan) ? draft.schedulingMode : 'off',
+    }
+    const resolved = { ...next, slug: resolveMockSlug(next, true) }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
     return resolved
   },

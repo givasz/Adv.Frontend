@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import type { Plan } from '@/lib/types'
-import { AREA_LIMIT, CHAR_LIMITS } from '@/lib/plans'
+import { AREA_LIMIT, ARTICLE_LIMIT, CHAR_LIMITS, HIGHLIGHT_LIMIT } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckIcon } from '@/components/ui/icons'
 import { PurchaseSimulator } from './PurchaseSimulator'
@@ -25,23 +25,25 @@ const PERKS: Record<Plan, string[]> = {
     `${AREA_LIMIT.free} áreas de atuação`,
     `Bio até ${CHAR_LIMITS.free.bio} caracteres`,
     'WhatsApp e redes sociais',
+    `${HIGHLIGHT_LIMIT.free} destaque de experiência`,
     '2 temas visuais',
   ],
   pro: [
-    `${AREA_LIMIT.pro} áreas de atuação`,
-    `Bio até ${CHAR_LIMITS.pro.bio} caracteres`,
-    'Agenda de consultas no perfil',
-    'QR Code e cartão de contato',
+    'Assistente virtual de agendamento',
     'Selo “OAB conferida”',
     'Endereço advoc.me/seu-nome',
+    `${HIGHLIGHT_LIMIT.pro} destaques de experiência`,
+    'Cartão digital com QR e vCard',
+    `${AREA_LIMIT.pro} áreas · bio até ${CHAR_LIMITS.pro.bio}`,
     '5 temas visuais',
   ],
   premium: [
     'Tudo do Pro, e mais:',
-    `${AREA_LIMIT.premium} áreas · bio até ${CHAR_LIMITS.premium.bio}`,
-    'Publique artigos no seu perfil',
+    `Até ${ARTICLE_LIMIT.premium} artigos no seu perfil`,
     'Domínio próprio (.adv.br)',
-    'Sem a marca advoc.me',
+    'Sua marca no lugar da nossa',
+    'Comprovante de conformidade em PDF',
+    `${AREA_LIMIT.premium} áreas · bio até ${CHAR_LIMITS.premium.bio}`,
     '8 temas visuais',
   ],
 }

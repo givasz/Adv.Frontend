@@ -47,6 +47,8 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
+  const highlights = profile.highlights.filter((h) => h.title.trim())
+  const articles = (profile.articles ?? []).filter((a) => a.title.trim())
   const s = getTheme(profile.theme).style
   const brand = profile.branding
   // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
@@ -279,6 +281,80 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
               {areas.map((a) => (
                 <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
               ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Experiência — o que sustenta a autoridade, em fatos curtos. Recurso que
+            escala com o plano (ver lib/plans.ts). */}
+        {highlights.length > 0 && (
+          <motion.section variants={item} className="mt-9">
+            <SectionTitle ornament={s.divider}>Experiência</SectionTitle>
+            <div className="mt-3 space-y-2.5">
+              {highlights.map((h) => (
+                <div key={h.id} className={`${tile} flex-col !items-stretch !gap-1 !py-3.5`}>
+                  <span className="flex items-center gap-2.5">
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rotate-45"
+                      style={{ background: 'var(--c-accent)' }}
+                      aria-hidden
+                    />
+                    <span className="font-display text-[15.5px] font-semibold leading-tight">
+                      {h.title}
+                    </span>
+                  </span>
+                  {h.detail.trim() && (
+                    <span className="t-muted pl-[18px] text-left text-[13.5px] leading-relaxed">
+                      {h.detail}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Conteúdo educativo — artigos do advogado (plano Max). Informativo por
+            definição: título, resumo e tempo de leitura, sem chamada de contratação. */}
+        {articles.length > 0 && (
+          <motion.section variants={item} className="mt-9">
+            <SectionTitle ornament={s.divider}>Conteúdo</SectionTitle>
+            <div className="mt-3 space-y-2.5">
+              {articles.map((a) => {
+                const inner = (
+                  <>
+                    <span className="flex w-full items-baseline justify-between gap-3">
+                      <span className="text-left font-display text-[15.5px] font-semibold leading-tight">
+                        {a.title}
+                      </span>
+                      <span className="t-faint shrink-0 text-[11.5px] tabular-nums">
+                        {a.readingMinutes} min
+                      </span>
+                    </span>
+                    {a.summary.trim() && (
+                      <span className="t-muted mt-1 text-left text-[13.5px] leading-relaxed">
+                        {a.summary}
+                      </span>
+                    )}
+                  </>
+                )
+                return a.url ? (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    onClick={stop}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`${tile} flex-col !items-stretch !gap-0 !py-4`}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={a.id} className={`${tile} flex-col !items-stretch !gap-0 !py-4`}>
+                    {inner}
+                  </div>
+                )
+              })}
             </div>
           </motion.section>
         )}

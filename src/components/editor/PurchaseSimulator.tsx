@@ -4,6 +4,7 @@ import type { Plan } from '@/lib/types'
 import { useDialog } from '@/lib/a11y'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckIcon, XIcon, ScaleIcon } from '@/components/ui/icons'
+import { PlanFeaturePeek } from './PlanChecklist'
 
 // Checkout SIMULADO — dá a sensação de assinar um plano de verdade (resumo do
 // pedido → processando → confirmado), mas deixa CLARO que é teste e não há
@@ -11,8 +12,8 @@ import { CheckIcon, XIcon, ScaleIcon } from '@/components/ui/icons'
 
 const PRICE: Record<Exclude<Plan, 'free'>, string> = { pro: 'R$ 19', premium: 'R$ 39' }
 const PROMISE: Record<Exclude<Plan, 'free'>, string> = {
-  pro: 'Agenda, QR Code, selo OAB conferida, mais áreas e temas.',
-  premium: 'Tudo do Pro + domínio próprio, artigos e sua marca sem advoc.me.',
+  pro: 'Assistente de agendamento, selo OAB conferida, endereço sem número e mais espaço.',
+  premium: 'Tudo do Pro + artigos no perfil, domínio próprio e a sua marca no lugar da nossa.',
 }
 
 type Phase = 'checkout' | 'processing' | 'done'
@@ -133,10 +134,15 @@ export function PurchaseSimulator({
               <CheckIcon width={34} height={34} strokeWidth={2.4} />
             </motion.span>
             <h3 className="mt-3 font-display text-[22px] font-semibold text-ink">Assinatura confirmada!</h3>
-            <p className="max-w-[16rem] text-[13.5px] leading-relaxed text-ink-soft">
-              Seu plano <span className="font-semibold text-brass-deep">{label}</span> está ativo. Os novos
-              recursos já apareceram no seu perfil.
+            <p className="max-w-[17rem] text-[13.5px] leading-relaxed text-ink-soft">
+              Seu plano <span className="font-semibold text-brass-deep">{label}</span> está ativo. Isto é
+              o que abriu agora:
             </p>
+            {/* Mesma lista do checklist pós-compra — a promessa da venda e o que
+                aparece depois nunca divergem (ver lib/planFeatures.ts). */}
+            <div className="mt-3 w-full rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5 text-left">
+              <PlanFeaturePeek plan={plan} max={5} />
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -145,7 +151,7 @@ export function PurchaseSimulator({
               }}
               className="btn-primary mt-4 w-full !py-3"
             >
-              Começar a usar
+              Ver o que fazer agora
             </button>
           </div>
         )}

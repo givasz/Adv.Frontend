@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Plan, Profile } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -70,25 +70,33 @@ export default function Onboarding() {
   const [step, setStep] = useState(WELCOME)
   const [aiOpen, setAiOpen] = useState(false)
   const [published, setPublished] = useState(false)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
 
   useEffect(() => {
     document.title = 'Vamos criar seu perfil · advoc.me'
-    api.getDraft().then((d) => setProfile(isUnstarted(d) ? blankEssentials(d) : d))
+    api.getDraft().then((d) => {
+      // Quem JÁ publicou nunca é jogado de volta no assistente de criação. Isto é o
+      // que fazia "trocar de plano" parecer refazer o perfil inteiro: os botões de
+      // plano da home apontam para /comecar?plan=pro, e aqui a pessoa caía na tela
+      // 1 de 6. Agora vai direto ao painel, com o checkout do plano já aberto.
+      if (d.published) {
+        const wanted = searchParams.get('plan')
+        const q = wanted === 'pro' || wanted === 'premium' ? `?assinar=${wanted}` : ''
+        navigate(`/painel${q}`, { replace: true })
+        return
+      }
+      setProfile(isUnstarted(d) ? blankEssentials(d) : d)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Plano escolhido na landing (?plan=). Aplicado em silêncio ao rascunho. O acesso
-  // ao onboarding já exige conta (RequireAuth em App.tsx), então aqui o usuário
-  // sempre está logado.
-  useEffect(() => {
-    if (!profile) return
-    const wanted = searchParams.get('plan')
-    if (wanted !== 'pro' && wanted !== 'premium') return
-    searchParams.delete('plan')
-    setSearchParams(searchParams, { replace: true })
-    setProfile((p) => (p ? { ...p, plan: wanted as Plan } : p))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile])
+  // Plano escolhido na landing (?plan=) por quem ainda NÃO tem perfil: guardado
+  // para ser oferecido no fim da criação (a assinatura só existe depois que há um
+  // perfil no ar — o plano é do servidor, ver api.setPlan).
+  const wantedPlan = searchParams.get('plan')
+  const pendingPlan: Exclude<Plan, 'free'> | null =
+    wantedPlan === 'pro' || wantedPlan === 'premium' ? wantedPlan : null
 
   // Salva o rascunho com debounce (mesmo armazenamento do editor).
   useEffect(() => {
@@ -141,7 +149,15 @@ export default function Onboarding() {
     setPublished(true)
   }
 
-  if (published) return <DoneScreen profile={profile} onPickPlan={(p) => set({ plan: p })} />
+  if (published) {
+    return (
+      <DoneScreen
+        profile={profile}
+        intent={pendingPlan}
+        onPickPlan={(p) => api.setPlan(p).then(setProfile)}
+      />
+    )
+  }
 
   return (
     <div className="grain flex min-h-dvh flex-col bg-paper-deep">
@@ -310,9 +326,10 @@ export default function Onboarding() {
                 </div>
                 {/* Desktop: a prévia já está na coluna ao lado — aqui vai o resumo. */}
                 <ReviewSummary profile={profile} area={area} />
-                {/* Instiga, sem travar nem sair do fluxo: tocar aplica o plano ao
-                    rascunho e o advogado publica já com os itens a mais. */}
-                <UnlockMore plan={profile.plan} compact onPick={(plan) => set({ plan })} />
+                {/* Instiga sem travar: mostra o que dá para somar ao perfil. A
+                    assinatura em si acontece depois de publicar (o plano é do
+                    servidor — ver api.setPlan), na tela de conclusão. */}
+                <UnlockMore plan={profile.plan} compact />
               </StepShell>
             )}
                 </motion.div>
@@ -490,7 +507,7 @@ const FACTOR_DEST: Record<string, string> = {
   redes: '/editor?section=redes',
   email: '/editor?section=redes',
   area2: '/editor?section=identidade',
-  artigo: '/editor?section=conteudo',
+  artigo: '/editor?section=artigos',
   oab_conferida: '/editor?section=oab',
   agenda: '/editor?section=agenda',
   dominio: '/editor?section=marca',
@@ -503,9 +520,12 @@ const FACTOR_DEST: Record<string, string> = {
 function DoneScreen({
   profile,
   onPickPlan,
+  intent = null,
 }: {
   profile: Profile
   onPickPlan: (p: Plan) => void
+  /** plano escolhido na home antes de criar o perfil — abre o checkout na hora */
+  intent?: Exclude<Plan, 'free'> | null
 }) {
   const trust = computeTrust(profile)
   const steps = trust.next.slice(0, 3)
@@ -609,7 +629,7 @@ function DoneScreen({
             sem pagar.
           </p>
           <div className="mt-5">
-            <UpgradeTopics profile={profile} onPick={onPickPlan} />
+            <UpgradeTopics profile={profile} onPick={onPickPlan} initial={intent} />
           </div>
         </div>
 

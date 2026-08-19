@@ -395,10 +395,10 @@ export default function Landing() {
             ctaLabel="Assinar Pro"
             features={[
               'Assistente virtual que marca horários por você',
-              'Descubra como as pessoas encontram você',
-              'Compartilhe com QR Code',
-              'Seu perfil sem a marca advoc.me',
+              'Selo “OAB conferida” no seu perfil',
+              'Destaques de experiência e formação',
               'Endereço personalizado (advoc.me/seu-nome)',
+              'Cartão digital com QR Code e vCard',
               'Até 6 áreas e bio ampliada',
               'Mais temas visuais',
             ]}
@@ -412,11 +412,11 @@ export default function Landing() {
             ctaLabel="Assinar Max"
             features={[
               'Tudo do Pro',
-              'Use seu próprio domínio (.adv.br)',
               'Publique artigos e amplie sua autoridade',
-              'Galeria e vídeo de apresentação',
+              'Use seu próprio domínio (.adv.br)',
+              'Sua marca no lugar da nossa',
               'Comprovante de conformidade em PDF',
-              'Bio ainda mais longa',
+              'Até 20 áreas e bio de 1000 caracteres',
             ]}
           />
           <PlanCard

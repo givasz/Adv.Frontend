@@ -45,7 +45,46 @@ export const sampleProfile: Profile = {
         'Aposentadorias, auxílios e revisões de benefícios junto ao INSS, com explicação clara de requisitos e prazos.',
     },
   ],
-  highlights: [],
+  highlights: [
+    {
+      id: 'h1',
+      title: '15 anos de atuação',
+      detail: 'Advocacia em Direito de Família e Sucessões desde 2010, em São Paulo.',
+    },
+    {
+      id: 'h2',
+      title: 'Mestrado em Direito Civil',
+      detail: 'Pesquisa em direito sucessório e planejamento patrimonial familiar.',
+    },
+    {
+      id: 'h3',
+      title: 'Mediadora certificada',
+      detail: 'Formação em mediação de conflitos familiares pelo Tribunal de Justiça.',
+    },
+  ],
+  articles: [
+    {
+      id: 'ar1',
+      title: 'Como funciona a guarda compartilhada',
+      summary:
+        'O que a lei estabelece, como o convívio é dividido na prática e quais pontos costumam ser definidos em acordo entre os pais.',
+      readingMinutes: 5,
+    },
+    {
+      id: 'ar2',
+      title: 'Inventário: extrajudicial ou judicial?',
+      summary:
+        'As duas vias possíveis, os requisitos de cada uma e o que muda no prazo, no custo e na documentação exigida.',
+      readingMinutes: 8,
+    },
+    {
+      id: 'ar3',
+      title: 'Regime de bens: o que muda em cada um',
+      summary:
+        'Comunhão parcial, universal e separação total explicados a partir do que acontece com o patrimônio durante e depois do casamento.',
+      readingMinutes: 6,
+    },
+  ],
   socials: [
     { kind: 'instagram', url: 'https://instagram.com/marinasales.adv' },
     { kind: 'linkedin', url: 'https://linkedin.com/in/marinasales' },
@@ -72,8 +111,15 @@ export const sampleProfile: Profile = {
     horizonDays: 14,
     greeting: '',
   },
-  plan: 'pro',
+  plan: 'premium',
   theme: 'papel',
+  // Identidade própria (white-label do Max) — o exemplo público demonstra o topo
+  // da escada: nome do escritório no rodapé, sem a marca advoc.me.
+  branding: {
+    brandName: 'Sales Advocacia',
+    hideWatermark: true,
+    customDomain: 'marinasales.adv.br',
+  },
   views: 1284,
 }
 
@@ -106,7 +152,18 @@ export const guilhermeSales: Profile = {
         'Esclarecimentos sobre aposentadorias, auxílios e benefícios do INSS, com análise dos requisitos previstos em lei.',
     },
   ],
-  highlights: [],
+  highlights: [
+    {
+      id: 'g-h1',
+      title: '10 anos em Direito do Trabalho',
+      detail: 'Atuação contínua em reclamatórias trabalhistas e assessoria a empregados.',
+    },
+    {
+      id: 'g-h2',
+      title: 'Pós-graduação em Direito Previdenciário',
+      detail: 'Especialização com foco em benefícios por incapacidade e revisões do INSS.',
+    },
+  ],
   socials: [{ kind: 'linkedin', url: 'https://linkedin.com/in/guilherme-sales' }],
   contact: {
     whatsapp: '5511991234567',
