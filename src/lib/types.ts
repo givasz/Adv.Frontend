@@ -96,7 +96,36 @@ export interface ContactChannels {
  */
 // 'whatsapp': o cliente preenche assunto + preferência de horário e a mensagem
 // vai pelo WhatsApp do advogado (sem calendário/slots). 'external': link Calendly/Google.
-export type SchedulingMode = 'off' | 'external' | 'whatsapp'
+// 'assistant': assistente virtual — uma conversa guiada (dia, horário, assunto) que
+// termina no WhatsApp do advogado. Ver lib/assistant.ts.
+export type SchedulingMode = 'off' | 'external' | 'whatsapp' | 'assistant'
+
+/** Um dia da semana atendido pelo assistente virtual, com os horários oferecidos. */
+export interface AssistantDay {
+  /** 0=domingo … 6=sábado */
+  weekday: number
+  /** horários oferecidos nesse dia, em "HH:MM" (ordenados, sem repetição) */
+  times: string[]
+}
+
+/**
+ * Configuração do assistente virtual de agendamento. O assistente NÃO presta
+ * orientação jurídica nem negocia contratação: ele apenas coleta dia, horário e
+ * assunto e monta uma mensagem para o WhatsApp do advogado (Prov. 205/2021 —
+ * contato informativo, sem captação).
+ */
+export interface AssistantConfig {
+  /** dias/horários da semana que o assistente oferece ao visitante */
+  days: AssistantDay[]
+  /** duração indicativa da conversa, em minutos (só informativa) */
+  durationMin: number
+  /** antecedência mínima entre o pedido e o horário oferecido, em horas */
+  leadHours: number
+  /** até quantos dias à frente sugerir datas */
+  horizonDays: number
+  /** frase de abertura personalizada (opcional) — passa pela checagem de conformidade */
+  greeting?: string
+}
 
 /** Configuração da agenda nativa (disponibilidade do advogado). */
 export interface BookingConfig {
@@ -186,6 +215,8 @@ export interface Profile {
   schedulingMode?: SchedulingMode
   /** config da agenda nativa (só relevante no modo 'native') */
   booking?: BookingConfig
+  /** config do assistente virtual (só relevante no modo 'assistant') */
+  assistant?: AssistantConfig
   plan: Plan
   /** tema visual escolhido pelo advogado — desbloqueado por plano (ver lib/themes.ts) */
   theme: ThemeId

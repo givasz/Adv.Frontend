@@ -24,7 +24,7 @@ export const WEEKDAYS_FULL = [
   'Sexta',
   'Sábado',
 ]
-const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+export const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 

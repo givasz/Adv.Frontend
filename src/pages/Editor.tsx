@@ -197,7 +197,9 @@ export default function Editor() {
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px]">
         {/* Coluna de edição */}
-        <div className={`mx-auto w-full max-w-2xl space-y-5 lg:max-w-none ${tab === 'preview' ? 'hidden lg:block' : ''}`}>
+        {/* min-w-0: sem isso um conteúdo largo (uma grade de horários, por exemplo)
+            vira a largura mínima da coluna e estoura a página no celular. */}
+        <div className={`mx-auto w-full min-w-0 max-w-2xl space-y-5 lg:max-w-none ${tab === 'preview' ? 'hidden lg:block' : ''}`}>
           <Link
             to="/painel"
             className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-burgundy"

@@ -5,10 +5,13 @@ import { getTheme, themeStyle, type ThemeStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { Avatar } from '@/components/ui/Avatar'
 import { SchedulingForm } from '@/components/profile/SchedulingForm'
+import { AssistantChat } from '@/components/profile/AssistantChat'
+import { assistantTitle } from '@/lib/assistant'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import {
   ArrowRight,
   CalendarIcon,
+  SparkIcon,
   ChevronDown,
   MailIcon,
   PinIcon,
@@ -221,6 +224,33 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
               Agendar uma consulta
             </motion.a>
           )}
+          {schedulingMode === 'assistant' && (
+            // Assistente virtual: a conversa guiada é o caminho mais leve para marcar
+            // um horário — e deixa explícito, já no botão, que quem atende é um robô.
+            <motion.button
+              variants={item}
+              type="button"
+              onClick={preview ? undefined : () => setSchedOpen(true)}
+              className={`${tile} !py-3`}
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: 'var(--c-accent-soft)' }}
+                aria-hidden
+              >
+                <SparkIcon width={17} height={17} className="t-accent" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold leading-tight">
+                  Agendar uma conversa
+                </span>
+                <span className="t-faint block text-[12px] leading-tight">
+                  {assistantTitle(profile)}
+                </span>
+              </span>
+              <ArrowRight width={16} height={16} className="t-faint shrink-0" />
+            </motion.button>
+          )}
           {schedulingMode === 'whatsapp' && (
             <motion.button
               variants={item}
@@ -285,9 +315,13 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
         </motion.footer>
       </motion.div>
 
-      {/* Formulário de agendamento → WhatsApp (não no preview do editor) */}
+      {/* Agendamento → WhatsApp (não no preview do editor): conversa guiada do
+          assistente virtual ou o formulário curto, conforme o modo escolhido. */}
       <AnimatePresence>
-        {schedOpen && !preview && (
+        {schedOpen && !preview && schedulingMode === 'assistant' && (
+          <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />
+        )}
+        {schedOpen && !preview && schedulingMode === 'whatsapp' && (
           <SchedulingForm profile={profile} onClose={() => setSchedOpen(false)} />
         )}
       </AnimatePresence>

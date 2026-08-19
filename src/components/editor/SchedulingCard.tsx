@@ -2,13 +2,19 @@ import type { Profile, SchedulingMode } from '@/lib/types'
 import { canUseScheduling } from '@/lib/plans'
 import { Field, TextInput } from './fields'
 import { InfoTip } from './InfoTip'
-import { LockIcon, WhatsappIcon } from '@/components/ui/icons'
+import { AssistantCard } from './AssistantCard'
+import { LockIcon, SparkIcon, WhatsappIcon } from '@/components/ui/icons'
 
 const MODES: { key: SchedulingMode; label: string; hint: string }[] = [
   { key: 'off', label: 'Sem agendamento', hint: 'O botão “Agendar” não aparece no perfil.' },
   {
+    key: 'assistant',
+    label: 'Assistente virtual',
+    hint: 'Uma conversa guiada escolhe dia e horário na sua grade e cai no seu WhatsApp.',
+  },
+  {
     key: 'whatsapp',
-    label: 'Agendar pelo WhatsApp',
+    label: 'Formulário rápido',
     hint: 'O cliente informa o assunto e o horário; a mensagem chega no seu WhatsApp.',
   },
   { key: 'external', label: 'Link externo', hint: 'Abre seu Calendly ou “Horários de agendamento” do Google.' },
@@ -27,7 +33,7 @@ export function SchedulingCard({
 }) {
   const schedulingLocked = !canUseScheduling(profile.plan)
   const mode: SchedulingMode = preview
-    ? 'whatsapp'
+    ? 'assistant'
     : profile.schedulingMode === ('native' as SchedulingMode)
       ? 'whatsapp'
       : profile.schedulingMode ?? (profile.contact.scheduling ? 'external' : 'off')
@@ -39,9 +45,9 @@ export function SchedulingCard({
       <div className="flex items-start gap-2.5 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-3">
         <LockIcon width={16} height={16} className="mt-0.5 shrink-0 text-brass-deep" />
         <p className="text-[12.5px] leading-relaxed text-ink-soft">
-          <span className="font-semibold text-brass-deep">Recurso Pro e Premium.</span> Deixe o cliente
-          pedir uma consulta pelo seu perfil — ele informa o assunto e o horário, e você recebe tudo
-          direto no seu WhatsApp. Faça upgrade para liberar.
+          <span className="font-semibold text-brass-deep">Recurso Pro e Max.</span> Um assistente
+          virtual conversa com quem chega ao seu perfil, oferece só os horários que você marcou e
+          manda o pedido pronto para o seu WhatsApp. Faça upgrade para liberar.
         </p>
       </div>
     )
@@ -50,7 +56,7 @@ export function SchedulingCard({
   return (
     <div className="space-y-4">
       {/* Seletor de modo — segmented, empilha no mobile */}
-      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Modo de agendamento">
+      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Modo de agendamento">
         {MODES.map((m) => {
           const active = mode === m.key
           return (
@@ -66,12 +72,21 @@ export function SchedulingCard({
                   : 'border-ink/15 bg-paper-soft hover:border-ink/30'
               }`}
             >
-              <span className="block text-[13px] font-semibold text-ink">{m.label}</span>
+              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                {m.key === 'assistant' && <SparkIcon width={13} height={13} className="text-brass-deep" />}
+                {m.label}
+              </span>
               <span className="mt-0.5 block text-[11px] leading-snug text-ink-faint">{m.hint}</span>
             </button>
           )
         })}
       </div>
+
+      {mode === 'assistant' && (
+        <div className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">
+          <AssistantCard profile={profile} set={set} preview={preview} />
+        </div>
+      )}
 
       {mode === 'whatsapp' && (
         <div className="space-y-3 rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">

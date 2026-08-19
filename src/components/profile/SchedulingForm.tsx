@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { useDialog } from '@/lib/a11y'
@@ -33,7 +34,9 @@ export function SchedulingForm({ profile, onClose }: { profile: Profile; onClose
     'w-full rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-2.5 text-[14px] text-ink ' +
     'placeholder:text-ink-faint/60 focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15'
 
-  return (
+  // Portal para o <body>: dentro do perfil, `.themed > *` força position:relative e
+  // o overlay `fixed` deixaria de cobrir a tela.
+  return createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 backdrop-blur-sm sm:items-center sm:p-4"
       initial={{ opacity: 0 }}
@@ -144,6 +147,7 @@ export function SchedulingForm({ profile, onClose }: { profile: Profile; onClose
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }

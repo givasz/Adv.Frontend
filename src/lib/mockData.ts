@@ -45,6 +45,21 @@ export const sampleProfile: Profile = {
     email: 'contato@marinasales.adv.br',
     scheduling: 'https://calendly.com/marinasales/consulta',
   },
+  // Perfil-modelo com o ASSISTENTE VIRTUAL ligado — é ele que a home demonstra.
+  schedulingMode: 'assistant',
+  assistant: {
+    days: [
+      { weekday: 1, times: ['09:00', '10:00', '14:00', '15:00'] },
+      { weekday: 2, times: ['14:00', '15:00', '16:00'] },
+      { weekday: 3, times: ['09:00', '10:00', '11:00', '14:00'] },
+      { weekday: 4, times: ['14:00', '15:00', '16:00', '17:00'] },
+      { weekday: 5, times: ['09:00', '10:00', '11:00'] },
+    ],
+    durationMin: 45,
+    leadHours: 2,
+    horizonDays: 14,
+    greeting: '',
+  },
   plan: 'pro',
   theme: 'papel',
   views: 1284,

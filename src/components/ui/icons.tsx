@@ -165,6 +165,14 @@ export const XIcon = (p: IconProps) => (
   </svg>
 )
 
+// Balão de conversa — usado pelo assistente virtual (chat guiado de agendamento).
+export const MessageIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.7 8.7 0 0 1-3.9-.9L3 21l1.9-5.6a8.7 8.7 0 0 1-.9-3.9 8.38 8.38 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5Z" />
+    <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" />
+  </svg>
+)
+
 export const ChevronDown = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m6 9 6 6 6-6" />

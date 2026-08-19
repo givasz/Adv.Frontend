@@ -4,16 +4,20 @@ import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
 import { FIRM_PRICING } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
+import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { LEGAL_DOCS } from '@/lib/legalContent'
 import {
   ArrowRight,
   CheckIcon,
+  CalendarIcon,
   ChevronDown,
   InfoIcon,
   LockIcon,
+  MessageIcon,
   ScaleIcon,
   SparkIcon,
+  WhatsappIcon,
 } from '@/components/ui/icons'
 
 const fade = {
@@ -45,6 +49,9 @@ export default function Landing() {
           advoc.me
         </span>
         <div className="flex items-center gap-2 sm:gap-4">
+          <a href="#assistente" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
+            Assistente
+          </a>
           <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Como funciona
           </a>
@@ -199,6 +206,72 @@ export default function Landing() {
         </div>
       </Section>
 
+      {/* Assistente virtual — demonstração funcional */}
+      <motion.section
+        id="assistente"
+        variants={rise}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-80px' }}
+        className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16"
+      >
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
+              Assistente virtual
+            </p>
+            <h2 className="mt-2 max-w-lg font-display text-3xl font-semibold leading-tight sm:text-4xl">
+              Um assistente marca a conversa
+              <span className="italic text-burgundy"> enquanto você atua.</span>
+            </h2>
+            <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
+              Quem chega ao seu perfil conversa com o seu assistente virtual: ele oferece{' '}
+              <span className="font-medium text-ink">apenas os dias e horários que você marcou</span>,
+              pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Você só confirma.
+            </p>
+
+            <ul className="mt-7 grid gap-4 sm:grid-cols-2">
+              {[
+                {
+                  icon: <CalendarIcon width={18} height={18} />,
+                  title: 'Sua grade, suas regras',
+                  body: 'Você escolhe os dias da semana, os horários e a antecedência mínima. Fora disso, nada é oferecido.',
+                },
+                {
+                  icon: <MessageIcon width={18} height={18} />,
+                  title: 'Conversa, não formulário',
+                  body: 'Perguntas curtas, respostas em um toque. O visitante só escreve o assunto e o nome.',
+                },
+                {
+                  icon: <WhatsappIcon width={18} height={18} />,
+                  title: 'Cai no seu WhatsApp',
+                  body: 'Dia, horário, formato e assunto chegam organizados em uma única mensagem.',
+                },
+                {
+                  icon: <ScaleIcon width={18} height={18} />,
+                  title: 'Sem passar do limite',
+                  body: 'O assistente se identifica como automático e não dá orientação jurídica — só organiza o horário.',
+                },
+              ].map((f) => (
+                <li key={f.title} className="flex gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
+                    {f.icon}
+                  </span>
+                  <div>
+                    <h3 className="font-display text-[16px] font-semibold text-ink">{f.title}</h3>
+                    <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-soft">{f.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="justify-self-center lg:justify-self-end">
+            <AssistantDemo profile={sampleProfile} />
+          </div>
+        </div>
+      </motion.section>
+
       {/* Como funciona */}
       <Section id="como-funciona" eyebrow="Como funciona" title="Do zero ao perfil publicado, em quatro passos.">
         <ol className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
@@ -321,7 +394,7 @@ export default function Landing() {
             ctaTo="/comecar?plan=pro"
             ctaLabel="Assinar Pro"
             features={[
-              'Receba pedidos de atendimento pelo perfil',
+              'Assistente virtual que marca horários por você',
               'Descubra como as pessoas encontram você',
               'Compartilhe com QR Code',
               'Seu perfil sem a marca advoc.me',
@@ -477,6 +550,10 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'Como funciona a conferência da OAB?',
     a: 'Você solicita a conferência; a plataforma verifica seu número no Cadastro Nacional dos Advogados (CNA) da OAB. Só então o perfil exibe a marca informativa “OAB conferida”.',
+  },
+  {
+    q: 'O assistente virtual dá orientação jurídica aos visitantes?',
+    a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, pergunta o assunto e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua.',
   },
   {
     q: 'Posso usar de graça?',
