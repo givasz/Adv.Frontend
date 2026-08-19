@@ -5,8 +5,8 @@ export const sampleProfile: Profile = {
   name: 'Marina Sales',
   oabNumber: 'OAB/SP 214.870',
   oabVerified: true,
-  headline: 'Advogada · Direito de Família e Sucessões',
-  bio: 'Atuo com escuta e técnica na condução de questões familiares e sucessórias. Meu trabalho busca reduzir o desgaste emocional dos processos, com informação clara sobre direitos e caminhos possíveis em cada etapa.',
+  headline: 'Advogada · Cível, Família, Trabalho e Consumidor',
+  bio: 'Atuo com escuta e técnica na condução de questões cíveis, trabalhistas, de família e de consumo. Meu trabalho busca reduzir o desgaste dos processos, com informação clara sobre direitos e caminhos possíveis em cada etapa.',
   avatarUrl:
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
   city: 'São Paulo',
@@ -18,19 +18,31 @@ export const sampleProfile: Profile = {
       id: 'a1',
       label: 'Direito de Família',
       description:
-        'Orientação em divórcio, guarda, pensão alimentícia e regime de bens, com foco em acordos que preservem as relações familiares sempre que possível.',
+        'Divórcio, guarda, pensão alimentícia e regime de bens, com foco em acordos que preservem as relações sempre que possível.',
     },
     {
       id: 'a2',
-      label: 'Sucessões e Inventário',
+      label: 'Direito do Trabalho',
       description:
-        'Condução de inventários judiciais e extrajudiciais, planejamento sucessório e testamentos, esclarecendo cada etapa do processo.',
+        'Orientação a empregados e empregadores sobre rescisões, verbas, jornada e demais direitos da relação de trabalho.',
     },
     {
       id: 'a3',
-      label: 'Mediação',
+      label: 'Direito do Consumidor',
       description:
-        'Uso de técnicas de mediação para buscar soluções consensuais e reduzir o tempo e o custo emocional dos litígios.',
+        'Cobranças indevidas, produtos e serviços com defeito, negativação e problemas em contratos de consumo.',
+    },
+    {
+      id: 'a4',
+      label: 'Direito Civil e Contratos',
+      description:
+        'Elaboração e revisão de contratos, responsabilidade civil e indenizações, buscando segurança jurídica em cada acordo.',
+    },
+    {
+      id: 'a5',
+      label: 'Direito Previdenciário',
+      description:
+        'Aposentadorias, auxílios e revisões de benefícios junto ao INSS, com explicação clara de requisitos e prazos.',
     },
   ],
   highlights: [],
