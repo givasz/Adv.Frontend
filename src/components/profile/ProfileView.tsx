@@ -24,6 +24,11 @@ interface ProfileViewProps {
   profile: Profile
   /** true dentro do editor: desativa navegação real e o efeito de entrada */
   preview?: boolean
+  /**
+   * Deixa o assistente virtual abrir mesmo em `preview` — usado no telefone da home,
+   * que é uma demonstração viva. Fora isso, segue o `preview`.
+   */
+  chatEnabled?: boolean
 }
 
 // Converte "#rrggbb" em "rgba(r,g,b,a)" para a variável de destaque suave.
@@ -34,9 +39,11 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
 }
 
-export function ProfileView({ profile, preview = false }: ProfileViewProps) {
+export function ProfileView({ profile, preview = false, chatEnabled }: ProfileViewProps) {
   const [schedOpen, setSchedOpen] = useState(false)
   const schedulingMode = resolveSchedulingMode(profile)
+  // Agendar é a única ação que continua viva na prévia da home (chatEnabled).
+  const canSchedule = chatEnabled ?? !preview
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
@@ -230,7 +237,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
             <motion.button
               variants={item}
               type="button"
-              onClick={preview ? undefined : () => setSchedOpen(true)}
+              onClick={canSchedule ? () => setSchedOpen(true) : undefined}
               className={`${tile} !py-3`}
             >
               <span
@@ -255,7 +262,7 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
             <motion.button
               variants={item}
               type="button"
-              onClick={preview ? undefined : () => setSchedOpen(true)}
+              onClick={canSchedule ? () => setSchedOpen(true) : undefined}
               className={`${tile} justify-center !py-3.5 font-semibold`}
             >
               <CalendarIcon width={19} height={19} className="t-accent" />
@@ -318,10 +325,10 @@ export function ProfileView({ profile, preview = false }: ProfileViewProps) {
       {/* Agendamento → WhatsApp (não no preview do editor): conversa guiada do
           assistente virtual ou o formulário curto, conforme o modo escolhido. */}
       <AnimatePresence>
-        {schedOpen && !preview && schedulingMode === 'assistant' && (
+        {schedOpen && canSchedule && schedulingMode === 'assistant' && (
           <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />
         )}
-        {schedOpen && !preview && schedulingMode === 'whatsapp' && (
+        {schedOpen && canSchedule && schedulingMode === 'whatsapp' && (
           <SchedulingForm profile={profile} onClose={() => setSchedOpen(false)} />
         )}
       </AnimatePresence>

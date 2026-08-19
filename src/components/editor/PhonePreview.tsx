@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Profile } from '@/lib/types'
+import { themeStyle } from '@/lib/themes'
 import { ProfileView } from '@/components/profile/ProfileView'
 
 // Indicador de scroll próprio (overlay), interativo — as scrollbars nativas variam por
@@ -25,7 +26,6 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
   }
 
   useEffect(() => {
-    if (hero) return // hero (home): estático, sem scroll interno que prenda a página
     const el = scrollRef.current
     if (!el) return
     const update = () => {
@@ -86,25 +86,37 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
   }
 
   return (
-    // hero (home): grande e estático (sem scroll interno que prenda a rolagem da
-    // página). Padrão (editor/onboarding): menor no mobile, com prévia rolável.
+    // hero (home): maior, e rolável como o perfil de verdade — é o exemplo vivo do
+    // produto. Padrão (editor/onboarding): menor no mobile, também rolável.
     <div className={`mx-auto w-full ${hero ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[300px] sm:max-w-[340px]'}`}>
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink p-0 shadow-lift">
         {/* notch */}
-        <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
+        {/* notch acima da faixa de status (que também é z-10, porém depois no DOM) */}
+        <div className="absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
         <div className="relative overflow-hidden rounded-[1.8rem]">
           <div
             ref={scrollRef}
+            // as variáveis do tema aqui deixam a faixa de status abaixo usar a cor do perfil
+            style={themeStyle(profile.theme)}
             className={`no-scrollbar relative flex flex-col overflow-x-hidden ${
               hero
-                ? 'h-[560px] max-h-[74svh] overflow-y-hidden'
+                ? 'h-[560px] max-h-[74svh] overflow-y-auto'
                 : 'h-[540px] max-h-[62svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
             }`}
           >
-            <ProfileView profile={profile} preview />
+            {/* Faixa de status: acompanha a rolagem e evita que o conteúdo passe
+                por baixo do notch (como num aparelho de verdade). */}
+            <div
+              className="sticky top-0 z-10 h-7 shrink-0"
+              style={{ background: 'var(--c-bg)' }}
+              aria-hidden
+            />
+            {/* No hero a conversa do assistente ABRE de verdade (é a demonstração);
+                no editor a prévia continua inerte. */}
+            <ProfileView profile={profile} preview chatEnabled={hero} />
           </div>
           {/* trilho + thumb interativos (área de toque generosa, thumb fino) */}
-          {!hero && thumb.show && (
+          {thumb.show && (
             <div
               onPointerDown={onTrackPointerDown}
               className="absolute bottom-1.5 right-0.5 top-1.5 w-3.5 cursor-pointer touch-none"
@@ -128,6 +140,11 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
       <p className="mt-3 text-center text-[12px] text-ink-faint">
         advoc.me/<span className="font-semibold text-ink">{profile.slug}</span>
       </p>
+      {hero && (
+        <p className="mt-1 text-center text-[11.5px] leading-snug text-ink-faint/85">
+          Perfil de exemplo — role o telefone e toque em “Agendar uma conversa”.
+        </p>
+      )}
     </div>
   )
 }

@@ -167,28 +167,49 @@ function resolveMockSlug(p: Profile): string {
 
 export const api = {
   async getProfile(slug: string): Promise<Profile | null> {
+    // O rascunho do próprio usuário (modo mock) responde primeiro pelo slug dele.
+    if (!USE_REAL_API) {
+      const draft = loadDraft()
+      if (draft.slug === slug) return draft
+    }
+    // Os perfis-modelo (marina-sales, guilherme-sales23) são fixtures do produto e
+    // resolvem no cliente, antes de qualquer rede: o "Ver um exemplo" da home
+    // funciona com o backend fora do ar — ou sem backend nenhum.
+    const example = exampleProfiles.find((p) => p.slug === slug)
+    if (example) return example
+
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/${slug}`)
-      return res.ok ? res.json() : null
+      try {
+        const res = await fetch(`${API_BASE}/api/profiles/${slug}`)
+        return res.ok ? res.json() : null
+      } catch {
+        return null // rede fora: perfil real indisponível (o exemplo já saiu acima)
+      }
     }
     await wait(280)
-    const draft = loadDraft()
-    if (draft.slug === slug) return draft
-    return exampleProfiles.find((p) => p.slug === slug) ?? null
+    return null
   },
 
   // Página institucional do escritório (sociedade). Mesmo padrão do getProfile:
   // API real quando habilitada; senão, mock em memória (escritorio.ts).
   async getFirm(slug: string): Promise<Firm | null> {
+    // Mesmo raciocínio do getProfile: o escritório-modelo é fixture e não depende
+    // do backend (é o "Ver exemplo" do plano Escritório na home).
+    const mock = getMockFirm(slug)
+    if (mock) return mock
+
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/firms/${slug}`)
-      return res.ok ? res.json() : null
+      try {
+        const res = await fetch(`${API_BASE}/api/firms/${slug}`)
+        return res.ok ? res.json() : null
+      } catch {
+        return null
+      }
     }
     await wait(280)
-    // No mock, o escritório criado pelo usuário (localStorage) tem prioridade.
+    // No mock, o escritório criado pelo usuário (localStorage) responde pelo slug dele.
     const mine = loadFirmDraft()
-    if (mine && mine.slug === slug) return mine
-    return getMockFirm(slug)
+    return mine && mine.slug === slug ? mine : null
   },
 
   // Escritório do usuário (dono) — para o editor. Mock: localStorage; real: /firms/me.
