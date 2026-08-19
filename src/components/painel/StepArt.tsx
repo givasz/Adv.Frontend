@@ -147,22 +147,27 @@ export function StepArt({ factorKey, profile }: { factorKey: string; profile: Pr
 
     case 'area1':
     case 'area2': {
-      // Losangos = os tiles de área do perfil. O segundo entra pontilhado quando
-      // o passo é justamente adicionar a segunda área.
+      // Dois tiles de área, com a barrinha de acento que o perfil usa de verdade.
+      // O segundo entra pontilhado quando o passo é justamente adicionar a
+      // segunda área.
       const second = factorKey === 'area2'
       return (
         <Plate>
           <span className="flex flex-col items-center gap-[5px]">
-            <span className="flex h-[13px] w-8 items-center justify-center rounded-[3px] bg-ink/10">
-              <span className="h-1.5 w-1.5 rotate-45 bg-burgundy" />
+            <span className="flex h-[13px] w-8 items-center gap-[3px] rounded-[3px] bg-ink/10 px-1">
+              <span className="h-2 w-[2px] shrink-0 rounded-full bg-burgundy" />
+              <span className="h-[3px] flex-1 rounded-full bg-ink/25" />
             </span>
             <span
-              className={`flex h-[13px] w-8 items-center justify-center rounded-[3px] ${
+              className={`flex h-[13px] w-8 items-center gap-[3px] rounded-[3px] px-1 ${
                 second ? 'border border-dashed border-brass/70' : 'bg-ink/10'
               }`}
             >
               <span
-                className={`h-1.5 w-1.5 rotate-45 ${second ? 'bg-brass/70' : 'bg-burgundy'}`}
+                className={`h-2 w-[2px] shrink-0 rounded-full ${second ? 'bg-brass/70' : 'bg-burgundy'}`}
+              />
+              <span
+                className={`h-[3px] flex-1 rounded-full ${second ? 'bg-brass/40' : 'bg-ink/25'}`}
               />
             </span>
           </span>

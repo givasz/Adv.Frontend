@@ -121,7 +121,21 @@
     position: relative;
     z-index: 1;
   }
+  /* Tipografia do tema. O corpo também troca (Ardósia usa a mesma grotesca no
+     display e no texto — é o gesto corporativo dela), então a identidade não
+     depende só do nome no topo. */
+  .themed {
+    font-family: var(--font-body, 'Hanken Grotesk', system-ui, sans-serif);
+  }
   .themed :is(h1, h2, h3, h4) {
+    font-family: var(--font-display, 'Fraunces', Georgia, serif);
+    letter-spacing: var(--display-tracking, 0);
+  }
+  /* Dentro do tema, `font-display` do Tailwind passa a ser a fonte DO TEMA. Sem
+     isto, o nome trocava de fonte mas títulos de área, destaque e artigo ficavam
+     todos em Fraunces — o tema mudava só a manchete e o resto entregava que era
+     sempre o mesmo layout. */
+  .themed .font-display {
     font-family: var(--font-display, 'Fraunces', Georgia, serif);
   }
 

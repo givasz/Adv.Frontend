@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
-import { getTheme, themeStyle, type ThemeStyle } from '@/lib/themes'
+import { getTheme, themeStyle, type RuleStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
@@ -64,13 +64,19 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
   const tile = s.tile === 'card' ? 't-tile' : `t-tile tv-${s.tile}`
   const foil = s.finish === 'foil'
   const left = s.header === 'editorial'
+  // A entreletra do NOME vem do tema (--name-tracking), não de uma classe fixa:
+  // caixa alta pede ar, serifa em corpo grande pede aperto, e cada família tem
+  // seu ponto de equilíbrio. Inline porque a regra do tema no CSS vence a classe
+  // do Tailwind por especificidade — deixar as duas brigando dá resultado
+  // diferente por tema sem ninguém entender o porquê.
   const nameCls = [
     'leading-tight',
     s.nameCase === 'upper'
-      ? 'uppercase tracking-[0.1em] text-[21px] sm:text-[25px] font-medium'
-      : 'tracking-tight text-[26px] sm:text-[30px] font-semibold',
+      ? 'uppercase text-[21px] sm:text-[25px] font-medium'
+      : 'text-[26px] sm:text-[30px] font-semibold',
     foil ? 'foil' : '',
   ].join(' ')
+  const nameStyle: React.CSSProperties = { letterSpacing: 'var(--name-tracking, -0.01em)' }
 
   const container = {
     hidden: {},
@@ -116,7 +122,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
           <motion.header variants={item} className="flex items-center gap-4 text-left">
             <Avatar src={profile.avatarUrl} name={profile.name} size={78} frame={s.avatar} />
             <div className="min-w-0">
-              <h1 className={nameCls}>{profile.name}</h1>
+              <h1 className={nameCls} style={nameStyle}>{profile.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">{identity}</div>
               {profile.headline && <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>}
             </div>
@@ -125,7 +131,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
           <motion.header variants={item} className="flex flex-col items-center text-center">
             {s.header === 'letterhead' && <div className="t-rule mb-5 w-24" />}
             <Avatar src={profile.avatarUrl} name={profile.name} size={104} frame={s.avatar} />
-            <h1 className={`mt-4 ${nameCls}`}>{profile.name}</h1>
+            <h1 className={`mt-4 ${nameCls}`} style={nameStyle}>{profile.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               {identity}
             </div>
@@ -163,7 +169,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
         {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
         {profile.socials.length > 0 && (
           <motion.section variants={item} className="mt-6">
-            <SectionTitle ornament={s.divider}>Redes e site</SectionTitle>
+            <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
             <div
               className={`mt-3 grid gap-2.5 ${
                 s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
@@ -198,7 +204,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
         )}
 
         <motion.div variants={item}>
-          <ThemeDivider type={s.divider} />
+          <ThemeDivider type={s.rule} />
         </motion.div>
 
         {/* Bio */}
@@ -282,7 +288,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
         {/* Áreas de atuação */}
         {areas.length > 0 && (
           <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Áreas de atuação</SectionTitle>
+            <SectionTitle rule={s.rule}>Áreas de atuação</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {areas.map((a) => (
                 <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
@@ -295,25 +301,29 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
             escala com o plano (ver lib/plans.ts). */}
         {highlights.length > 0 && (
           <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Experiência</SectionTitle>
+            <SectionTitle rule={s.rule}>Experiência</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {highlights.map((h) => (
                 <div key={h.id} className={`${tile} flex-col !items-stretch !gap-1 !py-3.5`}>
-                  <span className="flex items-center gap-2.5">
+                  {/* Filete vertical de acento no lugar do losango: marca a
+                      entrada sem virar enfeite, e alinha o título com o detalhe. */}
+                  <span className="flex items-stretch gap-2.5">
                     <span
-                      className="h-1.5 w-1.5 shrink-0 rotate-45"
-                      style={{ background: 'var(--c-accent)' }}
                       aria-hidden
+                      className="w-[2px] shrink-0 rounded-full"
+                      style={{ background: 'var(--c-accent)' }}
                     />
-                    <span className="font-display text-[15.5px] font-semibold leading-tight">
-                      {h.title}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display text-[15.5px] font-semibold leading-tight">
+                        {h.title}
+                      </span>
+                      {h.detail.trim() && (
+                        <span className="t-muted mt-1 block text-left text-[13.5px] leading-relaxed">
+                          {h.detail}
+                        </span>
+                      )}
                     </span>
                   </span>
-                  {h.detail.trim() && (
-                    <span className="t-muted pl-[18px] text-left text-[13.5px] leading-relaxed">
-                      {h.detail}
-                    </span>
-                  )}
                 </div>
               ))}
             </div>
@@ -324,7 +334,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
             definição: título, resumo e tempo de leitura, sem chamada de contratação. */}
         {articles.length > 0 && (
           <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Conteúdo</SectionTitle>
+            <SectionTitle rule={s.rule}>Conteúdo</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {articles.map((a) => {
                 const inner = (
@@ -371,7 +381,7 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
             depois do clique (ver VideoPlayer). */}
         {video && (
           <motion.section variants={item} className="mt-9">
-            <SectionTitle ornament={s.divider}>Apresentação</SectionTitle>
+            <SectionTitle rule={s.rule}>Apresentação</SectionTitle>
             <div className="mt-3">
               <VideoPlayer
                 video={video}
@@ -436,59 +446,124 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
   )
 }
 
-// ---- Ornamentos ----
+// ---- Filetes e títulos de seção ----
+//
+// Aqui morava um losango (◆) repetido em três lugares. Ele saiu por completo:
+// símbolo decorativo envelhece mal, some no contraste e faz o perfil de um
+// advogado parecer convite de casamento. O que separa e hierarquiza agora é
+// RÉGUA E TIPO — filete, versalete e entreletra —, que é justamente o idioma do
+// impresso jurídico e o que continua legível em qualquer tela.
+//
+// Cada variante é uma escolha do tema (ThemeStyle.rule), não um enfeite solto.
 
-const Diamond = () => (
-  <span
-    className="inline-block h-2 w-2 rotate-45"
-    style={{ background: 'var(--c-accent)' }}
-    aria-hidden
-  />
-)
-const Dot = () => (
-  <span
-    className="inline-block h-1 w-1 rounded-full"
-    style={{ background: 'var(--c-accent)', opacity: 0.65 }}
-    aria-hidden
-  />
-)
-
-function ThemeDivider({ type }: { type: ThemeStyle['divider'] }) {
-  if (type === 'line') return <div className="t-rule mx-auto my-6 max-w-[220px]" />
+/** Filete horizontal do tema. `soft` usa a cor de borda; senão, a de acento. */
+function Rule({
+  className = '',
+  soft = false,
+  thick = false,
+  fade = false,
+}: {
+  className?: string
+  soft?: boolean
+  thick?: boolean
+  fade?: boolean
+}) {
+  const color = soft ? 'var(--c-border)' : 'var(--c-ring)'
   return (
-    <div className="my-6 flex items-center justify-center gap-3" aria-hidden>
-      <span className="h-px w-14" style={{ background: 'var(--c-ring)' }} />
-      {type === 'diamond' && <Diamond />}
-      {type === 'deco' && (
-        <span className="flex items-center gap-1.5">
-          <Dot />
-          <Diamond />
-          <Dot />
-        </span>
-      )}
-      {type === 'fleuron' && (
-        <span className="t-accent font-display text-lg leading-none">&#10086;</span>
-      )}
-      <span className="h-px w-14" style={{ background: 'var(--c-ring)' }} />
-    </div>
+    <span
+      aria-hidden
+      className={className}
+      style={{
+        height: thick ? 2 : 1,
+        // `fade`: o filete se dissolve nas pontas em vez de terminar seco —
+        // é o que dá o ar do tema Névoa sem precisar de nenhum símbolo.
+        background: fade
+          ? `linear-gradient(to right, transparent, ${color} 22%, ${color} 78%, transparent)`
+          : color,
+      }}
+    />
   )
 }
 
-function SectionTitle({
-  children,
-  ornament,
-}: {
-  children: React.ReactNode
-  ornament: ThemeStyle['divider']
-}) {
-  const showMark = ornament !== 'line'
-  return (
-    <h2 className="t-faint flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em]">
-      <span className="h-px flex-1" style={{ background: 'var(--c-border)' }} />
-      {showMark && <Diamond />}
+/** Separador entre blocos do perfil — a pontuação do documento. */
+function ThemeDivider({ type }: { type: RuleStyle }) {
+  if (type === 'double') {
+    return (
+      <div className="my-6 flex flex-col gap-[3px]" aria-hidden>
+        <Rule soft />
+        <Rule soft />
+      </div>
+    )
+  }
+  if (type === 'capline') {
+    return <Rule thick className="my-6 w-16" />
+  }
+  if (type === 'bar') {
+    return <Rule thick className="my-6 w-10 rounded-full" />
+  }
+  if (type === 'tapered') {
+    return <Rule fade className="my-6 w-full" />
+  }
+  return <div className="t-rule mx-auto my-6 max-w-[220px]" />
+}
+
+/**
+ * Título de seção. A variante do tema decide o ALINHAMENTO e o desenho do
+ * filete: centralizado entre duas réguas (clássico), rente à esquerda sob um
+ * filete duplo (livro-razão), sob um filete grosso curto (editorial) ou com uma
+ * barra sólida de acento na frente (impresso moderno).
+ */
+function SectionTitle({ children, rule }: { children: React.ReactNode; rule: RuleStyle }) {
+  const label = (
+    <span
+      className="t-faint whitespace-nowrap text-[11px] font-semibold uppercase"
+      style={{ letterSpacing: 'var(--label-tracking, 0.18em)' }}
+    >
       {children}
-      {showMark && <Diamond />}
-      <span className="h-px flex-1" style={{ background: 'var(--c-border)' }} />
+    </span>
+  )
+
+  if (rule === 'double') {
+    return (
+      <h2 className="flex flex-col gap-1.5">
+        {label}
+        <span className="flex flex-col gap-[3px]">
+          <Rule soft />
+          <Rule soft />
+        </span>
+      </h2>
+    )
+  }
+
+  if (rule === 'capline') {
+    return (
+      <h2 className="flex flex-col items-start gap-2">
+        <Rule thick className="w-9" />
+        {label}
+      </h2>
+    )
+  }
+
+  if (rule === 'bar') {
+    return (
+      <h2 className="flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="h-3.5 w-[3px] shrink-0 rounded-full"
+          style={{ background: 'var(--c-accent)' }}
+        />
+        {label}
+        <Rule soft className="flex-1" />
+      </h2>
+    )
+  }
+
+  // hairline (padrão) e tapered: rótulo centralizado entre dois filetes.
+  return (
+    <h2 className="flex items-center gap-3">
+      <Rule soft={rule !== 'tapered'} fade={rule === 'tapered'} className="flex-1" />
+      {label}
+      <Rule soft={rule !== 'tapered'} fade={rule === 'tapered'} className="flex-1" />
     </h2>
   )
 }
@@ -505,12 +580,16 @@ function AreaCard({
   const [open, setOpen] = useState(false)
   const hasDesc = description.trim().length > 0
 
-  // Área sem descrição: tile estático, editorial — losango de acento acima e o
-  // nome em serifada de display, centralizado (timbre de escritório).
+  // Área sem descrição: tile estático e editorial. O nome sozinho, centralizado,
+  // com um filete curto de acento acima — o mesmo gesto do timbre, sem símbolo.
   if (!hasDesc) {
     return (
-      <div className={`${tileClass} flex-col !items-center !gap-2 !py-4 text-center`}>
-        <span className="h-1.5 w-1.5 rotate-45" style={{ background: 'var(--c-accent)' }} aria-hidden />
+      <div className={`${tileClass} flex-col !items-center !gap-2.5 !py-4 text-center`}>
+        <span
+          aria-hidden
+          className="h-[2px] w-6 rounded-full"
+          style={{ background: 'var(--c-accent)' }}
+        />
         <span className="font-display text-[16.5px] font-semibold leading-tight">{label}</span>
       </div>
     )
@@ -526,7 +605,13 @@ function AreaCard({
       style={open ? { borderColor: 'var(--c-accent)' } : undefined}
     >
       <span className="flex w-full items-center gap-2.5">
-        <span className="h-1.5 w-1.5 shrink-0 rotate-45" style={{ background: 'var(--c-accent)' }} aria-hidden />
+        {/* Barrinha vertical em vez do losango — a mesma marca dos destaques,
+            para o perfil inteiro falar uma língua só. */}
+        <span
+          aria-hidden
+          className="h-4 w-[2px] shrink-0 rounded-full"
+          style={{ background: 'var(--c-accent)' }}
+        />
         <span className="flex-1 text-left font-display text-[16.5px] font-semibold leading-tight">
           {label}
         </span>
