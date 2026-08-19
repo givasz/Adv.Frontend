@@ -10,7 +10,18 @@ import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
-import { ArrowRight, LockIcon, ScaleIcon } from '@/components/ui/icons'
+import {
+  ArrowRight,
+  DocIcon,
+  EyeIcon,
+  LockIcon,
+  MedalIcon,
+  PlayIcon,
+  QrIcon,
+  ScaleIcon,
+  ShieldIcon,
+} from '@/components/ui/icons'
+import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 
 // Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
 // lá o próprio recurso mostra seu valor antes de pedir upgrade (upsell natural).
@@ -114,23 +125,40 @@ export default function Painel() {
   }
 
   return (
-    <div className="min-h-dvh bg-paper-deep">
+    <div className="grain min-h-dvh bg-paper-deep">
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
-          <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <ScaleIcon width={20} height={20} className="text-burgundy" />
-            advoc.me
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-5">
+          {/* min-w-0 + shrink no logotipo: em 320px o wordmark cedia espaço para o
+              CTA e os dois se sobrepunham. Agora o logo encolhe e o CTA nunca. */}
+          <Link
+            to="/"
+            className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold"
+          >
+            <ScaleIcon width={20} height={20} className="shrink-0 text-burgundy" />
+            {/* Abaixo de 360px a balança sozinha identifica melhor que um "ad…"
+                cortado — truncar um wordmark de 8 letras não economiza nada. */}
+            <span className="hidden min-[360px]:inline">advoc.me</span>
+            <span className="sr-only min-[360px]:hidden">advoc.me</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link to={`/${profile.slug}`} target="_blank" className="btn-primary !py-2 !px-4 text-[13px]">
-              Ver meu perfil
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* !py-2.5 leva o alvo a ~40px: é o CTA principal do painel no
+                celular e estava com 36px de altura. */}
+            <Link
+              to={`/${profile.slug}`}
+              target="_blank"
+              className="btn-primary !py-2.5 !px-4 text-[13px]"
+            >
+              Ver perfil
             </Link>
             <AccountMenu compact />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-5 py-8">
+      {/* stagger: a página inteira sobe uma seção de cada vez. Uma entrada
+          orquestrada vale mais que microinterações espalhadas — e é só CSS,
+          desligado sozinho em prefers-reduced-motion. */}
+      <main className="stagger mx-auto max-w-3xl px-5 py-8">
         <div className="flex items-center gap-4">
           <Avatar name={profile.name} src={profile.avatarUrl} size={52} />
           <div className="min-w-0">
@@ -169,12 +197,10 @@ export default function Painel() {
             Os itens de planos pagos vão para a seção de upsell abaixo. */}
         {freeSteps.length > 0 && (
           <>
-            <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
-              Próximos passos
-            </h2>
+            <PanelHeading>Próximos passos</PanelHeading>
             <div className="mt-3 space-y-2.5">
               {freeSteps.map((f) => (
-                <StepCard key={f.key} factor={f} locked={false} />
+                <StepCard key={f.key} factor={f} locked={false} profile={profile} />
               ))}
             </div>
           </>
@@ -206,12 +232,10 @@ export default function Painel() {
         )}
 
         {/* A cara do perfil — temas (6 dos 8 são de plano pago → isca natural) */}
-        <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
-          A cara do seu perfil
-        </h2>
+        <PanelHeading>A cara do seu perfil</PanelHeading>
         <Link
           to="/editor?section=aparencia"
-          className="mt-3 block rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card transition-colors hover:border-burgundy/40"
+          className="group mt-3 block rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -220,7 +244,11 @@ export default function Painel() {
                 {unlockedThemes} de {THEMES.length} liberados no seu plano — os demais são do Pro e do Max.
               </p>
             </div>
-            <ArrowRight width={16} height={16} className="shrink-0 text-ink-faint" />
+            <ArrowRight
+              width={16}
+              height={16}
+              className="shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-0.5"
+            />
           </div>
           <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
             {THEMES.map((t) => {
@@ -248,44 +276,49 @@ export default function Painel() {
         </Link>
 
         {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}
-        <h2 className="mt-8 px-1 text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
-          Descubra mais
-        </h2>
+        <PanelHeading>Descubra mais</PanelHeading>
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
           <DiscoverCard
             to="/editor?section=analytics"
             title="Quem visita você"
             desc="Veja quantas pessoas abriram seu perfil."
+            icon={EyeIcon}
           />
           <DiscoverCard
             to="/editor?section=qrcode"
             title="Seu cartão digital"
             desc="Compartilhe seu perfil com um QR Code."
+            icon={QrIcon}
           />
           <DiscoverCard
             to="/editor?section=experiencia"
             title="Sua experiência"
             desc="Anos de atuação, formação e titulação em cards curtos."
+            icon={MedalIcon}
           />
           <DiscoverCard
             to="/editor?section=artigos"
             title="Seus artigos"
             desc="Conteúdo educativo que mantém o perfil vivo."
+            icon={DocIcon}
           />
           <DiscoverCard
             to="/editor?section=video"
             title="Seu vídeo"
             desc="Um vídeo curto de apresentação no fim do perfil."
+            icon={PlayIcon}
           />
           <DiscoverCard
             to="/editor?section=oab"
             title="Conferência da OAB"
             desc="Solicite a conferência e ganhe o selo no perfil."
+            icon={ScaleIcon}
           />
           <DiscoverCard
             to="/editor?section=conteudo"
             title="Documentos e privacidade"
             desc="Gere sua política de privacidade e o comprovante de conformidade."
+            icon={ShieldIcon}
           />
         </div>
 
@@ -298,7 +331,7 @@ export default function Painel() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-ink-faint">
-          <Link to="/legal" className="hover:text-ink">
+          <Link to="/legal" className="inline-block py-2 hover:text-ink">
             Documentos e privacidade
           </Link>
         </div>
@@ -307,36 +340,83 @@ export default function Painel() {
   )
 }
 
-function DiscoverCard({ to, title, desc }: { to: string; title: string; desc: string }) {
+// Cabeçalho de seção no idioma da marca: versalete + filete de latão que corre
+// até a margem — o mesmo timbre do perfil, trazido para o painel. Substitui o
+// rótulo cinza solto, que não dizia de que produto aquela tela era.
+function PanelHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mt-9 flex items-center gap-3 px-1">
+      <span className="shrink-0 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-brass-deep">
+        {children}
+      </span>
+      <span className="rule-brass h-px flex-1 opacity-50" />
+    </h2>
+  )
+}
+
+function DiscoverCard({
+  to,
+  title,
+  desc,
+  icon: Icon,
+}: {
+  to: string
+  title: string
+  desc: string
+  icon: (p: { width?: number; height?: number; className?: string }) => JSX.Element
+}) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-3 rounded-xl2 border border-ink/10 bg-paper/60 p-4 transition-colors hover:border-burgundy/40"
+      className="group flex items-center gap-3 rounded-xl2 border border-ink/10 bg-paper/60 p-4 transition-[transform,border-color,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-brass/50 hover:bg-paper hover:shadow-card"
     >
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brass/25 bg-brass/[0.07] text-brass-deep transition-colors group-hover:bg-brass/15"
+        aria-hidden
+      >
+        <Icon width={17} height={17} />
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block font-display text-[14.5px] font-semibold leading-tight text-ink">{title}</span>
         <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-soft">{desc}</span>
       </span>
-      <ArrowRight width={15} height={15} className="shrink-0 text-ink-faint" />
+      <ArrowRight
+        width={15}
+        height={15}
+        className="shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-0.5"
+      />
     </Link>
   )
 }
 
-function StepCard({ factor, locked }: { factor: TrustFactor; locked: boolean }) {
+// Um passo do painel. A miniatura da esquerda mostra O QUE o passo produz (os
+// logos das redes, o próprio avatar, o botão de WhatsApp) e a linha de baixo diz
+// o que muda para quem visita. Antes eram todos a mesma caixa com o mesmo chip de
+// pontos: uma lista onde nada se distinguia e nada dava vontade de tocar.
+function StepCard({
+  factor,
+  locked,
+  profile,
+}: {
+  factor: TrustFactor
+  locked: boolean
+  profile: Profile
+}) {
   const to = DEST[factor.key] ?? '/editor?section=identidade'
+  const hint = STEP_HINT[factor.key]
   return (
     <Link
       to={to}
-      className="flex items-center gap-3.5 rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card transition-colors hover:border-burgundy/40"
+      className="group flex items-center gap-3.5 rounded-xl2 border border-ink/10 bg-paper p-3.5 shadow-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift sm:p-4"
     >
-      <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl2 bg-brass/12 leading-none text-brass-deep">
-        <span className="text-[15px] font-semibold">+{factor.points}</span>
-        <span className="text-[8.5px] font-medium uppercase tracking-wide opacity-70">pts</span>
-      </span>
+      <StepArt factorKey={factor.key} profile={profile} />
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-display text-[15px] font-semibold leading-tight text-ink">
             {factor.action}
+          </span>
+          <span className="text-[11.5px] font-semibold tabular-nums text-brass-deep">
+            +{factor.points}
           </span>
           {factor.plan && (
             <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -345,8 +425,15 @@ function StepCard({ factor, locked }: { factor: TrustFactor; locked: boolean }) 
             </span>
           )}
         </span>
+        {hint && (
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-soft">{hint}</span>
+        )}
       </span>
-      <ArrowRight width={16} height={16} className="shrink-0 text-ink-faint" />
+      <ArrowRight
+        width={16}
+        height={16}
+        className="shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-burgundy"
+      />
     </Link>
   )
 }

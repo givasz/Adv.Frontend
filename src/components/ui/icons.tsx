@@ -194,6 +194,47 @@ export const InfoIcon = (p: IconProps) => (
   </svg>
 )
 
+// ---- Marcas dos atalhos do painel ----
+// Cada atalho de "Descubra mais" precisa de um sinal próprio: sem isso a grade
+// vira sete retângulos idênticos e o olho não distingue um do outro.
+
+export const EyeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+    <circle cx="12" cy="12" r="2.75" />
+  </svg>
+)
+
+export const QrIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3.5" y="3.5" width="6" height="6" rx="1" />
+    <rect x="14.5" y="3.5" width="6" height="6" rx="1" />
+    <rect x="3.5" y="14.5" width="6" height="6" rx="1" />
+    <path d="M14.5 14.5h3v3h-3zM20.5 14.5v3M17.5 20.5h3M14.5 20.5h.01" />
+  </svg>
+)
+
+export const MedalIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="9" r="5.5" />
+    <path d="M8.5 13.5 7 21l5-2.4L17 21l-1.5-7.5" />
+  </svg>
+)
+
+export const DocIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6 3.5h7.5L18 8v12.5H6z" />
+    <path d="M13.5 3.5V8H18M9 12h6M9 15.5h6M9 8.5h2" />
+  </svg>
+)
+
+export const ShieldIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3.2 5.5 6v5.6c0 4 2.7 7.5 6.5 9.2 3.8-1.7 6.5-5.2 6.5-9.2V6z" />
+    <path d="m9.3 12.2 1.9 1.9 3.6-3.8" />
+  </svg>
+)
+
 // `color`: cor OFICIAL da marca da rede — aplicada SÓ no ícone (logo). O resto do
 // tile (texto, borda) segue o tema. "Site" é neutro (não é uma rede específica).
 export const socialMeta: Record<

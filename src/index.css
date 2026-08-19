@@ -11,6 +11,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Sem o atraso de 300ms do duplo-toque: no celular o painel é uma lista de
+     cards que se toca em sequência, e meio segundo perdido por toque aparece. */
+  a,
+  button,
+  [role='button'],
+  label,
+  summary {
+    touch-action: manipulation;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
@@ -270,6 +280,13 @@
 .stagger > *:nth-child(4) { animation-delay: 0.22s; }
 .stagger > *:nth-child(5) { animation-delay: 0.28s; }
 .stagger > *:nth-child(6) { animation-delay: 0.34s; }
+.stagger > *:nth-child(7) { animation-delay: 0.4s; }
+.stagger > *:nth-child(8) { animation-delay: 0.46s; }
+.stagger > *:nth-child(9) { animation-delay: 0.52s; }
+.stagger > *:nth-child(10) { animation-delay: 0.58s; }
+/* A partir daqui todos entram juntos — abaixo da dobra o escalonamento já não é
+   percebido e prender o conteúdo por mais tempo só atrasa a leitura. */
+.stagger > *:nth-child(n + 11) { animation-delay: 0.62s; }
 
 @keyframes rise-in {
   from {
