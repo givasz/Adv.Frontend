@@ -413,7 +413,6 @@ export default function Landing() {
               'Assistente virtual que marca horários por você',
               'Selo “OAB conferida” no seu perfil',
               '2 perguntas frequentes respondidas no perfil',
-              'Destaques de experiência e formação',
               'Endereço personalizado (advoc.me/seu-nome)',
               'Cartão digital com QR Code e vCard',
               'Até 6 áreas e bio ampliada',

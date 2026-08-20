@@ -44,7 +44,6 @@ function blankEssentials(p: Profile): Profile {
     oabVerified: false,
     oabStatus: 'none',
     areas: [{ id: nextId(), label: '', description: '' }],
-    highlights: [],
     faqs: [],
     socials: [],
     contact: {},

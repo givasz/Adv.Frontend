@@ -97,7 +97,6 @@ function emptyDraft(): Profile {
     state: '',
     serviceMode: { inPerson: true, online: true },
     areas: [],
-    highlights: [],
     faqs: [],
     socials: [],
     contact: {},
@@ -114,7 +113,6 @@ function emptyDraft(): Profile {
 // IDs/valores fixos do perfil-modelo — usados só para reconhecer e remover resíduos
 // da Marina em rascunhos antigos (dado real do usuário tem id "id-…", nunca "a1"/"h1").
 const SAMPLE_AREA_IDS = new Set(sampleProfile.areas.map((a) => a.id))
-const SAMPLE_HL_IDS = new Set(sampleProfile.highlights.map((h) => h.id))
 const SAMPLE_FAQ_IDS = new Set((sampleProfile.faqs ?? []).map((f) => f.id))
 
 // Remove APENAS o que casa exatamente com o modelo — idempotente e seguro:
@@ -127,7 +125,6 @@ function stripSampleLeftovers(d: Profile): Profile {
   return {
     ...d,
     areas: d.areas.filter((a) => !SAMPLE_AREA_IDS.has(a.id)),
-    highlights: d.highlights.filter((h) => !SAMPLE_HL_IDS.has(h.id)),
     faqs: (d.faqs ?? []).filter((f) => !SAMPLE_FAQ_IDS.has(f.id)),
     socials: d.socials.filter((s) => !/marinasales/i.test(s.url)),
     headline: d.headline === sampleProfile.headline ? '' : d.headline,

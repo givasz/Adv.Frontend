@@ -8,7 +8,6 @@ import {
   AREA_LIMIT,
   FAQ_LIMIT,
   CHAR_LIMITS,
-  HIGHLIGHT_LIMIT,
   canUseFaq,
   canUseDigitalCard,
   canUseScheduling,
@@ -65,17 +64,12 @@ export function areaQuota(plan: Plan, used: number): Quota {
   return makeQuota(plan, used, (p) => AREA_LIMIT[p])
 }
 
-/** Cota de destaques de experiência (limite de CONTAGEM por plano). */
-export function highlightQuota(plan: Plan, used: number): Quota {
-  return makeQuota(plan, used, (p) => HIGHLIGHT_LIMIT[p])
-}
-
 /** Cota de perguntas frequentes (limite de CONTAGEM por plano; 0 no Free). */
 export function faqQuota(plan: Plan, used: number): Quota {
   return makeQuota(plan, used, (p) => FAQ_LIMIT[p])
 }
 
-/** Cota de um campo com limite de CARACTERES por plano (bio, destaque, etc.). */
+/** Cota de um campo com limite de CARACTERES por plano (bio, frase, área). */
 export function charQuota(plan: Plan, field: LimitedField, used: number): Quota {
   return makeQuota(plan, used, (p) => CHAR_LIMITS[p][field])
 }
@@ -99,7 +93,6 @@ export function factorPoints(...keys: string[]): number {
 export type UpsellFeature =
   | 'areas'
   | 'bio'
-  | 'highlights'
   | 'faq'
   | 'video'
   | 'qrcode'
@@ -115,7 +108,6 @@ export type UpsellFeature =
 const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   areas: [],
   bio: [],
-  highlights: [],
   faq: [],
   video: [],
   qrcode: [],
@@ -160,11 +152,6 @@ const FEATURE_META: Record<
     title: 'Tamanho da bio',
     subtitle: 'Quantos caracteres sua apresentação pode ter.',
     value: (p) => `${CHAR_LIMITS[p].bio} caracteres`,
-  },
-  highlights: {
-    title: 'Destaques de experiência',
-    subtitle: 'Anos de atuação, formação e titulação, em cards curtos no perfil.',
-    value: (p) => (HIGHLIGHT_LIMIT[p] === 1 ? '1 destaque' : `${HIGHLIGHT_LIMIT[p]} destaques`),
   },
   faq: {
     title: 'Perguntas frequentes',

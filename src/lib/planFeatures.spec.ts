@@ -8,13 +8,12 @@ import {
 } from './planFeatures'
 import { sampleProfile } from './mockData'
 import type { Profile } from './types'
-import { FAQ_LIMIT, HIGHLIGHT_LIMIT } from './plans'
+import { FAQ_LIMIT } from './plans'
 
 // Perfil recém-publicado no Free: só o essencial do onboarding.
 const base: Profile = {
   ...structuredClone(sampleProfile),
   slug: 'marina-sales-4827',
-  highlights: [],
   faqs: [],
   branding: undefined,
   schedulingMode: 'off',
@@ -58,7 +57,6 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     const pending = featuresPending({ ...base, plan: 'pro' }).map((f) => f.key)
     expect(pending).toContain('agenda')
     expect(pending).toContain('oab')
-    expect(pending).toContain('experiencia')
     // Itens automáticos (endereço, QR) não viram tarefa.
     expect(pending).not.toContain('endereco')
     expect(pending).not.toContain('qrcode')
@@ -69,21 +67,6 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     const depois = featuresPending({ ...base, plan: 'pro', schedulingMode: 'assistant' })
     expect(depois.length).toBe(antes.length - 1)
     expect(depois.some((f) => f.key === 'agenda')).toBe(false)
-  })
-
-  it('destaque só conta acima do teto do Free (o Free já tem um)', () => {
-    const um = { ...base, plan: 'pro' as const, highlights: [{ id: 'h', title: 'X', detail: '' }] }
-    expect(HIGHLIGHT_LIMIT.free).toBe(1)
-    expect(featuresPending(um).some((f) => f.key === 'experiencia')).toBe(true)
-
-    const dois = {
-      ...um,
-      highlights: [
-        { id: 'h', title: 'X', detail: '' },
-        { id: 'h2', title: 'Y', detail: '' },
-      ],
-    }
-    expect(featuresPending(dois).some((f) => f.key === 'experiencia')).toBe(false)
   })
 
   it('subir de Pro para Max acrescenta apenas os itens do Max', () => {
@@ -114,10 +97,6 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       oabStatus: 'verified',
       theme: 'toga',
       bio: 'x'.repeat(400),
-      highlights: [
-        { id: 'h1', title: 'A', detail: '' },
-        { id: 'h2', title: 'B', detail: '' },
-      ],
       faqs: Array.from({ length: FAQ_LIMIT.premium }, (_, i) => ({
         id: `f${i}`,
         question: `P${i}`,
@@ -143,7 +122,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .map((f) => f.key)
     expect(sampleProfile.plan).toBe('premium')
     expect(usados).toEqual(
-      expect.arrayContaining(['agenda', 'oab', 'experiencia', 'faq', 'faq_max', 'marca', 'dominio']),
+      expect.arrayContaining(['agenda', 'oab', 'faq', 'faq_max', 'marca', 'dominio']),
     )
   })
 

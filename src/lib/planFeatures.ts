@@ -11,7 +11,7 @@
 // sobra o que ainda é novo. O checklist encolhe sozinho conforme o perfil evolui.
 
 import type { Plan, Profile } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, HIGHLIGHT_LIMIT } from './plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT } from './plans'
 import { resolveSchedulingMode } from './booking'
 import { THEMES, isThemeUnlocked } from './themes'
 import { parseVideoUrl } from './video'
@@ -83,15 +83,6 @@ export const PLAN_FEATURES: PlanFeature[] = [
     cta: 'Ver meu endereço',
     automatic: true,
     done: (p) => !/-\d{4}$/.test(p.slug),
-  },
-  {
-    key: 'experiencia',
-    plan: 'pro',
-    title: 'Destaques de experiência',
-    body: 'Anos de atuação, formação e atuação em tribunais — o que sustenta a sua autoridade, em cards curtos.',
-    to: '/editor?section=experiencia',
-    cta: 'Adicionar destaques',
-    done: (p) => p.highlights.length > HIGHLIGHT_LIMIT.free,
   },
   {
     key: 'areas',

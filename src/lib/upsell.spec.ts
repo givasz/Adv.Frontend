@@ -76,7 +76,6 @@ describe('upsell — pontos do Índice de Confiança por recurso', () => {
     expect(featurePoints('areas')).toBe(0)
     expect(featurePoints('bio')).toBe(0)
     expect(featurePoints('themes')).toBe(0)
-    expect(featurePoints('highlights')).toBe(0)
   })
 
   it('featureCompare traz os três planos, valores derivados e os pontos', () => {

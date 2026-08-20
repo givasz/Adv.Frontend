@@ -45,23 +45,6 @@ export const sampleProfile: Profile = {
         'Aposentadorias, auxílios e revisões de benefícios junto ao INSS, com explicação clara de requisitos e prazos.',
     },
   ],
-  highlights: [
-    {
-      id: 'h1',
-      title: '15 anos de atuação',
-      detail: 'Advocacia em Direito de Família e Sucessões desde 2010, em São Paulo.',
-    },
-    {
-      id: 'h2',
-      title: 'Mestrado em Direito Civil',
-      detail: 'Pesquisa em direito sucessório e planejamento patrimonial familiar.',
-    },
-    {
-      id: 'h3',
-      title: 'Mediadora certificada',
-      detail: 'Formação em mediação de conflitos familiares pelo Tribunal de Justiça.',
-    },
-  ],
   // Perfil-modelo (Max): 5 perguntas frequentes, no limite do plano. Respostas
   // curtas, educativas e com o lembrete de análise individual — o exemplo que o
   // advogado vê é o padrão que ele vai copiar.
@@ -162,18 +145,6 @@ export const guilhermeSales: Profile = {
       label: 'Direito Previdenciário',
       description:
         'Esclarecimentos sobre aposentadorias, auxílios e benefícios do INSS, com análise dos requisitos previstos em lei.',
-    },
-  ],
-  highlights: [
-    {
-      id: 'g-h1',
-      title: '10 anos em Direito do Trabalho',
-      detail: 'Atuação contínua em reclamatórias trabalhistas e assessoria a empregados.',
-    },
-    {
-      id: 'g-h2',
-      title: 'Pós-graduação em Direito Previdenciário',
-      detail: 'Especialização com foco em benefícios por incapacidade e revisões do INSS.',
     },
   ],
   socials: [{ kind: 'linkedin', url: 'https://linkedin.com/in/guilherme-sales' }],

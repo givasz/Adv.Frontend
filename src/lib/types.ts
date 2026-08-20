@@ -58,13 +58,6 @@ export interface PracticeArea {
   description: string
 }
 
-export interface Highlight {
-  id: string
-  /** experiência genérica, sem identificar clientes (sigilo profissional) */
-  title: string
-  detail: string
-}
-
 /**
  * Pergunta frequente respondida pelo advogado no perfil (seção "Perguntas
  * frequentes"). Recurso dos planos pagos: 2 no Pro, 5 no Max.
@@ -212,7 +205,6 @@ export interface Profile {
   regionNote?: string // ex: "Atendimento em toda a Grande SP"
   serviceMode: ServiceMode
   areas: PracticeArea[]
-  highlights: Highlight[]
   /** perguntas frequentes respondidas pelo advogado — informativo, não promocional */
   faqs?: Faq[]
   /**

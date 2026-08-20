@@ -2,12 +2,12 @@ import type { Plan } from './types'
 
 // Limites de caracteres por campo, escalando com o plano ("Proposto").
 // ⚠️ MANTER EM SINCRONIA com backend/src/plans.ts (o backend é a fonte da verdade).
-export type LimitedField = 'headline' | 'bio' | 'areaDesc' | 'highlightTitle' | 'highlightDetail'
+export type LimitedField = 'headline' | 'bio' | 'areaDesc'
 
 export const CHAR_LIMITS: Record<Plan, Record<LimitedField, number>> = {
-  free: { headline: 60, bio: 300, areaDesc: 160, highlightTitle: 40, highlightDetail: 80 },
-  pro: { headline: 90, bio: 600, areaDesc: 280, highlightTitle: 60, highlightDetail: 140 },
-  premium: { headline: 120, bio: 1000, areaDesc: 400, highlightTitle: 80, highlightDetail: 200 },
+  free: { headline: 60, bio: 300, areaDesc: 160 },
+  pro: { headline: 90, bio: 600, areaDesc: 280 },
+  premium: { headline: 120, bio: 1000, areaDesc: 400 },
 }
 
 export function charLimit(plan: Plan, field: LimitedField): number {
@@ -16,10 +16,6 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 
 // Número máximo de áreas de atuação por plano (usado no editor).
 export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
-
-// Destaques de experiência ("15 anos em Direito de Família", "Mestrado em…").
-// O Free tem UM, só para dar o gosto; o teto sobe com o plano.
-export const HIGHLIGHT_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 10 }
 
 // Perguntas frequentes respondidas no perfil: nenhuma no Free, 2 no Pro, 5 no Max.
 export const FAQ_LIMIT: Record<Plan, number> = { free: 0, pro: 2, premium: 5 }

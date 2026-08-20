@@ -39,7 +39,6 @@ import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
 import { PurchaseSimulator } from '@/components/editor/PurchaseSimulator'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
-import { ExperienceCard } from '@/components/editor/ExperienceCard'
 import { FaqCard } from '@/components/editor/FaqCard'
 import { VideoCard } from '@/components/editor/VideoCard'
 import { ThemePicker } from '@/components/editor/ThemePicker'
@@ -69,7 +68,6 @@ type AiTarget = {
 type SectionId =
   | 'identidade'
   | 'bio'
-  | 'experiencia'
   | 'redes'
   | 'agenda'
   | 'aparencia'
@@ -111,10 +109,6 @@ const PREVIEW_FAQS = [
 const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   identidade: { title: 'Seu perfil', subtitle: 'Seus dados e como você aparece para quem chega.' },
   bio: { title: 'Sua apresentação', subtitle: 'Poucas linhas sobre você. A IA pode começar.' },
-  experiencia: {
-    title: 'Sua experiência',
-    subtitle: 'Anos de atuação, formação, onde você atua — o que sustenta a sua autoridade.',
-  },
   redes: { title: 'Seus canais', subtitle: 'Por onde os clientes falam com você.' },
   agenda: { title: 'Sua agenda', subtitle: 'Deixe que marquem um horário direto no perfil.' },
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
@@ -400,10 +394,6 @@ export default function Editor() {
                     </button>
                   )}
                 </Card>
-              )}
-
-              {section === 'experiencia' && (
-                <ExperienceCard profile={profile} set={set} onUpsell={setUpsell} />
               )}
 
               {section === 'redes' && (

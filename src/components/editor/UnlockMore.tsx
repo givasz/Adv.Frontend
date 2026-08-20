@@ -34,7 +34,6 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
       'Selo “OAB conferida”',
       '2 perguntas frequentes no perfil',
       'Endereço advoc.me/seu-nome',
-      'Destaques de experiência',
       'QR Code e cartão de contato',
       'Até 6 áreas de atuação',
       'Bio e textos mais longos',

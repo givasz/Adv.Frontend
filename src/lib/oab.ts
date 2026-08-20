@@ -126,12 +126,6 @@ export const OAB_GUIDANCE_BY_FIELD: Record<string, string[]> = {
     'Use seu nome civil / profissional conforme a inscrição na OAB.',
     'Não use nome fantasia ou marca no lugar do nome do advogado.',
   ],
-  highlight: [
-    'Registre fatos verificáveis: tempo de atuação, formação, titulação, cargos.',
-    'Evite superlativos e comparações ("o mais experiente", "referência no estado").',
-    'Não cite casos, processos, clientes ou resultados obtidos (sigilo profissional).',
-    'Não use números de "vitórias", percentuais de êxito ou depoimentos.',
-  ],
   video: [
     'Apresente-se: quem você é, onde atua e como trabalha.',
     'Explicar um tema jurídico de forma didática também vale.',

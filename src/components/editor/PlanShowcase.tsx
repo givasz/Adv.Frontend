@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import type { Plan } from '@/lib/types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, HIGHLIGHT_LIMIT } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckIcon } from '@/components/ui/icons'
 import { PurchaseSimulator } from './PurchaseSimulator'
@@ -25,7 +25,6 @@ const PERKS: Record<Plan, string[]> = {
     `${AREA_LIMIT.free} áreas de atuação`,
     `Bio até ${CHAR_LIMITS.free.bio} caracteres`,
     'WhatsApp e redes sociais',
-    `${HIGHLIGHT_LIMIT.free} destaque de experiência`,
     '2 temas visuais',
   ],
   pro: [
@@ -33,7 +32,6 @@ const PERKS: Record<Plan, string[]> = {
     'Selo “OAB conferida”',
     `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
     'Endereço advoc.me/seu-nome',
-    `${HIGHLIGHT_LIMIT.pro} destaques de experiência`,
     'Cartão digital com QR e vCard',
     `${AREA_LIMIT.pro} áreas · bio até ${CHAR_LIMITS.pro.bio}`,
     '5 temas visuais',

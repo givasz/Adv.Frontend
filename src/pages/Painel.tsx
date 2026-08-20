@@ -17,7 +17,6 @@ import {
   DocIcon,
   EyeIcon,
   LockIcon,
-  MedalIcon,
   PlayIcon,
   QrIcon,
   ScaleIcon,
@@ -328,12 +327,6 @@ export default function Painel() {
             title="Seu cartão digital"
             desc="Compartilhe seu perfil com um QR Code."
             icon={QrIcon}
-          />
-          <DiscoverCard
-            to="/editor?section=experiencia"
-            title="Sua experiência"
-            desc="Anos de atuação, formação e titulação em cards curtos."
-            icon={MedalIcon}
           />
           <DiscoverCard
             to="/editor?section=faq"

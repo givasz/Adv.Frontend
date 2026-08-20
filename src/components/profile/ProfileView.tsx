@@ -63,7 +63,6 @@ export function ProfileView({
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
-  const highlights = profile.highlights.filter((h) => h.title.trim())
   // FAQ: recurso pago (o servidor já não devolve fora dos planos pagos; a trava
   // repetida aqui vale para a prévia do editor e para o mock). Só entra pergunta
   // COM resposta — dúvida pendurada sem resposta é pior que não ter FAQ nenhum.
@@ -334,39 +333,6 @@ export function ProfileView({
             <div className="mt-3 space-y-2.5">
               {areas.map((a) => (
                 <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Experiência — o que sustenta a autoridade, em fatos curtos. Recurso que
-            escala com o plano (ver lib/plans.ts). */}
-        {highlights.length > 0 && (
-          <motion.section variants={item} className="mt-9">
-            <SectionTitle rule={s.rule}>Experiência</SectionTitle>
-            <div className="mt-3 space-y-2.5">
-              {highlights.map((h) => (
-                <div key={h.id} className={`${tile} flex-col !items-stretch !gap-1 !py-3.5`}>
-                  {/* Filete vertical de acento no lugar do losango: marca a
-                      entrada sem virar enfeite, e alinha o título com o detalhe. */}
-                  <span className="flex items-stretch gap-2.5">
-                    <span
-                      aria-hidden
-                      className="w-[2px] shrink-0 rounded-full"
-                      style={{ background: 'var(--c-accent)' }}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[15.5px] font-semibold leading-tight">
-                        {h.title}
-                      </span>
-                      {h.detail.trim() && (
-                        <span className="t-muted mt-1 block text-left text-[13.5px] leading-relaxed">
-                          {h.detail}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </div>
               ))}
             </div>
           </motion.section>
@@ -736,8 +702,8 @@ function AreaCard({
       style={open ? { borderColor: 'var(--c-accent)' } : undefined}
     >
       <span className="flex w-full items-center gap-2.5">
-        {/* Barrinha vertical em vez do losango — a mesma marca dos destaques,
-            para o perfil inteiro falar uma língua só. */}
+        {/* Barrinha vertical em vez do losango: marca a entrada sem virar
+            enfeite, e é a mesma língua visual do resto do perfil. */}
         <span
           aria-hidden
           className="h-4 w-[2px] shrink-0 rounded-full"

@@ -9,7 +9,6 @@ const essential: Profile = {
   avatarUrl: '',
   headline: '',
   socials: [],
-  highlights: [],
   faqs: [],
   contact: { whatsapp: '5511999999999' },
   branding: undefined,
@@ -67,7 +66,6 @@ describe('computeTrust', () => {
       headline: 'Advogada · Família',
       socials: [{ kind: 'instagram', url: 'https://instagram.com/x' }],
       contact: { whatsapp: '5511999999999', email: 'a@b.com' },
-      highlights: [{ id: 'h', title: '10 anos', detail: '...' }],
       faqs: [{ id: 'f', question: 'P', answer: 'R' }],
       areas: [
         { id: 'a', label: 'Família', description: '' },

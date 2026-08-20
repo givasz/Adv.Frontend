@@ -45,7 +45,6 @@ function seed(patch: Partial<Profile> = {}) {
     state: 'MG',
     serviceMode: { inPerson: true, online: true },
     areas: [],
-    highlights: [],
     socials: [],
     contact: {},
     plan: 'pro',
