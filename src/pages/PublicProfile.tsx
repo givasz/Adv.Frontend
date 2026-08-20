@@ -125,7 +125,7 @@ export default function PublicProfile() {
         profile={profile}
         topOffset={barsHeight}
       />
-      <ProfileView profile={profile} />
+      <ProfileView profile={profile} owner={isOwner} />
 
       {/* Denúncia — canal discreto de conformidade (Prov. 205/2021) */}
       <div className="flex justify-center pb-10 pt-2">

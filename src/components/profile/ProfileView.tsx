@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type RuleStyle } from '@/lib/themes'
@@ -28,6 +29,13 @@ interface ProfileViewProps {
   /** true dentro do editor: desativa navegação real e o efeito de entrada */
   preview?: boolean
   /**
+   * O DONO está vendo o próprio perfil público. Liga marcas discretas nos
+   * lugares onde falta conteúdo — a diferença entre o perfil dele e o exemplo da
+   * home é justamente o que ainda não foi preenchido, e sem uma pista aqui isso
+   * se parece com defeito do produto. Nunca aparece para visitante.
+   */
+  owner?: boolean
+  /**
    * Deixa o assistente virtual abrir mesmo em `preview` — usado no telefone da home,
    * que é uma demonstração viva. Fora isso, segue o `preview`.
    */
@@ -42,7 +50,12 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
 }
 
-export function ProfileView({ profile, preview = false, chatEnabled }: ProfileViewProps) {
+export function ProfileView({
+  profile,
+  preview = false,
+  chatEnabled,
+  owner = false,
+}: ProfileViewProps) {
   const [schedOpen, setSchedOpen] = useState(false)
   const schedulingMode = resolveSchedulingMode(profile)
   // Agendar é a única ação que continua viva na prévia da home (chatEnabled).
@@ -124,7 +137,15 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
             <div className="min-w-0">
               <h1 className={nameCls} style={nameStyle}>{profile.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">{identity}</div>
-              {profile.headline && <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>}
+              {profile.headline ? (
+                <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>
+              ) : (
+                owner && (
+                  <OwnerHint to="/editor?section=identidade" className="mt-1.5">
+                    Falta a sua frase de apresentação
+                  </OwnerHint>
+                )
+              )}
             </div>
           </motion.header>
         ) : (
@@ -135,7 +156,15 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               {identity}
             </div>
-            {profile.headline && <p className="t-muted mt-2 text-[15px]">{profile.headline}</p>}
+            {profile.headline ? (
+              <p className="t-muted mt-2 text-[15px]">{profile.headline}</p>
+            ) : (
+              owner && (
+                <OwnerHint to="/editor?section=identidade" className="mt-2.5">
+                  Falta a sua frase de apresentação
+                </OwnerHint>
+              )
+            )}
             {s.header === 'letterhead' && <div className="t-rule mt-4 w-16" />}
           </motion.header>
         )}
@@ -164,6 +193,14 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
           >
             {profile.regionNote}
           </motion.p>
+        )}
+
+        {owner && profile.socials.length === 0 && (
+          <motion.div variants={item} className="mt-6 flex justify-center">
+            <OwnerHint to="/editor?section=redes">
+              Suas redes e site ainda não aparecem aqui
+            </OwnerHint>
+          </motion.div>
         )}
 
         {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
@@ -443,6 +480,33 @@ export function ProfileView({ profile, preview = false, chatEnabled }: ProfileVi
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/**
+ * Marca de "falta isto aqui", visível SÓ para o dono.
+ *
+ * Tracejada e em corpo pequeno de propósito: é um bilhete no rascunho, não parte
+ * do perfil. Quem chega pelo link nunca vê nada disso — o que o visitante lê
+ * continua sendo apenas o que existe de verdade.
+ */
+function OwnerHint({
+  to,
+  children,
+  className = '',
+}: {
+  to: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <Link
+      to={to}
+      className={`t-faint inline-flex items-center gap-1.5 rounded-full border border-dashed px-3 py-1.5 text-[12px] transition-colors hover:opacity-80 ${className}`}
+      style={{ borderColor: 'var(--c-ring)' }}
+    >
+      + {children}
+    </Link>
   )
 }
 
