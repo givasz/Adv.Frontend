@@ -185,6 +185,42 @@ export default function Editor() {
     return () => clearTimeout(t)
   }, [profile])
 
+  // Enquanto o pedido de conferência está na fila, o editor volta a perguntar o
+  // estado ao servidor: ao abrir a seção e sempre que a aba recupera o foco. Sem
+  // isso a decisão do admin só aparecia depois de recarregar a página inteira.
+  useEffect(() => {
+    if (section !== 'oab') return
+    const status = profile?.oabStatus ?? (profile?.oabVerified ? 'verified' : 'none')
+    if (status !== 'pending') return
+    let alive = true
+    const sync = async () => {
+      try {
+        const st = await api.oabState()
+        if (!alive || st.oabStatus === 'pending') return
+        setProfile((p) =>
+          p
+            ? {
+                ...p,
+                oabStatus: st.oabStatus,
+                oabVerified: !!st.oabVerified,
+                oabRequestedAt: st.oabRequestedAt ?? undefined,
+                oabDecidedAt: st.oabDecidedAt ?? undefined,
+                oabReason: st.oabReason ?? undefined,
+              }
+            : p,
+        )
+      } catch {
+        /* silencioso: é só uma atualização de estado, não bloqueia a edição */
+      }
+    }
+    sync()
+    window.addEventListener('focus', sync)
+    return () => {
+      alive = false
+      window.removeEventListener('focus', sync)
+    }
+  }, [section, profile?.oabStatus, profile?.oabVerified])
+
   // Sair da aparência encerra a prova: nas outras seções a prévia tem de mostrar o
   // perfil como ele está de verdade.
   useEffect(() => {
@@ -223,9 +259,17 @@ export default function Editor() {
   const lim = CHAR_LIMITS[profile.plan]
 
   const oabStatus: OabStatus = profile.oabStatus ?? (profile.oabVerified ? 'verified' : 'none')
+  // O estado da conferência é do servidor: adotamos a resposta inteira (status,
+  // datas e motivo), nunca um palpite local. Erros sobem para o componente mostrar.
   async function requestOab() {
     const res = await api.requestOabCheck()
-    set({ oabStatus: res.oabStatus })
+    set({
+      oabStatus: res.oabStatus,
+      oabVerified: !!res.oabVerified,
+      oabRequestedAt: res.oabRequestedAt ?? undefined,
+      oabDecidedAt: res.oabDecidedAt ?? undefined,
+      oabReason: res.oabReason ?? undefined,
+    })
   }
 
   // Abre o gerador de IA se o plano permite o recurso; senão, abre o upsell.
@@ -452,7 +496,14 @@ export default function Editor() {
                       </button>
                     </div>
                   ) : (
-                    <OabVerifyRow status={oabStatus} onRequest={requestOab} />
+                    <OabVerifyRow
+                      status={oabStatus}
+                      requestedAt={profile.oabRequestedAt}
+                      decidedAt={profile.oabDecidedAt}
+                      reason={profile.oabReason}
+                      hasOabNumber={!!profile.oabNumber.trim()}
+                      onRequest={requestOab}
+                    />
                   )}
                 </Card>
               )}
@@ -942,8 +993,49 @@ function ModerationBanner({ status, note }: { status?: ModerationStatus; note?: 
   )
 }
 
+// Data legível ("12 de agosto, 14:30") para as etapas da conferência.
+function fmtWhen(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return isNaN(d.getTime())
+    ? ''
+    : d.toLocaleString('pt-BR', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
+}
+
 // Conferência da OAB — feita pela plataforma, nunca auto-declarada pelo advogado.
-function OabVerifyRow({ status, onRequest }: { status: OabStatus; onRequest: () => void }) {
+// O pedido tem TRÊS momentos visíveis para o advogado: enviado (em análise),
+// conferido e não aprovado (com o motivo que o admin escreveu). Antes o pedido era
+// um link solto no meio do texto e a rejeição nunca chegava a quem pediu.
+function OabVerifyRow({
+  status,
+  requestedAt,
+  decidedAt,
+  reason,
+  hasOabNumber,
+  onRequest,
+}: {
+  status: OabStatus
+  requestedAt?: string
+  decidedAt?: string
+  reason?: string
+  hasOabNumber: boolean
+  onRequest: () => Promise<void>
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function pedir() {
+    setBusy(true)
+    setError(null)
+    try {
+      await onRequest()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível enviar o pedido. Tente de novo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (status === 'verified') {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5">
@@ -952,7 +1044,7 @@ function OabVerifyRow({ status, onRequest }: { status: OabStatus; onRequest: () 
         </span>
         <p className="text-[12.5px] leading-relaxed text-ink-soft">
           <span className="font-semibold text-brass-deep">OAB conferida</span> — o número foi conferido pela
-          plataforma. Não é selo oficial da OAB.
+          plataforma{decidedAt ? ` em ${fmtWhen(decidedAt)}` : ''}. Não é selo oficial da OAB.
         </p>
       </div>
     )
@@ -960,21 +1052,70 @@ function OabVerifyRow({ status, onRequest }: { status: OabStatus; onRequest: () 
   return (
     <div className="rounded-lg border border-ink/12 bg-paper-soft px-3 py-2.5">
       {status === 'pending' ? (
-        <p className="flex items-center gap-2 text-[12.5px] font-medium text-ink-soft">
-          <span className="h-2 w-2 rounded-full bg-brass-deep/70" />
-          Conferência solicitada · em análise
-        </p>
+        <div className="rounded-lg border border-brass/30 bg-brass/[0.08] px-3 py-2.5">
+          <p className="flex items-center gap-2 text-[13px] font-semibold text-brass-deep">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-brass-deep/70" />
+            Pedido enviado · em análise
+          </p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
+            {requestedAt ? `Recebemos seu pedido em ${fmtWhen(requestedAt)}. ` : ''}
+            Nossa equipe confere seu número no Cadastro Nacional dos Advogados. Enquanto isso você
+            pode seguir editando o perfil — avisamos aqui quando houver resposta.
+          </p>
+        </div>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="space-y-2.5">
           {status === 'rejected' && (
-            <span className="text-[12.5px] font-medium text-burgundy-deep">Conferência não aprovada.</span>
+            <div className="rounded-lg border border-burgundy/30 bg-burgundy/[0.06] px-3 py-2.5">
+              <p className="text-[13px] font-semibold text-burgundy-deep">
+                Pedido não aprovado{decidedAt ? ` · ${fmtWhen(decidedAt)}` : ''}
+              </p>
+              {/* O motivo escrito pelo admin. É o que transforma "não aprovado" em
+                  algo acionável — sem ele o advogado só pode adivinhar e repetir. */}
+              {reason ? (
+                <p className="mt-1.5 rounded-lg bg-paper/70 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
+                  <span className="font-medium text-ink-faint">Motivo:</span> {reason}
+                </p>
+              ) : (
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
+                  A plataforma não confirmou o registro com os dados atuais.
+                </p>
+              )}
+              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">
+                Corrija o que for necessário (nome completo e número exatamente como no CNA) e peça de
+                novo.
+              </p>
+            </div>
           )}
-          <button type="button" onClick={onRequest} className="text-[13px] font-semibold text-burgundy hover:underline">
-            {status === 'rejected' ? 'Solicitar novamente' : 'Solicitar conferência da OAB'}
+          {!hasOabNumber && (
+            <p className="text-[12.5px] leading-relaxed text-ink-soft">
+              Informe seu número de inscrição em{' '}
+              <Link to="/editor?section=identidade" className="font-medium text-burgundy underline">
+                Seus dados
+              </Link>{' '}
+              antes de pedir a conferência.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={pedir}
+            disabled={busy || !hasOabNumber}
+            className="btn-primary !py-2 !px-4 text-[13px] disabled:opacity-50"
+          >
+            {busy
+              ? 'Enviando…'
+              : status === 'rejected'
+                ? 'Pedir nova conferência'
+                : 'Pedir a conferência'}
           </button>
+          {error && (
+            <p role="alert" className="text-[12.5px] font-medium text-burgundy-deep">
+              {error}
+            </p>
+          )}
         </div>
       )}
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
+      <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
         A conferência é feita pela plataforma no cadastro da OAB. Você não pode se marcar como conferido.
       </p>
       <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">

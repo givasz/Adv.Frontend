@@ -48,6 +48,37 @@ const DEST: Record<string, string> = {
 
 const LAST_KEY = 'advocme:trust:last'
 
+// Aviso do estado da conferência de OAB no painel (só quando há algo a dizer:
+// pedido na fila ou pedido recusado). Conferido não vira aviso — vira a marca no
+// perfil, que é onde ele importa.
+function OabNotice({ profile }: { profile: Profile }) {
+  const status = profile.oabStatus ?? (profile.oabVerified ? 'verified' : 'none')
+  if (status !== 'pending' && status !== 'rejected') return null
+  const pending = status === 'pending'
+  return (
+    <div
+      className={`mt-5 rounded-xl2 border px-4 py-3 ${
+        pending ? 'border-brass/30 bg-brass/[0.08]' : 'border-burgundy/30 bg-burgundy/[0.06]'
+      }`}
+    >
+      <p className={`text-[13px] font-semibold ${pending ? 'text-brass-deep' : 'text-burgundy-deep'}`}>
+        {pending ? 'Conferência da OAB em análise' : 'Conferência da OAB não aprovada'}
+      </p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
+        {pending
+          ? 'Recebemos seu pedido. Avisamos assim que nossa equipe concluir a conferência.'
+          : profile.oabReason || 'A plataforma não confirmou o registro com os dados atuais.'}
+      </p>
+      <Link
+        to="/editor?section=oab"
+        className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-burgundy hover:underline"
+      >
+        {pending ? 'Ver o pedido' : 'Corrigir e pedir de novo'} <ArrowRight width={13} height={13} />
+      </Link>
+    </div>
+  )
+}
+
 // Frase de incentivo conforme o índice — tom profissional, sem gamificação infantil.
 function motivator(score: number): string {
   if (score >= 90) return 'Parabéns — seu perfil está excelente.'
@@ -169,6 +200,11 @@ export default function Painel() {
             <p className="text-[14px] text-ink-soft">Olá, {firstName}. Seu perfil já está online.</p>
           </div>
         </div>
+
+        {/* Resposta da conferência de OAB — quem pediu está esperando por ela, e o
+            painel é a primeira tela que o advogado abre. Um "não aprovado" que só
+            existisse dentro da seção do editor nunca seria lido. */}
+        <OabNotice profile={profile} />
 
         {/* Índice de Confiança — roda que esverdeia conforme melhora */}
         <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-6 shadow-card">

@@ -61,7 +61,9 @@ export const PLAN_FEATURES: PlanFeature[] = [
     body: 'A plataforma confere seu registro e exibe a marca de conferência ao lado do seu número.',
     to: '/editor?section=oab',
     cta: 'Pedir a conferência',
-    done: (p) => (p.oabStatus ?? (p.oabVerified ? 'verified' : 'none')) !== 'none',
+    // Pedido enviado já conta como "usou o recurso"; rejeitado NÃO — ali ainda há
+    // algo a fazer, e o checklist existe justamente para mostrar o que falta.
+    done: (p) => ['pending', 'verified'].includes(p.oabStatus ?? (p.oabVerified ? 'verified' : 'none')),
   },
   {
     key: 'endereco',

@@ -2,10 +2,17 @@
 // O painel sempre fala com o backend real (NestJS) — em dev, via proxy /api do Vite.
 // O token de sessão é guardado em sessionStorage e enviado como Bearer.
 
+import { mockOabQueue } from './api'
 import type { ModerationStatus, Profile, Report } from './types'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 const TOKEN_KEY = 'advocme:admin:session'
+// Sem backend configurado, o painel não teria como decidir nada — e o advogado
+// ficaria "em análise" para sempre no ambiente de desenvolvimento. Só aqui (build
+// de dev, sem VITE_API_URL) a fila de OAB usa o espelho local do api.ts; em
+// produção o painel fala exclusivamente com o NestJS.
+const MOCK_ADMIN =
+  import.meta.env.DEV && import.meta.env.VITE_USE_REAL_API !== 'true' && !API_BASE
 
 export function getAdminToken(): string | null {
   try {
@@ -73,6 +80,9 @@ export interface PendingOab {
   state: string
   slug: string
   updatedAt: string
+  /** quando o advogado entrou na fila — é por ela que a fila é ordenada */
+  oabRequestedAt?: string | null
+  plan?: string
 }
 
 // Um evento do histórico de conferência de OAB (append-only no backend).
@@ -102,6 +112,13 @@ export interface AdminProfile {
 // ---- Auth ----
 
 export async function adminLogin(username: string, password: string): Promise<void> {
+  // Dev sem backend: as MESMAS credenciais padrão do NestJS (admin/dev-admin-123),
+  // conferidas localmente só para abrir o painel do ambiente de desenvolvimento.
+  if (MOCK_ADMIN) {
+    if (username !== 'admin' || password !== 'dev-admin-123') throw new Error('Credenciais inválidas')
+    setAdminToken('dev-local-session')
+    return
+  }
   const res = await fetch(`${API_BASE}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -151,6 +168,7 @@ export async function searchProfiles(q: string): Promise<AdminProfile[]> {
 // ---- Fila de OAB (reaproveita endpoints existentes) ----
 
 export async function listPendingOab(): Promise<PendingOab[]> {
+  if (MOCK_ADMIN) return mockOabQueue.pending()
   return json(await adminFetch('/admin/oab/pending'))
 }
 
@@ -159,6 +177,7 @@ export async function decideOab(
   decision: 'verify' | 'reject',
   reason?: string,
 ): Promise<unknown> {
+  if (MOCK_ADMIN) return mockOabQueue.decide(id, decision, reason)
   return json(await adminFetch(`/admin/profiles/${id}/oab/decision`, {
     method: 'POST',
     body: JSON.stringify({ decision, reason }),
@@ -166,6 +185,7 @@ export async function decideOab(
 }
 
 export async function oabHistory(id: string): Promise<OabEvent[]> {
+  if (MOCK_ADMIN) return mockOabQueue.history(id)
   return json(await adminFetch(`/admin/profiles/${id}/oab/history`))
 }
 

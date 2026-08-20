@@ -198,6 +198,12 @@ export interface Profile {
   oabVerified: boolean // espelha (oabStatus === 'verified') — controlado pela plataforma
   /** estado da conferência de OAB (só a plataforma promove a 'verified') */
   oabStatus?: OabStatus
+  /** ISO — quando o advogado entrou na fila de conferência (status 'pending') */
+  oabRequestedAt?: string
+  /** ISO — quando a plataforma decidiu (conferida ou rejeitada) */
+  oabDecidedAt?: string
+  /** devolutiva do admin ao advogado (motivo da rejeição). Só o dono do perfil vê. */
+  oabReason?: string
   headline: string // frase curta sob o nome
   bio: string
   avatarUrl?: string

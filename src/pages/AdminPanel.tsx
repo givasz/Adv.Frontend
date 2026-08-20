@@ -694,6 +694,8 @@ function OabTab() {
   const [busy, setBusy] = useState<string | null>(null)
   // Id do item cuja rejeição está sendo justificada (fluxo de motivo).
   const [rejecting, setRejecting] = useState<string | null>(null)
+  // Erro de uma DECISÃO (≠ erro de carregar a fila, que troca a tela inteira).
+  const [actionError, setActionError] = useState<string | null>(null)
   const [reason, setReason] = useState('')
   // Histórico carregado por perfil (toggle).
   const [history, setHistory] = useState<Record<string, OabEvent[]>>({})
@@ -713,11 +715,17 @@ function OabTab() {
 
   async function decide(id: string, decision: 'verify' | 'reject', why?: string) {
     setBusy(id)
+    setActionError(null)
     try {
       await decideOab(id, decision, why)
       setRejecting(null)
       setReason('')
       await reload()
+    } catch (e) {
+      // Uma decisão recusada pelo servidor (motivo em branco, perfil que saiu da
+      // fila) precisa aparecer: antes a promessa quebrava em silêncio e o item
+      // continuava lá como se nada tivesse sido clicado.
+      setActionError(e instanceof Error ? e.message : 'Não foi possível registrar a decisão.')
     } finally {
       setBusy(null)
     }
@@ -747,12 +755,21 @@ function OabTab() {
 
   return (
     <ul className="space-y-2.5">
+      {actionError && (
+        <li className="rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
+          {actionError}
+        </li>
+      )}
       {pending.map((p) => (
         <li key={p.id} className="rounded-xl2 border border-ink/10 bg-paper px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-medium text-ink">{p.name}</p>
               <p className="truncate text-[12px] text-ink-faint">{p.oabNumber} · {p.city}/{p.state} · advoc.me/{p.slug}</p>
+              {/* Há quanto tempo esta pessoa espera — a fila é ordenada por isso. */}
+              <p className="text-[11.5px] text-ink-faint">
+                Pedido em {fmtDate(p.oabRequestedAt ?? p.updatedAt) || '—'}
+              </p>
               {/* O CNA é a fonte oficial e aberta da OAB. Antes isso era só texto:
                   o admin tinha de copiar o número e procurar o site na mão. Agora
                   abre a consulta com o nome já preenchido — é o passo que a
@@ -802,12 +819,14 @@ function OabTab() {
 
           {rejecting === p.id && (
             <div className="mt-3 rounded-lg border border-ink/10 bg-paper-soft p-3">
-              <label className="text-[12px] font-medium text-ink-soft">Motivo da rejeição (visível na auditoria)</label>
+              <label className="text-[12px] font-medium text-ink-soft">
+                Motivo da rejeição — <span className="text-burgundy-deep">o advogado lê este texto</span>
+              </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={2}
-                placeholder="Ex.: nome não confere com o CNA; inscrição suspensa."
+                placeholder="Ex.: o nome informado não confere com o do CNA. Ajuste para o nome completo da inscrição e peça de novo."
                 className="mt-1.5 w-full resize-none rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[12.5px] outline-none focus:border-burgundy/40"
               />
               <div className="mt-2 flex justify-end gap-2">
