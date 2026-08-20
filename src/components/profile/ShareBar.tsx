@@ -11,10 +11,13 @@ export function ShareBar({
   slug,
   name,
   profile,
+  topOffset = 0,
 }: {
   slug: string
   name: string
   profile?: Profile
+  /** altura das barras grudentas acima (aviso de exemplo, barra do dono) */
+  topOffset?: number
 }) {
   const [open, setOpen] = useState(false)
   const url = `${window.location.origin}/${slug}`
@@ -36,7 +39,10 @@ export function ShareBar({
       <button
         type="button"
         onClick={share}
-        className="fixed right-4 top-4 z-20 inline-flex h-10 items-center gap-1.5 rounded-full border border-ink/10 bg-paper-soft/80 px-4 text-sm font-medium text-ink shadow-card backdrop-blur transition-colors hover:border-brass/50"
+        // `top` calculado: o botão é fixo e as barras do topo (aviso de exemplo,
+        // barra do dono) são grudentas — sem desviar, ele fica atrás delas.
+        style={{ top: `calc(1rem + ${topOffset}px)` }}
+        className="fixed right-4 z-20 inline-flex h-10 items-center gap-1.5 rounded-full border border-ink/10 bg-paper-soft/80 px-4 text-sm font-medium text-ink shadow-card backdrop-blur transition-colors hover:border-brass/50"
         aria-label="Compartilhar perfil"
       >
         Compartilhar
