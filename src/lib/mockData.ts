@@ -62,27 +62,39 @@ export const sampleProfile: Profile = {
       detail: 'Formação em mediação de conflitos familiares pelo Tribunal de Justiça.',
     },
   ],
-  articles: [
+  // Perfil-modelo (Max): 5 perguntas frequentes, no limite do plano. Respostas
+  // curtas, educativas e com o lembrete de análise individual — o exemplo que o
+  // advogado vê é o padrão que ele vai copiar.
+  faqs: [
     {
-      id: 'ar1',
-      title: 'Como funciona a guarda compartilhada',
-      summary:
-        'O que a lei estabelece, como o convívio é dividido na prática e quais pontos costumam ser definidos em acordo entre os pais.',
-      readingMinutes: 5,
+      id: 'fq1',
+      question: 'Como funciona a guarda compartilhada?',
+      answer:
+        'Na guarda compartilhada, as decisões sobre a vida da criança são tomadas pelos dois pais, e o convívio é dividido de forma equilibrada — o que não significa tempo idêntico. Cada família define o arranjo possível, e o caso concreto precisa ser analisado.',
     },
     {
-      id: 'ar2',
-      title: 'Inventário: extrajudicial ou judicial?',
-      summary:
-        'As duas vias possíveis, os requisitos de cada uma e o que muda no prazo, no custo e na documentação exigida.',
-      readingMinutes: 8,
+      id: 'fq2',
+      question: 'Quanto tempo demora um inventário?',
+      answer:
+        'Depende da via. Havendo consenso, herdeiros capazes e documentação em ordem, o inventário pode ser feito em cartório e costuma ser mais rápido que o judicial. Prazos variam conforme a documentação de cada família.',
     },
     {
-      id: 'ar3',
-      title: 'Regime de bens: o que muda em cada um',
-      summary:
-        'Comunhão parcial, universal e separação total explicados a partir do que acontece com o patrimônio durante e depois do casamento.',
-      readingMinutes: 6,
+      id: 'fq3',
+      question: 'Preciso ir ao fórum para me divorciar?',
+      answer:
+        'Nem sempre. Com acordo entre as partes e sem filhos menores ou incapazes, o divórcio pode ser feito em cartório, com assistência de advogado. Havendo divergência, o caminho é judicial.',
+    },
+    {
+      id: 'fq4',
+      question: 'O que muda em cada regime de bens?',
+      answer:
+        'O regime define o que entra na partilha. Na comunhão parcial, divide-se o adquirido durante o casamento; na universal, praticamente todo o patrimônio; na separação total, cada um mantém o seu. A escolha depende do planejamento de cada casal.',
+    },
+    {
+      id: 'fq5',
+      question: 'Quais documentos levar na primeira conversa?',
+      answer:
+        'Documento de identidade, certidões relacionadas ao tema (casamento, nascimento, óbito) e o que existir por escrito sobre a situação. Com isso já é possível entender o cenário e indicar os caminhos.',
     },
   ],
   socials: [

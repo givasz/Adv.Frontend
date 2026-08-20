@@ -21,14 +21,17 @@ export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
 // O Free tem UM, só para dar o gosto; o teto sobe com o plano.
 export const HIGHLIGHT_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 10 }
 
-// Artigos educativos publicados no perfil — exclusivo do Max.
-export const ARTICLE_LIMIT: Record<Plan, number> = { free: 0, pro: 0, premium: 12 }
-export const ARTICLE_TITLE_MAX = 90
-export const ARTICLE_SUMMARY_MAX = 240
+// Perguntas frequentes respondidas no perfil: nenhuma no Free, 2 no Pro, 5 no Max.
+export const FAQ_LIMIT: Record<Plan, number> = { free: 0, pro: 2, premium: 5 }
+// Tetos de texto CURTOS de propósito (iguais em todos os planos): FAQ é orientação
+// geral, não parecer. Resposta longa no celular vira parede de texto — e quanto mais
+// texto, mais chance de escorregar para fora do que o Prov. 205/2021 permite.
+export const FAQ_QUESTION_MAX = 100
+export const FAQ_ANSWER_MAX = 300
 
-/** Publicar artigos educativos no perfil — recurso exclusivo do Max. */
-export function canUseArticles(plan: Plan): boolean {
-  return plan === 'premium'
+/** Responder perguntas frequentes no perfil — recurso dos planos pagos. */
+export function canUseFaq(plan: Plan): boolean {
+  return plan === 'pro' || plan === 'premium'
 }
 
 /**

@@ -291,6 +291,7 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'regionNote', label: 'Observação de região' },
   { key: 'areas', label: 'Todas as áreas' },
   { key: 'highlights', label: 'Experiência / destaques' },
+  { key: 'faqs', label: 'Perguntas frequentes' },
   { key: 'socials', label: 'Redes e site' },
 ]
 
@@ -538,6 +539,19 @@ function ProfileSnapshot({ profile }: { profile: ModerationProfile }) {
                 <li key={h.id}>
                   <span className="font-medium">{h.title}</span>
                   {h.detail ? ` — ${h.detail}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {(profile.faqs ?? []).length > 0 && (
+          <div>
+            <span className="text-ink-faint">Perguntas frequentes:</span>
+            <ul className="mt-0.5 list-disc pl-5">
+              {(profile.faqs ?? []).map((f) => (
+                <li key={f.id}>
+                  <span className="font-medium">{f.question}</span>
+                  {f.answer ? ` — ${f.answer}` : ''}
                 </li>
               ))}
             </ul>

@@ -10,7 +10,7 @@ const essential: Profile = {
   headline: '',
   socials: [],
   highlights: [],
-  articles: [],
+  faqs: [],
   contact: { whatsapp: '5511999999999' },
   branding: undefined,
   schedulingMode: 'off',
@@ -68,7 +68,7 @@ describe('computeTrust', () => {
       socials: [{ kind: 'instagram', url: 'https://instagram.com/x' }],
       contact: { whatsapp: '5511999999999', email: 'a@b.com' },
       highlights: [{ id: 'h', title: '10 anos', detail: '...' }],
-      articles: [{ id: 'ar', title: 'T', summary: 'S', readingMinutes: 4 }],
+      faqs: [{ id: 'f', question: 'P', answer: 'R' }],
       areas: [
         { id: 'a', label: 'Família', description: '' },
         { id: 'b', label: 'Sucessões', description: '' },

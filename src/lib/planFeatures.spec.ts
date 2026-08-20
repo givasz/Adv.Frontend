@@ -8,14 +8,14 @@ import {
 } from './planFeatures'
 import { sampleProfile } from './mockData'
 import type { Profile } from './types'
-import { ARTICLE_LIMIT, HIGHLIGHT_LIMIT } from './plans'
+import { FAQ_LIMIT, HIGHLIGHT_LIMIT } from './plans'
 
 // Perfil recém-publicado no Free: só o essencial do onboarding.
 const base: Profile = {
   ...structuredClone(sampleProfile),
   slug: 'marina-sales-4827',
   highlights: [],
-  articles: [],
+  faqs: [],
   branding: undefined,
   schedulingMode: 'off',
   oabStatus: 'none',
@@ -92,14 +92,17 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     const novos = featuresPending(max)
       .map((f) => f.key)
       .filter((k) => !featuresPending(pro).some((f) => f.key === k))
-    expect(novos.sort()).toEqual(['artigos', 'dominio', 'marca', 'video'])
+    expect(novos.sort()).toEqual(['dominio', 'faq_max', 'marca', 'video'])
   })
 
-  it('artigos só existem no Max', () => {
-    expect(ARTICLE_LIMIT.free).toBe(0)
-    expect(ARTICLE_LIMIT.pro).toBe(0)
-    expect(featuresPending({ ...base, plan: 'pro' }).some((f) => f.key === 'artigos')).toBe(false)
-    expect(featuresPending({ ...base, plan: 'premium' }).some((f) => f.key === 'artigos')).toBe(true)
+  it('o FAQ começa no Pro e ganha um degrau no Max', () => {
+    expect(FAQ_LIMIT.free).toBe(0)
+    expect(FAQ_LIMIT.pro).toBe(2)
+    expect(FAQ_LIMIT.premium).toBe(5)
+    // No Free não há checklist; no Pro o FAQ aparece; o degrau extra é só do Max.
+    expect(featuresPending({ ...base, plan: 'pro' }).some((f) => f.key === 'faq')).toBe(true)
+    expect(featuresPending({ ...base, plan: 'pro' }).some((f) => f.key === 'faq_max')).toBe(false)
+    expect(featuresPending({ ...base, plan: 'premium' }).some((f) => f.key === 'faq_max')).toBe(true)
   })
 
   it('um perfil Max inteiramente configurado zera o checklist', () => {
@@ -115,7 +118,11 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
         { id: 'h1', title: 'A', detail: '' },
         { id: 'h2', title: 'B', detail: '' },
       ],
-      articles: [{ id: 'ar', title: 'T', summary: 'S', readingMinutes: 4 }],
+      faqs: Array.from({ length: FAQ_LIMIT.premium }, (_, i) => ({
+        id: `f${i}`,
+        question: `P${i}`,
+        answer: 'R',
+      })),
       videoUrl: 'https://youtu.be/aqz-KE-bpKQ',
       areas: [
         { id: 'a', label: 'Família', description: '' },
@@ -135,7 +142,9 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .filter((f) => f.done(sampleProfile))
       .map((f) => f.key)
     expect(sampleProfile.plan).toBe('premium')
-    expect(usados).toEqual(expect.arrayContaining(['agenda', 'oab', 'experiencia', 'artigos', 'marca', 'dominio']))
+    expect(usados).toEqual(
+      expect.arrayContaining(['agenda', 'oab', 'experiencia', 'faq', 'faq_max', 'marca', 'dominio']),
+    )
   })
 
   it('no Free não há checklist (nada foi comprado)', () => {

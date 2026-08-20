@@ -26,21 +26,21 @@ const TITLES: Record<GenerateKind, string> = {
   area: 'Descrição da área',
   headline: 'Frase de apresentação',
   improve: 'Melhorar meu texto',
-  article: 'Rascunho de artigo',
+  faq: 'Resposta do FAQ',
 }
 const HINTS: Record<GenerateKind, string> = {
   bio: 'Escreva palavras-chave sobre sua atuação. A IA redige um texto sóbrio e dentro das normas da OAB — você revisa antes de aplicar.',
   area: 'Palavras-chave sobre o que você faz nessa área. A IA descreve de forma clara e factual.',
   headline: 'Uma frase curta sob o seu nome. Pode dar palavras-chave ou deixar a IA usar suas áreas.',
   improve: 'A IA reescreve seu texto atual mais claro e sóbrio, mantendo o sentido e dentro da OAB.',
-  article: 'Um tema e a IA sugere um rascunho de artigo educativo (título + parágrafos) para o seu perfil.',
+  faq: 'A IA redige (ou reforça) a resposta da sua pergunta: curta, educativa e dentro das normas da OAB. Você revisa antes de aplicar — a resposta é sua.',
 }
 const PLACEHOLDERS: Record<GenerateKind, string> = {
   bio: 'ex: divórcio, guarda, acordo, mediação',
   area: 'ex: inventário, testamento, partilha',
   headline: 'ex: família, sucessões (opcional)',
   improve: '',
-  article: 'ex: pensão alimentícia, guarda compartilhada',
+  faq: 'ex: prazo, documentos, custas (opcional)',
 }
 
 export function AiGenerator({
@@ -226,7 +226,7 @@ export function AiGenerator({
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                rows={kind === 'article' ? 8 : 5}
+                rows={kind === 'faq' ? 6 : 5}
                 aria-label="Texto gerado — edite se quiser antes de aplicar"
                 className="w-full resize-none rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-3 text-[14px] leading-relaxed focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
               />

@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, type Variants } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type RuleStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
-import { canUseVideo } from '@/lib/plans'
+import { canUseFaq, canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
 import { SchedulingForm } from '@/components/profile/SchedulingForm'
@@ -64,7 +64,12 @@ export function ProfileView({
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
   const highlights = profile.highlights.filter((h) => h.title.trim())
-  const articles = (profile.articles ?? []).filter((a) => a.title.trim())
+  // FAQ: recurso pago (o servidor já não devolve fora dos planos pagos; a trava
+  // repetida aqui vale para a prévia do editor e para o mock). Só entra pergunta
+  // COM resposta — dúvida pendurada sem resposta é pior que não ter FAQ nenhum.
+  const faqs = canUseFaq(profile.plan)
+    ? (profile.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim())
+    : []
   // Vídeo de apresentação (Max): só existe se o link for reconhecido — link
   // quebrado não vira caixa vazia no perfil de ninguém.
   const video = canUseVideo(profile.plan) ? parseVideoUrl(profile.videoUrl) : null
@@ -367,48 +372,30 @@ export function ProfileView({
           </motion.section>
         )}
 
-        {/* Conteúdo educativo — artigos do advogado (plano Max). Informativo por
-            definição: título, resumo e tempo de leitura, sem chamada de contratação. */}
-        {articles.length > 0 && (
+        {/* Perguntas frequentes — o advogado responde as dúvidas que mais ouve.
+            Informativo por definição (Prov. 205/2021): orientação geral, sem
+            promessa de resultado e sem substituir a análise do caso. É a seção
+            que mais responde ao que o visitante veio procurar, então vem antes
+            do vídeo e depois do que explica QUEM é o advogado. */}
+        {faqs.length > 0 && (
           <motion.section variants={item} className="mt-9">
-            <SectionTitle rule={s.rule}>Conteúdo</SectionTitle>
+            <SectionTitle rule={s.rule}>Perguntas frequentes</SectionTitle>
             <div className="mt-3 space-y-2.5">
-              {articles.map((a) => {
-                const inner = (
-                  <>
-                    <span className="flex w-full items-baseline justify-between gap-3">
-                      <span className="text-left font-display text-[15.5px] font-semibold leading-tight">
-                        {a.title}
-                      </span>
-                      <span className="t-faint shrink-0 text-[11.5px] tabular-nums">
-                        {a.readingMinutes} min
-                      </span>
-                    </span>
-                    {a.summary.trim() && (
-                      <span className="t-muted mt-1 text-left text-[13.5px] leading-relaxed">
-                        {a.summary}
-                      </span>
-                    )}
-                  </>
-                )
-                return a.url ? (
-                  <a
-                    key={a.id}
-                    href={a.url}
-                    onClick={stop}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={`${tile} flex-col !items-stretch !gap-0 !py-4`}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <div key={a.id} className={`${tile} flex-col !items-stretch !gap-0 !py-4`}>
-                    {inner}
-                  </div>
-                )
-              })}
+              {faqs.map((f, i) => (
+                <FaqItem
+                  key={f.id}
+                  question={f.question}
+                  answer={f.answer}
+                  tileClass={tile}
+                  // A primeira já abre: um acordeão todo fechado esconde justamente
+                  // a prova de que o advogado explica bem — e é ela que convence.
+                  defaultOpen={i === 0}
+                />
+              ))}
             </div>
+            <p className="t-faint mt-3 text-[11px] leading-relaxed">
+              Respostas de caráter informativo. Não substituem a análise do seu caso.
+            </p>
           </motion.section>
         )}
 
@@ -629,6 +616,86 @@ function SectionTitle({ children, rule }: { children: React.ReactNode; rule: Rul
       {label}
       <Rule soft={rule !== 'tapered'} fade={rule === 'tapered'} className="flex-1" />
     </h2>
+  )
+}
+
+// Uma pergunta do FAQ. Mesma mecânica do AreaCard (abre/fecha, chevron, mesma
+// família visual) com uma marca própria: o "P." e o "R." do texto editorial. É o
+// gesto mais antigo de uma página de perguntas impressa, e diz na hora o que é
+// pergunta e o que é resposta — sem legenda, sem ícone novo, sem cor nova.
+function FaqItem({
+  question,
+  answer,
+  tileClass,
+  defaultOpen = false,
+}: {
+  question: string
+  answer: string
+  tileClass: string
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const reduced = useReducedMotion()
+  const panelId = useId()
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      aria-expanded={open}
+      aria-controls={panelId}
+      className={`${tileClass} flex-col !items-stretch !gap-0 !py-4`}
+      style={open ? { borderColor: 'var(--c-accent)' } : undefined}
+    >
+      <span className="flex w-full items-start gap-2.5">
+        <span
+          aria-hidden
+          className="t-accent mt-[1px] shrink-0 font-display text-[13px] font-semibold leading-[1.45]"
+          style={{ letterSpacing: '0.04em' }}
+        >
+          P.
+        </span>
+        {/* min-w-0 + break-words: pergunta longa em tela de 320px tem de quebrar
+            dentro do tile, nunca empurrar a largura do perfil inteiro. */}
+        <span className="min-w-0 flex-1 break-words text-left font-display text-[15.5px] font-semibold leading-snug">
+          {question}
+        </span>
+        <ChevronDown
+          width={16}
+          height={16}
+          className={`t-accent mt-[3px] shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </span>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.span
+            id={panelId}
+            key="answer"
+            initial={reduced ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+            transition={{ duration: reduced ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="block overflow-hidden"
+          >
+            <span className="mt-2.5 flex items-start gap-2.5">
+              <span
+                aria-hidden
+                className="t-faint mt-[1px] shrink-0 font-display text-[13px] font-semibold leading-[1.45]"
+                style={{ letterSpacing: '0.04em' }}
+              >
+                R.
+              </span>
+              {/* whitespace-pre-line: se o advogado separou a resposta em duas
+                  linhas, a quebra dele é preservada. */}
+              <span className="t-muted min-w-0 flex-1 whitespace-pre-line break-words text-left text-[13.5px] font-normal leading-relaxed">
+                {answer}
+              </span>
+            </span>
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
   )
 }
 

@@ -3,8 +3,8 @@ import type { GenerateKind, Plan } from './types'
 // Disponibilidade dos recursos de IA por plano — fonte ÚNICA. O backend usa o
 // mesmo `plan` só para ajustar profundidade/tamanho; quem libera o botão é aqui.
 //   free    → bio, área (a isca)
-//   pro     → + frase de apresentação, revisar/melhorar texto
-//   premium → + rascunho de artigo, e bio/área "enriquecidas" (cidade + áreas)
+//   pro     → + frase de apresentação, revisar/melhorar texto, resposta do FAQ
+//   premium → bio/área "enriquecidas" (cidade + áreas), textos mais longos
 export type AiFeature = GenerateKind
 
 export const AI_MIN_PLAN: Record<AiFeature, Plan> = {
@@ -12,7 +12,7 @@ export const AI_MIN_PLAN: Record<AiFeature, Plan> = {
   area: 'free',
   headline: 'pro',
   improve: 'pro',
-  article: 'premium',
+  faq: 'pro',
 }
 
 const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }

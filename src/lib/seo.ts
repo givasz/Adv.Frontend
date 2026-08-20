@@ -60,6 +60,25 @@ function attorneyJsonLd(p: Profile, url: string) {
 }
 
 /**
+ * FAQPage (schema.org) a partir das perguntas respondidas no perfil. É o dado
+ * estruturado que o Google usa para mostrar as perguntas direto no resultado da
+ * busca — e é de graça para quem já respondeu. Só entra pergunta COM resposta.
+ */
+function faqJsonLd(p: Profile) {
+  const faqs = (p.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim())
+  if (!faqs.length) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question.trim(),
+      acceptedAnswer: { '@type': 'Answer', text: f.answer.trim() },
+    })),
+  }
+}
+
+/**
  * Aplica o SEO do perfil ao <head> e devolve uma função de limpeza (para o
  * useEffect do React remover ao trocar de perfil).
  */
@@ -76,11 +95,16 @@ export function applyProfileSeo(p: Profile, url = window.location.href): () => v
   if (p.avatarUrl) upsertMeta('property', 'og:image', p.avatarUrl)
   upsertMeta('name', 'twitter:card', 'summary')
 
-  const ld = document.createElement('script')
-  ld.type = 'application/ld+json'
-  ld.setAttribute(MANAGED, '')
-  ld.textContent = JSON.stringify(attorneyJsonLd(p, url))
-  document.head.appendChild(ld)
+  const addLd = (data: unknown) => {
+    const ld = document.createElement('script')
+    ld.type = 'application/ld+json'
+    ld.setAttribute(MANAGED, '')
+    ld.textContent = JSON.stringify(data)
+    document.head.appendChild(ld)
+  }
+  addLd(attorneyJsonLd(p, url))
+  const faq = faqJsonLd(p)
+  if (faq) addLd(faq)
 
   return () => {
     document.head.querySelectorAll(`[${MANAGED}]`).forEach((n) => n.remove())

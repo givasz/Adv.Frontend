@@ -66,19 +66,19 @@ export interface Highlight {
 }
 
 /**
- * Artigo educativo exibido na seção "Conteúdo" do perfil. Caráter INFORMATIVO
- * (Prov. 205/2021 admite conteúdo jurídico educativo): título neutro, resumo
- * curto e tempo de leitura — nunca captação, promessa de resultado ou "case".
+ * Pergunta frequente respondida pelo advogado no perfil (seção "Perguntas
+ * frequentes"). Recurso dos planos pagos: 2 no Pro, 5 no Max.
+ *
+ * Prov. 205/2021: responder dúvidas de forma EDUCATIVA e geral é informação
+ * permitida — a resposta não pode virar captação, promessa de resultado, oferta
+ * de honorários nem consulta sobre um caso concreto. Textos curtos de propósito.
  */
-export interface Article {
+export interface Faq {
   id: string
-  title: string
-  /** resumo curto e sóbrio — o que o leitor aprende, sem tom promocional */
-  summary: string
-  /** tempo de leitura estimado em minutos */
-  readingMinutes: number
-  /** link externo opcional (blog, Jusbrasil, LinkedIn Artigos, etc.) */
-  url?: string
+  /** a dúvida, na forma como o cliente pergunta */
+  question: string
+  /** resposta curta, educativa e geral — passa pelo checkCompliance */
+  answer: string
 }
 
 export interface ContactChannels {
@@ -213,8 +213,8 @@ export interface Profile {
   serviceMode: ServiceMode
   areas: PracticeArea[]
   highlights: Highlight[]
-  /** artigos educativos (seção "Conteúdo") — informativo, não promocional */
-  articles?: Article[]
+  /** perguntas frequentes respondidas pelo advogado — informativo, não promocional */
+  faqs?: Faq[]
   /**
    * Vídeo de apresentação (plano Max). Guardamos só o LINK de YouTube/Vimeo —
    * sem upload. Ver lib/video.ts para as formas aceitas e o porquê.
@@ -262,7 +262,7 @@ export interface DirectoryResult
 
 // ---- Geração de conteúdo por IA ----
 
-export type GenerateKind = 'bio' | 'area' | 'headline' | 'improve' | 'article'
+export type GenerateKind = 'bio' | 'area' | 'headline' | 'improve' | 'faq'
 
 export interface GenerateRequest {
   kind: GenerateKind

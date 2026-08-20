@@ -43,7 +43,7 @@ function Plate({ children, tint = 'brass' }: { children: React.ReactNode; tint?:
   )
 }
 
-// Linhas de texto fantasma — usadas onde o passo produz TEXTO (bio, artigo).
+// Linhas de texto fantasma — usadas onde o passo produz TEXTO (bio, resposta).
 function Lines({ widths, className = '' }: { widths: number[]; className?: string }) {
   return (
     <span className={`flex w-full flex-col items-center gap-[3px] px-2.5 ${className}`}>
@@ -135,7 +135,7 @@ export function StepArt({ factorKey, profile }: { factorKey: string; profile: Pr
         </Plate>
       )
 
-    case 'artigo':
+    case 'faq':
       return (
         <Plate tint="ink">
           <span className="flex w-full flex-col items-center gap-[3px] px-2.5">
@@ -243,7 +243,7 @@ export const STEP_HINT: Record<string, string> = {
   redes: 'Instagram, LinkedIn e site reunidos em um lugar só.',
   email: 'Um canal formal, para quem prefere não usar WhatsApp.',
   area2: 'Cada área a mais é uma porta a mais para quem busca por assunto.',
-  artigo: 'Conteúdo educativo mantém o perfil vivo entre uma visita e outra.',
+  faq: 'As dúvidas que você mais ouve, respondidas por você.',
   oab_conferida: 'A plataforma confere seu registro e mostra isso no perfil.',
   agenda: 'Deixe que marquem um horário sem trocar dezenas de mensagens.',
 }

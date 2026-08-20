@@ -21,8 +21,9 @@ import { getTheme, isThemeUnlocked, THEMES, type ThemeId } from '@/lib/themes'
 import {
   AREA_LABEL_MAX,
   CHAR_LIMITS,
+  FAQ_ANSWER_MAX,
   NAME_MAX,
-  canUseArticles,
+  canUseFaq,
   canUseDigitalCard,
   canUseScheduling,
   canUseVideo,
@@ -39,7 +40,7 @@ import { PlanShowcase } from '@/components/editor/PlanShowcase'
 import { PurchaseSimulator } from '@/components/editor/PurchaseSimulator'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { ExperienceCard } from '@/components/editor/ExperienceCard'
-import { ArticlesCard } from '@/components/editor/ArticlesCard'
+import { FaqCard } from '@/components/editor/FaqCard'
 import { VideoCard } from '@/components/editor/VideoCard'
 import { ThemePicker } from '@/components/editor/ThemePicker'
 import { ThemeTrialBar } from '@/components/editor/ThemeTrialBar'
@@ -62,8 +63,8 @@ type AiTarget = {
   areaId?: string
   areaLabel?: string
   currentText?: string
-  /** artigo que recebe o rascunho gerado (kind === 'article') */
-  articleId?: string
+  /** pergunta que recebe a resposta gerada (kind === 'faq') */
+  faqId?: string
 } | null
 type SectionId =
   | 'identidade'
@@ -74,7 +75,7 @@ type SectionId =
   | 'aparencia'
   | 'marca'
   | 'oab'
-  | 'artigos'
+  | 'faq'
   | 'video'
   | 'conteudo'
   | 'analytics'
@@ -88,21 +89,20 @@ const nextId = () => `id-${Date.now()}-${uid++}`
 // seção de vídeo — nunca é salvo no perfil de ninguém.
 const PREVIEW_VIDEO_URL = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'
 
-// Conteúdo de exemplo mostrado BORRADO sob o cadeado da seção de artigos: serve
-// só para o advogado ver o formato do que teria no Max. Nunca é salvo.
-const PREVIEW_ARTICLES = [
+// Conteúdo de exemplo mostrado BORRADO sob o cadeado da seção de FAQ: serve só
+// para o advogado ver o formato do que teria. Nunca é salvo em perfil nenhum.
+const PREVIEW_FAQS = [
   {
     id: 'preview-1',
-    title: 'Como funciona a guarda compartilhada',
-    summary:
-      'O que a lei estabelece, como o convívio é dividido e quais pontos costumam ser definidos em acordo.',
-    readingMinutes: 5,
+    question: 'Quanto tempo demora um inventário?',
+    answer:
+      'Depende da via escolhida e da documentação. Em cartório, com todos de acordo e documentos em ordem, costuma ser mais rápido que na Justiça. Cada caso exige análise própria.',
   },
   {
     id: 'preview-2',
-    title: 'Inventário: extrajudicial ou judicial?',
-    summary: 'As duas vias, os requisitos de cada uma e o que muda no prazo e no custo.',
-    readingMinutes: 8,
+    question: 'Preciso ir ao fórum para me divorciar?',
+    answer:
+      'Nem sempre. Havendo consenso e sem incapazes, o divórcio pode ser feito em cartório, com assistência de advogado. Cada situação precisa ser avaliada.',
   },
 ]
 
@@ -120,7 +120,10 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
   oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
-  artigos: { title: 'Seus artigos', subtitle: 'Conteúdo educativo sobre as suas áreas, no seu perfil.' },
+  faq: {
+    title: 'Perguntas frequentes',
+    subtitle: 'As dúvidas que você mais ouve, respondidas por você no perfil.',
+  },
   video: {
     title: 'Seu vídeo',
     subtitle: 'Um vídeo curto de apresentação, no fim do seu perfil.',
@@ -284,6 +287,12 @@ export default function Editor() {
     else if (ai.kind === 'headline') set({ headline: text.replace(/[.]+$/, '').trim() })
     else if (ai.kind === 'area')
       set({ areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: text } : a)) })
+    else if (ai.kind === 'faq')
+      set({
+        faqs: (profile!.faqs ?? []).map((f) =>
+          f.id === ai.faqId ? { ...f, answer: text.slice(0, FAQ_ANSWER_MAX) } : f,
+        ),
+      })
   }
 
   const meta = SECTIONS[section]
@@ -521,22 +530,30 @@ export default function Editor() {
                   </LockedFeature>
                 ))}
 
-              {section === 'artigos' &&
-                (canUseArticles(profile.plan) ? (
-                  <ArticlesCard
+              {section === 'faq' &&
+                (canUseFaq(profile.plan) ? (
+                  <FaqCard
                     profile={profile}
                     set={set}
                     onUpsell={setUpsell}
-                    onAi={(topic) =>
-                      openAi({ kind: 'article', areaLabel: topic || profile.areas[0]?.label })
+                    // A pergunta vai como `areaLabel` (é o assunto) e a resposta atual
+                    // como `currentText` — é o que faz a IA APOIAR o texto do advogado
+                    // em vez de escrever outro por cima.
+                    onAi={(f) =>
+                      openAi({
+                        kind: 'faq',
+                        faqId: f.id,
+                        areaLabel: f.question || profile.areas[0]?.label,
+                        currentText: f.answer,
+                      })
                     }
                   />
                 ) : (
-                  // Fora do Max a seção continua no lugar, com o card real borrado
-                  // sob o cadeado — o advogado vê exatamente o que teria.
-                  <LockedFeature unlockPlan="premium" onOpen={() => setUpsell('articles')}>
-                    <ArticlesCard
-                      profile={{ ...profile, plan: 'premium', articles: PREVIEW_ARTICLES }}
+                  // No Free a seção continua no lugar, com o card real borrado sob o
+                  // cadeado — o advogado vê exatamente o que teria.
+                  <LockedFeature unlockPlan="pro" onOpen={() => setUpsell('faq')}>
+                    <FaqCard
+                      profile={{ ...profile, plan: 'pro', faqs: PREVIEW_FAQS }}
                       set={() => {}}
                       onUpsell={() => {}}
                       preview
@@ -548,7 +565,7 @@ export default function Editor() {
                 (canUseVideo(profile.plan) ? (
                   <VideoCard profile={profile} set={set} />
                 ) : (
-                  // Igual aos artigos: a seção fica no lugar, com o card real
+                  // Igual ao FAQ: a seção fica no lugar, com o card real
                   // borrado sob o cadeado, para o advogado ver o que teria.
                   <LockedFeature unlockPlan="premium" onOpen={() => setUpsell('video')}>
                     <VideoCard profile={{ ...profile, videoUrl: PREVIEW_VIDEO_URL }} set={() => {}} preview />

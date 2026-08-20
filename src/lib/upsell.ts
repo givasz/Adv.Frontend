@@ -6,10 +6,10 @@
 import type { Plan } from './types'
 import {
   AREA_LIMIT,
-  ARTICLE_LIMIT,
+  FAQ_LIMIT,
   CHAR_LIMITS,
   HIGHLIGHT_LIMIT,
-  canUseArticles,
+  canUseFaq,
   canUseDigitalCard,
   canUseScheduling,
   canUseVideo,
@@ -70,9 +70,9 @@ export function highlightQuota(plan: Plan, used: number): Quota {
   return makeQuota(plan, used, (p) => HIGHLIGHT_LIMIT[p])
 }
 
-/** Cota de artigos educativos (limite de CONTAGEM por plano; 0 fora do Max). */
-export function articleQuota(plan: Plan, used: number): Quota {
-  return makeQuota(plan, used, (p) => ARTICLE_LIMIT[p])
+/** Cota de perguntas frequentes (limite de CONTAGEM por plano; 0 no Free). */
+export function faqQuota(plan: Plan, used: number): Quota {
+  return makeQuota(plan, used, (p) => FAQ_LIMIT[p])
 }
 
 /** Cota de um campo com limite de CARACTERES por plano (bio, destaque, etc.). */
@@ -100,7 +100,7 @@ export type UpsellFeature =
   | 'areas'
   | 'bio'
   | 'highlights'
-  | 'articles'
+  | 'faq'
   | 'video'
   | 'qrcode'
   | 'agenda'
@@ -116,7 +116,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   areas: [],
   bio: [],
   highlights: [],
-  articles: [],
+  faq: [],
   video: [],
   qrcode: [],
   themes: [],
@@ -166,10 +166,11 @@ const FEATURE_META: Record<
     subtitle: 'Anos de atuação, formação e titulação, em cards curtos no perfil.',
     value: (p) => (HIGHLIGHT_LIMIT[p] === 1 ? '1 destaque' : `${HIGHLIGHT_LIMIT[p]} destaques`),
   },
-  articles: {
-    title: 'Artigos educativos',
-    subtitle: 'Textos informativos sobre as suas áreas, publicados no seu perfil.',
-    value: (p) => (canUseArticles(p) ? `Até ${ARTICLE_LIMIT[p]} artigos` : '—'),
+  faq: {
+    title: 'Perguntas frequentes',
+    subtitle: 'Você responde as dúvidas que mais ouve — e elas ficam no seu perfil.',
+    value: (p) =>
+      canUseFaq(p) ? `${FAQ_LIMIT[p]} ${FAQ_LIMIT[p] === 1 ? 'pergunta' : 'perguntas'}` : '—',
   },
   qrcode: {
     title: 'Cartão digital',
@@ -209,7 +210,7 @@ const FEATURE_META: Record<
         ? 'Bio e áreas'
         : p === 'pro'
           ? '+ Frase e revisão de texto'
-          : '+ Artigos e bio enriquecida',
+          : '+ Bio e áreas enriquecidas',
   },
 }
 

@@ -10,7 +10,7 @@ import { generateWithOllama } from './localAi'
 import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
 import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
 import { DEFAULT_BOOKING_CONFIG, resolveSchedulingMode } from './booking'
-import { canUseScheduling } from './plans'
+import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import type {
   Availability,
@@ -98,7 +98,7 @@ function emptyDraft(): Profile {
     serviceMode: { inPerson: true, online: true },
     areas: [],
     highlights: [],
-    articles: [],
+    faqs: [],
     socials: [],
     contact: {},
     schedulingMode: 'off',
@@ -115,7 +115,7 @@ function emptyDraft(): Profile {
 // da Marina em rascunhos antigos (dado real do usuário tem id "id-…", nunca "a1"/"h1").
 const SAMPLE_AREA_IDS = new Set(sampleProfile.areas.map((a) => a.id))
 const SAMPLE_HL_IDS = new Set(sampleProfile.highlights.map((h) => h.id))
-const SAMPLE_ART_IDS = new Set((sampleProfile.articles ?? []).map((a) => a.id))
+const SAMPLE_FAQ_IDS = new Set((sampleProfile.faqs ?? []).map((f) => f.id))
 
 // Remove APENAS o que casa exatamente com o modelo — idempotente e seguro:
 // um usuário real jamais teria a área "a1" ou o avatar/e-mail literais da Marina.
@@ -128,7 +128,7 @@ function stripSampleLeftovers(d: Profile): Profile {
     ...d,
     areas: d.areas.filter((a) => !SAMPLE_AREA_IDS.has(a.id)),
     highlights: d.highlights.filter((h) => !SAMPLE_HL_IDS.has(h.id)),
-    articles: (d.articles ?? []).filter((a) => !SAMPLE_ART_IDS.has(a.id)),
+    faqs: (d.faqs ?? []).filter((f) => !SAMPLE_FAQ_IDS.has(f.id)),
     socials: d.socials.filter((s) => !/marinasales/i.test(s.url)),
     headline: d.headline === sampleProfile.headline ? '' : d.headline,
     bio: d.bio === sampleProfile.bio ? '' : d.bio,
@@ -154,6 +154,17 @@ function loadDraft(): Profile {
     /* ignora storage corrompido */
   }
   return emptyDraft()
+}
+
+/**
+ * Corta o FAQ no limite do plano — espelha `faqRows` do backend. O que passa do
+ * teto NÃO é apagado do que o advogado digitou na tela; simplesmente não é
+ * gravado, do mesmo jeito que o servidor faz depois de um downgrade.
+ */
+function trimFaqs(raw: Profile['faqs'], plan: Plan): Profile['faqs'] {
+  const max = FAQ_LIMIT[plan]
+  if (!max) return []
+  return (raw ?? []).slice(0, max)
 }
 
 // ---- Conferência de OAB ----------------------------------------------------
@@ -468,7 +479,13 @@ export const api = {
     // A CONFERÊNCIA TAMBÉM É DO SERVIDOR: o editor manda o perfil inteiro a cada
     // tecla e sobrescreveria o estado da fila (uma aprovação do admin evaporava no
     // autosave seguinte). Aqui o mock repete a regra do backend.
-    const withPlan: Profile = { ...profile, plan: stored.plan, ...mockOabColumns(stored, profile) }
+    const withPlan: Profile = {
+      ...profile,
+      plan: stored.plan,
+      ...mockOabColumns(stored, profile),
+      // FAQ segue o limite do plano vigente, como no backend (faqRows).
+      faqs: trimFaqs(profile.faqs, stored.plan),
+    }
     // Resolve o endereço com a mesma regra do backend (Free sempre numerado).
     const resolved = { ...withPlan, slug: resolveMockSlug(withPlan) }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
@@ -848,9 +865,11 @@ function draftText(req: GenerateRequest): string {
     )
   }
 
-  if (req.kind === 'article') {
-    const area = req.areaLabel || req.areas?.filter(Boolean)[0] || 'o tema'
-    return `Entenda melhor: ${area}\n\nEste texto explica, de forma geral e informativa, conceitos e direitos relacionados a ${area}. O objetivo é orientar o leitor sobre como o tema funciona e quais caminhos existem, sem substituir a análise de um caso concreto.`
+  if (req.kind === 'faq') {
+    // Resposta de reserva: genérica e curta de propósito — serve para o advogado ter
+    // por onde começar quando a IA não está disponível, não para publicar como está.
+    const tema = req.areaLabel || req.areas?.filter(Boolean)[0] || 'esse tema'
+    return `De forma geral, ${tema} segue requisitos e prazos previstos em lei, que mudam conforme a situação de cada pessoa. O caminho costuma começar por reunir os documentos e verificar qual regra se aplica. Cada caso exige análise própria.`
   }
 
   const name = req.name?.split(' ')[0]

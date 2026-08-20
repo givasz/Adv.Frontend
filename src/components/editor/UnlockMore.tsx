@@ -32,6 +32,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     items: [
       'Assistente virtual que marca horários',
       'Selo “OAB conferida”',
+      '2 perguntas frequentes no perfil',
       'Endereço advoc.me/seu-nome',
       'Destaques de experiência',
       'QR Code e cartão de contato',
@@ -46,7 +47,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     price: 'R$ 39',
     pitch: 'Sua marca e sua autoridade, sem limites.',
     items: [
-      'Publique artigos no seu perfil',
+      'Até 5 perguntas frequentes no perfil',
       'Vídeo de apresentação',
       'Seu próprio domínio (.adv.br)',
       'Sem a marca advoc.me',

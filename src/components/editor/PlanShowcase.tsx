@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import type { Plan } from '@/lib/types'
-import { AREA_LIMIT, ARTICLE_LIMIT, CHAR_LIMITS, HIGHLIGHT_LIMIT } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, HIGHLIGHT_LIMIT } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckIcon } from '@/components/ui/icons'
 import { PurchaseSimulator } from './PurchaseSimulator'
@@ -31,6 +31,7 @@ const PERKS: Record<Plan, string[]> = {
   pro: [
     'Assistente virtual de agendamento',
     'Selo “OAB conferida”',
+    `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
     'Endereço advoc.me/seu-nome',
     `${HIGHLIGHT_LIMIT.pro} destaques de experiência`,
     'Cartão digital com QR e vCard',
@@ -39,7 +40,7 @@ const PERKS: Record<Plan, string[]> = {
   ],
   premium: [
     'Tudo do Pro, e mais:',
-    `Até ${ARTICLE_LIMIT.premium} artigos no seu perfil`,
+    `${FAQ_LIMIT.premium} perguntas frequentes (eram ${FAQ_LIMIT.pro})`,
     'Vídeo de apresentação',
     'Domínio próprio (.adv.br)',
     'Sua marca no lugar da nossa',

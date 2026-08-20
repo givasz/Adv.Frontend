@@ -412,6 +412,7 @@ export default function Landing() {
             features={[
               'Assistente virtual que marca horários por você',
               'Selo “OAB conferida” no seu perfil',
+              '2 perguntas frequentes respondidas no perfil',
               'Destaques de experiência e formação',
               'Endereço personalizado (advoc.me/seu-nome)',
               'Cartão digital com QR Code e vCard',
@@ -429,7 +430,7 @@ export default function Landing() {
             features={[
               'Tudo do Pro',
               'Vídeo de apresentação no seu perfil',
-              'Publique artigos e amplie sua autoridade',
+              'Até 5 perguntas frequentes (eram 2)',
               'Use seu próprio domínio (.adv.br)',
               'Sua marca no lugar da nossa',
               'Comprovante de conformidade em PDF',

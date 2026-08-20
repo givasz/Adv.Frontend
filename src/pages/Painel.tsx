@@ -39,7 +39,7 @@ const DEST: Record<string, string> = {
   redes: '/editor?section=redes',
   email: '/editor?section=redes',
   area2: '/editor?section=identidade',
-  artigo: '/editor?section=artigos',
+  faq: '/editor?section=faq',
   oab_conferida: '/editor?section=oab',
   agenda: '/editor?section=agenda',
   dominio: '/editor?section=marca',
@@ -336,9 +336,9 @@ export default function Painel() {
             icon={MedalIcon}
           />
           <DiscoverCard
-            to="/editor?section=artigos"
-            title="Seus artigos"
-            desc="Conteúdo educativo que mantém o perfil vivo."
+            to="/editor?section=faq"
+            title="Perguntas frequentes"
+            desc="Responda as dúvidas que você mais ouve."
             icon={DocIcon}
           />
           <DiscoverCard

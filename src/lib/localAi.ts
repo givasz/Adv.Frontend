@@ -29,8 +29,16 @@ function buildPrompt(req: GenerateRequest): string {
   if (req.kind === 'improve') {
     return `Revise e reescreva o texto abaixo para ficar mais claro, sóbrio e dentro das normas da OAB, mantendo o sentido. No máximo 3 frases, sem emojis.\n\nTexto:\n"""${req.currentText ?? ''}"""`
   }
-  if (req.kind === 'article') {
-    return `Sugira um rascunho de artigo informativo${req.areaLabel ? ` sobre ${req.areaLabel}` : ''}${kws ? `, abordando: ${kws}` : ''}. Título curto na primeira linha e 2 a 3 parágrafos curtos, tom educativo, sem promessas nem captação.`
+  if (req.kind === 'faq') {
+    // Com uma resposta já escrita, a IA APOIA o texto do advogado; sem ela, redige
+    // um primeiro rascunho. Nos dois casos: curto, educativo e sem captação.
+    const pergunta = req.areaLabel ? `Pergunta: "${req.areaLabel}". ` : ''
+    return req.currentText?.trim()
+      ? `${pergunta}Aprimore a resposta abaixo mantendo o sentido e os fatos, deixando-a mais clara e fundamentada. No máximo 300 caracteres, sem promessa de resultado, sem preços e sem convite a contratar. Termine lembrando que cada caso exige análise própria.
+
+Resposta atual:
+"${req.currentText}"`
+      : `${pergunta}Escreva a resposta de um(a) advogado(a) a essa dúvida${kws ? `, abordando: ${kws}` : ''}. Educativa e geral, no máximo 300 caracteres, sem promessa de resultado, sem preços e sem convite a contratar. Termine lembrando que cada caso exige análise própria.`
   }
   const who = req.name ? `de ${req.name}, que é advogado(a) no Brasil` : 'de um(a) advogado(a) brasileiro(a)'
   return `Escreva, em primeira pessoa, a bio de apresentação ${who}. Atua nas áreas: ${kws || areas}. No máximo 3 frases, sem emojis.`

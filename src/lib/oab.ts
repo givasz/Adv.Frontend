@@ -138,10 +138,11 @@ export const OAB_GUIDANCE_BY_FIELD: Record<string, string[]> = {
     'Não mencione decisões, resultados obtidos ou casos de clientes — nem em imagem.',
     'Evite ostentação (carro, viagem, escritório de luxo) e qualquer convite a contratar.',
   ],
-  article: [
-    'Escreva conteúdo educativo: explique o tema para quem não é da área.',
-    'Título neutro e informativo — nada de chamada para contratar ou consultar.',
-    'Evite prometer resultado ou sugerir que o leitor "não perca tempo".',
-    'Não use casos reais como exemplo, nem identifique partes envolvidas.',
+  faq: [
+    'Responda de forma geral e educativa: explique como a lei trata o assunto.',
+    'A resposta orienta, não substitui a análise do caso — diga isso em uma linha.',
+    'Nada de prometer resultado, prazo ou êxito ("resolvo", "garanto", "rápido").',
+    'Não cite casos, clientes, processos, honorários ou valores.',
+    'Sem convite a contratar ("fale comigo", "me chame") — o contato já está no perfil.',
   ],
 }

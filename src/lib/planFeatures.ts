@@ -11,7 +11,7 @@
 // sobra o que ainda é novo. O checklist encolhe sozinho conforme o perfil evolui.
 
 import type { Plan, Profile } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, HIGHLIGHT_LIMIT } from './plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, HIGHLIGHT_LIMIT } from './plans'
 import { resolveSchedulingMode } from './booking'
 import { THEMES, isThemeUnlocked } from './themes'
 import { parseVideoUrl } from './video'
@@ -64,6 +64,15 @@ export const PLAN_FEATURES: PlanFeature[] = [
     // Pedido enviado já conta como "usou o recurso"; rejeitado NÃO — ali ainda há
     // algo a fazer, e o checklist existe justamente para mostrar o que falta.
     done: (p) => ['pending', 'verified'].includes(p.oabStatus ?? (p.oabVerified ? 'verified' : 'none')),
+  },
+  {
+    key: 'faq',
+    plan: 'pro',
+    title: `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
+    body: 'Responda as dúvidas que você mais ouve. Quem chega já sai com uma resposta — e com a impressão de que você explica bem.',
+    to: '/editor?section=faq',
+    cta: 'Responder a primeira',
+    done: (p) => (p.faqs ?? []).length > 0,
   },
   {
     key: 'endereco',
@@ -124,13 +133,13 @@ export const PLAN_FEATURES: PlanFeature[] = [
 
   // ---- Max ----
   {
-    key: 'artigos',
+    key: 'faq_max',
     plan: 'premium',
-    title: 'Artigos educativos no seu perfil',
-    body: 'Publique textos informativos sobre as suas áreas. Conteúdo é o que mantém o perfil vivo entre uma visita e outra.',
-    to: '/editor?section=artigos',
-    cta: 'Escrever o primeiro',
-    done: (p) => (p.articles ?? []).length > 0,
+    title: `Até ${FAQ_LIMIT.premium} perguntas frequentes`,
+    body: `Eram ${FAQ_LIMIT.pro} no Pro. Mais dúvidas respondidas é mais gente que encontra a própria pergunta no seu perfil.`,
+    to: '/editor?section=faq',
+    cta: 'Adicionar perguntas',
+    done: (p) => (p.faqs ?? []).length > FAQ_LIMIT.pro,
   },
   {
     key: 'video',
