@@ -48,12 +48,21 @@ export function AssistantChat({
   profile,
   onClose,
   variant = 'sheet',
+  autoStart = true,
 }: {
   profile: Profile
   /** ausente no modo 'inline' (demonstração embutida) */
   onClose?: () => void
   /** 'sheet' = diálogo sobre o perfil; 'inline' = embutido (ex.: vitrine da home) */
   variant?: 'sheet' | 'inline'
+  /**
+   * Quando a conversa deve COMEÇAR a se escrever. No perfil ela abre por clique e
+   * já nasce em cena, então o padrão é `true`. Na vitrine da home o componente é
+   * montado com a página inteira: sem esta trava, a saudação e o "digitando…"
+   * aconteciam antes de alguém rolar até lá, e o visitante encontrava a conversa
+   * pronta — o efeito que mais vende o recurso simplesmente não era visto.
+   */
+  autoStart?: boolean
 }) {
   const config = useMemo(() => resolveAssistantConfig(profile.assistant), [profile.assistant])
   const days = useMemo(() => buildAssistantDays(config), [config])
@@ -133,11 +142,12 @@ export function AssistantChat({
   }, [config.greeting, days.length, first, say])
 
   useEffect(() => {
+    if (!autoStart) return
     start()
     return () => {
       genRef.current += 1
     }
-  }, [start])
+  }, [start, autoStart])
 
   // Mantém a conversa colada no fim, como em qualquer mensageiro. Além da mensagem
   // nova, a própria área de resposta muda de altura (chips ↔ campo de texto) e encolhe
