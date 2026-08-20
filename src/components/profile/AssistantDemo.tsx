@@ -32,7 +32,16 @@ export function AssistantDemo({ profile }: { profile: Profile }) {
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink shadow-lift">
         <div className="absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
         <div className="relative h-[600px] max-h-[76svh] overflow-hidden rounded-[1.8rem]">
-          <AssistantChat profile={profile} variant="inline" autoStart={!observable || inView} />
+          {/* `pace`: a vitrine fala mais devagar que o perfil real. Aqui ninguém
+              quer marcar horário — quer VER o assistente trabalhando —, e no
+              ritmo do perfil a abertura terminava antes de a pessoa acabar de ler
+              a primeira frase. */}
+          <AssistantChat
+            profile={profile}
+            variant="inline"
+            autoStart={!observable || inView}
+            pace={1.8}
+          />
         </div>
       </div>
       <p className="mt-3 text-center text-[12px] text-ink-faint">

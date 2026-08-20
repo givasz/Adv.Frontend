@@ -49,6 +49,7 @@ export function AssistantChat({
   onClose,
   variant = 'sheet',
   autoStart = true,
+  pace = 1,
 }: {
   profile: Profile
   /** ausente no modo 'inline' (demonstração embutida) */
@@ -63,6 +64,14 @@ export function AssistantChat({
    * pronta — o efeito que mais vende o recurso simplesmente não era visto.
    */
   autoStart?: boolean
+  /**
+   * Multiplicador do ritmo da conversa. 1 = ritmo do perfil real, onde quem está
+   * ali quer marcar e pressa é cortesia. Acima de 1 desacelera — é o que a
+   * vitrine da home usa: lá o objetivo não é agendar, é ASSISTIR o assistente
+   * trabalhar, e no ritmo normal a abertura inteira passava antes de a pessoa
+   * terminar de ler a primeira frase.
+   */
+  pace?: number
 }) {
   const config = useMemo(() => resolveAssistantConfig(profile.assistant), [profile.assistant])
   const days = useMemo(() => buildAssistantDays(config), [config])
@@ -110,17 +119,21 @@ export function AssistantChat({
       for (const line of lines) {
         if (!reduced) {
           setTyping(true)
-          await sleep(Math.min(1100, 380 + line.length * 11))
+          // "digitando…" proporcional ao tamanho da fala, com teto — uma frase
+          // longa não pode virar uma espera interminável.
+          await sleep(Math.min(1100, 380 + line.length * 11) * pace)
           if (genRef.current !== gen) return
           setTyping(false)
         }
         push('bot', line)
-        if (!reduced) await sleep(140)
+        // Respiro entre falas: sem ele, duas mensagens seguidas aparecem coladas
+        // e o olho não acompanha que são duas.
+        if (!reduced) await sleep(140 * pace)
         if (genRef.current !== gen) return
       }
       if (next) setStep(next)
     },
-    [push, reduced],
+    [push, reduced, pace],
   )
 
   const start = useCallback(() => {
