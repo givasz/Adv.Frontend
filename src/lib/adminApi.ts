@@ -168,3 +168,44 @@ export async function decideOab(
 export async function oabHistory(id: string): Promise<OabEvent[]> {
   return json(await adminFetch(`/admin/profiles/${id}/oab/history`))
 }
+
+// ---- Suporte ao cliente ----
+
+export interface AdminTicket {
+  id: string
+  kind: 'bug' | 'duvida' | 'conta' | 'sugestao' | 'outro'
+  subject: string
+  message: string
+  pageUrl: string
+  userAgent: string
+  status: 'open' | 'in_progress' | 'resolved'
+  adminNote: string
+  createdAt: string
+  handledAt: string | null
+  user: {
+    email: string
+    profile: { name: string; slug: string; plan: string; oabNumber: string } | null
+  }
+}
+
+export async function listTickets(status?: string): Promise<AdminTicket[]> {
+  const q = status ? `?status=${encodeURIComponent(status)}` : ''
+  return json(await adminFetch(`/admin/support${q}`))
+}
+
+export async function ticketCounts(): Promise<Record<string, number>> {
+  return json(await adminFetch('/admin/support/counts'))
+}
+
+export async function setTicketStatus(
+  id: string,
+  status: 'open' | 'in_progress' | 'resolved',
+  note?: string,
+): Promise<{ ok: boolean }> {
+  return json(
+    await adminFetch(`/admin/support/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status, note }),
+    }),
+  )
+}

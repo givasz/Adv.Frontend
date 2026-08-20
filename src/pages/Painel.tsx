@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -8,6 +9,7 @@ import { THEMES, isThemeUnlocked } from '@/lib/themes'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
+import { SupportDialog } from '@/components/support/SupportDialog'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import {
@@ -61,6 +63,7 @@ export default function Painel() {
   // true logo depois de confirmar uma assinatura — dá o tom de celebração ao
   // checklist do que abriu (some ao recarregar).
   const [justUpgraded, setJustUpgraded] = useState(false)
+  const [support, setSupport] = useState(false)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -150,7 +153,7 @@ export default function Painel() {
             >
               Ver perfil
             </Link>
-            <AccountMenu compact />
+            <AccountMenu compact onSupport={() => setSupport(true)} />
           </div>
         </div>
       </header>
@@ -334,7 +337,20 @@ export default function Painel() {
           <Link to="/legal" className="inline-block py-2 hover:text-ink">
             Documentos e privacidade
           </Link>
+          {/* Suporte fica na área logada de propósito: é canal de cliente, não
+              formulário público — e é o que permite responder a pessoa certa. */}
+          <button
+            type="button"
+            onClick={() => setSupport(true)}
+            className="inline-block py-2 font-medium text-ink-faint underline-offset-4 transition-colors hover:text-burgundy hover:underline"
+          >
+            Achou um problema? Falar com o suporte
+          </button>
         </div>
+
+        <AnimatePresence>
+          {support && <SupportDialog onClose={() => setSupport(false)} />}
+        </AnimatePresence>
       </main>
     </div>
   )

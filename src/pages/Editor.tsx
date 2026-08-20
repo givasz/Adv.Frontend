@@ -12,6 +12,7 @@ import type {
 } from '@/lib/types'
 import { api } from '@/lib/api'
 import { AccountMenu } from '@/components/auth/AccountMenu'
+import { SupportDialog } from '@/components/support/SupportDialog'
 import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
@@ -146,6 +147,7 @@ export default function Editor() {
   // rascunho. Deixar experimentar antes de pedir a assinatura é o que transforma
   // um cadeado em vontade — o cadeado continua, mas no salvar.
   const [tryTheme, setTryTheme] = useState<ThemeId | null>(null)
+  const [support, setSupport] = useState(false)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -258,7 +260,7 @@ export default function Editor() {
             <Link to={`/${profile.slug}`} className="btn-primary !py-2 !px-4 text-[13px]" target="_blank">
               Ver perfil
             </Link>
-            <AccountMenu compact />
+            <AccountMenu compact onSupport={() => setSupport(true)} />
           </div>
         </div>
       </header>
@@ -574,6 +576,10 @@ export default function Editor() {
             }}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {support && <SupportDialog onClose={() => setSupport(false)} />}
       </AnimatePresence>
 
       {/* Checkout simulado — do "está travado" ao "está liberado" sem trocar de tela */}

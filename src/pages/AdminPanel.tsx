@@ -16,6 +16,9 @@ import {
   type OabEvent,
   type PendingOab,
   type ReportGroup,
+  listTickets,
+  setTicketStatus,
+  type AdminTicket,
 } from '@/lib/adminApi'
 import { REASON_LABEL } from '@/lib/reportReasons'
 import type { ModerationStatus } from '@/lib/types'
@@ -88,19 +91,31 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           <h1 className="font-display text-lg font-semibold text-ink">Painel de moderação</h1>
           <p className="text-[12px] text-ink-faint">Acesso restrito à equipe advoc.me</p>
         </div>
-        <label className="mb-1.5 block text-[12.5px] font-medium text-ink">Usuário</label>
+        {/* htmlFor/id: os rótulos estavam soltos, sem associação com os campos —
+            clicar no texto não focava nada e leitor de tela anunciava input sem
+            nome. */}
+        <label htmlFor="admin-user" className="mb-1.5 block text-[12.5px] font-medium text-ink">
+          Usuário
+        </label>
         <input
+          id="admin-user"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
+          spellCheck={false}
+          autoCapitalize="none"
           className="mb-3 w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
         />
-        <label className="mb-1.5 block text-[12.5px] font-medium text-ink">Senha</label>
+        <label htmlFor="admin-pass" className="mb-1.5 block text-[12.5px] font-medium text-ink">
+          Senha
+        </label>
         <input
+          id="admin-pass"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
+          spellCheck={false}
           className="mb-4 w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
         />
         {error && (
@@ -119,8 +134,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ---- Dashboard ----
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<'reports' | 'search' | 'oab'>('reports')
-  const TAB_LABEL = { reports: 'Denúncias', search: 'Advogados', oab: 'Conferência OAB' } as const
+  const [tab, setTab] = useState<'reports' | 'search' | 'oab' | 'support'>('reports')
+  const TAB_LABEL = {
+    reports: 'Denúncias',
+    oab: 'Conferência OAB',
+    support: 'Suporte',
+    search: 'Advogados',
+  } as const
 
   return (
     <div className="min-h-dvh bg-paper-deep">
@@ -135,7 +155,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </button>
         </div>
         <div className="mx-auto flex max-w-4xl gap-1 px-4">
-          {(['reports', 'search', 'oab'] as const).map((t) => (
+          {/* Ordem = prioridade de atendimento: o que tem gente esperando resposta
+              primeiro; a busca de advogados é ferramenta, não fila. */}
+          {(['reports', 'oab', 'support', 'search'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -152,7 +174,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {tab === 'reports' ? <ReportsTab /> : tab === 'search' ? <SearchTab /> : <OabTab />}
+        {tab === 'reports' ? (
+          <ReportsTab />
+        ) : tab === 'search' ? (
+          <SearchTab />
+        ) : tab === 'support' ? (
+          <SupportTab />
+        ) : (
+          <OabTab />
+        )}
       </main>
     </div>
   )
@@ -641,7 +671,24 @@ const OAB_STATUS_LABEL: Record<string, string> = {
   rejected: 'rejeitada',
 }
 
+// Consulta pública do Cadastro Nacional dos Advogados — fonte OFICIAL da OAB.
+// Levar o admin direto para lá, com o nome preenchido, é o que transforma a fila
+// em conferência de verdade em vez de aprovação no escuro.
+function cnaSearchUrl(name: string): string {
+  return `https://cna.oab.org.br/?nome=${encodeURIComponent(name)}`
+}
+
 function OabTab() {
+  const [copiado, setCopiado] = useState<string | null>(null)
+  const copiar = (texto: string) => {
+    navigator.clipboard?.writeText(texto).then(
+      () => {
+        setCopiado(texto)
+        setTimeout(() => setCopiado(null), 1600)
+      },
+      () => {},
+    )
+  }
   const [pending, setPending] = useState<PendingOab[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -706,8 +753,27 @@ function OabTab() {
             <div className="min-w-0">
               <p className="truncate font-medium text-ink">{p.name}</p>
               <p className="truncate text-[12px] text-ink-faint">{p.oabNumber} · {p.city}/{p.state} · advoc.me/{p.slug}</p>
-              <p className="mt-1 text-[11.5px] text-ink-faint">
-                Confira a inscrição no CNA (cna.oab.org.br) antes de aprovar.{' '}
+              {/* O CNA é a fonte oficial e aberta da OAB. Antes isso era só texto:
+                  o admin tinha de copiar o número e procurar o site na mão. Agora
+                  abre a consulta com o nome já preenchido — é o passo que a
+                  conferência realmente exige. */}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-faint">
+                <a
+                  href={cnaSearchUrl(p.name)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1 rounded-full border border-brass/40 bg-brass/10 px-2.5 py-1 font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+                >
+                  Consultar no CNA
+                  <ExternalLinkIcon width={11} height={11} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => copiar(p.oabNumber)}
+                  className="rounded-full border border-ink/15 px-2.5 py-1 font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                >
+                  {copiado === p.oabNumber ? 'Copiado' : 'Copiar número'}
+                </button>
                 <button onClick={() => toggleHistory(p.id)} className="font-medium text-brass-deep hover:underline">
                   {history[p.id] ? 'Ocultar histórico' : 'Ver histórico'}
                 </button>
@@ -778,5 +844,207 @@ function OabTab() {
         </li>
       ))}
     </ul>
+  )
+}
+
+// ---- Aba: Suporte ao cliente ----
+//
+// A fila de chamados abertos pelos advogados. Cada item traz DE QUEM é (e-mail,
+// nome, plano) e o contexto técnico que veio junto — sem isso o admin lê "não
+// funciona" e não tem como reproduzir nada.
+
+const TICKET_KIND_LABEL: Record<string, string> = {
+  bug: 'Algo quebrado',
+  duvida: 'Dúvida',
+  conta: 'Conta ou plano',
+  sugestao: 'Sugestão',
+  outro: 'Outro',
+}
+const TICKET_STATUS_LABEL: Record<string, string> = {
+  open: 'Aberto',
+  in_progress: 'Em análise',
+  resolved: 'Resolvido',
+}
+const TICKET_FILTERS = [
+  { value: 'open', label: 'Abertos' },
+  { value: 'in_progress', label: 'Em análise' },
+  { value: 'resolved', label: 'Resolvidos' },
+  { value: '', label: 'Todos' },
+] as const
+
+function SupportTab() {
+  const [filtro, setFiltro] = useState<string>('open')
+  const [itens, setItens] = useState<AdminTicket[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
+  const [nota, setNota] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+
+  async function recarregar(f: string) {
+    setErro(null)
+    try {
+      setItens(await listTickets(f || undefined))
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao carregar os chamados.')
+    }
+  }
+
+  useEffect(() => {
+    setItens(null)
+    recarregar(filtro)
+  }, [filtro])
+
+  async function mudar(id: string, status: 'open' | 'in_progress' | 'resolved') {
+    setBusy(id)
+    try {
+      await setTicketStatus(id, status, aberto === id ? nota : undefined)
+      setAberto(null)
+      setNota('')
+      await recarregar(filtro)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {TICKET_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setFiltro(f.value)}
+            aria-pressed={filtro === f.value}
+            className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
+              filtro === f.value
+                ? 'border-burgundy bg-burgundy/[0.07] text-burgundy'
+                : 'border-ink/15 text-ink-soft hover:border-brass/50'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {erro && (
+        <p className="rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
+          {erro}
+        </p>
+      )}
+      {!itens && !erro && <p className="py-10 text-center text-[13px] text-ink-faint">Carregando…</p>}
+      {itens?.length === 0 && (
+        <p className="py-10 text-center text-[13px] text-ink-faint">Nenhum chamado nesta situação.</p>
+      )}
+
+      <ul className="space-y-2.5">
+        {(itens ?? []).map((t) => (
+          <li key={t.id} className="rounded-xl2 border border-ink/10 bg-paper px-4 py-3.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-ink">{t.subject}</span>
+              <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                {TICKET_KIND_LABEL[t.kind] ?? t.kind}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                  t.status === 'resolved'
+                    ? 'bg-brass/20 text-brass-deep'
+                    : t.status === 'in_progress'
+                      ? 'bg-burgundy/10 text-burgundy'
+                      : 'bg-ink/[0.06] text-ink-faint'
+                }`}
+              >
+                {TICKET_STATUS_LABEL[t.status] ?? t.status}
+              </span>
+            </div>
+
+            {/* De quem é o chamado: sem isso não há como reproduzir nem responder. */}
+            <p className="mt-1 text-[12px] text-ink-faint">
+              {t.user.profile?.name || 'Sem perfil'} · {t.user.email}
+              {t.user.profile ? ` · ${t.user.profile.plan} · advoc.me/${t.user.profile.slug}` : ''}
+              {' · '}
+              {new Date(t.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+            </p>
+
+            <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
+              {t.message}
+            </p>
+
+            {(t.pageUrl || t.userAgent) && (
+              <p className="mt-2 break-all rounded-lg bg-paper-deep/60 px-2.5 py-2 text-[11px] leading-relaxed text-ink-faint">
+                {t.pageUrl && (
+                  <>
+                    <span className="font-medium">Página:</span> {t.pageUrl}
+                    <br />
+                  </>
+                )}
+                {t.userAgent && (
+                  <>
+                    <span className="font-medium">Navegador:</span> {t.userAgent}
+                  </>
+                )}
+              </p>
+            )}
+
+            {t.adminNote && aberto !== t.id && (
+              <p className="mt-2 border-l-2 border-brass/50 pl-2.5 text-[12.5px] leading-relaxed text-ink-soft">
+                <span className="font-medium text-ink">Resposta:</span> {t.adminNote}
+              </p>
+            )}
+
+            {aberto === t.id && (
+              <textarea
+                rows={3}
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                placeholder="Resposta para o advogado (aparece no chamado dele)…"
+                className="mt-2.5 w-full resize-none rounded-lg border border-ink/15 bg-paper-soft px-3 py-2 text-[13px] leading-relaxed text-ink placeholder:text-ink-faint/60 focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+              />
+            )}
+
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAberto((a) => (a === t.id ? null : t.id))
+                  setNota(t.adminNote ?? '')
+                }}
+                className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy"
+              >
+                {aberto === t.id ? 'Cancelar resposta' : t.adminNote ? 'Editar resposta' : 'Responder'}
+              </button>
+              {t.status !== 'in_progress' && (
+                <button
+                  type="button"
+                  disabled={busy === t.id}
+                  onClick={() => mudar(t.id, 'in_progress')}
+                  className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
+                >
+                  Pôr em análise
+                </button>
+              )}
+              {t.status !== 'resolved' ? (
+                <button
+                  type="button"
+                  disabled={busy === t.id}
+                  onClick={() => mudar(t.id, 'resolved')}
+                  className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:opacity-50"
+                >
+                  <CheckIcon width={13} height={13} strokeWidth={2.6} /> Marcar resolvido
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy === t.id}
+                  onClick={() => mudar(t.id, 'open')}
+                  className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
+                >
+                  Reabrir
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

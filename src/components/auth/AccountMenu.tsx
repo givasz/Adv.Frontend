@@ -4,7 +4,14 @@ import { useAuth } from '@/lib/auth'
 
 // Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
 // página /entrar, voltando à página atual). Logado: e-mail + menu com "Sair".
-export function AccountMenu({ compact = false }: { compact?: boolean }) {
+export function AccountMenu({
+  compact = false,
+  onSupport,
+}: {
+  compact?: boolean
+  /** abre o canal de suporte; sem o callback, o item não aparece */
+  onSupport?: () => void
+}) {
   const { user, isAuthed, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const location = useLocation()
@@ -53,6 +60,19 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
               <p className="truncate text-[13px] font-medium text-ink">{user.name || shortName}</p>
               <p className="truncate text-[11.5px] text-ink-faint">{user.email}</p>
             </div>
+            {onSupport && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  onSupport()
+                }}
+                className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+              >
+                Falar com o suporte
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
