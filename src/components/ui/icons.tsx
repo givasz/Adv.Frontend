@@ -194,16 +194,25 @@ export const InfoIcon = (p: IconProps) => (
   </svg>
 )
 
-// ---- Marcas dos atalhos do painel ----
-// Cada atalho de "Descubra mais" precisa de um sinal próprio: sem isso a grade
-// vira sete retângulos idênticos e o olho não distingue um do outro.
-
+// Olho de revelar senha — e o mesmo olho cortado para o estado "visível".
 export const EyeIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
     <circle cx="12" cy="12" r="2.75" />
   </svg>
 )
+
+export const EyeOffIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9.9 5.7A10.6 10.6 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a18 18 0 0 1-3.3 4.1M6.3 7.9A17.7 17.7 0 0 0 2 12s3.6 6.5 10 6.5c1.6 0 3-.4 4.2-1" />
+    <path d="M10.1 10.1a2.75 2.75 0 0 0 3.8 3.8" />
+    <path d="M3.5 3.5l17 17" />
+  </svg>
+)
+
+// ---- Marcas dos atalhos do painel ----
+// Cada atalho de "Descubra mais" precisa de um sinal próprio: sem isso a grade
+// vira sete retângulos idênticos e o olho não distingue um do outro.
 
 export const QrIcon = (p: IconProps) => (
   <svg {...base(p)}>

@@ -6,6 +6,7 @@ import { FIRM_PRICING } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
+import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
 import {
   ArrowRight,
@@ -36,6 +37,10 @@ const rise = {
 }
 
 export default function Landing() {
+  // Convidar a "criar meu perfil" quem já tem um (e está logado, com o nome ali
+  // do lado no menu de conta) faz o produto parecer que não sabe quem você é.
+  const meu = useMyProfileLink()
+
   useEffect(() => {
     document.title = 'advoc.me — presença digital profissional para advogados'
   }, [])
@@ -56,8 +61,12 @@ export default function Landing() {
             Como funciona
           </a>
           <AccountMenu />
-          <Link to="/comecar" className="btn-primary !py-2.5 !px-5 text-[14px]">
-            Criar meu perfil
+          <Link
+            to={meu.to}
+            {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+            className="btn-primary !py-2.5 !px-5 text-[14px]"
+          >
+            {meu.label}
           </Link>
         </div>
       </nav>
@@ -108,8 +117,15 @@ export default function Landing() {
             animate="show"
             className="mt-7 flex flex-wrap items-center gap-3"
           >
-            <Link to="/comecar" className="btn-primary">
-              Criar meu perfil grátis
+            <Link
+              to={meu.to}
+              {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+              className="btn-primary"
+            >
+              {/* "grátis" só faz sentido para quem ainda não tem conta. */}
+              {meu.to === '/comecar' && meu.label === 'Criar meu perfil'
+                ? 'Criar meu perfil grátis'
+                : meu.label}
               <ArrowRight width={18} height={18} />
             </Link>
             <Link to={`/${sampleProfile.slug}`} className="btn-ghost">
@@ -461,8 +477,12 @@ export default function Landing() {
         <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
           Comece grátis. Construa autoridade com sobriedade e a segurança de estar dentro das normas.
         </p>
-        <Link to="/comecar" className="btn-primary mt-8">
-          Criar meu perfil agora
+        <Link
+          to={meu.to}
+          {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+          className="btn-primary mt-8"
+        >
+          {meu.label === 'Criar meu perfil' ? 'Criar meu perfil agora' : meu.label}
           <ArrowRight width={18} height={18} />
         </Link>
       </section>

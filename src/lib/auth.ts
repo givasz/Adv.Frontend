@@ -8,6 +8,7 @@
 // OBRIGATÓRIA para assinar um plano pago. O gate vive na UI (ver `requireAccount`).
 
 import { useSyncExternalStore } from 'react'
+import { passwordProblem } from './passwordStrength'
 
 export interface AuthUser {
   id: string
@@ -112,9 +113,12 @@ function mockSession(user: AuthUser): Session {
 
 // ---- API pública ------------------------------------------------------------
 
+// Validação do CADASTRO. O login não passa por aqui de propósito: endurecer a
+// regra não pode trancar quem já tem conta com a senha antiga.
 function validate(email: string, password: string) {
   if (!EMAIL_RE.test(email)) throw new Error('Informe um e-mail válido.')
-  if (password.length < 6) throw new Error('A senha deve ter ao menos 6 caracteres.')
+  const problema = passwordProblem(password, email)
+  if (problema) throw new Error(problema)
 }
 
 export async function signup(emailRaw: string, password: string, name?: string): Promise<Session> {
