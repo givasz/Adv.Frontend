@@ -88,6 +88,19 @@ function setSession(s: Session | null) {
   emit()
 }
 
+/**
+ * Esquece quem estava logado NESTE navegador, sem falar com o servidor.
+ *
+ * Para quando não há mais sessão a encerrar do outro lado: a conta acabou de ser
+ * excluída. Precisa passar por aqui (e não por um `localStorage.removeItem`
+ * solto) porque é o store reativo que faz o cabeçalho parar de mostrar a pessoa
+ * como logada — apagar a chave por fora não avisa ninguém.
+ */
+export function esquecerSessaoLocal(): void {
+  setCsrfToken(null)
+  setSession(null)
+}
+
 /** Sessão atual (não reativa) — para uso fora de componentes (ex.: api.ts). */
 export function getSession(): Session | null {
   return current

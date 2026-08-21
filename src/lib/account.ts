@@ -6,16 +6,18 @@
 // Dizer "não dá" no mock seria mentir sobre um direito que, ali, é ainda mais
 // simples de cumprir.
 
-import { getSession } from './auth'
+import { esquecerSessaoLocal, getSession } from './auth'
 import { apiFetch } from './http'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 const useReal = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
 
 const STORAGE_KEY = 'advocme:profile:draft'
-const SESSION_KEY = 'advocme:session'
 const ACCOUNTS_KEY = 'advocme:accounts'
 const FIRM_KEY = 'advocme:firm:draft'
+// Retrato de quem está logado (nome, e-mail, plano) — nunca credencial. A chave
+// mudou de `advocme:session` para cá quando a sessão virou cookie HttpOnly.
+const USER_KEY = 'advocme:user'
 
 /** Pacote com tudo o que a plataforma guarda sobre a conta. */
 export async function exportarDados(): Promise<unknown> {
@@ -38,7 +40,7 @@ export async function exportarDados(): Promise<unknown> {
     sobre: 'Seus dados neste navegador (o perfil ainda não foi enviado a uma conta).',
     perfil: ler(STORAGE_KEY),
     escritorio: ler(FIRM_KEY),
-    conta: ler(SESSION_KEY),
+    conta: ler(USER_KEY),
   }
 }
 
@@ -86,12 +88,15 @@ export async function excluirConta(senha: string): Promise<void> {
       throw new Error(msg)
     }
   }
-  // Local: apaga o rascunho e a sessão deste navegador.
-  for (const k of [STORAGE_KEY, FIRM_KEY, SESSION_KEY, ACCOUNTS_KEY]) {
+  // Local: apaga o rascunho e as contas do modo mock.
+  for (const k of [STORAGE_KEY, FIRM_KEY, ACCOUNTS_KEY]) {
     try {
       localStorage.removeItem(k)
     } catch {
       /* armazenamento indisponível */
     }
   }
+  // E esquece quem estava logado. Pelo store, não pela chave: é ele que faz a
+  // interface parar de mostrar uma pessoa que não existe mais.
+  esquecerSessaoLocal()
 }
