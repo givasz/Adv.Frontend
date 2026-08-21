@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import {
   adminLogin,
   adminLogout,
+  adminSessaoAtiva,
   dismissReport,
-  getAdminToken,
   getModerationProfile,
   listReports,
   moderateProfile,
@@ -34,7 +34,21 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function AdminPanel() {
-  const [authed, setAuthed] = useState<boolean>(() => !!getAdminToken())
+  // `null` = ainda perguntando ao servidor. A sessão do painel é um cookie
+  // HttpOnly: recarregar a página apaga tudo o que esta tela sabia, e só o
+  // servidor pode dizer se ela continua aberta. Sem o estado intermediário, o
+  // painel piscaria a tela de login em toda recarga de quem já está dentro.
+  const [authed, setAuthed] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let vivo = true
+    void adminSessaoAtiva().then((ok) => {
+      if (vivo) setAuthed(ok)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   useEffect(() => {
     document.title = 'Painel · advoc.me'
@@ -48,8 +62,30 @@ export default function AdminPanel() {
     }
   }, [])
 
+  if (authed === null) return <Conferindo />
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />
-  return <Dashboard onLogout={() => { adminLogout(); setAuthed(false) }} />
+  return (
+    <Dashboard
+      onLogout={() => {
+        void adminLogout()
+        setAuthed(false)
+      }}
+    />
+  )
+}
+
+/** Meio segundo de "conferindo" em vez de um piscar de tela de login. */
+function Conferindo() {
+  return (
+    <div className="grain flex min-h-dvh items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
+          <LockIcon width={20} height={20} />
+        </span>
+        <p className="text-[12.5px] text-ink-faint">Conferindo a sessão…</p>
+      </div>
+    </div>
+  )
 }
 
 // ---- Login ----

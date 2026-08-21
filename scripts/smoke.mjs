@@ -76,6 +76,11 @@ const ROTAS = [
   [`/${SLUG}/agendar`, 'perfil · agendar'],
   [`/${SLUG}/denunciar`, 'perfil · denunciar'],
   [`/${SLUG}/compartilhar`, 'perfil · compartilhar'],
+  // Rota escondida do painel (mesmo padrão de App.tsx). Entrou aqui quando a
+  // sessão do painel virou cookie: a tela passou a perguntar ao servidor quem
+  // está logado ANTES de decidir o que desenhar, e é exatamente esse tipo de
+  // mudança que produz tela branca sem erro nenhum no console.
+  ['/painel-mod-7fq3k9x2a', 'painel de moderação (login)'],
 ]
 
 // Ruído conhecido do ambiente de desenvolvimento — não é falha do app.
