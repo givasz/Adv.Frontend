@@ -28,6 +28,7 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [remember, setRemember] = useState(true)
   const [showPw, setShowPw] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [touchedPw, setTouchedPw] = useState(false)
@@ -74,8 +75,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     setBusy(true)
     setError(null)
     try {
-      if (isSignup) await signup(email, password, name)
-      else await login(email, password)
+      if (isSignup) await signup(email, password, name, remember)
+      else await login(email, password, remember)
       navigate(next, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível concluir. Tente novamente.')
@@ -226,6 +227,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
                 </Field>
               )}
 
+              <RememberMe checked={remember} onChange={setRemember} />
+
               {error && (
                 <p
                   role="alert"
@@ -267,6 +270,37 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
         </div>
       </main>
     </div>
+  )
+}
+
+/**
+ * "Continuar conectado" — marcado por padrão.
+ *
+ * Marcado, a sessão vive num cookie com prazo próprio e volta depois de fechar o
+ * navegador; é o que se espera de uma ferramenta de trabalho, e evita a fricção
+ * de logar toda manhã. Desmarcado, o cookie morre junto com a janela — que é o
+ * comportamento certo num computador emprestado ou no lobby de um fórum.
+ *
+ * A frase abaixo do rótulo existe porque "lembrar de mim" não diz a ninguém o que
+ * acontece de fato; "continua conectado neste aparelho" diz.
+ */
+function RememberMe({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5 py-1">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-ink/25 text-burgundy accent-burgundy focus:ring-2 focus:ring-burgundy/20"
+      />
+      <span className="text-[12.5px] leading-snug text-ink-soft">
+        <span className="font-medium text-ink">Continuar conectado neste aparelho</span>
+        <br />
+        {checked
+          ? 'Você segue logado ao fechar e reabrir o navegador.'
+          : 'A sessão termina quando você fechar o navegador.'}
+      </span>
+    </label>
   )
 }
 

@@ -1,13 +1,22 @@
 // Autenticação de usuário (advogado) — cadastro/login por e-mail.
 //
-// Espelha a camada `api.ts`: funciona em modo MOCK (contas em localStorage, sem
-// backend) e em modo REAL (endpoints /api/auth/* do NestJS). A sessão fica em
-// localStorage e um pequeno store reativo (useSyncExternalStore) avisa a UI.
+// A sessão vive num COOKIE HttpOnly escrito pelo servidor. Este arquivo nunca vê
+// a credencial: ele não consegue lê-la, e é essa a intenção — um script injetado
+// na página (XSS) não tem o que roubar, e fechar o navegador não desloga ninguém,
+// porque o cookie tem prazo próprio e volta sozinho na próxima visita.
+//
+// O que fica aqui é só o retrato de quem está logado. Ao abrir o site,
+// `/api/auth/me` confirma com o servidor (é a única forma de saber, já que o
+// cookie é invisível para o JavaScript) e o retrato é atualizado.
+//
+// Espelha a camada `api.ts`: funciona em modo MOCK (contas no localStorage, sem
+// backend) e em modo REAL (endpoints /api/auth/* do NestJS).
 //
 // Regra de produto: conta é OPCIONAL no Free (dá pra recuperar/editar depois) e
 // OBRIGATÓRIA para assinar um plano pago. O gate vive na UI (ver `requireAccount`).
 
 import { useSyncExternalStore } from 'react'
+import { apiFetch, setCsrfToken } from './http'
 import { passwordProblem } from './passwordStrength'
 
 export interface AuthUser {
@@ -19,41 +28,42 @@ export interface AuthUser {
 }
 
 export interface Session {
-  token: string
   user: AuthUser
-  /** epoch ms — quando a sessão expira (opcional no mock) */
+  /** epoch ms — quando a sessão expira (informativo; quem manda é o cookie) */
   expiresAt?: number
+  /** o login pediu para ser lembrado? */
+  remember?: boolean
 }
 
-const SESSION_KEY = 'advocme:session'
+// Retrato de quem está logado — nome, e-mail, plano. NÃO é credencial: serve
+// para a interface já abrir com o cabeçalho certo, em vez de piscar "deslogado"
+// enquanto o servidor responde. Quem decide se a sessão vale é o cookie.
+const USER_KEY = 'advocme:user'
 const ACCOUNTS_KEY = 'advocme:accounts' // só no modo mock
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-// Segue o MESMO modo dos perfis (api.ts): backend real quando VITE_USE_REAL_API=true
-// OU quando há backend configurado (VITE_API_URL). Assim, no Netlify, conta e perfil
-// ficam no backend do Render (sem localStorage). Em dev sem VITE_API_URL, mock.
-const useReal = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+// Modo real (backend) quando explicitamente ligado OU quando há backend
+// configurado (VITE_API_URL). Assim, no Netlify, conta e perfil ficam no
+// servidor. Em dev sem VITE_API_URL, mock.
+const useReal =
+  import.meta.env.VITE_USE_REAL_API === 'true' || !!(import.meta.env.VITE_API_URL ?? '')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // ---- Store reativo ----------------------------------------------------------
 
-function loadSession(): Session | null {
+function lerRetrato(): Session | null {
   try {
-    const raw = localStorage.getItem(SESSION_KEY)
+    const raw = localStorage.getItem(USER_KEY)
     if (!raw) return null
     const s = JSON.parse(raw) as Session
-    if (s?.expiresAt && s.expiresAt <= Date.now()) {
-      localStorage.removeItem(SESSION_KEY)
-      return null
-    }
-    return s && s.token && s.user ? s : null
+    return s?.user?.id && s.user.email ? s : null
   } catch {
     return null
   }
 }
 
-let current: Session | null = loadSession()
+let current: Session | null = lerRetrato()
+let conferido = !useReal // no mock não há servidor a consultar
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -69,8 +79,12 @@ function snapshot() {
 
 function setSession(s: Session | null) {
   current = s
-  if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s))
-  else localStorage.removeItem(SESSION_KEY)
+  try {
+    if (s) localStorage.setItem(USER_KEY, JSON.stringify(s))
+    else localStorage.removeItem(USER_KEY)
+  } catch {
+    /* armazenamento indisponível (aba privativa) — a sessão segue no cookie */
+  }
   emit()
 }
 
@@ -79,14 +93,76 @@ export function getSession(): Session | null {
   return current
 }
 
-/** Header de autorização para anexar às chamadas de API (vazio se deslogado). */
-export function authHeader(): Record<string, string> {
-  return current?.token ? { Authorization: `Bearer ${current.token}` } : {}
-}
-
 export function isAuthenticated(): boolean {
   return !!current
 }
+
+/** A conferência inicial com o servidor já terminou? */
+export function sessaoConferida(): boolean {
+  return conferido
+}
+
+// ---- Conferência com o servidor ---------------------------------------------
+
+interface RespostaSessao {
+  user: AuthUser
+  expiresAt?: number
+  csrfToken?: string
+  remember?: boolean
+}
+
+function aplicar(dados: RespostaSessao): Session {
+  setCsrfToken(dados.csrfToken ?? null)
+  const sessao: Session = {
+    user: dados.user,
+    expiresAt: dados.expiresAt,
+    remember: dados.remember,
+  }
+  setSession(sessao)
+  return sessao
+}
+
+/**
+ * Pergunta ao servidor quem está logado neste navegador.
+ *
+ * É o que faz a sessão sobreviver a fechar e reabrir o navegador: o cookie volta
+ * sozinho na primeira chamada e o servidor responde com a pessoa. Também é aqui
+ * que a renovação deslizante acontece do outro lado — usar o site empurra o prazo
+ * para a frente.
+ *
+ * Uma chamada por carregamento de página. Não vale a pena evitá-la: é a única
+ * forma de saber, e o servidor responde a partir de um cache curto.
+ */
+export async function revalidarSessao(): Promise<Session | null> {
+  if (!useReal) {
+    conferido = true
+    return current
+  }
+  try {
+    const res = await apiFetch('/api/auth/me')
+    if (res.ok) {
+      const dados = (await res.json()) as RespostaSessao
+      const sessao = aplicar(dados)
+      conferido = true
+      return sessao
+    }
+    // 401 = não há sessão. Qualquer outra falha é do servidor, não da sessão:
+    // derrubar o retrato ali seria deslogar alguém por causa de um deploy.
+    if (res.status === 401) {
+      setCsrfToken(null)
+      setSession(null)
+    }
+  } catch {
+    /* rede fora — mantém o retrato e tenta de novo na próxima */
+  }
+  conferido = true
+  emit()
+  return current
+}
+
+// A conferência começa junto com o app. Sem `await`: a interface abre com o
+// retrato guardado e se corrige em seguida, se for o caso.
+if (useReal) void revalidarSessao()
 
 // ---- Mock (localStorage) ----------------------------------------------------
 
@@ -107,8 +183,8 @@ function saveAccounts(list: MockAccount[]) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list))
 }
 
-function mockSession(user: AuthUser): Session {
-  return { token: `mock-${user.id}`, user, expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 7 }
+function mockSession(user: AuthUser, remember: boolean): Session {
+  return { user, remember, expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30 }
 }
 
 // ---- API pública ------------------------------------------------------------
@@ -121,21 +197,25 @@ function validate(email: string, password: string) {
   if (problema) throw new Error(problema)
 }
 
-export async function signup(emailRaw: string, password: string, name?: string): Promise<Session> {
+export async function signup(
+  emailRaw: string,
+  password: string,
+  name?: string,
+  remember = true,
+): Promise<Session> {
   const email = emailRaw.trim().toLowerCase()
   validate(email, password)
   const cleanName = name?.trim() || undefined
 
   if (useReal) {
-    const res = await fetch(`${API_BASE}/api/auth/signup`, {
+    const res = await apiFetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name: cleanName }),
+      body: JSON.stringify({ email, password, name: cleanName, remember }),
     })
     if (!res.ok) throw new Error((await res.text().catch(() => '')) || 'Não foi possível criar a conta.')
-    const session = (await res.json()) as Session
-    setSession(session)
-    return session
+    conferido = true
+    return aplicar((await res.json()) as RespostaSessao)
   }
 
   const accounts = loadAccounts()
@@ -144,24 +224,27 @@ export async function signup(emailRaw: string, password: string, name?: string):
   }
   const user: AuthUser = { id: `u-${Date.now()}-${Math.floor(Math.random() * 1e4)}`, email, name: cleanName }
   saveAccounts([...accounts, { ...user, password }])
-  const session = mockSession(user)
+  const session = mockSession(user, remember)
   setSession(session)
   return session
 }
 
-export async function login(emailRaw: string, password: string): Promise<Session> {
+export async function login(
+  emailRaw: string,
+  password: string,
+  remember = true,
+): Promise<Session> {
   const email = emailRaw.trim().toLowerCase()
 
   if (useReal) {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember }),
     })
     if (!res.ok) throw new Error((await res.text().catch(() => '')) || 'E-mail ou senha incorretos.')
-    const session = (await res.json()) as Session
-    setSession(session)
-    return session
+    conferido = true
+    return aplicar((await res.json()) as RespostaSessao)
   }
 
   const account = loadAccounts().find((a) => a.email === email)
@@ -169,31 +252,28 @@ export async function login(emailRaw: string, password: string): Promise<Session
     throw new Error('E-mail ou senha incorretos.')
   }
   const { password: _pw, ...user } = account
-  const session = mockSession(user)
+  const session = mockSession(user, remember)
   setSession(session)
   return session
 }
 
 /**
- * Sair. Avisa o servidor ANTES de esquecer o token: é lá que a sessão é apagada.
- * Sem esse aviso, sair só limpava este navegador — um token copiado antes seguia
- * entrando por até 7 dias, porque o servidor não tinha como saber que a sessão
- * tinha acabado.
+ * Sair. Avisa o servidor ANTES de esquecer quem estava logado: é lá que a sessão
+ * é apagada e é de lá que vem a ordem de descartar o cookie. Sem esse aviso, sair
+ * limparia só a aparência — o cookie continuaria valendo até vencer.
  *
  * A limpeza local acontece de qualquer jeito: se a rede falhar, a pessoa continua
- * saindo daqui. O token vencerá sozinho no prazo dele.
+ * saindo daqui.
  */
 export async function logout(): Promise<void> {
-  const token = current?.token
+  const eraReal = useReal && !!current
+  setCsrfToken(null)
   setSession(null)
-  if (!useReal || !token) return
+  if (!eraReal) return
   try {
-    await fetch(`${API_BASE}/api/auth/logout`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await apiFetch('/api/auth/logout', { method: 'POST' })
   } catch {
-    /* rede fora — o token expira sozinho no prazo */
+    /* rede fora — o cookie expira sozinho no prazo */
   }
 }
 
@@ -202,15 +282,12 @@ export async function logout(): Promise<void> {
  * vazou: derruba o que estiver aberto em qualquer lugar, e não só aqui.
  */
 export async function logoutEverywhere(): Promise<number> {
-  const token = current?.token
-  if (!useReal || !token) {
+  if (!useReal || !current) {
     setSession(null)
     return 0
   }
-  const res = await fetch(`${API_BASE}/api/auth/logout-all`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await apiFetch('/api/auth/logout-all', { method: 'POST' })
+  setCsrfToken(null)
   setSession(null)
   if (!res.ok) throw new Error('Não foi possível encerrar as sessões.')
   const { encerradas } = (await res.json()) as { encerradas: number }
@@ -219,9 +296,9 @@ export async function logoutEverywhere(): Promise<number> {
 
 /** Quantos aparelhos estão logados nesta conta agora. */
 export async function countOpenSessions(): Promise<number | null> {
-  if (!useReal || !current?.token) return null
+  if (!useReal || !current) return null
   try {
-    const res = await fetch(`${API_BASE}/api/account/sessions`, { headers: authHeader() })
+    const res = await apiFetch('/api/account/sessions')
     if (!res.ok) return null
     const { abertas } = (await res.json()) as { abertas: number }
     return abertas

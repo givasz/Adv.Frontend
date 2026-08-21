@@ -4,7 +4,7 @@
 // conteúdo de um terceiro: aqui é o próprio advogado falando com a plataforma
 // sobre um problema dela. Por isso exige sessão — e por isso dá para responder.
 
-import { authHeader } from './auth'
+import { apiFetch } from './http'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
@@ -71,9 +71,9 @@ export async function openTicket(input: {
   message: string
 }): Promise<SupportTicket> {
   if (USE_REAL_API) {
-    const res = await fetch(`${API_BASE}/api/support`, {
+    const res = await apiFetch('/api/support', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...input, ...contexto() }),
     })
     if (!res.ok) {
@@ -101,7 +101,7 @@ export async function openTicket(input: {
 export async function myTickets(): Promise<SupportTicket[]> {
   if (USE_REAL_API) {
     try {
-      const res = await fetch(`${API_BASE}/api/support/mine`, { headers: { ...authHeader() } })
+      const res = await apiFetch('/api/support/mine')
       return res.ok ? res.json() : []
     } catch {
       return []

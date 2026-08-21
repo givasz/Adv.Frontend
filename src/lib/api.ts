@@ -4,7 +4,8 @@
 // Amanhã: basta implementar as mesmas assinaturas apontando para `/api/...`
 // (o proxy do Vite já encaminha para o NestJS na porta 3333).
 
-import { authHeader, isAuthenticated } from './auth'
+import { isAuthenticated } from './auth'
+import { apiFetch } from './http'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
@@ -99,7 +100,7 @@ const contaAtiva = () => USE_REAL_API && isAuthenticated()
 // Chamada autenticada às rotas de gestão do escritório. Todas devolvem o escritório
 // inteiro e todas falham do mesmo jeito — daí um único caminho de erro.
 async function firmFetch(path: string, init: RequestInit = {}): Promise<Firm> {
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: { ...init.headers, ...authHeader() } })
+  const res = await apiFetch(path, init)
   if (!res.ok) throw new Error(firmErrorMessage(res.status, await res.text().catch(() => '')))
   return (await res.json()) as Firm
 }
@@ -278,7 +279,7 @@ export const api = {
   async getMyFirm(): Promise<Firm | null> {
     if (USE_REAL_API) {
       try {
-        const res = await fetch(`${API_BASE}/api/firms/me`, { headers: { ...authHeader() } })
+        const res = await apiFetch('/api/firms/me')
         const text = res.ok ? await res.text() : ''
         return text ? (JSON.parse(text) as Firm) : null
       } catch {
@@ -291,9 +292,9 @@ export const api = {
 
   async saveFirm(firm: Firm): Promise<Firm> {
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/firms/me`, {
+      const res = await apiFetch('/api/firms/me', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(firm),
       })
       // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
@@ -360,7 +361,7 @@ export const api = {
   async getFirmInvites(): Promise<FirmInvite[]> {
     if (USE_REAL_API) {
       try {
-        const res = await fetch(`${API_BASE}/api/firms/me/invites`, { headers: { ...authHeader() } })
+        const res = await apiFetch('/api/firms/me/invites')
         return res.ok ? ((await res.json()) as FirmInvite[]) : []
       } catch {
         return [] // rede fora: melhor não mostrar convite nenhum do que inventar um
@@ -375,10 +376,7 @@ export const api = {
       await wait(120)
       return
     }
-    const res = await fetch(`${API_BASE}/api/firms/me/invites/${id}/${resposta}`, {
-      method: 'POST',
-      headers: { ...authHeader() },
-    })
+    const res = await apiFetch(`/api/firms/me/invites/${id}/${resposta}`, { method: 'POST' })
     if (!res.ok) {
       throw new Error(firmErrorMessage(res.status, await res.text().catch(() => '')))
     }
@@ -389,7 +387,7 @@ export const api = {
       // Blindagem: banco vazio / resposta vazia não pode travar o editor.
       // Se o backend não devolver um perfil válido, começa com um rascunho local.
       try {
-        const res = await fetch(`${API_BASE}/api/profiles/me`, { headers: { ...authHeader() } })
+        const res = await apiFetch('/api/profiles/me')
         const text = res.ok ? await res.text() : ''
         const data = text ? (JSON.parse(text) as Partial<Profile>) : null
         if (data && data.slug) {
@@ -406,9 +404,9 @@ export const api = {
 
   async saveDraft(profile: Profile): Promise<Profile> {
     if (contaAtiva()) {
-      const res = await fetch(`${API_BASE}/api/profiles/me`, {
+      const res = await apiFetch('/api/profiles/me', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
       })
       // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
@@ -453,9 +451,7 @@ export const api = {
       const params = new URLSearchParams({ slug: desired })
       if (name) params.set('name', name)
       try {
-        const res = await fetch(`${API_BASE}/api/profiles/slug-available?${params}`, {
-          headers: { ...authHeader() },
-        })
+        const res = await apiFetch(`/api/profiles/slug-available?${params}`)
         if (res.ok) return res.json()
       } catch {
         /* rede fora → devolve indefinido abaixo em vez de mentir "disponível" */
@@ -490,9 +486,9 @@ export const api = {
    */
   async setPlan(plan: Plan): Promise<Profile> {
     if (contaAtiva()) {
-      const res = await fetch(`${API_BASE}/api/profiles/me/plan`, {
+      const res = await apiFetch('/api/profiles/me/plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan }),
       })
       if (!res.ok) throw new Error('Não foi possível ativar o plano.')
@@ -565,12 +561,12 @@ export const api = {
     // mesmo com os perfis em localStorage. Sem backend (dev), cai no Ollama/template.
     if (USE_REAL_API || API_BASE) {
       try {
-        const res = await fetch(`${API_BASE}/api/ai/generate`, {
+        const res = await apiFetch('/api/ai/generate', {
           method: 'POST',
-          // A sessão vai junto porque é ela que prova o plano: o backend decide o
-          // que cada plano gera a partir da assinatura no banco, nunca do `plan`
-          // que vier no corpo (ver backend/src/ai/ai.controller.ts).
-          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          // A sessão (cookie) vai junto porque é ela que prova o plano: o backend
+          // decide o que cada plano gera a partir da assinatura no banco, nunca do
+          // `plan` que vier no corpo (ver backend/src/ai/ai.controller.ts).
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(req),
         })
         if (res.ok) {

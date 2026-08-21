@@ -6,7 +6,8 @@
 // Dizer "não dá" no mock seria mentir sobre um direito que, ali, é ainda mais
 // simples de cumprir.
 
-import { authHeader, getSession } from './auth'
+import { getSession } from './auth'
+import { apiFetch } from './http'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 const useReal = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
@@ -19,7 +20,7 @@ const FIRM_KEY = 'advocme:firm:draft'
 /** Pacote com tudo o que a plataforma guarda sobre a conta. */
 export async function exportarDados(): Promise<unknown> {
   if (useReal && getSession()) {
-    const res = await fetch(`${API_BASE}/api/account/data`, { headers: { ...authHeader() } })
+    const res = await apiFetch('/api/account/data')
     if (!res.ok) throw new Error('Não foi possível reunir seus dados agora.')
     return res.json()
   }
@@ -68,9 +69,9 @@ export function baixarComoArquivo(dados: unknown, nome = 'meus-dados-advocme') {
  */
 export async function excluirConta(senha: string): Promise<void> {
   if (useReal && getSession()) {
-    const res = await fetch(`${API_BASE}/api/account`, {
+    const res = await apiFetch('/api/account', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: senha }),
     })
     if (!res.ok) {
