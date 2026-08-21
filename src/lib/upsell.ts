@@ -185,8 +185,8 @@ const FEATURE_META: Record<
     value: (p) => (p === 'free' ? '—' : 'Incluído'),
   },
   branding: {
-    title: 'Marca e domínio próprios',
-    subtitle: 'Domínio .adv.br e perfil sem a marca advoc.me.',
+    title: 'Sua marca no perfil',
+    subtitle: 'Nome do escritório no rodapé, cor de destaque própria e sem a marca advoc.me.',
     value: (p) => (p === 'premium' ? 'Incluído' : '—'),
   },
   ai: {

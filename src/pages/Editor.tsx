@@ -586,6 +586,7 @@ export default function Editor() {
                   <BrandingCard
                     plan={profile.plan}
                     branding={profile.branding}
+                    slug={profile.slug}
                     onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
                   />
                 </>

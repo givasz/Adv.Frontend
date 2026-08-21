@@ -430,7 +430,7 @@ export default function Landing() {
               'Tudo do Pro',
               'Vídeo de apresentação no seu perfil',
               'Até 5 perguntas frequentes (eram 2)',
-              'Use seu próprio domínio (.adv.br)',
+              'Domínio próprio (.adv.br) — em breve',
               'Sua marca no lugar da nossa',
               'Comprovante de conformidade em PDF',
               'Até 20 áreas e bio de 1000 caracteres',

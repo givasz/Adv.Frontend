@@ -112,15 +112,16 @@ const TOPICS: Topic[] = [
   },
   {
     key: 'domain',
-    title: 'Seu próprio domínio (.adv.br)',
+    title: 'Domínio próprio (.adv.br) — em breve',
     plan: 'premium',
     proof: (p) => (
       <span className="flex flex-wrap items-center gap-1.5">
         <GlobeIcon width={14} height={14} className="text-brass-deep" />
         <Addr>{slugify(p.name) || 'seu-nome'}.adv.br</Addr>
-        {/* Domínio .adv.br é registrado no registro.br, fora daqui: a plataforma
-            não tem como afirmar que está livre. Dizer "disponível" seria inventar. */}
-        <span className="text-[11.5px] text-ink-faint">a registrar no seu nome</span>
+        {/* Duas verdades no mesmo rótulo: o .adv.br é registrado no registro.br em
+            nome do advogado (a plataforma não tem como afirmar que está livre), e o
+            suporte a domínio próprio ainda está sendo preparado aqui dentro. */}
+        <span className="text-[11.5px] text-ink-faint">em preparo · registrado no seu nome</span>
       </span>
     ),
   },

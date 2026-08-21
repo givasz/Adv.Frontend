@@ -43,8 +43,10 @@ export const TRUST_FACTORS: TrustFactor[] = [
   // ---- Planos pagos ----
   { key: 'oab_conferida', action: 'Solicitar conferência da OAB', label: 'OAB conferida', points: 10, plan: 'pro', done: oabVerified },
   { key: 'agenda', action: 'Ativar sua agenda de atendimento', label: 'Agenda', points: 8, plan: 'pro', done: (p) => resolveSchedulingMode(p) !== 'off' },
-  { key: 'dominio', action: 'Usar seu próprio domínio', label: 'Domínio', points: 5, plan: 'premium', done: (p) => !!p.branding?.customDomain },
-  { key: 'marca', action: 'Personalizar sua marca', label: 'Marca própria', points: 5, plan: 'premium', done: (p) => !!(p.branding?.brandName || p.branding?.hideWatermark) },
+  // Domínio próprio saiu do índice enquanto o recurso não existe: dava 5 pontos de
+  // credibilidade por DIGITAR um endereço que não ia para lugar nenhum. Os pontos
+  // foram para a marca própria, que é o que o Max entrega de fato hoje.
+  { key: 'marca', action: 'Personalizar sua marca', label: 'Marca própria', points: 10, plan: 'premium', done: (p) => !!(p.branding?.brandName || p.branding?.hideWatermark) },
 ]
 
 export interface TrustResult {

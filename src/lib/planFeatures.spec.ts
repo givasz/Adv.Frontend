@@ -75,7 +75,9 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     const novos = featuresPending(max)
       .map((f) => f.key)
       .filter((k) => !featuresPending(pro).some((f) => f.key === k))
-    expect(novos.sort()).toEqual(['dominio', 'faq_max', 'marca', 'video'])
+    // Sem 'dominio': o recurso saiu do checklist enquanto a plataforma não tem
+    // domínio próprio no ar (ver planFeatures.ts).
+    expect(novos.sort()).toEqual(['faq_max', 'marca', 'video'])
   })
 
   it('o FAQ começa no Pro e ganha um degrau no Max', () => {
@@ -122,7 +124,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .map((f) => f.key)
     expect(sampleProfile.plan).toBe('premium')
     expect(usados).toEqual(
-      expect.arrayContaining(['agenda', 'oab', 'faq', 'faq_max', 'marca', 'dominio']),
+      expect.arrayContaining(['agenda', 'oab', 'faq', 'faq_max', 'marca']),
     )
   })
 

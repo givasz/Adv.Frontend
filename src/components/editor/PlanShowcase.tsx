@@ -38,7 +38,7 @@ const PERKS: Record<Plan, string[]> = {
     'Tudo do Pro, e mais:',
     `${FAQ_LIMIT.premium} perguntas frequentes (eram ${FAQ_LIMIT.pro})`,
     'Vídeo de apresentação',
-    'Domínio próprio (.adv.br)',
+    'Domínio próprio (.adv.br) — em breve',
     'Sua marca no lugar da nossa',
     'Comprovante de conformidade em PDF',
     `${AREA_LIMIT.premium} áreas · bio até ${CHAR_LIMITS.premium.bio}`,

@@ -177,7 +177,11 @@ export interface Branding {
   accent?: string
   /** ocultar o selo "criado com advoc.me" (só Premium) */
   hideWatermark?: boolean
-  /** domínio próprio (ex.: "silva.adv.br") — informativo no protótipo (sem DNS real) */
+  /**
+   * Domínio que o advogado PRETENDE usar (ex.: "silva.adv.br"). Hoje é só uma
+   * intenção guardada — lista de espera do recurso, sem DNS e sem efeito no
+   * perfil. Ver BrandingCard: a interface diz isso com todas as letras.
+   */
   customDomain?: string
 }
 

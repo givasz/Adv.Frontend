@@ -43,6 +43,10 @@ const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 const freeThemes = THEMES.filter((t) => isThemeUnlocked(t, 'free')).map((t) => t.id)
 const filledAreas = (p: Profile) => p.areas.filter((a) => a.label.trim()).length
 
+// ⚠️ Domínio próprio NÃO está aqui de propósito. O checklist é a lista do que dá
+// para fazer AGORA; enquanto a plataforma não tem domínio no ar, o item seria uma
+// tarefa impossível de concluir — e, pior, ele se marcava como feito só por haver
+// texto no campo. Volta quando o recurso existir de verdade.
 export const PLAN_FEATURES: PlanFeature[] = [
   // ---- Pro ----
   {
@@ -149,15 +153,6 @@ export const PLAN_FEATURES: PlanFeature[] = [
     to: '/editor?section=marca',
     cta: 'Personalizar',
     done: (p) => !!(p.branding?.brandName || p.branding?.hideWatermark || p.branding?.accent),
-  },
-  {
-    key: 'dominio',
-    plan: 'premium',
-    title: 'Seu próprio domínio (.adv.br)',
-    body: 'O perfil responde no seu endereço, não no nosso — o cartão de visitas passa a ser inteiramente seu.',
-    to: '/editor?section=marca',
-    cta: 'Configurar domínio',
-    done: (p) => !!p.branding?.customDomain,
   },
 ]
 

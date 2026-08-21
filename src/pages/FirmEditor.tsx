@@ -224,7 +224,9 @@ export default function FirmEditor() {
               )}
             </div>
           </Field>
-          <Field label="Domínio próprio" hint="informativo no protótipo">
+          {/* Mesma verdade da página do advogado: é intenção guardada, não um
+              domínio ligado. Ver components/editor/BrandingCard.tsx. */}
+          <Field label="Domínio próprio" hint="em preparo — guardamos a sua intenção">
             <TextInput
               value={firm.customDomain ?? ''}
               placeholder="andradevieira.adv.br"
