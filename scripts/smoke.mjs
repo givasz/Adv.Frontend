@@ -5,6 +5,10 @@
 // nenhum deles chega a RENDERIZAR a página. Só abrindo o app pega esse tipo de
 // erro, e é barato demais não fazer.
 //
+// Depois das rotas, percorre as duas CONVERSAS do assistente (perfil e escritório)
+// até o link de WhatsApp. Abrir a página não prova que o roteiro anda: o motor da
+// conversa é compartilhado pelos dois e uma quebra nele passaria batida por aqui.
+//
 // Uso:  node scripts/smoke.mjs [http://localhost:5173]
 // Sobe o dev server antes (npm run dev). Sai com código 1 se algo quebrar.
 
@@ -107,10 +111,105 @@ for (const [rota, nome] of ROTAS) {
   await contexto.close()
 }
 
+// ---- Conversas do assistente ------------------------------------------------
+
+// Abre uma página nova já com a sessão semeada, vigiando erros de runtime.
+async function abrir(rota) {
+  const contexto = await navegador.newContext({ viewport: { width: 390, height: 844 } })
+  await contexto.addInitScript(SEED)
+  const pagina = await contexto.newPage()
+  const erros = []
+  pagina.on('pageerror', (e) => erros.push(String(e)))
+  await pagina.goto(BASE + rota, { waitUntil: 'networkidle', timeout: 20000 })
+  return { contexto, pagina, erros }
+}
+
+const ESPERA = 20000
+const clicar = async (pagina, nome) => {
+  const b = pagina.getByRole('button', { name: nome, exact: true })
+  await b.waitFor({ timeout: ESPERA })
+  await b.click()
+}
+
+// Perfil: dia → horário → formato → assunto livre → nome → WhatsApp.
+async function conversaDoPerfil() {
+  const { contexto, pagina, erros } = await abrir(`/${SLUG}/agendar`)
+  try {
+    const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
+    await dia.waitFor({ timeout: ESPERA })
+    await dia.click()
+    const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
+    await hora.waitFor({ timeout: ESPERA })
+    await hora.click()
+    await clicar(pagina, 'Online')
+    await clicar(pagina, 'Outro assunto')
+    const assunto = pagina.getByLabel('Assunto da conversa')
+    await assunto.waitFor({ timeout: ESPERA })
+    await assunto.fill('Revisão de contrato')
+    await clicar(pagina, 'Enviar resposta')
+    const nome = pagina.getByLabel('Seu nome')
+    await nome.waitFor({ timeout: ESPERA })
+    await nome.fill('Visitante Smoke')
+    await clicar(pagina, 'Enviar resposta')
+    const link = pagina.getByRole('link', { name: /Enviar no WhatsApp/ })
+    await link.waitFor({ timeout: ESPERA })
+    const href = decodeURIComponent((await link.getAttribute('href')) ?? '')
+    if (!href.includes('Visitante Smoke')) erros.push('a mensagem final não levou as respostas')
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
+// Escritório: assunto → advogado → formato → período → nome → WhatsApp.
+async function conversaDoEscritorio() {
+  const { contexto, pagina, erros } = await abrir(`/escritorio/${FIRM_SLUG}`)
+  try {
+    await clicar(pagina, 'Falar com o escritório')
+    await clicar(pagina, 'Direito de Família')
+    // "Tanto faz" vem primeiro de propósito: escolher advogado é opcional e a
+    // plataforma não indica ninguém (Prov. 205/2021 veda ranking).
+    await pagina.getByRole('button', { name: 'Tanto faz', exact: true }).waitFor({ timeout: ESPERA })
+    await clicar(pagina, 'Camila Nunes')
+    await clicar(pagina, 'Online')
+    await clicar(pagina, 'Esta semana, de manhã')
+    const nome = pagina.getByLabel('Seu nome')
+    await nome.waitFor({ timeout: ESPERA })
+    await nome.fill('Visitante Smoke')
+    await clicar(pagina, 'Enviar resposta')
+    const link = pagina.getByRole('link', { name: /Enviar no WhatsApp/ })
+    await link.waitFor({ timeout: ESPERA })
+    const href = decodeURIComponent((await link.getAttribute('href')) ?? '')
+    if (!href.includes('Advogado(a): Camila Nunes')) erros.push('o pedido não levou o advogado escolhido')
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
+const CONVERSAS = [
+  ['assistente do perfil', conversaDoPerfil],
+  ['assistente do escritório', conversaDoEscritorio],
+]
+
+for (const [nome, percorrer] of CONVERSAS) {
+  const erros = await percorrer()
+  if (erros.length) {
+    falhas.push({ rota: nome, nome, erros })
+    console.log(`✗ ${nome}`)
+    for (const e of erros) console.log(`    ${e}`)
+  } else {
+    console.log(`✓ ${nome}`)
+  }
+}
+
 await navegador.close()
 
+const total = ROTAS.length + CONVERSAS.length
 if (falhas.length) {
-  console.log(`\n${falhas.length} de ${ROTAS.length} rotas quebradas.`)
+  console.log(`\n${falhas.length} de ${total} verificações quebradas.`)
   process.exit(1)
 }
-console.log(`\n${ROTAS.length} rotas abriram sem erro.`)
+console.log(`\n${ROTAS.length} rotas abriram sem erro e as ${CONVERSAS.length} conversas do assistente foram até o fim.`)

@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { Avatar } from '@/components/ui/Avatar'
+import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import {
-  ArrowRight,
-  CalendarIcon,
-  CheckIcon,
-  SparkIcon,
-  WhatsappIcon,
-  XIcon,
-} from '@/components/ui/icons'
+  Bubble,
+  cap,
+  Chip,
+  ChipRow,
+  Composer,
+  Summary,
+  TypingDots,
+} from '@/components/assistant/pieces'
+import { useConversation, usePinnedToBottom } from '@/components/assistant/useConversation'
 import {
   assistantTitle,
   assistantWhatsappHref,
@@ -34,12 +37,6 @@ import {
 // fala de honorários e não insiste — apenas organiza um pedido de horário (Prov. 205/2021).
 
 type Step = 'boot' | 'day' | 'time' | 'format' | 'subject' | 'detail' | 'name' | 'done'
-
-interface Msg {
-  id: number
-  from: 'bot' | 'user'
-  text: string
-}
 
 const STEP_ORDER: Step[] = ['day', 'time', 'format', 'subject', 'detail', 'name', 'done']
 const OTHER_SUBJECT = 'Outro assunto'
@@ -90,20 +87,15 @@ export function AssistantChat({
   const soloFormat = profile.serviceMode.online ? 'online' : 'presencial'
   const first = firstName(profile.name)
 
-  const reduced = useReducedMotion()
-  const [msgs, setMsgs] = useState<Msg[]>([])
-  const [typing, setTyping] = useState(false)
+  // Falas, "digitando…" e o cancelamento das falas pendentes vivem no motor
+  // compartilhado com o assistente do escritório (components/assistant).
+  const { msgs, typing, push, say: falar, reset, reduced, listRef } = useConversation({ pace })
   const [step, setStep] = useState<Step>('boot')
   const [answers, setAnswers] = useState<AssistantAnswers>({})
   const [showAllDays, setShowAllDays] = useState(false)
   const [draft, setDraft] = useState('')
 
-  const listRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const idRef = useRef(0)
-  // Cada "geração" invalida os temporizadores da anterior — evita mensagens fantasma
-  // ao recomeçar a conversa ou ao desmontar o componente.
-  const genRef = useRef(0)
 
   // O trap de foco só vale no modo diálogo. `closeRef` mantém o callback estável:
   // a conversa re-renderiza muito (digitando…) e um efeito re-executado roubaria o foco.
@@ -113,40 +105,15 @@ export function AssistantChat({
   const requestClose = useCallback(() => closeRef.current?.(), [])
   useDialog(variant === 'sheet' ? panelRef : nullRef, requestClose)
 
-  const push = useCallback((from: Msg['from'], text: string) => {
-    idRef.current += 1
-    setMsgs((m) => [...m, { id: idRef.current, from, text }])
-  }, [])
-
-  // Fala do assistente: uma linha por vez, com "digitando…" proporcional ao tamanho
-  // do texto. Em prefers-reduced-motion, tudo aparece imediatamente.
+  // Açúcar em cima do motor: as transições do roteiro continuam se lendo como
+  // "diz isto e vai para o passo tal".
   const say = useCallback(
-    async (lines: string[], next?: Step) => {
-      const gen = genRef.current
-      for (const line of lines) {
-        if (!reduced) {
-          setTyping(true)
-          // "digitando…" proporcional ao tamanho da fala, com teto — uma frase
-          // longa não pode virar uma espera interminável.
-          await sleep(Math.min(1100, 380 + line.length * 11) * pace)
-          if (genRef.current !== gen) return
-          setTyping(false)
-        }
-        push('bot', line)
-        // Respiro entre falas: sem ele, duas mensagens seguidas aparecem coladas
-        // e o olho não acompanha que são duas.
-        if (!reduced) await sleep(140 * pace)
-        if (genRef.current !== gen) return
-      }
-      if (next) setStep(next)
-    },
-    [push, reduced, pace],
+    (lines: string[], next?: Step) => falar(lines, next ? () => setStep(next) : undefined),
+    [falar],
   )
 
   const start = useCallback(() => {
-    genRef.current += 1
-    setTyping(false)
-    setMsgs([])
+    reset()
     setAnswers({})
     setShowAllDays(false)
     setDraft('')
@@ -159,33 +126,10 @@ export function AssistantChat({
           'Posso reservar um horário de conversa. Não presto orientação jurídica — só organizo o pedido e encaminho.',
         ]
     void say(days.length ? [...opening, 'Qual dia fica melhor para você?'] : opening, days.length ? 'day' : 'done')
-  }, [config.greeting, days.length, first, say])
+  }, [config.greeting, days.length, first, say, reset])
 
-  useEffect(() => {
-    if (!autoStart) return
-    start()
-    return () => {
-      genRef.current += 1
-    }
-  }, [start, autoStart])
-
-  // Mantém a conversa colada no fim, como em qualquer mensageiro. Além da mensagem
-  // nova, a própria área de resposta muda de altura (chips ↔ campo de texto) e encolhe
-  // a lista DEPOIS do quadro seguinte — daí o ResizeObserver, que re-ancora no fim.
-  useEffect(() => {
-    const el = listRef.current
-    if (!el) return
-    const pin = () => {
-      el.scrollTop = el.scrollHeight
-    }
-    const id = requestAnimationFrame(pin)
-    const ro = new ResizeObserver(pin)
-    ro.observe(el)
-    return () => {
-      cancelAnimationFrame(id)
-      ro.disconnect()
-    }
-  }, [msgs, typing, step])
+  useAutoStart(start, autoStart)
+  usePinnedToBottom(listRef, [msgs, typing, step])
 
   // ---- Transições ----
 
@@ -380,7 +324,13 @@ export function AssistantChat({
           ))}
         </AnimatePresence>
         {typing && <TypingDots />}
-        {ready && <Summary answers={answers} durationMin={config.durationMin} reduced={!!reduced} />}
+        {ready && (
+          <Summary
+            title="Pedido de horário"
+            rows={summaryRows(answers, config.durationMin)}
+            reduced={reduced}
+          />
+        )}
         </div>
       </div>
 
@@ -539,66 +489,10 @@ export function AssistantChat({
   )
 }
 
-// ---- Peças da conversa ----
-
-function Bubble({ from, text, reduced }: { from: 'bot' | 'user'; text: string; reduced: boolean }) {
-  const bot = from === 'bot'
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: reduced ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex ${bot ? 'justify-start' : 'justify-end'}`}
-    >
-      <p
-        className={`max-w-[85%] px-3.5 py-2.5 text-[14px] leading-relaxed ${
-          bot ? 'rounded-[16px] rounded-bl-[5px] border' : 'rounded-[16px] rounded-br-[5px] font-medium'
-        }`}
-        style={
-          bot
-            ? { background: 'var(--c-surface)', borderColor: 'var(--c-border)', color: 'var(--c-muted)' }
-            : { background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }
-        }
-      >
-        {text}
-      </p>
-    </motion.div>
-  )
-}
-
-function TypingDots() {
-  return (
-    <div className="flex justify-start">
-      <span
-        className="flex items-center gap-1 rounded-[16px] rounded-bl-[5px] border px-3.5 py-3"
-        style={{ background: 'var(--c-surface)', borderColor: 'var(--c-border)' }}
-        aria-label="digitando"
-      >
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="block h-1.5 w-1.5 rounded-full"
-            style={{ background: 'var(--c-faint)' }}
-            animate={{ opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
-            transition={{ duration: 1, repeat: Infinity, delay: i * 0.16, ease: 'easeInOut' }}
-          />
-        ))}
-      </span>
-    </div>
-  )
-}
-
-// Cartão de resumo — o "comprovante" do que foi combinado, antes de enviar.
-function Summary({
-  answers,
-  durationMin,
-  reduced,
-}: {
-  answers: AssistantAnswers
-  durationMin: number
-  reduced: boolean
-}) {
-  const rows = [
+// Linhas do "comprovante" mostrado antes de enviar. O cartão em si é compartilhado
+// (components/assistant/pieces); o que muda entre os assistentes é o conteúdo.
+function summaryRows(answers: AssistantAnswers, durationMin: number): [string, string][] {
+  return [
     ['Quando', formatChoice(answers)],
     ['Duração', `${durationMin} minutos`],
     answers.format ? ['Formato', cap(answers.format)] : null,
@@ -606,134 +500,11 @@ function Summary({
     answers.detail ? ['Contexto', answers.detail] : null,
     answers.name ? ['Nome', answers.name] : null,
   ].filter(Boolean) as [string, string][]
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduced ? 0 : 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="mt-1 overflow-hidden rounded-[16px] border"
-      style={{ borderColor: 'var(--c-ring)', background: 'var(--c-surface)' }}
-    >
-      <p
-        className="flex items-center gap-2 px-4 py-2.5 font-display text-[13px] font-semibold uppercase tracking-[0.14em]"
-        style={{ background: 'var(--c-accent-soft)' }}
-      >
-        <CheckIcon width={14} height={14} className="t-accent" strokeWidth={2.4} />
-        Pedido de horário
-      </p>
-      <dl className="divide-y" style={{ borderColor: 'var(--c-border)' }}>
-        {rows.map(([k, v]) => (
-          <div key={k} className="flex gap-3 px-4 py-2.5">
-            <dt className="t-faint w-[74px] shrink-0 text-[11.5px] uppercase tracking-wider">{k}</dt>
-            <dd className="t-muted flex-1 text-[13.5px] leading-snug">{v}</dd>
-          </div>
-        ))}
-      </dl>
-    </motion.div>
-  )
 }
 
-function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="t-faint mb-2 text-[11px] font-semibold uppercase tracking-[0.14em]">{label}</p>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </div>
-  )
-}
-
-function Chip({
-  children,
-  onClick,
-  subtle = false,
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  subtle?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 hover:-translate-y-px active:translate-y-0"
-      style={{
-        borderColor: subtle ? 'var(--c-border)' : 'var(--c-ring)',
-        background: subtle ? 'transparent' : 'var(--c-accent-soft)',
-        color: subtle ? 'var(--c-faint)' : 'var(--c-text)',
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Composer({
-  value,
-  onChange,
-  onSend,
-  placeholder,
-  label,
-  canSend,
-  skipLabel,
-  onSkip,
-}: {
-  value: string
-  onChange: (v: string) => void
-  onSend: () => void
-  placeholder: string
-  label: string
-  canSend: boolean
-  skipLabel?: string
-  onSkip?: () => void
-}) {
-  const ref = useRef<HTMLInputElement>(null)
+// Dispara a conversa quando o componente entra em cena (ver a prop autoStart).
+function useAutoStart(start: () => void, autoStart: boolean) {
   useEffect(() => {
-    ref.current?.focus()
-  }, [])
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (canSend) onSend()
-      }}
-      className="flex items-center gap-2"
-    >
-      <input
-        ref={ref}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={label}
-        maxLength={140}
-        className="min-w-0 flex-1 rounded-full border px-4 py-2.5 text-[14px] outline-none transition-colors"
-        style={{
-          borderColor: 'var(--c-border)',
-          background: 'var(--c-bg)',
-          color: 'var(--c-text)',
-        }}
-      />
-      {skipLabel && onSkip && (
-        <button
-          type="button"
-          onClick={onSkip}
-          className="t-faint shrink-0 px-1 text-[13px] font-medium underline-offset-4 hover:underline"
-        >
-          {skipLabel}
-        </button>
-      )}
-      <button
-        type="submit"
-        disabled={!canSend}
-        aria-label="Enviar resposta"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all disabled:opacity-40"
-        style={{ background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }}
-      >
-        <ArrowRight width={18} height={18} />
-      </button>
-    </form>
-  )
+    if (autoStart) start()
+  }, [start, autoStart])
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

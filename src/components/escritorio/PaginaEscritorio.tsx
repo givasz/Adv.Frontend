@@ -11,13 +11,14 @@ import {
 } from '@/components/ui/icons'
 import { FirmVerified } from './FirmVerified'
 import { MiniPerfil } from './MiniPerfil'
-import { PainelTriagemWhatsApp } from './PainelTriagemWhatsApp'
+import { PainelEmLinha } from './PainelEmLinha'
+import { AssistenteEscritorio } from './AssistenteEscritorio'
 
 // Página institucional standalone do escritório (sociedade de advogados). Estilo próprio
 // baseado na paleta "Papel & Tinta" (bege/grafite/dourado) — NÃO usa o sistema de temas
 // por perfil. Sóbria, mobile-first, sem aparência de loja.
 export function PaginaEscritorio({ firm }: { firm: Firm }) {
-  const [triage, setTriage] = useState(false)
+  const [assistente, setAssistente] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const lawyers = lawyersInNeutralOrder(firm)
   const active = lawyers.find((l) => l.id === selected) ?? null
@@ -71,7 +72,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
           {firm.contact.whatsapp && (
             <button
               type="button"
-              onClick={() => setTriage(true)}
+              onClick={() => setAssistente(true)}
               aria-label="WhatsApp do escritório"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/12 bg-paper-soft text-ink-soft transition-colors hover:border-brass/50 hover:text-burgundy"
             >
@@ -142,10 +143,10 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               </a>
             )}
           </div>
-          {firm.contact.whatsapp && !triage && (
+          {firm.contact.whatsapp && !assistente && (
             <button
               type="button"
-              onClick={() => setTriage(true)}
+              onClick={() => setAssistente(true)}
               className="btn-primary mt-4 w-full"
               style={{ background: 'var(--firm-accent)' }}
             >
@@ -153,8 +154,16 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               Falar com o escritório
             </button>
           )}
-          {/* A triagem abre AQUI, no lugar do botão — não numa janela sobre a página. */}
-          {triage && <PainelTriagemWhatsApp firm={firm} onClose={() => setTriage(false)} />}
+          {/* A conversa abre AQUI, no lugar do botão — não numa janela sobre a
+              página. Substituiu a triagem de duas telas: é o mesmo assistente do
+              perfil individual, sem grade de horários (ver AssistenteEscritorio). */}
+          {assistente && (
+            <PainelEmLinha onClose={() => setAssistente(false)}>
+              <div className="mt-1 text-left">
+                <AssistenteEscritorio firm={firm} />
+              </div>
+            </PainelEmLinha>
+          )}
         </section>
 
         {/* Rodapé de compliance */}

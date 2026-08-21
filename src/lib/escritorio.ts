@@ -18,6 +18,8 @@ export interface FirmLawyer {
   avatarUrl?: string
   /** LinkedIn PESSOAL do advogado (separado das redes institucionais) */
   linkedin?: string
+  /** WhatsApp do advogado — usado quando o escritório encaminha o pedido a ele */
+  whatsapp?: string
 }
 
 /** Papel dentro da sociedade. `owner` responde pelo faturamento; `admin` também
@@ -94,6 +96,14 @@ export interface Firm {
   brandAccent?: string
   /** domínio próprio (informativo no protótipo) */
   customDomain?: string
+  /**
+   * Para onde o assistente virtual manda o pedido:
+   *   'institutional' (padrão) → WhatsApp do escritório, que mantém o controle do
+   *                              atendimento — o que a maioria quer;
+   *   'lawyer'                 → WhatsApp do advogado escolhido, com volta ao
+   *                              institucional quando não há escolha ou número.
+   */
+  assistantRoute?: 'institutional' | 'lawyer'
   // ---- Gestão: só vem em /firms/me (editor). A página pública não recebe. ----
   /** membros e convites pendentes, em ordem alfabética (nunca por senioridade) */
   members?: FirmMember[]
@@ -122,11 +132,15 @@ export const sampleFirm: Firm = {
     instagram: 'https://instagram.com/andradevieira.adv',
     linkedin: 'https://linkedin.com/company/andradevieira',
   },
+  // Mesmos rótulos das áreas dos advogados: no backend as áreas do escritório são
+  // DERIVADAS das áreas deles (ver firms.service.toApi), e o assistente usa a área
+  // escolhida para filtrar quem atua nela. Rótulos diferentes aqui fariam o exemplo
+  // se comportar diferente do escritório real.
   areas: [
-    { id: 'emp', label: 'Empresarial' },
-    { id: 'fam', label: 'Família' },
-    { id: 'prev', label: 'Previdenciário' },
-    { id: 'trab', label: 'Trabalhista' },
+    { id: 'emp', label: 'Direito Empresarial' },
+    { id: 'fam', label: 'Direito de Família' },
+    { id: 'prev', label: 'Direito Previdenciário' },
+    { id: 'trab', label: 'Direito Trabalhista' },
   ],
   // Ordem NEUTRA (alfabética na exibição) — sem hierarquia por senioridade/destaque.
   lawyers: [
@@ -230,6 +244,7 @@ export function blankFirm(): Firm {
     contact: {},
     areas: [],
     lawyers: [],
+    assistantRoute: 'institutional',
   }
 }
 

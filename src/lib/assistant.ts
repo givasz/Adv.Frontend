@@ -245,3 +245,102 @@ export function assistantWhatsappHref(
     buildAssistantMessage(profile, answers, durationMin),
   )}`
 }
+
+// ---- Assistente do ESCRITÓRIO ---------------------------------------------
+//
+// A sociedade não tem agenda por advogado: perguntar horário exato seria prometer
+// o que ninguém pode confirmar. Então o roteiro troca a grade por uma PREFERÊNCIA
+// de dia/período — o que uma secretária perguntaria — e o escritório confirma.
+//
+// Duas travas de conformidade que valem aqui e não valem no perfil individual:
+//   • a lista de advogados é sempre alfabética e nunca vem com recomendação
+//     ("o mais indicado para o seu caso" é ranking, e ranking é vedado);
+//   • escolher advogado é opcional — "tanto faz" é a primeira opção.
+
+/** Preferência de horário oferecida pelo assistente do escritório. */
+export interface FirmPeriodOption {
+  id: string
+  /** texto do chip */
+  label: string
+}
+
+export const FIRM_PERIODS: FirmPeriodOption[] = [
+  { id: 'esta-manha', label: 'Esta semana, de manhã' },
+  { id: 'esta-tarde', label: 'Esta semana, à tarde' },
+  { id: 'proxima-manha', label: 'Próxima semana, de manhã' },
+  { id: 'proxima-tarde', label: 'Próxima semana, à tarde' },
+  { id: 'tanto-faz', label: 'Tanto faz' },
+]
+
+/** "Sem preferência" na escolha de advogado — nunca uma sugestão da plataforma. */
+export const FIRM_ANY_LAWYER = 'Tanto faz'
+
+export interface FirmAssistantAnswers {
+  area?: string
+  /** nome do advogado escolhido; ausente = sem preferência */
+  lawyer?: string
+  /** 'presencial' | 'online' */
+  format?: string
+  /** rótulo da preferência de horário (ver FIRM_PERIODS) */
+  period?: string
+  name?: string
+}
+
+/**
+ * Mensagem que o visitante envia ao escritório. Mesmo espírito da do perfil:
+ * factual, sem promessa, sem preço, sem urgência — só o pedido organizado.
+ */
+export function buildFirmAssistantMessage(
+  firmName: string,
+  answers: FirmAssistantAnswers,
+): string {
+  const fields: (string | null)[] = [
+    answers.name?.trim() ? `Nome: ${answers.name.trim()}` : null,
+    answers.area ? `Assunto: ${answers.area}` : null,
+    `Advogado(a): ${answers.lawyer?.trim() || 'sem preferência'}`,
+    answers.format ? `Formato: ${capitalize(answers.format)}` : null,
+    answers.period ? `Preferência de horário: ${answers.period}` : null,
+  ]
+  return [
+    `Olá! Vim pela página do ${firmName} no advoc.me e gostaria de marcar uma conversa.`,
+    '',
+    ...fields.filter((l): l is string => !!l),
+    '',
+    'Fico no aguardo da confirmação.',
+  ].join('\n')
+}
+
+/**
+ * Para onde o pedido vai. O padrão é o WhatsApp INSTITUCIONAL: mantém o controle do
+ * atendimento com o escritório, que é o que a maioria quer. Com `assistantRoute`
+ * em 'lawyer', o pedido vai direto para o advogado escolhido — e cai no
+ * institucional quando o visitante não escolheu ninguém ou o advogado não informou
+ * WhatsApp.
+ */
+export function firmAssistantWhatsapp(
+  firm: { contact: { whatsapp?: string }; lawyers: { name: string; whatsapp?: string }[]; assistantRoute?: string },
+  answers: FirmAssistantAnswers,
+): string | undefined {
+  if (firm.assistantRoute === 'lawyer' && answers.lawyer) {
+    const escolhido = firm.lawyers.find((l) => l.name === answers.lawyer)
+    if (escolhido?.whatsapp) return escolhido.whatsapp
+  }
+  return firm.contact.whatsapp
+}
+
+/** Link wa.me pronto — undefined quando não há número para receber o pedido. */
+export function firmAssistantWhatsappHref(
+  firm: {
+    name: string
+    contact: { whatsapp?: string }
+    lawyers: { name: string; whatsapp?: string }[]
+    assistantRoute?: string
+  },
+  answers: FirmAssistantAnswers,
+): string | undefined {
+  const wa = firmAssistantWhatsapp(firm, answers)
+  if (!wa) return undefined
+  return `https://wa.me/${wa}?text=${encodeURIComponent(buildFirmAssistantMessage(firm.name, answers))}`
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

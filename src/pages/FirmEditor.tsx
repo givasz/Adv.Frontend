@@ -328,6 +328,31 @@ export default function FirmEditor() {
           </div>
         </Card>
 
+        {/* Assistente virtual da página */}
+        <Card title="Assistente virtual">
+          <p className="text-[12.5px] leading-relaxed text-ink-faint">
+            Na página do escritório, quem quiser falar responde a uma conversa guiada (assunto,
+            advogado, formato e preferência de horário) e o pedido chega pronto no WhatsApp. É um
+            roteiro fixo: não dá orientação jurídica e não confirma horário.
+          </p>
+          <Field label="Para onde vai o pedido">
+            <div className="grid gap-2">
+              <RotaOption
+                checked={(firm.assistantRoute ?? 'institutional') === 'institutional'}
+                onSelect={() => set({ assistantRoute: 'institutional' })}
+                title="WhatsApp do escritório"
+                desc="O atendimento fica centralizado com a secretaria. Recomendado."
+              />
+              <RotaOption
+                checked={firm.assistantRoute === 'lawyer'}
+                onSelect={() => set({ assistantRoute: 'lawyer' })}
+                title="WhatsApp do advogado escolhido"
+                desc="Vai direto para quem a pessoa escolheu. Sem escolha ou sem número, volta para o escritório."
+              />
+            </div>
+          </Field>
+        </Card>
+
         {/* Advogados */}
         <Card
           title="Advogados da sociedade"
@@ -400,6 +425,40 @@ export default function FirmEditor() {
         </Card>
       </div>
     </div>
+  )
+}
+
+// Escolha do destino do assistente. Rádio de verdade (não um switch decorativo):
+// são duas opções excludentes e o teclado precisa navegar entre elas.
+function RotaOption({
+  checked,
+  onSelect,
+  title,
+  desc,
+}: {
+  checked: boolean
+  onSelect: () => void
+  title: string
+  desc: string
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer gap-2.5 rounded-lg border p-3 transition-colors ${
+        checked ? 'border-burgundy/40 bg-burgundy/[0.04]' : 'border-ink/12 bg-paper-soft hover:border-brass/50'
+      }`}
+    >
+      <input
+        type="radio"
+        name="assistant-route"
+        checked={checked}
+        onChange={onSelect}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-burgundy"
+      />
+      <span className="min-w-0">
+        <span className="block text-[13.5px] font-medium text-ink">{title}</span>
+        <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-faint">{desc}</span>
+      </span>
+    </label>
   )
 }
 
