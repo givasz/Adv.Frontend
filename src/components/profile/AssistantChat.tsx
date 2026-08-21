@@ -446,7 +446,12 @@ export function AssistantChat({
             pessoal (assunto e nome). Mostrá-lo desde o "escolha um dia" seria
             ruído; escondê-lo na etapa do assunto seria pedir sem avisar. */}
         {(step === 'detail' || step === 'name' || ready) && (
-          <PrivacyNote fluxo="assistente" tone="themed" className="mt-2.5 text-center" />
+          <PrivacyNote
+            fluxo="assistente"
+            tone="themed"
+            semGuarda={step !== 'detail'}
+            className="mt-2.5 text-center"
+          />
         )}
         <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
           Assistente automático. Não presta orientação jurídica e não confirma o horário —

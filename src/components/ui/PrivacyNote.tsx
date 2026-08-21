@@ -52,10 +52,17 @@ const TEXTO: Record<Fluxo, { corpo: React.ReactNode; guarda?: string }> = {
 export function PrivacyNote({
   fluxo,
   tone = 'page',
+  semGuarda = false,
   className = '',
 }: {
   fluxo: Fluxo
   tone?: 'page' | 'themed'
+  /**
+   * Esconde a orientação "escreva o assunto em linhas gerais". Ela só faz sentido
+   * ENQUANTO o assunto está sendo escrito — repeti-la na pergunta do nome deixa a
+   * conversa dando um conselho sobre um campo que já ficou para trás.
+   */
+  semGuarda?: boolean
   className?: string
 }) {
   const { corpo, guarda } = TEXTO[fluxo]
@@ -64,7 +71,7 @@ export function PrivacyNote({
       className={`text-[11.5px] leading-relaxed ${tone === 'themed' ? 't-faint' : 'text-ink-faint'} ${className}`}
     >
       {corpo}{' '}
-      {guarda && <span className="block mt-1">{guarda}</span>}
+      {guarda && !semGuarda && <span className="block mt-1">{guarda}</span>}
       <Link
         to="/legal/privacidade"
         target="_blank"
