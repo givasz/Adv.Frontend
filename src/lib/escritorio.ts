@@ -201,6 +201,16 @@ export function getFirm(slug: string): Firm | null {
   return slug === sampleFirm.slug ? sampleFirm : null
 }
 
+/**
+ * O escritório é a fixture de demonstração da home? A página precisa saber para se
+ * rotular: sociedade, advogados e números de OAB são inventados, e um selo de
+ * conferência sobre dado inventado, sem aviso, seria informação enganosa
+ * (Prov. 205/2021). Mesmo tratamento dos perfis-exemplo (ver pages/PublicProfile).
+ */
+export function isExampleFirm(slug: string): boolean {
+  return slug === sampleFirm.slug
+}
+
 // ---- Helpers de edição/criação ----
 
 /** Slug a partir do nome da sociedade. */

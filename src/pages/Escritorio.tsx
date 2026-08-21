@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
-import type { Firm } from '@/lib/escritorio'
+import { isExampleFirm, type Firm } from '@/lib/escritorio'
 import { PaginaEscritorio } from '@/components/escritorio/PaginaEscritorio'
 import { ScaleIcon } from '@/components/ui/icons'
 
@@ -51,5 +51,16 @@ export default function Escritorio() {
     )
   }
 
-  return <PaginaEscritorio firm={firm} />
+  return (
+    <>
+      {isExampleFirm(slug) && (
+        <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
+          <ScaleIcon width={13} height={13} className="shrink-0 text-brass-light" />
+          Escritório de demonstração — sociedade, advogados e registros fictícios, apenas para
+          exemplo do advoc.me.
+        </div>
+      )}
+      <PaginaEscritorio firm={firm} />
+    </>
+  )
 }
