@@ -20,6 +20,17 @@ describe('caminho de volta', () => {
     expect(caminhoDeVolta('//exemplo.com', '/painel')).toBe('/painel')
     expect(caminhoDeVolta('javascript:alert(1)', '/painel')).toBe('/painel')
   })
+
+  it('recusa a barra invertida — o navegador a lê como endereço externo', () => {
+    expect(caminhoDeVolta('/\\exemplo.com', '/painel')).toBe('/painel')
+    expect(caminhoDeVolta('/\\\\exemplo.com', '/painel')).toBe('/painel')
+    expect(caminhoDeVolta('  //exemplo.com', '/painel')).toBe('/painel')
+  })
+
+  it('recusa caractere de controle no caminho', () => {
+    expect(caminhoDeVolta('/painel\nhttps://exemplo.com', '/painel')).toBe('/painel')
+    expect(caminhoDeVolta('/\tpainel', '/painel')).toBe('/painel')
+  })
 })
 
 describe('montagem do endereço', () => {

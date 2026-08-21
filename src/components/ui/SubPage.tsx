@@ -14,12 +14,23 @@ import { ArrowRight, ScaleIcon } from '@/components/ui/icons'
 // usa o `fallback` de quem renderiza. O botão nunca fica sem destino.
 
 /**
- * Valida o destino de volta. Só caminho INTERNO: um `?voltar=https://…` (ou
+ * Valida o destino de volta. Só caminho INTERNO: um `?voltar=https://...` (ou
  * `//outro.site`) transformaria estas páginas em trampolim de redirecionamento
  * para fora — é o tipo de brecha que se abre sem querer ao trocar modal por rota.
+ *
+ * A barra invertida conta junto com a barra dupla: o navegador lê `/\outro.site`
+ * como o mesmo endereço externo que `//outro.site`, e checar só a barra dupla
+ * deixava a porta aberta — é a mesma variação publicada como falha do próprio
+ * react-router. Caractere de controle (quebra de linha, tabulação) também é
+ * recusado: serve para contrabandear um segundo destino no meio do caminho.
  */
 export function caminhoDeVolta(raw: string | null | undefined, fallback: string): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : fallback
+  const destino = (raw ?? '').trim()
+  if (!destino.startsWith('/')) return fallback
+  if (/^\/[/\\]/.test(destino)) return fallback
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(destino)) return fallback
+  return destino
 }
 
 /** Lê o destino de volta da URL (`?voltar=`), com um destino de reserva. */

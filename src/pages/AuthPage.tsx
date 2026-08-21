@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { login, signup, useAuth } from '@/lib/auth'
 import { passwordStrength } from '@/lib/passwordStrength'
 import { ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, ScaleIcon, SparkIcon } from '@/components/ui/icons'
+import { caminhoDeVolta } from '@/components/ui/SubPage'
 
 type Mode = 'login' | 'signup'
 
@@ -37,7 +38,10 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
   const navigate = useNavigate()
   const { isAuthed } = useAuth()
   // Sem ?next, cai no painel — que redireciona ao onboarding se ainda não há perfil.
-  const next = params.get('next') || '/painel'
+  // Mesma trava do `?voltar=`: `next` vem da URL e é para onde a pessoa cai
+  // JÁ LOGADA. Sem validar, um link `/entrar?next=https://site-falso` mandava o
+  // advogado recém-autenticado direto para a página de quem montou o link.
+  const next = caminhoDeVolta(params.get('next'), '/painel')
   const isSignup = mode === 'signup'
 
   const strength = useMemo(() => passwordStrength(password, email), [password, email])
