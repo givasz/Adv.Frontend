@@ -9,7 +9,14 @@ import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
 import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
-import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
+import {
+  blankFirm,
+  getFirm as getMockFirm,
+  slugifyFirm,
+  type Firm,
+  type FirmInvite,
+  type FirmMember,
+} from './escritorio'
 import { DEFAULT_BOOKING_CONFIG, resolveSchedulingMode } from './booking'
 import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
@@ -88,6 +95,21 @@ function loadFirmDraft(): Firm | null {
     return null
   }
 }
+
+function saveFirmDraft(firm: Firm): Firm {
+  try {
+    localStorage.setItem(FIRM_KEY, JSON.stringify(firm))
+  } catch {
+    /* storage indisponível — segue com o valor em memória */
+  }
+  return firm
+}
+
+// Ordem NEUTRA também na gestão: quem administra não vê ranking nenhum, nem por
+// data de entrada. Prov. 205/2021 veda destaque entre advogados.
+function sortMembers(members: FirmMember[]): FirmMember[] {
+  return [...members].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+}
 // URL absoluta do backend (Render) em produção. Vazio em dev → usa caminho relativo
 // `/api` que o proxy do Vite encaminha para localhost:3333. No Netlify, defina
 // VITE_API_URL=https://<seu-backend>.onrender.com.
@@ -96,6 +118,14 @@ const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 // configurado (VITE_API_URL) — assim o deploy no Netlify usa o Render de ponta a
 // ponta (perfis, conta, IA), sem localStorage. Em dev sem VITE_API_URL, segue mock.
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+
+// Chamada autenticada às rotas de gestão do escritório. Todas devolvem o escritório
+// inteiro e todas falham do mesmo jeito — daí um único caminho de erro.
+async function firmFetch(path: string, init: RequestInit = {}): Promise<Firm> {
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: { ...init.headers, ...authHeader() } })
+  if (!res.ok) throw new Error(firmErrorMessage(res.status, await res.text().catch(() => '')))
+  return (await res.json()) as Firm
+}
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -448,9 +478,83 @@ export const api = {
       return res.json()
     }
     await wait(200)
-    const resolved: Firm = { ...firm, slug: firm.name ? slugifyFirm(firm.name) : '' }
-    localStorage.setItem(FIRM_KEY, JSON.stringify(resolved))
-    return resolved
+    const anterior = loadFirmDraft()
+    const resolved: Firm = {
+      ...firm,
+      slug: firm.name ? slugifyFirm(firm.name) : '',
+      // O editor manda só o institucional; os membros vivem no rascunho.
+      members: firm.members ?? anterior?.members ?? [],
+    }
+    return saveFirmDraft(resolved)
+  },
+
+  // ---- Membros do escritório -------------------------------------------------
+  //
+  // Advogado do escritório é uma CONTA convidada, não uma linha digitada pelo dono.
+  // Todas as rotas devolvem o escritório inteiro já atualizado, para o editor não
+  // precisar remontar a lista na mão.
+
+  async inviteFirmMember(email: string, role: 'member' | 'admin' = 'member'): Promise<Firm> {
+    if (USE_REAL_API) {
+      return firmFetch('/api/firms/me/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      })
+    }
+    await wait(160)
+    const firm = loadFirmDraft() ?? blankFirm()
+    const jaTem = (firm.members ?? []).some((m) => m.email?.toLowerCase() === email.toLowerCase())
+    if (jaTem) throw new Error('Esse advogado já faz parte do seu escritório.')
+    const convite: FirmMember = {
+      id: `mock-${Date.now()}`,
+      kind: 'invite',
+      name: email,
+      email,
+      role,
+      status: 'invited',
+    }
+    return saveFirmDraft({ ...firm, members: sortMembers([...(firm.members ?? []), convite]) })
+  },
+
+  async removeFirmMember(member: FirmMember): Promise<Firm> {
+    if (USE_REAL_API) {
+      return firmFetch(`/api/firms/me/members/${member.kind}/${member.id}`, { method: 'DELETE' })
+    }
+    await wait(160)
+    const firm = loadFirmDraft() ?? blankFirm()
+    return saveFirmDraft({
+      ...firm,
+      members: (firm.members ?? []).filter((m) => m.id !== member.id),
+    })
+  },
+
+  /** Convites pendentes dirigidos a quem está logado (mostrados no painel). */
+  async getFirmInvites(): Promise<FirmInvite[]> {
+    if (USE_REAL_API) {
+      try {
+        const res = await fetch(`${API_BASE}/api/firms/me/invites`, { headers: { ...authHeader() } })
+        return res.ok ? ((await res.json()) as FirmInvite[]) : []
+      } catch {
+        return [] // rede fora: melhor não mostrar convite nenhum do que inventar um
+      }
+    }
+    await wait(120)
+    return []
+  },
+
+  async answerFirmInvite(id: string, resposta: 'accept' | 'decline'): Promise<void> {
+    if (!USE_REAL_API) {
+      await wait(120)
+      return
+    }
+    const res = await fetch(`${API_BASE}/api/firms/me/invites/${id}/${resposta}`, {
+      method: 'POST',
+      headers: { ...authHeader() },
+    })
+    if (!res.ok) {
+      throw new Error(firmErrorMessage(res.status, await res.text().catch(() => '')))
+    }
   },
 
   async getDraft(): Promise<Profile> {

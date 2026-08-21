@@ -20,6 +20,41 @@ export interface FirmLawyer {
   linkedin?: string
 }
 
+/** Papel dentro da sociedade. `owner` responde pelo faturamento; `admin` também
+ *  edita a página e convida; `member` cuida apenas do próprio perfil. */
+export type FirmMemberRole = 'owner' | 'admin' | 'member'
+
+/** Estado do vínculo: convidado (não aparece na página) ou ativo (aparece). */
+export type FirmMemberState = 'invited' | 'active'
+
+/**
+ * Pessoa ligada ao escritório, na visão de QUEM ADMINISTRA. São duas naturezas na
+ * mesma lista porque para o dono são a mesma coisa ("gente que eu chamei"):
+ *   • `membership` → já tem conta; o perfil é dela e continua dela se sair.
+ *   • `invite`     → convite por e-mail para quem ainda não tem conta.
+ */
+export interface FirmMember {
+  id: string
+  kind: 'membership' | 'invite'
+  /** nome do perfil; no convite por e-mail, o próprio e-mail */
+  name: string
+  email?: string
+  oabNumber?: string
+  oabVerified?: boolean
+  area?: string
+  role: FirmMemberRole
+  status: FirmMemberState
+  /** endereço do perfil individual, quando já existe */
+  profileSlug?: string
+}
+
+/** Convite recebido por um advogado — o que aparece no painel dele. */
+export interface FirmInvite {
+  id: string
+  role: FirmMemberRole
+  firm: { name: string; slug: string; city: string; state: string }
+}
+
 /** Área de atuação do escritório — alimenta a triagem do WhatsApp. */
 export interface FirmArea {
   id: string
@@ -59,6 +94,13 @@ export interface Firm {
   brandAccent?: string
   /** domínio próprio (informativo no protótipo) */
   customDomain?: string
+  // ---- Gestão: só vem em /firms/me (editor). A página pública não recebe. ----
+  /** membros e convites pendentes, em ordem alfabética (nunca por senioridade) */
+  members?: FirmMember[]
+  /** assentos ocupados x contratados (base do plano + extras) */
+  seats?: { purchased: number; used: number }
+  /** mensalidade calculada pelo servidor para os assentos em uso */
+  monthlyPrice?: number
 }
 
 export const sampleFirm: Firm = {

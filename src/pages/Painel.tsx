@@ -22,6 +22,7 @@ import {
   ShieldIcon,
 } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
+import { EscritorioCard } from '@/components/painel/EscritorioCard'
 
 // Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
 // lá o próprio recurso mostra seu valor antes de pedir upgrade (upsell natural).
@@ -350,6 +351,10 @@ export default function Painel() {
             icon={ShieldIcon}
           />
         </div>
+
+        {/* Escritório — criar, gerenciar ou responder a um convite */}
+        <PanelHeading>Escritório</PanelHeading>
+        <EscritorioCard />
 
         {/* Conquistados */}
         {trust.earned.length > 0 && (

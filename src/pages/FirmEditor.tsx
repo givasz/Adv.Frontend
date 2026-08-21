@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
 import {
   blankFirm,
-  lawyersInNeutralOrder,
   monogramFrom,
-  nextLawyerId,
   type Firm,
-  type FirmLawyer,
+  type FirmMember,
 } from '@/lib/escritorio'
 import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
@@ -21,14 +19,32 @@ const UF_LIST = [
 ]
 
 export default function FirmEditor() {
+  // O estado é dividido de propósito: `firm` é só o INSTITUCIONAL (o que o
+  // autosave grava); a gestão de membros vem do servidor a cada convite/remoção e
+  // não pode entrar no corpo do PUT — senão o autosave reescreveria a sociedade.
   const [firm, setFirm] = useState<Firm | null>(null)
+  const [gestao, setGestao] = useState<{
+    members: FirmMember[]
+    seats?: { purchased: number; used: number }
+    monthlyPrice?: number
+  }>({ members: [] })
   const [saved, setSaved] = useState(true)
   const [saveError, setSaveError] = useState('')
+  const [convite, setConvite] = useState('')
+  const [conviteErro, setConviteErro] = useState('')
+  const [convidando, setConvidando] = useState(false)
+
+  // Separa a resposta do servidor em institucional (estado editável) e gestão.
+  const receber = useCallback((f: Firm): Firm => {
+    const { members = [], seats, monthlyPrice, ...institucional } = f
+    setGestao({ members, seats, monthlyPrice })
+    return institucional as Firm
+  }, [])
 
   useEffect(() => {
     document.title = 'Editor do escritório · advoc.me'
-    api.getMyFirm().then((f) => setFirm(f ?? blankFirm()))
-  }, [])
+    api.getMyFirm().then((f) => setFirm(f ? receber(f) : blankFirm()))
+  }, [receber])
 
   // Salva com debounce quando há nome (sociedade precisa de nome para existir).
   useEffect(() => {
@@ -40,8 +56,9 @@ export default function FirmEditor() {
         .then((s) => {
           setSaved(true)
           setSaveError('')
-          if (s?.slug && s.slug !== firm.slug) {
-            setFirm((p) => (p ? { ...p, slug: s.slug } : p))
+          const institucional = receber(s)
+          if (institucional?.slug && institucional.slug !== firm.slug) {
+            setFirm((p) => (p ? { ...p, slug: institucional.slug } : p))
           }
         })
         .catch((e: unknown) => {
@@ -49,15 +66,11 @@ export default function FirmEditor() {
         })
     }, 700)
     return () => clearTimeout(t)
-  }, [firm])
+  }, [firm, receber])
 
   const issues = useMemo(
     () =>
-      firm
-        ? [firm.tagline, firm.about, ...firm.lawyers.map((l) => l.bio)].flatMap((t) =>
-            checkCompliance(t || ''),
-          )
-        : [],
+      firm ? [firm.tagline, firm.about].flatMap((t) => checkCompliance(t || '')) : [],
     [firm],
   )
 
@@ -73,20 +86,33 @@ export default function FirmEditor() {
   const setContact = (patch: Partial<Firm['contact']>) =>
     setFirm((p) => (p ? { ...p, contact: { ...p.contact, ...patch } } : p))
 
-  const setLawyer = (id: string, patch: Partial<FirmLawyer>) =>
-    set({ lawyers: firm.lawyers.map((l) => (l.id === id ? { ...l, ...patch } : l)) })
-  const addLawyer = () =>
-    set({
-      lawyers: [
-        ...firm.lawyers,
-        { id: nextLawyerId(), name: '', oabNumber: '', oabVerified: false, area: '', bio: '', avatarUrl: '', linkedin: '' },
-      ],
-    })
-  const removeLawyer = (id: string) => set({ lawyers: firm.lawyers.filter((l) => l.id !== id) })
+  const convidar = async () => {
+    const email = convite.trim()
+    if (!email || convidando) return
+    setConvidando(true)
+    setConviteErro('')
+    try {
+      receber(await api.inviteFirmMember(email))
+      setConvite('')
+    } catch (e: unknown) {
+      setConviteErro(e instanceof Error ? e.message : 'Não foi possível convidar agora.')
+    } finally {
+      setConvidando(false)
+    }
+  }
 
-  const seatsUsed = firm.lawyers.length
-  const seatsPurchased = Math.max(FIRM_PRICING.includedSeats, seatsUsed)
-  const price = firmMonthlyPrice(seatsPurchased)
+  const removerMembro = async (m: FirmMember) => {
+    setConviteErro('')
+    try {
+      receber(await api.removeFirmMember(m))
+    } catch (e: unknown) {
+      setConviteErro(e instanceof Error ? e.message : 'Não foi possível remover agora.')
+    }
+  }
+
+  const seatsUsed = gestao.seats?.used ?? gestao.members.length
+  const seatsPurchased = gestao.seats?.purchased ?? Math.max(FIRM_PRICING.includedSeats, seatsUsed)
+  const price = gestao.monthlyPrice ?? firmMonthlyPrice(seatsPurchased)
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-paper-deep">
@@ -315,92 +341,101 @@ export default function FirmEditor() {
             Inclui {FIRM_PRICING.includedSeats} advogados; a partir do {FIRM_PRICING.includedSeats + 1}º,
             + R$ {FIRM_PRICING.extraSeatPrice}/mês por advogado. Exibidos em ordem alfabética.
           </p>
-          {lawyersInNeutralOrder(firm).map((l) => (
-            <LawyerEditor
-              key={l.id}
-              lawyer={l}
-              onChange={(patch) => setLawyer(l.id, patch)}
-              onRemove={() => removeLawyer(l.id)}
-            />
-          ))}
-          <button type="button" onClick={addLawyer} className="btn-ghost w-full border-dashed">
-            + Adicionar advogado
-          </button>
+          <p className="text-[12.5px] leading-relaxed text-ink-faint">
+            Cada advogado entra com a <strong>conta dele</strong> e cuida do próprio perfil. Se sair do
+            escritório, o perfil continua sendo dele — nada é apagado.
+          </p>
+
+          {gestao.members.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-ink/15 bg-paper-soft px-3 py-4 text-center text-[13px] text-ink-faint">
+              Ninguém no escritório ainda. Convide o primeiro advogado pelo e-mail dele.
+            </p>
+          ) : (
+            <ul className="grid gap-2">
+              {gestao.members.map((m) => (
+                <MemberRow key={`${m.kind}-${m.id}`} member={m} onRemove={() => removerMembro(m)} />
+              ))}
+            </ul>
+          )}
+
+          {/* Convite EM LINHA — sem tela sobreposta (ver components/ui/SubPage). */}
+          <div className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
+            <label htmlFor="convite-email" className="text-[12.5px] font-medium text-ink-soft">
+              Convidar advogado
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <input
+                id="convite-email"
+                type="email"
+                value={convite}
+                placeholder="email@doadvogado.adv.br"
+                onChange={(e) => setConvite(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void convidar()
+                  }
+                }}
+                className="min-w-[200px] flex-1 rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+              />
+              <button
+                type="button"
+                onClick={() => void convidar()}
+                disabled={!convite.trim() || convidando}
+                className="btn-primary !py-2 !px-4 text-[13px] disabled:opacity-50"
+              >
+                {convidando ? 'Convidando…' : 'Convidar'}
+              </button>
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-ink-faint">
+              Quem já tem conta recebe o convite no painel. Quem ainda não tem entra pelo cadastro com
+              esse mesmo e-mail e o convite aparece lá.
+            </p>
+            {conviteErro && (
+              <p role="alert" className="text-[12.5px] font-medium text-burgundy">
+                {conviteErro}
+              </p>
+            )}
+          </div>
         </Card>
       </div>
     </div>
   )
 }
 
-function LawyerEditor({
-  lawyer,
-  onChange,
-  onRemove,
-}: {
-  lawyer: FirmLawyer
-  onChange: (patch: Partial<FirmLawyer>) => void
-  onRemove: () => void
-}) {
+// Uma pessoa do escritório na visão de quem administra. É deliberadamente uma
+// linha de LEITURA: o conteúdo do perfil (bio, área, foto) pertence ao advogado e
+// se edita no editor dele, não aqui.
+function MemberRow({ member, onRemove }: { member: FirmMember; onRemove: () => void }) {
+  const dono = member.role === 'owner'
+  const convidado = member.status === 'invited'
   return (
-    <div className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
-      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-        <input
-          value={lawyer.name}
-          placeholder="Nome do advogado"
-          onChange={(e) => onChange({ name: e.target.value })}
-          aria-label="Nome do advogado"
-          className="rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-        />
-        <input
-          value={lawyer.oabNumber}
-          placeholder="OAB/SP 123.456"
-          onChange={(e) => onChange({ oabNumber: e.target.value })}
-          aria-label="Número da OAB do advogado"
-          className="rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-        />
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-ink/10 bg-paper-soft px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-medium text-ink">{member.name}</p>
+        <p className="truncate text-[12px] text-ink-faint">
+          {[member.oabNumber, member.area, member.email].filter(Boolean).join(' · ') || 'Sem dados ainda'}
+        </p>
       </div>
-      <input
-        value={lawyer.area}
-        placeholder="Área principal (ex.: Direito de Família)"
-        onChange={(e) => onChange({ area: e.target.value })}
-        aria-label="Área principal do advogado"
-        className="rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-      />
-      <textarea
-        rows={2}
-        value={lawyer.bio}
-        maxLength={280}
-        placeholder="Bio curta e sóbria — o que faz na área, sem promessas ou captação."
-        onChange={(e) => onChange({ bio: e.target.value })}
-        aria-label="Bio do advogado"
-        className="resize-none rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[14px] leading-relaxed focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-      />
-      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-        <input
-          value={lawyer.avatarUrl ?? ''}
-          placeholder="Foto (URL)"
-          onChange={(e) => onChange({ avatarUrl: e.target.value || undefined })}
-          aria-label="URL da foto do advogado"
-          className="rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[13px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-        />
-        <input
-          value={lawyer.linkedin ?? ''}
-          placeholder="LinkedIn (URL)"
-          onChange={(e) => onChange({ linkedin: e.target.value || undefined })}
-          aria-label="LinkedIn do advogado"
-          className="rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[13px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-        />
-      </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remover advogado"
-        className="inline-flex items-center gap-1.5 justify-self-start rounded-lg border border-ink/10 px-2.5 py-1.5 text-[12px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:bg-burgundy/[0.06] hover:text-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/20"
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+          convidado ? 'bg-brass/15 text-brass-deep' : 'bg-ink/[0.06] text-ink-faint'
+        }`}
       >
-        <TrashIcon width={13} height={13} />
-        Remover
-      </button>
-    </div>
+        {dono ? 'Responsável' : convidado ? 'Convite enviado' : 'No escritório'}
+      </span>
+      {!dono && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={convidado ? `Cancelar convite de ${member.name}` : `Remover ${member.name} do escritório`}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-ink/10 px-2.5 py-1.5 text-[12px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:bg-burgundy/[0.06] hover:text-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/20"
+        >
+          <TrashIcon width={13} height={13} />
+          {convidado ? 'Cancelar' : 'Remover'}
+        </button>
+      )}
+    </li>
   )
 }
 
