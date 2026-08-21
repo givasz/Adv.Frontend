@@ -140,7 +140,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
     key: 'video',
     plan: 'premium',
     title: 'Vídeo de apresentação',
-    body: 'Um vídeo curto seu no fim do perfil. Ver e ouvir a pessoa aproxima mais do que qualquer texto.',
+    body: 'Um vídeo curto seu no fim do perfil — ver e ouvir a pessoa aproxima mais que texto. Você envia ao YouTube (tem passo a passo) e cola o link aqui.',
     to: '/editor?section=video',
     cta: 'Colar meu link',
     done: (p) => !!parseVideoUrl(p.videoUrl),

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { parseVideoUrl, VIDEO_CAPTION_MAX } from '@/lib/video'
@@ -6,6 +8,7 @@ import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { Card, Field, TextInput } from './fields'
 import { InfoTip } from './InfoTip'
 import { MarginNotes } from './MarginNotes'
+import { ChevronDown, ExternalLinkIcon, PlayIcon } from '@/components/ui/icons'
 
 // Vídeo de apresentação (Max): o advogado cola um link de YouTube ou Vimeo e ele
 // aparece no fim do perfil. Sem upload — ver lib/video.ts para o porquê.
@@ -38,8 +41,12 @@ export function VideoCard({
     <Card title="Vídeo de apresentação">
       <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
         Um vídeo curto em que você se apresenta ou explica um tema aparece no fim do seu perfil.
-        Cole o link do YouTube ou do Vimeo — o vídeo continua hospedado lá.
+        <span className="font-medium text-ink-soft"> Não é upload:</span> o vídeo fica no
+        <span className="font-medium text-ink-soft"> YouTube</span> (ou no Vimeo) e aqui você cola o
+        link. Assim ele não pesa no seu perfil e continua seu, na sua conta.
       </p>
+
+      {!preview && <ComoFazer />}
 
       <Field
         label="Link do vídeo"
@@ -103,5 +110,113 @@ export function VideoCard({
         </>
       )}
     </Card>
+  )
+}
+
+// Passo a passo de quem NUNCA subiu vídeo. Fica dentro do próprio card, aberto
+// por um clique — a dúvida aparece aqui, a resposta tem de aparecer aqui também.
+//
+// O passo da VISIBILIDADE é o motivo de este texto existir: "Não listado" toca
+// normalmente no perfil, "Privado" NÃO toca. Quem escolhe privado acha que
+// escondeu o vídeo do YouTube e na verdade quebrou o próprio perfil — e não tem
+// como descobrir isso sozinho.
+function ComoFazer() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="rounded-lg border border-brass/30 bg-brass/[0.06]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3.5 py-3 text-left"
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brass/20 text-brass-deep">
+          <PlayIcon width={13} height={13} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-brass-deep">
+            Nunca subiu um vídeo? Veja como
+          </span>
+          <span className="block text-[11.5px] leading-snug text-ink-faint">
+            Em 5 passos, do celular ao link colado aqui.
+          </span>
+        </span>
+        <ChevronDown
+          width={16}
+          height={16}
+          className={`shrink-0 text-brass-deep transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <ol className="space-y-3 border-t border-brass/25 px-3.5 py-3.5">
+              <Passo n={1} titulo="Grave no celular mesmo">
+                Um a dois minutos bastam. Luz na frente do rosto (janela serve), celular apoiado, e
+                fale como falaria na primeira conversa: quem você é, onde atua e como trabalha.
+              </Passo>
+              <Passo n={2} titulo="Envie para o YouTube">
+                No computador, abra{' '}
+                <a
+                  href="https://www.youtube.com/upload"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1 font-semibold text-burgundy underline underline-offset-2"
+                >
+                  youtube.com/upload
+                  <ExternalLinkIcon width={11} height={11} />
+                </a>{' '}
+                e entre com a sua conta Google. No celular: app do YouTube → <b>+ Criar</b> →{' '}
+                <b>Enviar vídeo</b>. É gratuito.
+              </Passo>
+              <Passo n={3} titulo="Dê um título simples">
+                “Apresentação — seu nome, advogado(a) em sua cidade”. Sem promessa de resultado, sem
+                “o melhor”: valem as mesmas regras do resto do perfil.
+              </Passo>
+              <Passo n={4} titulo="Escolha “Não listado” na visibilidade">
+                <b>Não listado</b> = só quem tem o link vê, e ele funciona normalmente aqui no seu
+                perfil — é a escolha mais comum. <b>Público</b> também funciona (aparece nas buscas
+                do YouTube).{' '}
+                <span className="font-semibold text-burgundy-deep">
+                  Não escolha “Privado”: o vídeo deixa de tocar no seu perfil.
+                </span>
+              </Passo>
+              <Passo n={5} titulo="Copie o link e cole aqui em cima">
+                No vídeo publicado, clique em <b>Compartilhar</b> e copie o endereço (fica parecido
+                com <span className="whitespace-nowrap font-mono text-[11.5px]">youtu.be/AbC123</span>).
+                Cole no campo acima — a prévia aparece na hora.
+              </Passo>
+            </ol>
+            <p className="border-t border-brass/25 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-ink-faint">
+              Prefere o Vimeo? Funciona igual: envie por lá e cole o link{' '}
+              <span className="whitespace-nowrap font-mono text-[11.5px]">vimeo.com/123456789</span>.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function Passo({ n, titulo, children }: { n: number; titulo: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brass/25 text-[11px] font-bold tabular-nums text-brass-deep">
+        {n}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[12.5px] font-semibold text-ink">{titulo}</span>
+        <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-soft">{children}</span>
+      </span>
+    </li>
   )
 }

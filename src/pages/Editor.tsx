@@ -119,7 +119,7 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   },
   video: {
     title: 'Seu vídeo',
-    subtitle: 'Um vídeo curto de apresentação, no fim do seu perfil.',
+    subtitle: 'Um vídeo curto de apresentação no fim do perfil — do YouTube ou do Vimeo.',
   },
   conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },

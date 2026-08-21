@@ -334,7 +334,7 @@ export default function Painel() {
           <DiscoverCard
             to="/editor?section=video"
             title="Seu vídeo"
-            desc="Um vídeo curto de apresentação no fim do perfil."
+            desc="Cole um link do YouTube ou Vimeo — tem um passo a passo lá dentro."
             icon={PlayIcon}
           />
           <DiscoverCard
