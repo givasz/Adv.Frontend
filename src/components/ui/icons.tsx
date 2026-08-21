@@ -237,6 +237,16 @@ export const DocIcon = (p: IconProps) => (
   </svg>
 )
 
+// Bandeira — símbolo universal de "denunciar". Traço fino e sem preenchimento:
+// o canal de denúncia é discreto de propósito (fica no rodapé do perfil), então o
+// ícone tem de sinalizar sem virar alarme na página de outra pessoa.
+export const FlagIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6 21V4.4" />
+    <path d="M6 5.2h11.4l-2 3.3 2 3.3H6" />
+  </svg>
+)
+
 export const ShieldIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 3.2 5.5 6v5.6c0 4 2.7 7.5 6.5 9.2 3.8-1.7 6.5-5.2 6.5-9.2V6z" />

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { api } from '@/lib/api'
 import { REPORT_GUIDELINES, REPORT_REASONS } from '@/lib/reportReasons'
 import type { ReportReason } from '@/lib/types'
-import { CheckIcon, ScaleIcon, XIcon } from '@/components/ui/icons'
+import { CheckIcon, FlagIcon, XIcon } from '@/components/ui/icons'
 
 interface ReportDialogProps {
   slug: string
@@ -56,8 +56,11 @@ export function ReportDialog({ slug, name, onClose }: ReportDialogProps) {
         {/* Cabeçalho */}
         <div className="flex items-start justify-between gap-3 border-b border-ink/10 px-5 py-4">
           <div className="flex items-center gap-2.5">
+            {/* A MESMA bandeira do link que abriu esta janela: clicou numa bandeira,
+                abriu uma bandeira. A balança aqui era a marca da plataforma, não o
+                assunto da tela. */}
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
-              <ScaleIcon width={18} height={18} />
+              <FlagIcon width={17} height={17} />
             </span>
             <div>
               <h2 className="font-display text-[16px] font-semibold text-ink">Denunciar perfil</h2>

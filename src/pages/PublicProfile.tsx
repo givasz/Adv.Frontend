@@ -9,7 +9,7 @@ import { ProfileView } from '@/components/profile/ProfileView'
 import { ReportDialog } from '@/components/profile/ReportDialog'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { OwnerBar } from '@/components/profile/OwnerBar'
-import { ScaleIcon } from '@/components/ui/icons'
+import { FlagIcon, ScaleIcon } from '@/components/ui/icons'
 
 export default function PublicProfile() {
   const { slug = '' } = useParams()
@@ -132,9 +132,13 @@ export default function PublicProfile() {
         <button
           type="button"
           onClick={() => setReporting(true)}
-          className="text-[11.5px] font-medium text-ink-faint/70 underline-offset-2 transition-colors hover:text-burgundy hover:underline"
+          className="group inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink-faint/70 transition-colors hover:text-burgundy"
         >
-          Denunciar este perfil
+          {/* O sublinhado fica no TEXTO, não no botão: com o ícone dentro de um
+              inline-flex, sublinhar o container arrastaria o traço por baixo da
+              bandeira também. */}
+          <FlagIcon width={12} height={12} strokeWidth={1.9} aria-hidden />
+          <span className="underline-offset-2 group-hover:underline">Denunciar este perfil</span>
         </button>
       </div>
 
