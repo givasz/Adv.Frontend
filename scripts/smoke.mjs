@@ -12,6 +12,7 @@ import { chromium } from 'playwright'
 
 const BASE = process.argv[2] ?? 'http://localhost:5173'
 const SLUG = 'marina-sales' // perfil-modelo do mock
+const FIRM_SLUG = 'andrade-vieira' // escritório-modelo do mock
 
 // Sessão de mentira + rascunho PUBLICADO, para as rotas que exigem conta.
 // O rascunho é essencial: sem `published: true` o painel desvia para /comecar e a
@@ -63,6 +64,8 @@ const ROTAS = [
   ['/assinar/pro', 'checkout'],
   ['/legal', 'documentos legais'],
   ['/legal/termos', 'termos'],
+  ['/escritorio/editar', 'escritório · editor'],
+  [`/escritorio/${FIRM_SLUG}`, 'escritório · página'],
   [`/${SLUG}`, 'perfil público'],
   [`/${SLUG}/agendar`, 'perfil · agendar'],
   [`/${SLUG}/denunciar`, 'perfil · denunciar'],

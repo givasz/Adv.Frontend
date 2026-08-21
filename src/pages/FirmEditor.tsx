@@ -23,6 +23,7 @@ const UF_LIST = [
 export default function FirmEditor() {
   const [firm, setFirm] = useState<Firm | null>(null)
   const [saved, setSaved] = useState(true)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     document.title = 'Editor do escritório · advoc.me'
@@ -34,12 +35,18 @@ export default function FirmEditor() {
     if (!firm || !firm.name.trim()) return
     setSaved(false)
     const t = setTimeout(() => {
-      api.saveFirm(firm).then((s) => {
-        setSaved(true)
-        if (s?.slug && s.slug !== firm.slug) {
-          setFirm((p) => (p ? { ...p, slug: s.slug } : p))
-        }
-      })
+      api
+        .saveFirm(firm)
+        .then((s) => {
+          setSaved(true)
+          setSaveError('')
+          if (s?.slug && s.slug !== firm.slug) {
+            setFirm((p) => (p ? { ...p, slug: s.slug } : p))
+          }
+        })
+        .catch((e: unknown) => {
+          setSaveError(e instanceof Error ? e.message : 'Não foi possível salvar agora.')
+        })
     }, 700)
     return () => clearTimeout(t)
   }, [firm])
@@ -91,8 +98,17 @@ export default function FirmEditor() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-[12px] text-ink-faint sm:inline" aria-live="polite">
-              {!firm.name.trim() ? 'Dê um nome à sociedade' : saved ? 'Tudo salvo' : 'Salvando…'}
+            <span
+              className={`hidden text-[12px] sm:inline ${saveError ? 'text-burgundy' : 'text-ink-faint'}`}
+              aria-live="polite"
+            >
+              {saveError
+                ? 'Não salvo'
+                : !firm.name.trim()
+                  ? 'Dê um nome à sociedade'
+                  : saved
+                    ? 'Tudo salvo'
+                    : 'Salvando…'}
             </span>
             {firm.slug && (
               <Link to={`/escritorio/${firm.slug}`} target="_blank" className="btn-primary !py-2 !px-4 text-[13px]">
@@ -105,6 +121,14 @@ export default function FirmEditor() {
       </header>
 
       <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        {saveError && (
+          <p
+            role="alert"
+            className="rounded-xl2 border border-burgundy/25 bg-burgundy/[0.06] px-4 py-3 text-[13px] text-burgundy"
+          >
+            {saveError}
+          </p>
+        )}
         <div className="rounded-xl2 border border-brass/25 bg-brass/[0.06] px-4 py-3 text-[13px] text-ink-soft">
           <span className="font-semibold text-brass-deep">Plano Escritório.</span> Página institucional
           da sociedade + um perfil para cada advogado. O grid é sempre <strong>alfabético</strong> (sem

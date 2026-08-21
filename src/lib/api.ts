@@ -38,6 +38,22 @@ export interface SlugCheck {
 
 const STORAGE_KEY = 'advocme:profile:draft'
 const FIRM_KEY = 'advocme:firm:draft'
+
+// Traduz a falha do PUT /firms/me para uma frase que o dono entende. O corpo do
+// Nest ({ message }) é útil no 400 de conformidade; nos demais casos é ruído.
+function firmErrorMessage(status: number, body: string): string {
+  if (status === 401 || status === 403) {
+    return 'Sua sessão expirou. Entre de novo para continuar editando o escritório.'
+  }
+  try {
+    const parsed = JSON.parse(body) as { message?: string | string[] }
+    const msg = Array.isArray(parsed.message) ? parsed.message[0] : parsed.message
+    if (msg) return msg
+  } catch {
+    /* corpo não-JSON → mensagem genérica */
+  }
+  return 'Não foi possível salvar o escritório agora. Tente de novo em instantes.'
+}
 const BOOKINGS_KEY = 'advocme:bookings'
 // Histórico local da conferência de OAB (espelha OabVerificationEvent no backend).
 const OAB_EVENTS_KEY = 'advocme:oab:events'
@@ -423,6 +439,12 @@ export const api = {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(firm),
       })
+      // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
+      // "Tudo salvo": o corpo de erro não é um Firm.
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        throw new Error(firmErrorMessage(res.status, detail))
+      }
       return res.json()
     }
     await wait(200)
