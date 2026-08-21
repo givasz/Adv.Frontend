@@ -733,6 +733,10 @@ function IdentitySection({
             placeholder="Advogada · Direito de Família"
           />
         </Field>
+        {/* A linha mais visível do perfil depois do nome — e a última a ganhar
+            revisão ao vivo. Um "o melhor criminalista da cidade" aqui é tão
+            irregular quanto na bio. */}
+        <MarginNotes issues={checkCompliance(profile.headline)} />
         <button
           type="button"
           onClick={() => onAi({ kind: 'headline' })}
@@ -760,6 +764,7 @@ function IdentitySection({
             placeholder="Atendimento em toda a Grande SP"
           />
         </Field>
+        <MarginNotes issues={checkCompliance(profile.regionNote ?? '')} />
         <div className="flex gap-6">
           <Toggle
             checked={profile.serviceMode.inPerson}
@@ -1091,6 +1096,9 @@ function AreaEditor({
           onFix={(v) => onChange({ description: v })}
         />
       </div>
+      {/* Nome e descrição conferidos juntos: são um bloco só na leitura de quem
+          visita, e separar daria dois avisos para o mesmo problema. */}
+      <MarginNotes issues={checkCompliance(`${area.label} ${area.description}`)} />
       <button
         type="button"
         onClick={onRemove}

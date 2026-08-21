@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { AssistantChat } from '@/components/profile/AssistantChat'
+import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, WhatsappIcon } from '@/components/ui/icons'
 
 // Agendar uma conversa — /:slug/agendar.
@@ -170,9 +171,12 @@ export default function SchedulePage() {
             Este perfil ainda não informou um WhatsApp.
           </p>
         ) : (
-          <p className="text-center text-[11.5px] leading-relaxed text-ink-faint">
-            Contato informativo. Nenhuma orientação jurídica é prestada antes da análise do caso.
-          </p>
+          <>
+            <p className="text-center text-[11.5px] leading-relaxed text-ink-faint">
+              Contato informativo. Nenhuma orientação jurídica é prestada antes da análise do caso.
+            </p>
+            <PrivacyNote fluxo="formulario" className="text-center" />
+          </>
         )}
       </div>
     </SubPage>

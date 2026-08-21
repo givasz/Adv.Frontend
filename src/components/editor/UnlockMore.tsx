@@ -30,7 +30,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     id: 'premium',
     tier: 'Max',
     price: 'R$ 39',
-    pitch: 'Sua marca e sua autoridade, sem limites.',
+    pitch: 'Vídeo, marca própria e o perfil por inteiro.',
     items: [
       'Até 5 perguntas frequentes no perfil',
       'Vídeo de apresentação',

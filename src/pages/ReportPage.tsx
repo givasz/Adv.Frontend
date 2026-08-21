@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { REPORT_GUIDELINES, REPORT_REASONS } from '@/lib/reportReasons'
 import type { ReportReason } from '@/lib/types'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
+import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { CheckIcon, FlagIcon, XIcon } from '@/components/ui/icons'
 
 // Denúncia de um perfil — /:slug/denunciar.
@@ -195,6 +196,7 @@ export default function ReportPage() {
         />
 
         <p className="mt-3 text-[11.5px] leading-relaxed text-ink-faint">{REPORT_GUIDELINES.outcome}</p>
+        <PrivacyNote fluxo="denuncia" className="mt-2" />
       </div>
 
       {error && (

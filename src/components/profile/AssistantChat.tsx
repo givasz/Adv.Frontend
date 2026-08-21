@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { Avatar } from '@/components/ui/Avatar'
+import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import {
   Bubble,
@@ -441,6 +442,12 @@ export function AssistantChat({
           </motion.div>
         </AnimatePresence>
 
+        {/* O aviso de privacidade entra só quando a conversa começa a PEDIR dado
+            pessoal (assunto e nome). Mostrá-lo desde o "escolha um dia" seria
+            ruído; escondê-lo na etapa do assunto seria pedir sem avisar. */}
+        {(step === 'detail' || step === 'name' || ready) && (
+          <PrivacyNote fluxo="assistente" tone="themed" className="mt-2.5 text-center" />
+        )}
         <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
           Assistente automático. Não presta orientação jurídica e não confirma o horário —
           quem confirma é {first || 'o(a) advogado(a)'}.

@@ -1,6 +1,8 @@
 import type { Branding, Plan } from '@/lib/types'
 import { BRAND_HOST } from '@/lib/publicUrl'
+import { checkCompliance } from '@/lib/oab'
 import { Card, Field, TextInput, Toggle } from './fields'
+import { MarginNotes } from './MarginNotes'
 import { GlobeIcon, LockIcon } from '@/components/ui/icons'
 
 // Identidade própria (white-label) — recurso do plano Premium/Escritório. Domínio
@@ -45,6 +47,9 @@ export function BrandingCard({
           placeholder="Silva & Associados"
         />
       </Field>
+      {/* O nome vai para o rodapé do perfil PÚBLICO — logo, é publicidade, e passa
+          pela mesma régua do resto. */}
+      <MarginNotes issues={checkCompliance(b.brandName ?? '')} />
 
       {/* Domínio próprio ainda NÃO existe. Enquanto não existir, esta caixa diz a
           verdade e serve de lista de espera — o endereço que a pessoa digita fica

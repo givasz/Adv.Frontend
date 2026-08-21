@@ -40,7 +40,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         paragraphs: [
           'Esta Política explica como a plataforma advoc.me ("advoc.me", "nós") trata dados pessoais de advogados que criam perfis e de visitantes que os acessam. O tratamento observa a Lei nº 13.709/2018 (LGPD).',
-          'Importante: cada advogado é controlador dos dados de seus próprios clientes/contatos recebidos por seus canais (WhatsApp, e-mail, agendamento). Para esse tratamento, vale a política do próprio advogado — o advoc.me atua apenas como meio de contato.',
+          'Se você é VISITANTE de um perfil: o advoc.me não recebe nem guarda o que você escreve para falar com o advogado. O assistente e o formulário de contato apenas montam a mensagem, que sai do seu próprio aparelho direto para o WhatsApp dele. A partir daí, quem trata seus dados é o advogado, como controlador, sob a política dele.',
         ],
       },
       {
@@ -49,6 +49,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Cadastro do advogado: e-mail e senha (armazenada apenas como hash), e os dados que você publica no perfil (nome, número de OAB, cidade/UF, áreas, bio, links de contato).',
           'Uso: métricas agregadas de visitas e cliques do seu perfil (analytics), sem identificar o visitante.',
           'Denúncias: motivo, descrição e, se o denunciante quiser, um e-mail para retorno (opcional).',
+          'De quem visita um perfil: fora a denúncia acima (que só existe se você optar por enviá-la) e a contagem agregada de visitas, nada. Pedidos de contato e agendamento não chegam até nós — a mensagem vai do seu aparelho direto ao WhatsApp do advogado, e não registramos quem falou com quem nem sobre o quê.',
         ],
       },
       {
@@ -179,13 +180,13 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '1. Papéis',
         paragraphs: [
-          'O advoc.me é controlador dos dados necessários para operar a plataforma (conta, perfil, moderação). Quanto aos contatos que cada advogado recebe pelos seus canais, o advogado é o controlador, e o advoc.me atua como simples meio.',
+          'O advoc.me é controlador dos dados necessários para operar a plataforma (conta, perfil, moderação). Os contatos que cada advogado recebe pelos canais dele não passam por nós: a mensagem vai do aparelho do visitante para o WhatsApp do advogado, que é o único controlador desses dados.',
         ],
       },
       {
         heading: '2. Minimização',
         paragraphs: [
-          'Coletamos o mínimo necessário. A trilha de auditoria guarda apenas o conteúdo público (ex.: snapshot da bio), o status de conformidade e a versão da política — não dados sensíveis.',
+          'Coletamos o mínimo necessário. A trilha de auditoria guarda apenas o conteúdo público (ex.: snapshot da bio), o status de conformidade e a versão da política — não dados sensíveis. A agenda que guardava nome, WhatsApp e o assunto de quem procurava um advogado foi retirada do produto justamente por concentrar dado de terceiro sem necessidade.',
         ],
       },
       {

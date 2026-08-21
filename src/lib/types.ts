@@ -117,7 +117,12 @@ export interface AssistantConfig {
   greeting?: string
 }
 
-/** Configuração da agenda nativa (disponibilidade do advogado). */
+/**
+ * Configuração da grade de atendimento. Nasceu para a agenda-calendário, que foi
+ * REMOVIDA — ela guardava nome, WhatsApp e o assunto do visitante no nosso banco,
+ * sem tela que a usasse e sem aviso de privacidade. O que sobrou aqui é só a
+ * preferência do advogado, ainda lida pelo assistente.
+ */
 export interface BookingConfig {
   /** dias da semana atendidos — 0=domingo … 6=sábado */
   weekdays: number[]
@@ -133,29 +138,6 @@ export interface BookingConfig {
   horizonDays: number
 }
 
-export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
-
-/** Uma solicitação de consulta na agenda nativa. */
-export interface Booking {
-  id: string
-  clientName: string
-  clientWhats: string // só dígitos
-  note?: string
-  /** ISO — início do horário escolhido */
-  startAt: string
-  /** ISO — fim do horário (startAt + slotMin) */
-  endAt: string
-  status: BookingStatus
-  createdAt: string
-}
-
-/** Resposta pública de disponibilidade — config + horários já ocupados. */
-export interface Availability {
-  mode: SchedulingMode
-  config: BookingConfig
-  /** ISO dos horários ocupados (pending/confirmed futuros) */
-  busy: string[]
-}
 
 export interface ServiceMode {
   inPerson: boolean

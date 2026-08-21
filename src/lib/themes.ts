@@ -14,10 +14,17 @@
 //    display (e às vezes de corpo); trocar de tema muda a VOZ do perfil, não só o
 //    matiz. Fontes carregadas em index.html; o navegador só baixa a do tema em uso.
 //
-// A escada por plano continua legível:
-//   free    → chapado, uma cor, sem metal (limpo, "de entrada")
+// A escada por plano continua legível — e é ESCADA DE OFÍCIO, não de ostentação:
+//   free    → chapado, uma cor, sem relevo (limpo, "de entrada")
 //   pro     → paleta encorpada + um traço estrutural forte, ainda chapado
-//   premium → fundo dramático (escuro/mármore) + foil metálico animado + vidro
+//   premium → fundo de maior contraste, superfície de vidro e nome em relevo
+//
+// O que os temas de topo entregam é GRAVIDADE (contraste, tipografia de alto
+// contraste, filete duplo, versalete), não brilho. O relevo do nome é estático de
+// propósito: a varredura metálica animada saiu em 2026-08-21 — ver .foil no
+// index.css. Nomes e descrições evitam vocabulário de luxo ("ouro", "déco",
+// "mármore"): a peça é a mesma, mas a divulgação de advogado tem de primar pela
+// discrição (Prov. 205/2021, Art. 3º caput), e isso vale para como NÓS a vendemos.
 
 export type ThemeId =
   | 'papel'
@@ -299,7 +306,7 @@ export const THEMES: Theme[] = [
     name: 'Meia-noite',
     tier: 'premium',
     dark: true,
-    blurb: 'Navy gradiente e vidro, com serifa de alto contraste em foil.',
+    blurb: 'Fundo azul-noite e serifa de alto contraste — leitura calma no escuro.',
     swatch: { bg: '#0f1420', accent: '#e0c088', text: '#eef1f8' },
     style: {
       tile: 'glass',
@@ -338,10 +345,10 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'obsidian',
-    name: 'Obsidiana',
+    name: 'Grafite',
     tier: 'premium',
     dark: true,
-    blurb: 'Preto absoluto e bronze, display contemporâneo em caixa alta.',
+    blurb: 'Preto profundo e tipografia contemporânea em caixa alta.',
     swatch: { bg: '#0c0c0d', accent: '#c9a888', text: '#ece7df' },
     style: {
       tile: 'glass',
@@ -376,11 +383,15 @@ export const THEMES: Theme[] = [
     },
   },
   {
+    // ⚠️ O id continua 'marmore' de propósito: ele está gravado nos perfis que já
+    // escolheram este tema, e `resolveTheme` derruba id desconhecido para o neutro
+    // — renomear a chave apagaria a escolha dessas pessoas em silêncio. Só o nome
+    // exibido e a descrição mudaram, para sair do vocabulário de luxo.
     id: 'marmore',
-    name: 'Mármore',
+    name: 'Ofício',
     tier: 'premium',
     dark: false,
-    blurb: 'Mármore e ouro, Playfair em caixa alta — déco, cantos vivos.',
+    blurb: 'Papel claro, cantos vivos e caixa alta — ar de papel timbrado.',
     swatch: { bg: '#f4f1ea', accent: '#7d6229', text: '#23201b' },
     style: {
       tile: 'outline',

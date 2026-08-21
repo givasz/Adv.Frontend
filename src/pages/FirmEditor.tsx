@@ -68,9 +68,14 @@ export default function FirmEditor() {
     return () => clearTimeout(t)
   }, [firm, receber])
 
+  // O NOME da sociedade também é conferido: é a maior linha da página institucional,
+  // e o servidor recusa salvar se tiver termo vedado (ver firms.service.ts). Fica em
+  // um apontamento SEPARADO para o aviso aparecer junto do campo que o causou — um
+  // alerta no cartão "Apresentação" sobre um problema no nome mandaria a pessoa
+  // procurar no lugar errado.
+  const nameIssues = useMemo(() => checkCompliance(firm?.name || ''), [firm?.name])
   const issues = useMemo(
-    () =>
-      firm ? [firm.tagline, firm.about].flatMap((t) => checkCompliance(t || '')) : [],
+    () => (firm ? [firm.tagline, firm.about].flatMap((t) => checkCompliance(t || '')) : []),
     [firm],
   )
 
@@ -178,6 +183,7 @@ export default function FirmEditor() {
               }}
             />
           </Field>
+          <ComplianceHint issues={nameIssues} />
           <div className="grid grid-cols-[1fr_88px] gap-3">
             <Field label="Registro da sociedade na OAB" hint="≠ OAB individual">
               <TextInput

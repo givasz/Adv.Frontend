@@ -11,10 +11,13 @@ import { CheckIcon } from '@/components/ui/icons'
 
 const ORDER: Plan[] = ['pro', 'premium', 'free']
 
+// O pitch DESCREVE o que o plano acrescenta ao perfil. Nada de "receba clientes"
+// ou "ganhe autoridade": vender captação para advogado é oferecer justamente o que
+// o Prov. 205/2021 veda a ele — e é a frase que uma fiscalização citaria primeiro.
 const PITCH: Record<Plan, string> = {
   free: 'Seu perfil profissional no ar.',
-  pro: 'Receba clientes e ganhe alcance.',
-  premium: 'Sua marca e autoridade, sem limites.',
+  pro: 'Agendamento e perguntas frequentes no perfil.',
+  premium: 'O perfil com a sua identidade visual.',
 }
 const PRICE: Record<Plan, string> = { free: 'R$ 0', pro: 'R$ 19', premium: 'R$ 39' }
 

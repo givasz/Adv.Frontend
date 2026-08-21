@@ -120,8 +120,10 @@ export default function PublicProfile() {
       <ShareBar slug={profile.slug} name={profile.name} topOffset={barsHeight} />
       <ProfileView profile={profile} owner={isOwner} />
 
-      {/* Denúncia — canal discreto de conformidade (Prov. 205/2021) */}
-      <div className="flex justify-center pb-10 pt-2">
+      {/* Rodapé da PLATAFORMA (não do advogado): denúncia e privacidade. Discretos
+          de propósito — mas presentes, porque quem chega aqui pode escrever para o
+          advogado sem nunca ter visto uma linha nossa sobre dados. */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-10 pt-2">
         <Link
           to={`/${profile.slug}/denunciar`}
           className="group inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink-faint/70 transition-colors hover:text-burgundy"
@@ -131,6 +133,12 @@ export default function PublicProfile() {
               bandeira também. */}
           <FlagIcon width={12} height={12} strokeWidth={1.9} aria-hidden />
           <span className="underline-offset-2 group-hover:underline">Denunciar este perfil</span>
+        </Link>
+        <Link
+          to="/legal/privacidade"
+          className="text-[11.5px] font-medium text-ink-faint/70 underline-offset-2 transition-colors hover:text-burgundy hover:underline"
+        >
+          Privacidade
         </Link>
       </div>
 

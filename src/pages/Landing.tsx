@@ -405,7 +405,7 @@ export default function Landing() {
             name="Pro"
             price="R$ 19"
             period="/mês"
-            pitch="Receba clientes e acompanhe seu alcance."
+            pitch="Agendamento e perguntas frequentes no perfil."
             featured
             ctaTo="/comecar?plan=pro"
             ctaLabel="Assinar Pro"
@@ -422,7 +422,7 @@ export default function Landing() {
             name="Max"
             price="R$ 39"
             period="/mês"
-            pitch="Sua marca, seu domínio, sua autoridade."
+            pitch="Vídeo, marca própria e o perfil por inteiro."
             ctaTo="/comecar?plan=premium"
             ctaLabel="Assinar Max"
             features={[
@@ -471,10 +471,10 @@ export default function Landing() {
         <h2 className="font-display text-3xl font-semibold sm:text-5xl">
           Uma presença digital
           <br />
-          <span className="italic text-burgundy">à altura da sua toga.</span>
+          <span className="italic text-burgundy">que respeita a profissão.</span>
         </h2>
         <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
-          Comece grátis. Construa autoridade com sobriedade e a segurança de estar dentro das normas.
+          Comece grátis. Um perfil sóbrio, claro e conferido antes de ir ao ar.
         </p>
         <Link
           to={meu.to}
