@@ -9,6 +9,7 @@ import {
 import { sampleProfile } from './mockData'
 import type { Profile } from './types'
 import { FAQ_LIMIT } from './plans'
+import { DEFAULT_CARD } from './cardArt'
 
 // Perfil recém-publicado no Free: só o essencial do onboarding.
 const base: Profile = {
@@ -16,6 +17,7 @@ const base: Profile = {
   slug: 'marina-sales-4827',
   faqs: [],
   branding: undefined,
+  card: undefined,
   schedulingMode: 'off',
   theme: 'papel',
   plan: 'free',
@@ -74,7 +76,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .filter((k) => !featuresPending(pro).some((f) => f.key === k))
     // Sem 'dominio': o recurso saiu do checklist enquanto a plataforma não tem
     // domínio próprio no ar (ver planFeatures.ts).
-    expect(novos.sort()).toEqual(['faq_max', 'marca', 'video'])
+    expect(novos.sort()).toEqual(['cartao', 'faq_max', 'marca', 'video'])
   })
 
   it('o FAQ começa no Pro e ganha um degrau no Max', () => {
@@ -107,6 +109,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
         { id: 'c', label: 'Consumidor', description: '' },
       ],
       branding: { brandName: 'Sales Advocacia', customDomain: 'marinasales.adv.br' },
+      card: DEFAULT_CARD,
     }
     expect(featuresPending(completo)).toHaveLength(0)
     const { done, total } = featureProgress(completo)

@@ -23,6 +23,7 @@ import {
   NAME_MAX,
   canUseFaq,
   canUseDigitalCard,
+  canUsePrintCard,
   canUseScheduling,
   canUseVideo,
 } from '@/lib/plans'
@@ -49,6 +50,7 @@ import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { DigitalCard } from '@/components/editor/DigitalCard'
+import { CARD_PREVIEW, CardStudio } from '@/components/editor/CardStudio'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upsellBits'
 import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
@@ -75,6 +77,7 @@ type SectionId =
   | 'conteudo'
   | 'analytics'
   | 'qrcode'
+  | 'cartao'
   | 'plano'
 
 let uid = 0
@@ -121,6 +124,10 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
   analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
   qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
+  cartao: {
+    title: 'Seu cartão de visita',
+    subtitle: 'A arte do seu cartão, pronta para levar à gráfica.',
+  },
   plano: { title: 'Seu plano', subtitle: 'Troque quando quiser. Mais recursos, mais alcance.' },
 }
 
@@ -549,6 +556,18 @@ export default function Editor() {
                   // endereço limpo que ele passaria a ter, que é metade do apelo.
                   <LockedFeature unlockPlan="pro" onOpen={() => abrirUpsell('qrcode')}>
                     <DigitalCard profile={{ ...profile, slug: slugify(profile.name) || profile.slug }} />
+                  </LockedFeature>
+                ))}
+
+              {section === 'cartao' &&
+                (canUsePrintCard(profile.plan) ? (
+                  <CardStudio profile={profile} set={set} />
+                ) : (
+                  // Igual ao FAQ e ao vídeo: a seção continua no lugar, com o
+                  // cartão REAL dele borrado sob o cadeado. Ver o próprio nome no
+                  // papel é o que faz querer.
+                  <LockedFeature unlockPlan="premium" onOpen={() => abrirUpsell('cartao')}>
+                    <CardStudio profile={{ ...profile, card: CARD_PREVIEW }} set={() => {}} preview />
                   </LockedFeature>
                 ))}
 

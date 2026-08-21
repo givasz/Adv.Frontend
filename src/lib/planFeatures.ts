@@ -126,6 +126,15 @@ export const PLAN_FEATURES: PlanFeature[] = [
     done: (p) => (p.faqs ?? []).length > FAQ_LIMIT.pro,
   },
   {
+    key: 'cartao',
+    plan: 'premium',
+    title: 'Cartão de visita pronto para a gráfica',
+    body: 'A arte do seu cartão sai daqui em PDF, com frente, verso e o QR que abre o seu perfil. É só levar à gráfica.',
+    to: '/editor?section=cartao',
+    cta: 'Montar meu cartão',
+    done: (p) => !!p.card,
+  },
+  {
     key: 'video',
     plan: 'premium',
     title: 'Vídeo de apresentação',

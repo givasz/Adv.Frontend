@@ -224,6 +224,16 @@ export const QrIcon = (p: IconProps) => (
   </svg>
 )
 
+// Cartão impresso: um retângulo na proporção do papel (90 × 50 mm) com as linhas
+// do timbre. Precisa não virar o mesmo desenho do QR ao lado dele na grade.
+export const CardIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="2.5" y="5.5" width="19" height="13" rx="1.5" />
+    <path d="M6 10h7M6 13.5h4.5" />
+    <path d="M15.5 9.5h3.5v3.5h-3.5z" />
+  </svg>
+)
+
 export const MedalIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="9" r="5.5" />

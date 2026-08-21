@@ -163,6 +163,7 @@ export interface PublicTextSource {
   faqs?: { question?: string | null; answer?: string | null }[] | null
   branding?: { brandName?: string | null } | null
   assistant?: { greeting?: string | null } | null
+  card?: { tagline?: string | null } | null
 }
 
 export interface PublicText {
@@ -194,6 +195,9 @@ export function publicTexts(p: PublicTextSource): PublicText[] {
   add('Legenda do vídeo', 'video', p.videoCaption)
   add('Abertura do assistente', 'agenda', p.assistant?.greeting)
   add('Nome no rodapé do perfil', 'marca', p.branding?.brandName)
+  // O cartão impresso é divulgação como qualquer outra: a linha livre passa pelo
+  // mesmo crivo do resto do perfil, e um apontamento de bloqueio trava a arte.
+  add('Linha do cartão de visita', 'cartao', p.card?.tagline)
 
   return out
 }

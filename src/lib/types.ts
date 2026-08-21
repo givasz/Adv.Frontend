@@ -1,6 +1,7 @@
 // Modelo de domínio — espelha o schema Prisma do backend (backend/prisma/schema.prisma)
 
 import type { ThemeId } from './themes'
+import type { CardConfig } from './cardArt'
 
 export type Plan = 'free' | 'pro' | 'premium'
 
@@ -213,6 +214,12 @@ export interface Profile {
   contentModerated?: boolean
   /** identidade visual própria (white-label) — Premium/Escritório. */
   branding?: Branding
+  /**
+   * Cartão de visita para impressão (plano Max). Guarda só a ESCOLHA do advogado
+   * — modelo e o que aparece; o conteúdo continua vindo do perfil, para o cartão
+   * nunca dizer um telefone que o perfil já corrigiu. Ver lib/cardArt.ts.
+   */
+  card?: CardConfig
   /**
    * Revisão do conjunto de regras (RULESET_REV) conferida na última edição.
    * Usada pelo monitor de mudanças normativas: se a revisão vigente for maior,

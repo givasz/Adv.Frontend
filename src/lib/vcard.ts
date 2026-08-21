@@ -38,6 +38,15 @@ export function downloadFile(content: string | Blob, filename: string, type = 't
   const a = document.createElement('a')
   a.href = href
   a.download = filename
+  a.rel = 'noopener'
+  // O link PRECISA estar no documento: o Firefox ignora `click()` em elemento
+  // solto e o download simplesmente não acontece. E o endereço só é liberado no
+  // quadro seguinte — revogar na mesma linha aborta o arquivo no Safari.
+  a.style.display = 'none'
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(href)
+  setTimeout(() => {
+    if (a.parentNode) a.parentNode.removeChild(a)
+    URL.revokeObjectURL(href)
+  }, 1000)
 }

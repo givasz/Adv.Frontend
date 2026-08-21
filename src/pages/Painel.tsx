@@ -13,6 +13,7 @@ import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
 import {
   ArrowRight,
+  CardIcon,
   DocIcon,
   EyeIcon,
   LockIcon,
@@ -289,6 +290,12 @@ export default function Painel() {
             title="Seu cartão digital"
             desc="Compartilhe seu perfil com um QR Code."
             icon={QrIcon}
+          />
+          <DiscoverCard
+            to="/editor?section=cartao"
+            title="Seu cartão de visita"
+            desc="Monte a arte e leve o arquivo pronto para a gráfica."
+            icon={CardIcon}
           />
           <DiscoverCard
             to="/editor?section=faq"

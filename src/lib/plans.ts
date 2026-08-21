@@ -40,6 +40,15 @@ export function canUseDigitalCard(plan: Plan): boolean {
   return plan === 'pro' || plan === 'premium'
 }
 
+/**
+ * Cartão de visita para IMPRIMIR (arte pronta para a gráfica) — exclusivo do Max.
+ * É outra coisa do cartão digital acima: aqui sai arquivo de impressão, com
+ * sangria e marcas de corte. Ver lib/cardArt.ts.
+ */
+export function canUsePrintCard(plan: Plan): boolean {
+  return plan === 'premium'
+}
+
 /** Vídeo de apresentação no perfil — também exclusivo do Max. */
 export function canUseVideo(plan: Plan): boolean {
   return plan === 'premium'

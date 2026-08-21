@@ -10,6 +10,7 @@ import {
   CHAR_LIMITS,
   canUseFaq,
   canUseDigitalCard,
+  canUsePrintCard,
   canUseScheduling,
   canUseVideo,
   type LimitedField,
@@ -96,6 +97,7 @@ export type UpsellFeature =
   | 'faq'
   | 'video'
   | 'qrcode'
+  | 'cartao'
   | 'agenda'
   | 'themes'
   | 'branding'
@@ -110,6 +112,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   faq: [],
   video: [],
   qrcode: [],
+  cartao: [],
   themes: [],
   ai: [],
   agenda: ['agenda'],
@@ -161,6 +164,11 @@ const FEATURE_META: Record<
     title: 'Cartão digital',
     subtitle: 'QR Code em resolução de impressão e o seu contato em vCard.',
     value: (p) => (canUseDigitalCard(p) ? 'Incluído' : '—'),
+  },
+  cartao: {
+    title: 'Cartão de visita impresso',
+    subtitle: 'A arte do seu cartão pronta para a gráfica — frente, verso e QR do perfil.',
+    value: (p) => (canUsePrintCard(p) ? 'Incluído' : '—'),
   },
   video: {
     title: 'Vídeo de apresentação',
