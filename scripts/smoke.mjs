@@ -178,10 +178,17 @@ async function conversaDoEscritorio() {
     await nome.waitFor({ timeout: ESPERA })
     await nome.fill('Visitante Smoke')
     await clicar(pagina, 'Enviar resposta')
-    const link = pagina.getByRole('link', { name: /Enviar no WhatsApp/ })
+    // Com encaminhamento direto o botão NOMEIA quem recebe ("Enviar para Camila
+    // Nunes") — daí o /Enviar/ solto em vez do rótulo fixo.
+    const link = pagina.getByRole('link', { name: /Enviar/ })
     await link.waitFor({ timeout: ESPERA })
     const href = decodeURIComponent((await link.getAttribute('href')) ?? '')
     if (!href.includes('Advogado(a): Camila Nunes')) erros.push('o pedido não levou o advogado escolhido')
+    // O escritório-modelo encaminha para o advogado escolhido: o link tem de ser o
+    // WhatsApp dela, não o institucional.
+    if (!href.startsWith('https://wa.me/5511990000002')) {
+      erros.push('o pedido não foi para o WhatsApp da advogada escolhida')
+    }
   } catch (e) {
     erros.push(String(e).split('\n')[0])
   }

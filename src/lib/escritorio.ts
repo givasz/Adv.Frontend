@@ -125,6 +125,10 @@ export const sampleFirm: Firm = {
     'Nosso trabalho é orientado por informação clara, técnica e acompanhamento próximo em cada etapa dos processos.',
   city: 'São Paulo',
   state: 'SP',
+  // O exemplo encaminha DIRETO para o advogado escolhido — é o que a opção
+  // 'lawyer' faz, e sem isso a demonstração nunca mostrava o encaminhamento.
+  // Sem escolha (ou sem número dele), volta para o WhatsApp institucional.
+  assistantRoute: 'lawyer',
   contact: {
     phone: '+55 11 3000-0000',
     email: 'contato@andradevieira.adv.br',
@@ -154,6 +158,7 @@ export const sampleFirm: Firm = {
       avatarUrl:
         'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/beatriz-andrade',
+      whatsapp: '5511990000001',
     },
     {
       id: 'l2',
@@ -165,6 +170,7 @@ export const sampleFirm: Firm = {
       avatarUrl:
         'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/camila-nunes',
+      whatsapp: '5511990000002',
     },
     {
       id: 'l3',
@@ -176,6 +182,7 @@ export const sampleFirm: Firm = {
       avatarUrl:
         'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/eduardo-vieira',
+      whatsapp: '5511990000003',
     },
     {
       id: 'l4',
@@ -187,6 +194,8 @@ export const sampleFirm: Firm = {
       avatarUrl:
         'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/rafael-costa',
+      // Sem WhatsApp de propósito: o exemplo também mostra a volta ao institucional
+      // quando o advogado escolhido não informou número.
     },
   ],
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildFirmAssistantMessage,
   FIRM_PERIODS,
+  firmAssistantDestination,
   firmAssistantWhatsapp,
   firmAssistantWhatsappHref,
 } from './assistant'
@@ -83,5 +84,32 @@ describe('preferências de horário', () => {
   it('são períodos, não horários — a sociedade não tem agenda por advogado', () => {
     expect(FIRM_PERIODS.length).toBeGreaterThan(1)
     for (const p of FIRM_PERIODS) expect(p.label).not.toMatch(/\d{1,2}:\d{2}/)
+  })
+})
+
+// O visitante precisa saber, ANTES de enviar, se vai cair no WhatsApp de uma pessoa
+// ou no do escritório: a conversa mostra esse nome no resumo e no botão.
+describe('nome do destino', () => {
+  it('encaminhamento direto nomeia o advogado', () => {
+    const d = firmAssistantDestination(
+      { ...escritorio, assistantRoute: 'lawyer' },
+      { lawyer: 'Ana Beatriz' },
+    )
+    expect(d).toEqual({ whatsapp: '5511911111111', label: 'Ana Beatriz', direct: true })
+  })
+
+  it('sem encaminhamento direto, o destino é o escritório', () => {
+    const d = firmAssistantDestination(escritorio, { lawyer: 'Ana Beatriz' })
+    expect(d.direct).toBe(false)
+    expect(d.label).toBe('o escritório')
+  })
+
+  it('advogado sem número não é anunciado como destino', () => {
+    const d = firmAssistantDestination(
+      { ...escritorio, assistantRoute: 'lawyer' },
+      { lawyer: 'Carlos Andrade' },
+    )
+    expect(d.direct).toBe(false)
+    expect(d.whatsapp).toBe('5511990000000')
   })
 })

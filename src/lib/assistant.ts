@@ -317,15 +317,43 @@ export function buildFirmAssistantMessage(
  * institucional quando o visitante não escolheu ninguém ou o advogado não informou
  * WhatsApp.
  */
-export function firmAssistantWhatsapp(
-  firm: { contact: { whatsapp?: string }; lawyers: { name: string; whatsapp?: string }[]; assistantRoute?: string },
+export interface FirmAssistantDestination {
+  /** número que vai receber; ausente = ninguém informou WhatsApp */
+  whatsapp?: string
+  /** para quem o pedido vai, em palavras — a conversa mostra isso ao visitante */
+  label: string
+  /** true quando o pedido vai direto ao advogado escolhido */
+  direct: boolean
+}
+
+/** Para quem o pedido vai, com o nome — o visitante precisa saber antes de enviar. */
+export function firmAssistantDestination(
+  firm: {
+    contact: { whatsapp?: string }
+    lawyers: { name: string; whatsapp?: string }[]
+    assistantRoute?: string
+  },
   answers: FirmAssistantAnswers,
-): string | undefined {
+): FirmAssistantDestination {
   if (firm.assistantRoute === 'lawyer' && answers.lawyer) {
     const escolhido = firm.lawyers.find((l) => l.name === answers.lawyer)
-    if (escolhido?.whatsapp) return escolhido.whatsapp
+    if (escolhido?.whatsapp) {
+      return { whatsapp: escolhido.whatsapp, label: escolhido.name, direct: true }
+    }
   }
-  return firm.contact.whatsapp
+  return { whatsapp: firm.contact.whatsapp, label: 'o escritório', direct: false }
+}
+
+/** Só o número do destino (ver firmAssistantDestination). */
+export function firmAssistantWhatsapp(
+  firm: {
+    contact: { whatsapp?: string }
+    lawyers: { name: string; whatsapp?: string }[]
+    assistantRoute?: string
+  },
+  answers: FirmAssistantAnswers,
+): string | undefined {
+  return firmAssistantDestination(firm, answers).whatsapp
 }
 
 /** Link wa.me pronto — undefined quando não há número para receber o pedido. */

@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { type Firm, lawyersInNeutralOrder } from '@/lib/escritorio'
 import { Avatar } from '@/components/ui/Avatar'
 import {
+  ArrowRight,
   InstagramIcon,
   LinkedinIcon,
   MailIcon,
   PinIcon,
   ScaleIcon,
+  SparkIcon,
   WhatsappIcon,
 } from '@/components/ui/icons'
 import { FirmVerified } from './FirmVerified'
@@ -81,6 +83,49 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
           )}
         </nav>
 
+        {/* Falar com o escritório — a conversa guiada é a ação principal da
+            página, então mora aqui em cima, não no rodapé. */}
+        {firm.contact.whatsapp && (
+          <section className="mt-7">
+            {!assistente && (
+              <button
+                type="button"
+                onClick={() => setAssistente(true)}
+                className="flex w-full items-center gap-3 rounded-xl2 border border-ink/10 bg-paper-soft p-3.5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
+              >
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: 'color-mix(in srgb, var(--firm-accent) 10%, transparent)' }}
+                  aria-hidden
+                >
+                  <SparkIcon width={17} height={17} style={{ color: 'var(--firm-accent)' }} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold leading-tight text-ink">
+                    Falar com o escritório
+                  </span>
+                  {/* "Automático" já aqui: quem clica sabe de antemão que quem
+                      responde é um robô, nunca um(a) advogado(a). */}
+                  <span className="block text-[12px] leading-tight text-ink-faint">
+                    Assistente virtual · Automático
+                  </span>
+                </span>
+                <ArrowRight width={16} height={16} className="shrink-0 text-ink-faint" />
+              </button>
+            )}
+            {/* A conversa abre AQUI, no lugar do botão — não numa janela sobre a
+                página. Substituiu a triagem de duas telas: é o mesmo assistente do
+                perfil individual, sem grade de horários (ver AssistenteEscritorio). */}
+            {assistente && (
+              <PainelEmLinha onClose={() => setAssistente(false)}>
+                <div className="mt-1 text-left">
+                  <AssistenteEscritorio firm={firm} />
+                </div>
+              </PainelEmLinha>
+            )}
+          </section>
+        )}
+
         <div className="rule-brass mx-auto my-8 max-w-[220px]" />
 
         {/* Sobre o escritório */}
@@ -143,6 +188,9 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               </a>
             )}
           </div>
+          {/* Mesmo assistente do topo: um só painel na página. Ao abrir, o
+              PainelEmLinha se traz para a vista, então clicar daqui leva a pessoa
+              até a conversa em vez de abrir uma segunda cópia dela. */}
           {firm.contact.whatsapp && !assistente && (
             <button
               type="button"
@@ -153,16 +201,6 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               <WhatsappIcon width={18} height={18} />
               Falar com o escritório
             </button>
-          )}
-          {/* A conversa abre AQUI, no lugar do botão — não numa janela sobre a
-              página. Substituiu a triagem de duas telas: é o mesmo assistente do
-              perfil individual, sem grade de horários (ver AssistenteEscritorio). */}
-          {assistente && (
-            <PainelEmLinha onClose={() => setAssistente(false)}>
-              <div className="mt-1 text-left">
-                <AssistenteEscritorio firm={firm} />
-              </div>
-            </PainelEmLinha>
           )}
         </section>
 

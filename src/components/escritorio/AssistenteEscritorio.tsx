@@ -4,6 +4,7 @@ import { lawyersInNeutralOrder, type Firm } from '@/lib/escritorio'
 import {
   FIRM_ANY_LAWYER,
   FIRM_PERIODS,
+  firmAssistantDestination,
   firmAssistantWhatsappHref,
   type FirmAssistantAnswers,
 } from '@/lib/assistant'
@@ -118,12 +119,16 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     const value = text.trim()
     if (!value) return
     push('user', value)
-    setAnswers((a) => ({ ...a, name: value }))
+    const finais = { ...answers, name: value }
+    setAnswers(finais)
     setDraft('')
+    const quem = firmAssistantDestination(firm, finais)
     void say(
       [
         `Prazer, ${value.split(/\s+/)[0]}. Registrei o seu pedido.`,
-        'Toque no botão abaixo para enviar tudo pelo WhatsApp — o escritório confirma o horário.',
+        quem.direct
+          ? `Toque no botão abaixo para enviar tudo pelo WhatsApp de ${quem.label} — quem confirma o horário é ${quem.label}.`
+          : 'Toque no botão abaixo para enviar tudo pelo WhatsApp — o escritório confirma o horário.',
       ],
       'done',
     )
@@ -134,6 +139,7 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   const answered = STEP_ORDER.indexOf(step)
   const progress = step === 'boot' ? 0 : Math.min(1, answered / (STEP_ORDER.length - 1))
   const href = firmAssistantWhatsappHref(firm, answers)
+  const destino = firmAssistantDestination(firm, answers)
   const ready = step === 'done' && !!answers.name && !!href
 
   const rows: [string, string][] = [
@@ -142,6 +148,9 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     answers.format ? ['Formato', cap(answers.format)] : null,
     answers.period ? ['Quando', answers.period] : null,
     answers.name ? ['Nome', answers.name] : null,
+    // Para quem o pedido vai: com encaminhamento direto o visitante sai da conversa
+    // no WhatsApp de uma pessoa, não do escritório. Isso não pode ser surpresa.
+    ['Vai para', destino.direct ? destino.label : 'WhatsApp do escritório'],
   ].filter(Boolean) as [string, string][]
 
   return (
@@ -274,7 +283,7 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
                   className="t-btn w-full !py-3.5 text-[15px]"
                 >
                   <WhatsappIcon width={20} height={20} />
-                  Enviar no WhatsApp
+                  {destino.direct ? `Enviar para ${destino.label}` : 'Enviar no WhatsApp'}
                   <ArrowRight width={16} height={16} />
                 </a>
                 <button
@@ -295,7 +304,7 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
 
         <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
           Assistente automático. Não presta orientação jurídica e não confirma o horário — quem
-          confirma é o escritório.
+          confirma é {destino.direct ? destino.label : 'o escritório'}.
         </p>
       </div>
     </div>
