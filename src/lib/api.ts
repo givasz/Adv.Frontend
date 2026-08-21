@@ -4,7 +4,7 @@
 // Amanhã: basta implementar as mesmas assinaturas apontando para `/api/...`
 // (o proxy do Vite já encaminha para o NestJS na porta 3333).
 
-import { authHeader } from './auth'
+import { authHeader, isAuthenticated } from './auth'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
@@ -89,6 +89,12 @@ const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 // configurado (VITE_API_URL) — assim o deploy no Netlify usa o Render de ponta a
 // ponta (perfis, conta, IA), sem localStorage. Em dev sem VITE_API_URL, segue mock.
 const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+
+// O perfil no servidor é SEMPRE de uma conta. Sem sessão, o rascunho vive só
+// neste navegador: a API rejeita escrita anônima (401) porque, antes, todo mundo
+// sem conta escrevia na MESMA linha do banco — quem preenchia nome, WhatsApp e
+// e-mail no editor deixava esses dados à vista do próximo visitante anônimo.
+const contaAtiva = () => USE_REAL_API && isAuthenticated()
 
 // Chamada autenticada às rotas de gestão do escritório. Todas devolvem o escritório
 // inteiro e todas falham do mesmo jeito — daí um único caminho de erro.
@@ -379,7 +385,7 @@ export const api = {
   },
 
   async getDraft(): Promise<Profile> {
-    if (USE_REAL_API) {
+    if (contaAtiva()) {
       // Blindagem: banco vazio / resposta vazia não pode travar o editor.
       // Se o backend não devolver um perfil válido, começa com um rascunho local.
       try {
@@ -399,7 +405,7 @@ export const api = {
   },
 
   async saveDraft(profile: Profile): Promise<Profile> {
-    if (USE_REAL_API) {
+    if (contaAtiva()) {
       const res = await fetch(`${API_BASE}/api/profiles/me`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -483,7 +489,7 @@ export const api = {
    * desta função não muda.
    */
   async setPlan(plan: Plan): Promise<Profile> {
-    if (USE_REAL_API) {
+    if (contaAtiva()) {
       const res = await fetch(`${API_BASE}/api/profiles/me/plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -561,7 +567,10 @@ export const api = {
       try {
         const res = await fetch(`${API_BASE}/api/ai/generate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          // A sessão vai junto porque é ela que prova o plano: o backend decide o
+          // que cada plano gera a partir da assinatura no banco, nunca do `plan`
+          // que vier no corpo (ver backend/src/ai/ai.controller.ts).
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
           body: JSON.stringify(req),
         })
         if (res.ok) {

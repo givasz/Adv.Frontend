@@ -22,6 +22,7 @@ import {
   WhatsappIcon,
   socialMeta,
 } from '@/components/ui/icons'
+import { safeHref } from '@/lib/safeUrl'
 
 interface ProfileViewProps {
   profile: Profile
@@ -223,10 +224,10 @@ export function ProfileView({
               Conversar no WhatsApp
             </motion.a>
           )}
-          {schedulingMode === 'external' && profile.contact.scheduling && (
+          {schedulingMode === 'external' && safeHref(profile.contact.scheduling) && (
             <motion.a
               variants={item}
-              href={profile.contact.scheduling}
+              href={safeHref(profile.contact.scheduling)}
               onClick={stop}
               target="_blank"
               rel="noreferrer noopener"
@@ -294,12 +295,17 @@ export function ProfileView({
               }`}
             >
               {profile.socials.map((soc) => {
+                // Rede desconhecida não tem ícone — renderizar sem conferir
+                // derrubava a página inteira. E o link só vira href se for
+                // http/https (ver lib/safeUrl.ts).
                 const meta = socialMeta[soc.kind]
+                const href = safeHref(soc.url)
+                if (!meta || !href) return null
                 const Icon = meta.Icon
                 return (
                   <a
                     key={soc.kind + soc.url}
-                    href={soc.url}
+                    href={href}
                     onClick={stop}
                     target="_blank"
                     rel="noreferrer noopener"

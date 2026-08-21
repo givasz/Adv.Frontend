@@ -15,6 +15,7 @@ import { CnaLink } from '@/components/ui/CnaLink'
 import { MiniPerfil } from './MiniPerfil'
 import { PainelEmLinha } from './PainelEmLinha'
 import { AssistenteEscritorio } from './AssistenteEscritorio'
+import { safeHref } from '@/lib/safeUrl'
 
 // Página institucional standalone do escritório (sociedade de advogados). Estilo próprio
 // baseado na paleta "Papel & Tinta" (bege/grafite/dourado) — NÃO usa o sistema de temas
@@ -61,13 +62,13 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
 
         {/* Redes institucionais (topo) — separadas das redes pessoais dos advogados */}
         <nav className="mt-6 flex items-center justify-center gap-3" aria-label="Redes do escritório">
-          {firm.contact.instagram && (
-            <SocialDot href={firm.contact.instagram} label="Instagram do escritório">
+          {safeHref(firm.contact.instagram) && (
+            <SocialDot href={safeHref(firm.contact.instagram)!} label="Instagram do escritório">
               <InstagramIcon width={19} height={19} />
             </SocialDot>
           )}
-          {firm.contact.linkedin && (
-            <SocialDot href={firm.contact.linkedin} label="LinkedIn do escritório">
+          {safeHref(firm.contact.linkedin) && (
+            <SocialDot href={safeHref(firm.contact.linkedin)!} label="LinkedIn do escritório">
               <LinkedinIcon width={19} height={19} />
             </SocialDot>
           )}
