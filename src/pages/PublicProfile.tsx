@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth'
 import { exampleProfiles } from '@/lib/mockData'
 import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
-import { ReportDialog } from '@/components/profile/ReportDialog'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { OwnerBar } from '@/components/profile/OwnerBar'
 import { FlagIcon, ScaleIcon } from '@/components/ui/icons'
@@ -15,7 +14,6 @@ export default function PublicProfile() {
   const { slug = '' } = useParams()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'notfound'>('loading')
-  const [reporting, setReporting] = useState(false)
   // Dono? Só então aparece a barra com o caminho de volta ao editor. Comparamos
   // com o SLUG do rascunho dele — é o que amarra a sessão a este endereço.
   const { isAuthed } = useAuth()
@@ -119,19 +117,13 @@ export default function PublicProfile() {
         )}
         {isOwner && <OwnerBar />}
       </div>
-      <ShareBar
-        slug={profile.slug}
-        name={profile.name}
-        profile={profile}
-        topOffset={barsHeight}
-      />
+      <ShareBar slug={profile.slug} name={profile.name} topOffset={barsHeight} />
       <ProfileView profile={profile} owner={isOwner} />
 
       {/* Denúncia — canal discreto de conformidade (Prov. 205/2021) */}
       <div className="flex justify-center pb-10 pt-2">
-        <button
-          type="button"
-          onClick={() => setReporting(true)}
+        <Link
+          to={`/${profile.slug}/denunciar`}
           className="group inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink-faint/70 transition-colors hover:text-burgundy"
         >
           {/* O sublinhado fica no TEXTO, não no botão: com o ícone dentro de um
@@ -139,12 +131,9 @@ export default function PublicProfile() {
               bandeira também. */}
           <FlagIcon width={12} height={12} strokeWidth={1.9} aria-hidden />
           <span className="underline-offset-2 group-hover:underline">Denunciar este perfil</span>
-        </button>
+        </Link>
       </div>
 
-      {reporting && (
-        <ReportDialog slug={profile.slug} name={profile.name} onClose={() => setReporting(false)} />
-      )}
     </main>
   )
 }

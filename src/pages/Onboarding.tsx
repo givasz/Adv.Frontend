@@ -7,7 +7,7 @@ import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
 import { parseOab } from '@/lib/brFormat'
 import { computeTrust } from '@/lib/trustScore'
-import { AREA_LABEL_MAX } from '@/lib/plans'
+import { AREA_LABEL_MAX, CHAR_LIMITS } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { AiGenerator } from '@/components/editor/AiGenerator'
@@ -150,11 +150,7 @@ export default function Onboarding() {
 
   if (published) {
     return (
-      <DoneScreen
-        profile={profile}
-        intent={pendingPlan}
-        onPickPlan={(p) => api.setPlan(p).then(setProfile)}
-      />
+      <DoneScreen profile={profile} intent={pendingPlan} />
     )
   }
 
@@ -264,14 +260,27 @@ export default function Onboarding() {
                     placeholder="Escreva algumas linhas ou deixe a IA começar para você…"
                   />
                 </Field>
-                <button
-                  type="button"
-                  onClick={() => setAiOpen(true)}
-                  className="inline-flex items-center justify-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-4 py-2 text-[13.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
-                >
-                  <SparkIcon width={15} height={15} />
-                  Gerar bio comigo
-                </button>
+                {/* O gerador abre AQUI, embaixo do botão e do campo — não numa
+                    janela por cima. Na criação do perfil isso é o que mantém o
+                    ritmo: escreve, gera, aplica e segue, tudo na mesma tela. */}
+                {!aiOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setAiOpen(true)}
+                    className="inline-flex items-center justify-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-4 py-2 text-[13.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+                  >
+                    <SparkIcon width={15} height={15} />
+                    Gerar bio comigo
+                  </button>
+                ) : (
+                  <AiGenerator
+                    kind="bio"
+                    name={profile.name}
+                    limit={CHAR_LIMITS[profile.plan].bio}
+                    onApply={(text) => set({ bio: text })}
+                    onClose={() => setAiOpen(false)}
+                  />
+                )}
                 {blockedBio && (
                   <p className="rounded-lg border border-brass/30 bg-brass/[0.08] px-3 py-2 text-[12.5px] leading-relaxed text-brass-deep">
                     Um trecho da bio pode esbarrar nas regras da OAB. Ajuste antes de publicar.
@@ -385,16 +394,6 @@ export default function Onboarding() {
         )}
       </main>
 
-      <AnimatePresence>
-        {aiOpen && (
-          <AiGenerator
-            kind="bio"
-            name={profile.name}
-            onApply={(text) => set({ bio: text })}
-            onClose={() => setAiOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -518,12 +517,10 @@ const FACTOR_DEST: Record<string, string> = {
 // ativáveis grátis em teste). Mobile-first, sóbrio, mas puxando o "levante" do perfil.
 function DoneScreen({
   profile,
-  onPickPlan,
   intent = null,
 }: {
   profile: Profile
-  onPickPlan: (p: Plan) => void
-  /** plano escolhido na home antes de criar o perfil — abre o checkout na hora */
+  /** plano escolhido na home antes de criar o perfil — vai direto para a assinatura */
   intent?: Exclude<Plan, 'free'> | null
 }) {
   const trust = computeTrust(profile)
@@ -628,7 +625,7 @@ function DoneScreen({
             sem pagar.
           </p>
           <div className="mt-5">
-            <UpgradeTopics profile={profile} onPick={onPickPlan} initial={intent} />
+            <UpgradeTopics profile={profile} initial={intent} />
           </div>
         </div>
 

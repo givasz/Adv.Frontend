@@ -55,7 +55,10 @@ export function InfoTip({
         {open && (
           <motion.div
             id={panelId}
-            role="dialog"
+            // NÃO é diálogo: é uma nota de ajuda ancorada ao campo. Marcá-la como
+            // modal prendia o foco e obrigava a "fechar" algo que nunca bloqueou
+            // nada — a ajuda tem de conviver com o campo que ela explica.
+            role="note"
             aria-label={title}
             initial={{ opacity: 0, y: -4, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

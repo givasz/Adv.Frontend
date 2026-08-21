@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
-import { themeStyle } from '@/lib/themes'
+import { getTheme, themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { Avatar } from '@/components/ui/Avatar'
 import {
@@ -48,14 +48,21 @@ export function AssistantChat({
   profile,
   onClose,
   variant = 'sheet',
+  fullPage = false,
   autoStart = true,
   pace = 1,
 }: {
   profile: Profile
   /** ausente no modo 'inline' (demonstração embutida) */
   onClose?: () => void
-  /** 'sheet' = diálogo sobre o perfil; 'inline' = embutido (ex.: vitrine da home) */
-  variant?: 'sheet' | 'inline'
+  /**
+   * 'page'   = tela inteira, com endereço próprio (/:slug/agendar) — o padrão no perfil;
+   * 'inline' = embutido numa página (ex.: a vitrine da home);
+   * 'sheet'  = folha sobreposta (legado; a conversa saiu dos modais).
+   */
+  variant?: 'sheet' | 'inline' | 'page'
+  /** atalho de `variant="page"` para quem chama a partir da rota */
+  fullPage?: boolean
   /**
    * Quando a conversa deve COMEÇAR a se escrever. No perfil ela abre por clique e
    * já nasce em cena, então o padrão é `true`. Na vitrine da home o componente é
@@ -270,7 +277,12 @@ export function AssistantChat({
   // Sem horário escolhido não há pedido: o fim da conversa vira só um recado.
   const ready = step === 'done' && !!answers.time && !!href
 
-  const sheet = variant === 'sheet'
+  const modo = fullPage ? 'page' : variant
+  const sheet = modo === 'sheet'
+  // Página inteira: sem overlay, sem foco preso, com endereço próprio. É o modo
+  // do perfil desde que a conversa deixou de ser modal — no celular ela precisa
+  // da tela toda (o teclado sobe e uma folha de 92dvh vira uma fresta).
+  const page = modo === 'page'
 
   const body = (
     <div
@@ -281,14 +293,18 @@ export function AssistantChat({
       className={`themed flex w-full flex-col overflow-hidden ${
         sheet
           ? 'mx-auto h-[92dvh] max-w-[440px] rounded-t-[26px] shadow-lift sm:h-[min(88dvh,680px)] sm:rounded-[26px]'
-          : 'h-full'
+          : page
+            ? // Centralizado e com altura de tela: no desktop a conversa não se
+              // esparrama pela largura toda, no celular ocupa tudo.
+              'mx-auto h-dvh max-w-[520px]'
+            : 'h-full'
       }`}
       style={themeStyle(profile.theme)}
     >
       {/* Cabeçalho: quem está falando fica explícito — assistente, não o advogado. */}
       <header
         className={`relative z-10 flex shrink-0 items-center gap-3 px-4 pb-3.5 ${
-          sheet ? 'pt-3.5' : 'pt-8'
+          sheet || page ? 'pt-3.5' : 'pt-8'
         }`}
         style={{ borderBottom: '1px solid var(--c-border)', background: 'var(--c-surface)' }}
       >
@@ -321,10 +337,16 @@ export function AssistantChat({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fechar a conversa"
+            aria-label={page ? 'Voltar ao perfil' : 'Fechar a conversa'}
             className="t-faint -mr-1 shrink-0 rounded-full p-2 transition-colors hover:bg-[var(--c-accent-soft)]"
           >
-            <XIcon width={18} height={18} />
+            {/* Em página o gesto é VOLTAR (seta), não fechar (X): a pessoa não está
+                por cima do perfil, está numa tela seguinte. */}
+            {page ? (
+              <ArrowRight width={18} height={18} className="rotate-180" />
+            ) : (
+              <XIcon width={18} height={18} />
+            )}
           </button>
         )}
       </header>
@@ -476,6 +498,19 @@ export function AssistantChat({
       </div>
     </div>
   )
+
+  // Em página, o fundo da tela também é o do tema do perfil: a conversa continua
+  // sendo "a casa" do advogado, não uma tela branca do sistema.
+  if (page) {
+    return (
+      <div
+        className={`themed min-h-dvh w-full surf-${getTheme(profile.theme).style.surface}`}
+        style={themeStyle(profile.theme)}
+      >
+        {body}
+      </div>
+    )
+  }
 
   if (!sheet) return body
 

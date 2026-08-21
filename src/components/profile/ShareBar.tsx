@@ -1,25 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import QRCode from 'qrcode'
-import type { Profile } from '@/lib/types'
-import { useDialog } from '@/lib/a11y'
-import { slugify } from '@/lib/brFormat'
-import { buildVCard, dataUrlToBlob, downloadFile } from '@/lib/vcard'
-import { CopyIcon } from '@/components/ui/icons'
+import { useNavigate } from 'react-router-dom'
 
+// Botão "Compartilhar" que flutua no canto do perfil.
+//
+// Quando o navegador tem compartilhamento nativo (celular), é ele que abre — é o
+// caminho que a pessoa conhece. Quando não tem (desktop), vai para a PÁGINA de
+// compartilhamento (/:slug/compartilhar), que antes era um painel sobreposto.
 export function ShareBar({
   slug,
   name,
-  profile,
   topOffset = 0,
 }: {
   slug: string
   name: string
-  profile?: Profile
   /** altura das barras grudentas acima (aviso de exemplo, barra do dono) */
   topOffset?: number
 }) {
-  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const url = `${window.location.origin}/${slug}`
 
   async function share() {
@@ -28,142 +24,23 @@ export function ShareBar({
         await navigator.share({ title: `${name} · advoc.me`, url })
         return
       } catch {
-        /* usuário cancelou — cai para o painel */
+        /* usuário cancelou ou o navegador recusou — cai para a página */
       }
     }
-    setOpen(true)
+    navigate(`/${slug}/compartilhar`)
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={share}
-        // `top` calculado: o botão é fixo e as barras do topo (aviso de exemplo,
-        // barra do dono) são grudentas — sem desviar, ele fica atrás delas.
-        style={{ top: `calc(1rem + ${topOffset}px)` }}
-        className="fixed right-4 z-20 inline-flex h-10 items-center gap-1.5 rounded-full border border-ink/10 bg-paper-soft/80 px-4 text-sm font-medium text-ink shadow-card backdrop-blur transition-colors hover:border-brass/50"
-        aria-label="Compartilhar perfil"
-      >
-        Compartilhar
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <SharePanel url={url} name={name} profile={profile} onClose={() => setOpen(false)} />
-        )}
-      </AnimatePresence>
-    </>
-  )
-}
-
-function SharePanel({
-  url,
-  name,
-  profile,
-  onClose,
-}: {
-  url: string
-  name: string
-  profile?: Profile
-  onClose: () => void
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const [copied, setCopied] = useState(false)
-  useDialog(dialogRef, onClose)
-
-  useEffect(() => {
-    if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, url, {
-        width: 190,
-        margin: 1,
-        color: { dark: '#211c17', light: '#faf6ec' },
-      }).catch(() => {})
-    }
-  }, [url])
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* clipboard indisponível */
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 p-4 backdrop-blur-sm sm:items-center"
+    <button
+      type="button"
+      onClick={share}
+      // `top` calculado: o botão é fixo e as barras do topo (aviso de exemplo,
+      // barra do dono) são grudentas — sem desviar, ele fica atrás delas.
+      style={{ top: `calc(1rem + ${topOffset}px)` }}
+      className="fixed right-4 z-20 inline-flex h-10 items-center gap-1.5 rounded-full border border-ink/10 bg-paper-soft/80 px-4 text-sm font-medium text-ink shadow-card backdrop-blur transition-colors hover:border-brass/50"
+      aria-label="Compartilhar perfil"
     >
-      <motion.div
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 30, opacity: 0 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-title"
-        className="w-full max-w-sm rounded-xl2 border border-ink/10 bg-paper p-6 text-center shadow-lift"
-      >
-        <h3 id="share-title" className="text-xl font-semibold">
-          Compartilhar perfil
-        </h3>
-        <p className="mt-1 text-sm text-ink-faint">
-          Aponte a câmera ou copie o link de {name.split(' ')[0]}.
-        </p>
-        <div className="mt-5 flex justify-center">
-          <div className="rounded-xl2 border border-ink/10 bg-paper-soft p-3">
-            <canvas
-              ref={canvasRef}
-              role="img"
-              aria-label={`QR code do link do perfil de ${name.split(' ')[0]}`}
-              className="rounded-md"
-            />
-          </div>
-        </div>
-        <button type="button" onClick={copy} className="btn-ghost mt-5 w-full">
-          <CopyIcon width={17} height={17} />
-          {copied ? 'Link copiado!' : url.replace(/^https?:\/\//, '')}
-        </button>
-        <span className="sr-only" aria-live="polite">
-          {copied ? 'Link copiado para a área de transferência' : ''}
-        </span>
-
-        {/* Cartão digital para eventos: baixar o QR ou o contato (vCard) */}
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const png = canvasRef.current?.toDataURL('image/png')
-              if (png) downloadFile(dataUrlToBlob(png), `qr-${slugify(name)}.png`)
-            }}
-            className="btn-ghost flex-1 !text-[13px]"
-          >
-            Baixar QR
-          </button>
-          {profile && (
-            <button
-              type="button"
-              onClick={() => downloadFile(buildVCard(profile, url), `${slugify(name)}.vcf`)}
-              className="btn-ghost flex-1 !text-[13px]"
-            >
-              Baixar contato
-            </button>
-          )}
-        </div>
-
-        <button type="button" onClick={onClose} className="mt-3 text-sm text-ink-faint hover:text-ink">
-          Fechar
-        </button>
-      </motion.div>
-    </motion.div>
+      Compartilhar
+    </button>
   )
 }

@@ -5,7 +5,6 @@ import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
 import { fitToLimit } from '@/lib/textLimit'
 import { templatesFor } from '@/lib/templates'
-import { useDialog } from '@/lib/a11y'
 import { SparkIcon } from '@/components/ui/icons'
 import { TextInput } from './fields'
 
@@ -67,8 +66,20 @@ export function AiGenerator({
   const [draft, setDraft] = useState('')
   const [typed, setTyped] = useState('') // efeito "IA digitando" (revela o texto aos poucos)
   const [typing, setTyping] = useState(false)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useDialog(dialogRef, onClose)
+  // Painel EM LINHA, não modal. O gerador é a ferramenta mais usada de quem está
+  // montando o perfil; abrir uma janela por cima escondia justamente o campo que
+  // ia receber o texto, prendia o foco e, no celular, brigava com o teclado.
+  // Aqui ele entra no fluxo da página, logo acima do campo, e sai sem fechar nada.
+  const painelRef = useRef<HTMLDivElement>(null)
+
+  // Ao abrir, traz o painel para a vista e põe o foco no primeiro campo — o que o
+  // modal ganhava de graça por ser sobreposto, aqui é explícito.
+  useEffect(() => {
+    const el = painelRef.current
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true })
+  }, [])
 
   // Máquina de escrever: revela o texto do rascunho em ~1s, depois vira editável.
   useEffect(() => {
@@ -127,24 +138,14 @@ export function AiGenerator({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="fixed inset-0 z-40 flex items-end justify-center bg-ink/45 p-3 backdrop-blur-sm sm:items-center"
+      ref={painelRef}
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      aria-labelledby="aigen-title"
+      className="rounded-xl2 border border-brass/30 bg-paper p-4 shadow-card sm:p-5"
     >
-      <motion.div
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 30, opacity: 0 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="aigen-title"
-        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl2 border border-ink/10 bg-paper p-6 shadow-lift"
-      >
         <div className="flex items-center gap-2 text-burgundy">
           <SparkIcon width={20} height={20} />
           <h3 id="aigen-title" className="font-display text-xl font-semibold">
@@ -297,14 +298,13 @@ export function AiGenerator({
           )}
         </AnimatePresence>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 block w-full text-center text-sm text-ink-faint hover:text-ink"
-        >
-          Cancelar
-        </button>
-      </motion.div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-4 block w-full py-2 text-center text-sm text-ink-faint hover:text-ink"
+      >
+        Cancelar
+      </button>
     </motion.div>
   )
 }

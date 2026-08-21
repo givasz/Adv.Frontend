@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -9,9 +8,9 @@ import { THEMES, isThemeUnlocked } from '@/lib/themes'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
-import { SupportDialog } from '@/components/support/SupportDialog'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
+import { comVolta } from '@/components/ui/SubPage'
 import {
   ArrowRight,
   DocIcon,
@@ -93,14 +92,17 @@ export default function Painel() {
   // true logo depois de confirmar uma assinatura — dá o tom de celebração ao
   // checklist do que abriu (some ao recarregar).
   const [justUpgraded, setJustUpgraded] = useState(false)
-  const [support, setSupport] = useState(false)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // "Assinar Pro" clicado na home (ou em qualquer lugar fora do painel) chega como
-  // ?assinar=pro e abre o checkout aqui — sem passar pelo assistente de criação.
+  // "Assinar Pro" clicado na home chega como ?assinar=pro e segue direto para a
+  // página de assinatura. Na volta, ?assinou=pro dá o tom de celebração ao
+  // checklist do que abriu — o estado da compra atravessa a navegação pela URL,
+  // que é justamente o que um modal não sabia fazer.
   const wanted = searchParams.get('assinar')
-  const openCheckout: Plan | null = wanted === 'pro' || wanted === 'premium' ? wanted : null
+  const openCheckout: Exclude<Plan, 'free'> | null =
+    wanted === 'pro' || wanted === 'premium' ? wanted : null
+  const acabouDeAssinar = searchParams.get('assinou')
 
   useEffect(() => {
     document.title = 'Evolua seu perfil · advoc.me'
@@ -146,16 +148,15 @@ export default function Painel() {
   // perfil que ele devolve (com endereço e agendamento já reconciliados) em vez de
   // remendar o objeto local — era isso que fazia o recurso comprado voltar a
   // aparecer travado no recarregamento seguinte.
-  const activatePlan = async (p: Plan) => {
-    const saved = await api.setPlan(p)
-    setProfile(saved)
-    setJustUpgraded(p !== 'free')
-    if (openCheckout) {
-      searchParams.delete('assinar')
-      setSearchParams(searchParams, { replace: true })
-    }
+  // Voltou da assinatura: comemora uma vez e limpa o parâmetro, para o recarregar
+  // não repetir a festa.
+  useEffect(() => {
+    if (!acabouDeAssinar) return
+    setJustUpgraded(true)
+    searchParams.delete('assinou')
+    setSearchParams(searchParams, { replace: true })
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  }, [acabouDeAssinar, searchParams, setSearchParams])
 
   return (
     <div className="grain min-h-dvh bg-paper-deep">
@@ -183,7 +184,7 @@ export default function Painel() {
             >
               Ver perfil
             </Link>
-            <AccountMenu compact onSupport={() => setSupport(true)} />
+            <AccountMenu compact supportTo={comVolta('/suporte', '/painel')} />
           </div>
         </div>
       </header>
@@ -259,12 +260,7 @@ export default function Painel() {
               </p>
             </div>
             <div className="mt-5">
-              <UpgradeTopics
-                profile={profile}
-                onPick={activatePlan}
-                initial={openCheckout as Exclude<Plan, 'free'> | null}
-                showIncluded={false}
-              />
+              <UpgradeTopics profile={profile} initial={openCheckout} showIncluded={false} />
             </div>
           </section>
         )}
@@ -368,18 +364,14 @@ export default function Painel() {
           </Link>
           {/* Suporte fica na área logada de propósito: é canal de cliente, não
               formulário público — e é o que permite responder a pessoa certa. */}
-          <button
-            type="button"
-            onClick={() => setSupport(true)}
+          <Link
+            to={comVolta('/suporte', '/painel')}
             className="inline-block py-2 font-medium text-ink-faint underline-offset-4 transition-colors hover:text-burgundy hover:underline"
           >
             Achou um problema? Falar com o suporte
-          </button>
+          </Link>
         </div>
 
-        <AnimatePresence>
-          {support && <SupportDialog onClose={() => setSupport(false)} />}
-        </AnimatePresence>
       </main>
     </div>
   )

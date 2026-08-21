@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Modal } from './Modal'
+import { PainelEmLinha } from './PainelEmLinha'
 
 // Formulário sóbrio de "Solicitar contato" (nunca "Contrate agora"). Mockado:
 // não envia a lugar nenhum — apenas simula a confirmação. Trocável por API depois.
-export function ModalContato({
+export function PainelContato({
   onClose,
   subjectName,
 }: {
@@ -24,7 +24,7 @@ export function ModalContato({
   }
 
   return (
-    <Modal title="Solicitar contato" onClose={onClose} labelledBy="contato-title">
+    <PainelEmLinha title="Solicitar contato" onClose={onClose} labelledBy="contato-title">
       {sent ? (
         <div className="mt-4 text-center">
           <p className="text-sm text-ink-soft">
@@ -80,7 +80,7 @@ export function ModalContato({
           </p>
         </form>
       )}
-    </Modal>
+    </PainelEmLinha>
   )
 }
 

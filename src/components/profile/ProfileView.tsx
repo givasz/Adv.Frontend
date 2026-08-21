@@ -7,7 +7,6 @@ import { resolveSchedulingMode } from '@/lib/booking'
 import { canUseFaq, canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
-import { SchedulingForm } from '@/components/profile/SchedulingForm'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { AssistantChat } from '@/components/profile/AssistantChat'
 import { assistantTitle } from '@/lib/assistant'
@@ -60,6 +59,11 @@ export function ProfileView({
   const schedulingMode = resolveSchedulingMode(profile)
   // Agendar é a única ação que continua viva na prévia da home (chatEnabled).
   const canSchedule = chatEnabled ?? !preview
+  // DEMONSTRAÇÃO: só no telefone da home a conversa abre ali mesmo, sobre a
+  // prévia — é o que se está mostrando. No perfil de verdade, agendar virou
+  // PÁGINA (/:slug/agendar): sem overlay, com endereço próprio e voltar do
+  // navegador funcionando.
+  const demoChat = !!chatEnabled && preview
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
@@ -233,12 +237,8 @@ export function ProfileView({
           {schedulingMode === 'assistant' && (
             // Assistente virtual: a conversa guiada é o caminho mais leve para marcar
             // um horário — e deixa explícito, já no botão, que quem atende é um robô.
-            <motion.button
-              variants={item}
-              type="button"
-              onClick={canSchedule ? () => setSchedOpen(true) : undefined}
-              className={`${tile} !py-3`}
-            >
+            <motion.div variants={item}>
+             <AcaoAgendar slug={profile.slug} demo={demoChat} onDemo={() => setSchedOpen(true)} inert={!canSchedule} className={`${tile} !py-3`}>
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ background: 'var(--c-accent-soft)' }}
@@ -255,18 +255,22 @@ export function ProfileView({
                 </span>
               </span>
               <ArrowRight width={16} height={16} className="t-faint shrink-0" />
-            </motion.button>
+             </AcaoAgendar>
+            </motion.div>
           )}
           {schedulingMode === 'whatsapp' && (
-            <motion.button
-              variants={item}
-              type="button"
-              onClick={canSchedule ? () => setSchedOpen(true) : undefined}
-              className={`${tile} justify-center !py-3.5 font-semibold`}
-            >
-              <CalendarIcon width={19} height={19} className="t-accent" />
-              Agendar uma consulta
-            </motion.button>
+            <motion.div variants={item}>
+              <AcaoAgendar
+                slug={profile.slug}
+                demo={demoChat}
+                onDemo={() => setSchedOpen(true)}
+                inert={!canSchedule}
+                className={`${tile} justify-center !py-3.5 font-semibold`}
+              >
+                <CalendarIcon width={19} height={19} className="t-accent" />
+                Agendar uma consulta
+              </AcaoAgendar>
+            </motion.div>
           )}
         </div>
 
@@ -425,15 +429,10 @@ export function ProfileView({
         </motion.footer>
       </motion.div>
 
-      {/* Agendamento → WhatsApp (não no preview do editor): conversa guiada do
-          assistente virtual ou o formulário curto, conforme o modo escolhido. */}
+      {/* Única sobreposição que sobrou no perfil, e só na DEMONSTRAÇÃO da home:
+          ali a conversa precisa acontecer dentro do telefone, senão não é demo. */}
       <AnimatePresence>
-        {schedOpen && canSchedule && schedulingMode === 'assistant' && (
-          <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />
-        )}
-        {schedOpen && canSchedule && schedulingMode === 'whatsapp' && (
-          <SchedulingForm profile={profile} onClose={() => setSchedOpen(false)} />
-        )}
+        {schedOpen && demoChat && <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />}
       </AnimatePresence>
     </div>
   )
@@ -585,6 +584,41 @@ function SectionTitle({ children, rule }: { children: React.ReactNode; rule: Rul
       {label}
       <Rule soft={rule !== 'tapered'} fade={rule === 'tapered'} className="flex-1" />
     </h2>
+  )
+}
+
+/**
+ * O botão de agendar muda de natureza conforme onde está:
+ *  • perfil real      → LINK para /:slug/agendar (página com endereço próprio);
+ *  • demo da home     → botão que abre a conversa ali dentro do telefone;
+ *  • prévia do editor → inerte, só para o advogado ver como fica.
+ */
+function AcaoAgendar({
+  slug,
+  demo,
+  onDemo,
+  inert,
+  className,
+  children,
+}: {
+  slug: string
+  demo: boolean
+  onDemo: () => void
+  inert: boolean
+  className: string
+  children: React.ReactNode
+}) {
+  if (inert) return <div className={className}>{children}</div>
+  if (demo)
+    return (
+      <button type="button" onClick={onDemo} className={className}>
+        {children}
+      </button>
+    )
+  return (
+    <Link to={`/${slug}/agendar`} className={className}>
+      {children}
+    </Link>
   )
 }
 

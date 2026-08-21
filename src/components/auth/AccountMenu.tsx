@@ -6,11 +6,12 @@ import { useAuth } from '@/lib/auth'
 // página /entrar, voltando à página atual). Logado: e-mail + menu com "Sair".
 export function AccountMenu({
   compact = false,
-  onSupport,
+  supportTo,
 }: {
   compact?: boolean
   /** abre o canal de suporte; sem o callback, o item não aparece */
-  onSupport?: () => void
+  /** destino do item "Falar com o suporte" (página, já com o caminho de volta) */
+  supportTo?: string
 }) {
   const { user, isAuthed, logout } = useAuth()
   const [open, setOpen] = useState(false)
@@ -60,18 +61,15 @@ export function AccountMenu({
               <p className="truncate text-[13px] font-medium text-ink">{user.name || shortName}</p>
               <p className="truncate text-[11.5px] text-ink-faint">{user.email}</p>
             </div>
-            {onSupport && (
-              <button
-                type="button"
+            {supportTo && (
+              <Link
+                to={supportTo}
                 role="menuitem"
-                onClick={() => {
-                  setOpen(false)
-                  onSupport()
-                }}
+                onClick={() => setOpen(false)}
                 className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
               >
                 Falar com o suporte
-              </button>
+              </Link>
             )}
             <button
               type="button"

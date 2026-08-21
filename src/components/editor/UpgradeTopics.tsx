@@ -1,11 +1,10 @@
-import { useState, type ReactNode } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useEffect, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Plan, Profile } from '@/lib/types'
 import { slugify } from '@/lib/brFormat'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import { CalendarIcon, CheckIcon, GlobeIcon, ScaleIcon, ShieldIcon } from '@/components/ui/icons'
-import { PurchaseSimulator } from './PurchaseSimulator'
 import { useSlugCheck } from '@/lib/useSlugCheck'
 import { BRAND_HOST } from '@/lib/publicUrl'
 
@@ -18,7 +17,7 @@ import { BRAND_HOST } from '@/lib/publicUrl'
 // texto cinza descrevendo a promessa, não.
 //
 // Já incluídos no plano atual aparecem com selo (quando `showIncluded`), dando
-// senso de evolução. O botão abre o checkout SIMULADO.
+// senso de evolução. O botão leva à PÁGINA de assinatura (/assinar/:plano).
 
 type Topic = {
   key: string
@@ -157,13 +156,11 @@ const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 
 export function UpgradeTopics({
   profile,
-  onPick,
   initial = null,
   showIncluded = true,
 }: {
   profile: Profile
-  onPick: (p: Plan) => void
-  /** abre o checkout já neste plano (ex.: quem clicou "Assinar Pro" na home) */
+  /** vai direto para o checkout deste plano (ex.: quem clicou "Assinar Pro" na home) */
   initial?: Exclude<Plan, 'free'> | null
   /**
    * Mostra também os tópicos já inclusos no plano atual (com selo "Incluído").
@@ -172,7 +169,18 @@ export function UpgradeTopics({
    */
   showIncluded?: boolean
 }) {
-  const [pending, setPending] = useState<Exclude<Plan, 'free'> | null>(initial)
+  const loc = useLocation()
+  const navigate = useNavigate()
+  const volta = `${loc.pathname}${loc.search}`
+  const checkoutUrl = (p: Exclude<Plan, 'free'>) =>
+    `/assinar/${p}?voltar=${encodeURIComponent(volta)}`
+
+  // Quem chegou com a intenção já declarada ("Assinar Pro" na home) não precisa
+  // clicar de novo: vai direto para a assinatura.
+  useEffect(() => {
+    if (initial) navigate(checkoutUrl(initial), { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial])
 
   return (
     <>
@@ -223,28 +231,18 @@ export function UpgradeTopics({
                   Incluído
                 </span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setPending(t.plan)}
-                  className="min-h-[44px] w-full shrink-0 rounded-full bg-burgundy px-3.5 text-[12.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep sm:min-h-0 sm:w-auto sm:self-center sm:py-1.5"
+                <Link
+                  to={checkoutUrl(t.plan)}
+                  className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-full bg-burgundy px-3.5 text-[12.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep sm:min-h-0 sm:w-auto sm:self-center sm:py-1.5"
                 >
                   Ativar {PLAN_LABEL[t.plan]}
-                </button>
+                </Link>
               )}
             </div>
           )
         })}
       </div>
 
-      <AnimatePresence>
-        {pending && (
-          <PurchaseSimulator
-            plan={pending}
-            onClose={() => setPending(null)}
-            onConfirmed={() => onPick(pending)}
-          />
-        )}
-      </AnimatePresence>
     </>
   )
 }

@@ -12,6 +12,12 @@ import AdminPanel from './pages/AdminPanel'
 import Escritorio from './pages/Escritorio'
 import FirmEditor from './pages/FirmEditor'
 import LegalPage from './pages/LegalPage'
+import ReportPage from './pages/ReportPage'
+import SchedulePage from './pages/SchedulePage'
+import SharePage from './pages/SharePage'
+import SupportPage from './pages/SupportPage'
+import PlansPage from './pages/PlansPage'
+import CheckoutPage from './pages/CheckoutPage'
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -51,6 +57,9 @@ export default function App() {
         <Route path="/comecar" element={<RequireAuth to="/criar-conta"><Onboarding /></RequireAuth>} />
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
         <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
+        <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
+        <Route path="/planos" element={<RequireAuth><PlansPage /></RequireAuth>} />
+        <Route path="/assinar/:plano" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />
@@ -58,6 +67,10 @@ export default function App() {
         <Route path={`/${ADMIN_PATH}`} element={<AdminPanel />} />
         <Route path="/escritorio/editar" element={<RequireAuth><FirmEditor /></RequireAuth>} />
         <Route path="/escritorio/:slug" element={<Escritorio />} />
+        {/* Subpáginas do perfil público — antes eram modais (ver components/ui/SubPage). */}
+        <Route path="/:slug/denunciar" element={<ReportPage />} />
+        <Route path="/:slug/agendar" element={<SchedulePage />} />
+        <Route path="/:slug/compartilhar" element={<SharePage />} />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
     </BrowserRouter>

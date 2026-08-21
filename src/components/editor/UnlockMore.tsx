@@ -1,24 +1,11 @@
-import { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import type { Plan } from '@/lib/types'
-import { useDialog } from '@/lib/a11y'
-import {
-  featureCompare,
-  nextPlan,
-  PLAN_LABEL,
-  PLAN_PRICE,
-  type UpsellFeature,
-} from '@/lib/upsell'
-import { TrustPointsChip } from './upsellBits'
-import { ArrowRight, CheckIcon, SparkIcon, XIcon } from '@/components/ui/icons'
+import { ArrowRight, CheckIcon, SparkIcon } from '@/components/ui/icons'
 
 // Upsell "positivo": os planos pagos não desbloqueiam recursos abstratos — eles
 // dão MAIS ITENS para o advogado colocar no perfil. Cada bullet é uma coisa a
 // mais que aparece no perfil, não um jargão de assinatura. Usado enquanto o
 // perfil é montado (onboarding) e no painel de evolução.
-
-const RANK_ORDER: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 
 type PaidPlan = Exclude<Plan, 'free'>
 type Tier = { id: PaidPlan; tier: string; price: string; pitch: string; items: string[] }
@@ -165,146 +152,5 @@ export function UnlockMore({
         </div>
       ))}
     </div>
-  )
-}
-
-/**
- * Modal de comparação FOCADO em um recurso — abre quando o advogado bate um
- * limite no editor. Mostra só o recurso que motivou o bloqueio, comparado entre
- * Free/Pro/Max (valores derivados de lib/upsell.ts → plans.ts). Fecha por Esc,
- * clique fora, X ou "Continuar editando" — nunca força a decisão. O CTA leva à
- * página de planos existente. O CTA assina o próximo plano ali mesmo
- * (`onSubscribe`), sem mandar o advogado procurar onde pagar; sem o callback,
- * degrada para o link da seção de plano.
- */
-export function FeatureUpsellModal({
-  feature,
-  plan,
-  onClose,
-  onSubscribe,
-}: {
-  feature: UpsellFeature
-  plan: Plan
-  onClose: () => void
-  /** abre o checkout do plano indicado (o Editor é quem monta o checkout) */
-  onSubscribe?: (p: Exclude<Plan, 'free'>) => void
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  useDialog(ref, onClose)
-  const cmp = featureCompare(feature)
-  const titleId = 'feature-upsell-title'
-  // Menor plano que realmente muda este recurso — é ele que o botão assina.
-  const target = (cmp.rows.find(
-    (r) => r.plan !== 'free' && RANK_ORDER[r.plan] > RANK_ORDER[plan] && r.value !== '—',
-  )?.plan ?? nextPlan(plan)) as Exclude<Plan, 'free'> | null
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center sm:p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="w-full max-w-md overflow-hidden rounded-t-xl2 bg-paper shadow-lift sm:rounded-xl2"
-        initial={{ y: 24, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 24, opacity: 0 }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-ink/10 px-5 py-4">
-          <div>
-            <h2 id={titleId} className="font-display text-[19px] font-semibold text-ink">
-              {cmp.title}
-            </h2>
-            <p className="mt-0.5 text-[13px] leading-snug text-ink-soft">{cmp.subtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-ink-faint transition-colors hover:bg-ink/[0.05] hover:text-ink"
-          >
-            <XIcon width={18} height={18} />
-          </button>
-        </div>
-
-        <div className="px-5 py-4">
-          {cmp.points > 0 && (
-            <div className="mb-3">
-              <TrustPointsChip points={cmp.points} />
-            </div>
-          )}
-          <ul className="space-y-2">
-            {cmp.rows.map((r) => {
-              const current = r.plan === plan
-              const emphasis = !current && r.plan !== 'free'
-              return (
-                <li
-                  key={r.plan}
-                  className={`flex items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 ${
-                    emphasis ? 'border-brass/40 bg-brass/[0.06]' : 'border-ink/10 bg-paper-soft'
-                  }`}
-                >
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span
-                      className={`text-[13.5px] font-semibold ${emphasis ? 'text-brass-deep' : 'text-ink'}`}
-                    >
-                      {PLAN_LABEL[r.plan]}
-                    </span>
-                    {current && (
-                      <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                        Seu plano
-                      </span>
-                    )}
-                    {r.plan !== 'free' && (
-                      <span className="text-[11.5px] text-ink-faint">
-                        {PLAN_PRICE[r.plan as Exclude<Plan, 'free'>]}/mês
-                      </span>
-                    )}
-                  </span>
-                  <span
-                    className={`shrink-0 text-right text-[13px] font-medium ${
-                      emphasis ? 'text-ink' : 'text-ink-soft'
-                    }`}
-                  >
-                    {r.value}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-
-          <div className="mt-4 flex items-center gap-2.5">
-            <button type="button" onClick={onClose} className="btn-ghost flex-1 !py-2.5">
-              Continuar editando
-            </button>
-            {onSubscribe && target ? (
-              <button
-                type="button"
-                onClick={() => onSubscribe(target)}
-                className="btn-primary flex-1 !py-2.5 text-[14px]"
-              >
-                Ativar {PLAN_LABEL[target]} · {PLAN_PRICE[target]}/mês
-              </button>
-            ) : (
-              <Link
-                to="/editor?section=plano"
-                onClick={onClose}
-                className="btn-primary flex-1 !py-2.5 text-[14px]"
-              >
-                Ver planos
-              </Link>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
   )
 }

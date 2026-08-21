@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import type { Firm } from '@/lib/escritorio'
 import { WhatsappIcon, ArrowRight } from '@/components/ui/icons'
-import { Modal } from './Modal'
+import { PainelEmLinha } from './PainelEmLinha'
 
 // Triagem de contato: antes de abrir o WhatsApp genérico, pergunta a ÁREA para
 // direcionar a conversa. Evita o "WhatsApp balcão" e organiza a captação de forma
 // sóbria (sem urgência, sem linguagem de venda).
-export function ModalTriagemWhatsApp({ firm, onClose }: { firm: Firm; onClose: () => void }) {
+export function PainelTriagemWhatsApp({ firm, onClose }: { firm: Firm; onClose: () => void }) {
   const [area, setArea] = useState<string | null>(null)
 
   const waHref = (areaLabel: string) => {
@@ -15,7 +15,7 @@ export function ModalTriagemWhatsApp({ firm, onClose }: { firm: Firm; onClose: (
   }
 
   return (
-    <Modal title="Sobre qual assunto deseja falar?" onClose={onClose} labelledBy="triagem-title">
+    <PainelEmLinha title="Sobre qual assunto deseja falar?" onClose={onClose} labelledBy="triagem-title">
       <p className="mt-1.5 text-sm text-ink-soft">
         Escolha a área para direcionarmos seu contato à equipe responsável.
       </p>
@@ -65,6 +65,6 @@ export function ModalTriagemWhatsApp({ firm, onClose }: { firm: Firm; onClose: (
         Contato informativo. Nenhuma orientação jurídica é prestada por este canal antes da
         análise do caso.
       </p>
-    </Modal>
+    </PainelEmLinha>
   )
 }

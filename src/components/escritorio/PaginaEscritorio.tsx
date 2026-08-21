@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/icons'
 import { FirmVerified } from './FirmVerified'
 import { MiniPerfil } from './MiniPerfil'
-import { ModalTriagemWhatsApp } from './ModalTriagemWhatsApp'
+import { PainelTriagemWhatsApp } from './PainelTriagemWhatsApp'
 
 // Página institucional standalone do escritório (sociedade de advogados). Estilo próprio
 // baseado na paleta "Papel & Tinta" (bege/grafite/dourado) — NÃO usa o sistema de temas
@@ -142,7 +142,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               </a>
             )}
           </div>
-          {firm.contact.whatsapp && (
+          {firm.contact.whatsapp && !triage && (
             <button
               type="button"
               onClick={() => setTriage(true)}
@@ -153,6 +153,8 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               Falar com o escritório
             </button>
           )}
+          {/* A triagem abre AQUI, no lugar do botão — não numa janela sobre a página. */}
+          {triage && <PainelTriagemWhatsApp firm={firm} onClose={() => setTriage(false)} />}
         </section>
 
         {/* Rodapé de compliance */}
@@ -164,7 +166,6 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
         </footer>
       </div>
 
-      {triage && <ModalTriagemWhatsApp firm={firm} onClose={() => setTriage(false)} />}
     </main>
   )
 }

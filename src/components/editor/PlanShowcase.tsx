@@ -1,13 +1,11 @@
-import { useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { Link, useLocation } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CheckIcon } from '@/components/ui/icons'
-import { PurchaseSimulator } from './PurchaseSimulator'
 
-// Vitrine de planos com ATIVAÇÃO simulada — o CTA abre um checkout de mentira
-// (parece assinatura de verdade, mas sem cobrança) e só então ativa o plano.
+// Vitrine de planos. O CTA leva à PÁGINA de assinatura (/assinar/:plano), um
+// checkout de mentira que parece de verdade — sem cobrança, e sem modal.
 // Durante os testes todos os planos ficam liberados. Números (áreas, bio) vêm
 // de plans.ts para não mentir; o resto é copy curada de valor.
 
@@ -48,14 +46,24 @@ const PERKS: Record<Plan, string[]> = {
   ],
 }
 
-export function PlanShowcase({ plan, onPick }: { plan: Plan; onPick: (p: Plan) => void }) {
-  // Plano aguardando confirmação no checkout simulado (null = fechado).
-  const [pending, setPending] = useState<Exclude<Plan, 'free'> | null>(null)
-
-  const activate = (p: Plan) => {
-    if (p === 'free') return onPick('free') // downgrade não precisa de checkout
-    setPending(p) // abre o checkout simulado
-  }
+export function PlanShowcase({
+  plan,
+  onPick,
+  voltar,
+  tema,
+}: {
+  plan: Plan
+  /** só para o downgrade ("Voltar ao Free"), que não passa por checkout */
+  onPick?: (p: Plan) => void
+  /** para onde a assinatura devolve a pessoa (padrão: a rota atual) */
+  voltar?: string
+  /** tema em prova, preservado através do checkout */
+  tema?: string | null
+}) {
+  const loc = useLocation()
+  const volta = voltar ?? `${loc.pathname}${loc.search}`
+  const checkoutUrl = (p: Exclude<Plan, 'free'>) =>
+    `/assinar/${p}${tema ? `?tema=${tema}&` : '?'}voltar=${encodeURIComponent(volta)}`
 
   return (
     <>
@@ -108,17 +116,23 @@ export function PlanShowcase({ plan, onPick }: { plan: Plan; onPick: (p: Plan) =
                   </div>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => activate(p)}
-                      className={`w-full rounded-full py-2.5 text-[13.5px] font-semibold transition-colors ${
-                        p !== 'free'
-                          ? 'bg-burgundy text-paper-soft hover:bg-burgundy-deep'
-                          : 'border border-ink/15 text-ink hover:border-burgundy/40 hover:text-burgundy'
-                      }`}
-                    >
-                      {p === 'free' ? 'Voltar ao Free' : `Assinar ${PLAN_LABEL[p]}`}
-                    </button>
+                    {p === 'free' ? (
+                      // Downgrade não passa por checkout — é só desligar a assinatura.
+                      <button
+                        type="button"
+                        onClick={() => onPick?.('free')}
+                        className="w-full rounded-full border border-ink/15 py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                      >
+                        Voltar ao Free
+                      </button>
+                    ) : (
+                      <Link
+                        to={checkoutUrl(p)}
+                        className="block w-full rounded-full bg-burgundy py-2.5 text-center text-[13.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep"
+                      >
+                        Assinar {PLAN_LABEL[p]}
+                      </Link>
+                    )}
                     {p !== 'free' && (
                       <p className="mt-1.5 text-center text-[11px] text-ink-faint">em teste · sem cobrança</p>
                     )}
@@ -130,15 +144,6 @@ export function PlanShowcase({ plan, onPick }: { plan: Plan; onPick: (p: Plan) =
         })}
       </div>
 
-      <AnimatePresence>
-        {pending && (
-          <PurchaseSimulator
-            plan={pending}
-            onClose={() => setPending(null)}
-            onConfirmed={() => onPick(pending)}
-          />
-        )}
-      </AnimatePresence>
     </>
   )
 }

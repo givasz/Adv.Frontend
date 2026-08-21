@@ -3,7 +3,7 @@ import type { FirmLawyer } from '@/lib/escritorio'
 import { Avatar } from '@/components/ui/Avatar'
 import { ArrowRight, LinkedinIcon } from '@/components/ui/icons'
 import { FirmVerified } from './FirmVerified'
-import { ModalContato } from './ModalContato'
+import { PainelContato } from './PainelContato'
 
 // Mini-perfil do advogado exibido DENTRO da página do escritório (sem sair de domínio).
 // Foto, nome, OAB, área, bio curta, LinkedIn pessoal, "Solicitar contato" e "Voltar".
@@ -48,17 +48,20 @@ export function MiniPerfil({ lawyer, onBack }: { lawyer: FirmLawyer; onBack: () 
             <ArrowRight width={15} height={15} className="ml-auto text-ink-faint" />
           </a>
         )}
-        <button
-          type="button"
-          onClick={() => setContact(true)}
-          className="btn-primary w-full"
-          style={{ background: 'var(--firm-accent)' }}
-        >
-          Solicitar contato
-        </button>
+        {!contact && (
+          <button
+            type="button"
+            onClick={() => setContact(true)}
+            className="btn-primary w-full"
+            style={{ background: 'var(--firm-accent)' }}
+          >
+            Solicitar contato
+          </button>
+        )}
       </div>
 
-      {contact && <ModalContato subjectName={lawyer.name} onClose={() => setContact(false)} />}
+      {/* O formulário abre no próprio mini-perfil, logo abaixo do botão. */}
+      {contact && <PainelContato subjectName={lawyer.name} onClose={() => setContact(false)} />}
     </div>
   )
 }

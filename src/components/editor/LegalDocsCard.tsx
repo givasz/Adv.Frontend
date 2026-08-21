@@ -1,8 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { generateLegalDocs, type LegalDoc } from '@/lib/legalDocs'
-import { useDialog } from '@/lib/a11y'
 import { Card } from './fields'
 import { CopyIcon, LockIcon } from '@/components/ui/icons'
 
@@ -19,9 +18,26 @@ function download(doc: LegalDoc) {
 // Gerador de Política de Privacidade e Termos de Uso (LGPD) a partir dos dados do
 // perfil — útil para quem coleta contato pelo link. Modelo informativo, não é
 // aconselhamento jurídico.
+//
+// Os documentos abrem EM LINHA, dentro do próprio card. Eram uma janela sobre a
+// página: texto longo dentro de uma caixa com rolagem própria, no celular, é a
+// pior combinação possível — e ler o documento inteiro é o objetivo da tela.
 export function LegalDocsCard({ profile }: { profile: Profile }) {
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState(0)
+  const [copied, setCopied] = useState(false)
   const docs = useMemo(() => generateLegalDocs(profile), [profile])
+  const doc = docs[tab]
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(doc.body)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      /* área de transferência indisponível */
+    }
+  }
 
   return (
     <Card title="Documentos legais (LGPD)">
@@ -32,90 +48,58 @@ export function LegalDocsCard({ profile }: { profile: Profile }) {
           Privacidade e Termos de Uso já preenchidos com os seus dados.
         </span>
       </p>
-      <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full">
-        Gerar documentos
-      </button>
-      {open && <LegalDocsDialog docs={docs} onClose={() => setOpen(false)} />}
-    </Card>
-  )
-}
 
-function LegalDocsDialog({ docs, onClose }: { docs: LegalDoc[]; onClose: () => void }) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const [tab, setTab] = useState(0)
-  const [copied, setCopied] = useState(false)
-  useDialog(dialogRef, onClose)
-  const doc = docs[tab]
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full">
+          Gerar documentos
+        </button>
+      ) : (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-lg border border-ink/10 bg-paper-soft/60"
+          >
+            {/* Abas dos documentos gerados */}
+            <div className="flex flex-wrap gap-1.5 border-b border-ink/10 p-3">
+              {docs.map((d, i) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setTab(i)}
+                  className={`rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                    i === tab ? 'bg-burgundy text-paper-soft' : 'bg-ink/[0.05] text-ink-faint'
+                  }`}
+                >
+                  {d.title}
+                </button>
+              ))}
+            </div>
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(doc.body)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* clipboard indisponível */
-    }
-  }
+            {/* Altura limitada com rolagem própria: o documento é longo e não pode
+                empurrar o resto do editor para fora da tela. */}
+            <div className="max-h-[50vh] overflow-y-auto p-3.5">
+              <pre className="whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-ink-soft">
+                {doc.body}
+              </pre>
+            </div>
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="fixed inset-0 z-40 flex items-end justify-center bg-ink/45 p-3 backdrop-blur-sm sm:items-center"
-    >
-      <motion.div
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 30, opacity: 0 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="legal-title"
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl2 border border-ink/10 bg-paper shadow-lift"
-      >
-        <div className="border-b border-ink/10 p-4">
-          <h3 id="legal-title" className="font-display text-lg font-semibold">
-            Documentos legais
-          </h3>
-          <div className="mt-3 flex gap-1.5">
-            {docs.map((d, i) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => setTab(i)}
-                className={`rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                  i === tab ? 'bg-burgundy text-paper-soft' : 'bg-ink/[0.05] text-ink-faint'
-                }`}
-              >
-                {d.title}
+            <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 p-3">
+              <button type="button" onClick={() => download(doc)} className="btn-primary flex-1 !py-2.5">
+                Baixar .txt
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="overflow-y-auto p-4">
-          <pre className="whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-ink-soft">
-            {doc.body}
-          </pre>
-        </div>
-
-        <div className="flex items-center gap-2 border-t border-ink/10 p-4">
-          <button type="button" onClick={() => download(doc)} className="btn-primary flex-1">
-            Baixar .txt
-          </button>
-          <button type="button" onClick={copy} className="btn-ghost">
-            <CopyIcon width={16} height={16} />
-            {copied ? 'Copiado!' : 'Copiar'}
-          </button>
-          <button type="button" onClick={onClose} className="btn-ghost">
-            Fechar
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
+              <button type="button" onClick={copy} className="btn-ghost !py-2.5">
+                <CopyIcon width={16} height={16} />
+                {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+              <button type="button" onClick={() => setOpen(false)} className="btn-ghost !py-2.5">
+                Fechar
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </Card>
   )
 }

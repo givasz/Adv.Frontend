@@ -12,7 +12,6 @@ import type {
 } from '@/lib/types'
 import { api } from '@/lib/api'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { SupportDialog } from '@/components/support/SupportDialog'
 import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
@@ -29,6 +28,7 @@ import {
   canUseVideo,
 } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
+import { comVolta } from '@/components/ui/SubPage'
 import { fitToLimit } from '@/lib/textLimit'
 import { useSlugCheck } from '@/lib/useSlugCheck'
 import { BRAND_HOST } from '@/lib/publicUrl'
@@ -38,7 +38,6 @@ import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
 import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
-import { PurchaseSimulator } from '@/components/editor/PurchaseSimulator'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { FaqCard } from '@/components/editor/FaqCard'
 import { VideoCard } from '@/components/editor/VideoCard'
@@ -52,7 +51,6 @@ import { MarginNotes } from '@/components/editor/MarginNotes'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { DigitalCard } from '@/components/editor/DigitalCard'
 import { UpsellCard } from '@/components/editor/UpsellCard'
-import { FeatureUpsellModal } from '@/components/editor/UnlockMore'
 import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
 import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
 import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
@@ -137,16 +135,13 @@ export default function Editor() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
-  // Recurso que motivou o modal de upsell contextual (null = fechado).
-  const [upsell, setUpsell] = useState<UpsellFeature | null>(null)
-  // Plano no checkout simulado (null = fechado). Assinar acontece AQUI mesmo, sem
-  // mandar o advogado procurar outra página.
-  const [checkout, setCheckout] = useState<Exclude<Plan, 'free'> | null>(null)
+  // Upsell e checkout deixaram de ser modais: viram páginas (/planos, /assinar).
+  // Antes de sair do editor é preciso DESCARREGAR o que está em voo, senão os
+  // últimos caracteres digitados morrem com a tela (mesmo motivo do "Pronto").
   // Tema travado que o advogado está PROVANDO: entra só na prévia, nunca no
   // rascunho. Deixar experimentar antes de pedir a assinatura é o que transforma
   // um cadeado em vontade — o cadeado continua, mas no salvar.
   const [tryTheme, setTryTheme] = useState<ThemeId | null>(null)
-  const [support, setSupport] = useState(false)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -289,6 +284,7 @@ export default function Editor() {
   // A troca de plano passa pelo servidor (api.setPlan) e o resultado dele é adotado
   // como novo estado: quem manda é a assinatura vigente, não o objeto local. Sem
   // isso, o recurso "comprado" destravava só na tela e voltava a travar no reload.
+  // Hoje só o DOWNGRADE passa por aqui — assinar acontece em /assinar/:plano.
   const changePlan = async (plan: Plan) => {
     // Grava o que estiver em voo antes de trocar: setPlan devolve o perfil do
     // servidor e nós o adotamos por inteiro — sem este flush, os últimos
@@ -302,7 +298,6 @@ export default function Editor() {
     const theme = isThemeUnlocked(getTheme(wanted), plan) ? wanted : 'papel'
     setProfile({ ...saved, theme })
     setTryTheme(null)
-    setCheckout(null)
   }
   const lim = CHAR_LIMITS[profile.plan]
 
@@ -323,7 +318,7 @@ export default function Editor() {
   // Abre o gerador de IA se o plano permite o recurso; senão, abre o upsell.
   function openAi(target: NonNullable<AiTarget>) {
     if (canUseAi(target.kind, profile!.plan)) setAi(target)
-    else setUpsell('ai')
+    else abrirUpsell('ai')
   }
 
   // Teto de caracteres do campo que vai receber o texto. É o mesmo número que o
@@ -348,6 +343,22 @@ export default function Editor() {
       set({
         faqs: (profile!.faqs ?? []).map((f) => (f.id === ai.faqId ? { ...f, answer: texto } : f)),
       })
+  }
+
+  /** Endereço atual do editor — é para cá que as subpáginas devolvem a pessoa. */
+  const aqui = `/editor?section=${section}`
+
+  /** Sai do editor para uma subpágina, gravando o que estiver em voo. */
+  async function irPara(destino: string) {
+    await flush()
+    navigate(destino)
+  }
+
+  /** Abre a comparação de planos focada no recurso que bateu o limite. */
+  function abrirUpsell(feature: UpsellFeature) {
+    void irPara(
+      comVolta(`/planos?recurso=${feature}&plano=${profile!.plan}`, aqui),
+    )
   }
 
   // Sair do editor GRAVA o que estiver em voo antes de navegar. Se o servidor
@@ -387,7 +398,7 @@ export default function Editor() {
             <Link to={`/${profile.slug}`} className="btn-primary !py-2 !px-4 text-[13px]" target="_blank">
               Ver perfil
             </Link>
-            <AccountMenu compact onSupport={() => setSupport(true)} />
+            <AccountMenu compact supportTo={comVolta('/suporte', `/editor?section=${section}`)} />
           </div>
         </div>
       </header>
@@ -427,6 +438,26 @@ export default function Editor() {
             <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">{meta.subtitle}</p>
           </div>
 
+          {/* Gerador de IA — PAINEL, não janela. Fica aqui, no fluxo da coluna de
+              edição, logo acima do campo que vai receber o texto: a pessoa vê o
+              antes e o depois na mesma tela, e cancelar não "fecha" nada. */}
+          <AnimatePresence>
+            {ai && (
+              <AiGenerator
+                kind={ai.kind}
+                areaLabel={ai.areaLabel}
+                name={profile.name}
+                plan={profile.plan}
+                city={[profile.city, profile.state].filter(Boolean).join('/')}
+                areas={profile.areas.map((a) => a.label).filter(Boolean)}
+                currentText={ai.currentText}
+                limit={aiLimit(ai)}
+                onApply={applyAi}
+                onClose={() => setAi(null)}
+              />
+            )}
+          </AnimatePresence>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
@@ -443,7 +474,7 @@ export default function Editor() {
                   setProfile={setProfile}
                   lim={lim}
                   onAi={openAi}
-                  onUpsell={setUpsell}
+                  onUpsell={abrirUpsell}
                 />
               )}
 
@@ -492,7 +523,7 @@ export default function Editor() {
                     <LockedFeature
                       unlockPlan={nextPlan(profile.plan) ?? 'pro'}
                       points={featurePoints('agenda')}
-                      onOpen={() => setUpsell('agenda')}
+                      onOpen={() => abrirUpsell('agenda')}
                     >
                       <SchedulingCard profile={profile} set={() => {}} preview />
                     </LockedFeature>
@@ -521,7 +552,9 @@ export default function Editor() {
                       <ThemeTrialBar
                         trying={tryTheme}
                         saved={profile.theme}
-                        onSubscribe={setCheckout}
+                        onSubscribe={(p) =>
+                          void irPara(comVolta(`/assinar/${p}?tema=${tryTheme}`, `/editor?section=aparencia`))
+                        }
                         onCancel={() => setTryTheme(null)}
                         onShowPreview={() => setTab('preview')}
                       />
@@ -570,7 +603,7 @@ export default function Editor() {
                       <TrustPointsChip points={featurePoints('oab')} />
                       <button
                         type="button"
-                        onClick={() => setUpsell('oab')}
+                        onClick={() => abrirUpsell('oab')}
                         className="btn-primary !py-2 !px-4 text-[13px]"
                       >
                         Ver o que muda
@@ -597,7 +630,7 @@ export default function Editor() {
                 ) : (
                   // Free vê o cartão real borrado sob o cadeado — inclusive com o
                   // endereço limpo que ele passaria a ter, que é metade do apelo.
-                  <LockedFeature unlockPlan="pro" onOpen={() => setUpsell('qrcode')}>
+                  <LockedFeature unlockPlan="pro" onOpen={() => abrirUpsell('qrcode')}>
                     <DigitalCard profile={{ ...profile, slug: slugify(profile.name) || profile.slug }} />
                   </LockedFeature>
                 ))}
@@ -607,7 +640,7 @@ export default function Editor() {
                   <FaqCard
                     profile={profile}
                     set={set}
-                    onUpsell={setUpsell}
+                    onUpsell={abrirUpsell}
                     // A pergunta vai como `areaLabel` (é o assunto) e a resposta atual
                     // como `currentText` — é o que faz a IA APOIAR o texto do advogado
                     // em vez de escrever outro por cima.
@@ -623,7 +656,7 @@ export default function Editor() {
                 ) : (
                   // No Free a seção continua no lugar, com o card real borrado sob o
                   // cadeado — o advogado vê exatamente o que teria.
-                  <LockedFeature unlockPlan="pro" onOpen={() => setUpsell('faq')}>
+                  <LockedFeature unlockPlan="pro" onOpen={() => abrirUpsell('faq')}>
                     <FaqCard
                       profile={{ ...profile, plan: 'pro', faqs: PREVIEW_FAQS }}
                       set={() => {}}
@@ -639,7 +672,7 @@ export default function Editor() {
                 ) : (
                   // Igual ao FAQ: a seção fica no lugar, com o card real
                   // borrado sob o cadeado, para o advogado ver o que teria.
-                  <LockedFeature unlockPlan="premium" onOpen={() => setUpsell('video')}>
+                  <LockedFeature unlockPlan="premium" onOpen={() => abrirUpsell('video')}>
                     <VideoCard profile={{ ...profile, videoUrl: PREVIEW_VIDEO_URL }} set={() => {}} preview />
                   </LockedFeature>
                 ))}
@@ -647,7 +680,7 @@ export default function Editor() {
               {section === 'conteudo' && (
                 <>
                   <LegalDocsCard profile={profile} />
-                  <AuditReportCard profile={profile} onUpsell={() => setUpsell('branding')} />
+                  <AuditReportCard profile={profile} onUpsell={() => abrirUpsell('branding')} />
                 </>
               )}
 
@@ -657,7 +690,7 @@ export default function Editor() {
                       não uma vitrine para comprar de novo. */}
                   <PlanChecklist profile={profile} />
                   <Card title="Planos">
-                    <PlanShowcase plan={profile.plan} onPick={changePlan} />
+                    <PlanShowcase plan={profile.plan} onPick={changePlan} voltar={aqui} />
                     <p className="text-[11.5px] leading-relaxed text-ink-faint">
                       Plataforma em teste: a assinatura é ativada na hora e nenhuma cobrança é
                       feita. Você pode voltar ao Free quando quiser — seus textos continuam
@@ -704,52 +737,6 @@ export default function Editor() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {ai && (
-          <AiGenerator
-            kind={ai.kind}
-            areaLabel={ai.areaLabel}
-            name={profile.name}
-            plan={profile.plan}
-            city={[profile.city, profile.state].filter(Boolean).join('/')}
-            areas={profile.areas.map((a) => a.label).filter(Boolean)}
-            currentText={ai.currentText}
-            limit={aiLimit(ai)}
-            onApply={applyAi}
-            onClose={() => setAi(null)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Modal de upsell focado no recurso que bateu o limite */}
-      <AnimatePresence>
-        {upsell && (
-          <FeatureUpsellModal
-            feature={upsell}
-            plan={profile.plan}
-            onClose={() => setUpsell(null)}
-            onSubscribe={(p) => {
-              setUpsell(null)
-              setCheckout(p)
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {support && <SupportDialog onClose={() => setSupport(false)} />}
-      </AnimatePresence>
-
-      {/* Checkout simulado — do "está travado" ao "está liberado" sem trocar de tela */}
-      <AnimatePresence>
-        {checkout && (
-          <PurchaseSimulator
-            plan={checkout}
-            onClose={() => setCheckout(null)}
-            onConfirmed={() => changePlan(checkout)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
