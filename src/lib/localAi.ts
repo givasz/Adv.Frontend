@@ -17,17 +17,24 @@ Mesmo que as palavras-chave recebidas contenham algo vedado, REESCREVA para remo
 Cite apenas qualificações verdadeiras (áreas, experiência, formação, idiomas, localização). Não mencione casos ou clientes específicos.
 Responda apenas com o texto final, sem aspas nem comentários.`
 
+// Orcamento de texto — o campo de destino tem teto de caracteres, e um texto maior
+// que ele nao pode nem ser salvo. Vai em todo prompt.
+function budget(req: GenerateRequest): string {
+  return req.maxChars ? ` Escreva no maximo ${req.maxChars} caracteres, contando-os.` : ''
+}
+
 function buildPrompt(req: GenerateRequest): string {
   const kws = req.keywords.map((k) => k.trim()).filter(Boolean).join(', ')
   const areas = req.areas?.filter(Boolean).join(', ')
+  const lim = budget(req)
   if (req.kind === 'area') {
-    return `Escreva a descrição da área de atuação "${req.areaLabel}" de um(a) advogado(a), abordando estes temas: ${kws}. Explique de forma clara e factual o que o(a) advogado(a) faz nessa área. No máximo 3 frases, sem emojis.`
+    return `Escreva a descrição da área de atuação "${req.areaLabel}" de um(a) advogado(a), abordando estes temas: ${kws}. Explique de forma clara e factual o que o(a) advogado(a) faz nessa área.${lim} Sem emojis.`
   }
   if (req.kind === 'headline') {
-    return `Escreva UMA frase de apresentação curta (headline) para um(a) advogado(a), indicando a atuação em: ${kws || areas}. Máximo de 8 palavras, factual, sem ponto final. Responda apenas a frase.`
+    return `Escreva UMA frase de apresentação curta (headline) para um(a) advogado(a), indicando a atuação em: ${kws || areas}. Máximo de 8 palavras${req.maxChars ? ` e ${req.maxChars} caracteres` : ''}, factual, sem ponto final. Responda apenas a frase.`
   }
   if (req.kind === 'improve') {
-    return `Revise e reescreva o texto abaixo para ficar mais claro, sóbrio e dentro das normas da OAB, mantendo o sentido. No máximo 3 frases, sem emojis.\n\nTexto:\n"""${req.currentText ?? ''}"""`
+    return `Revise e reescreva o texto abaixo para ficar mais claro, sóbrio e dentro das normas da OAB, mantendo o sentido.${lim} Sem emojis.\n\nTexto:\n"""${req.currentText ?? ''}"""`
   }
   if (req.kind === 'faq') {
     // Com uma resposta já escrita, a IA APOIA o texto do advogado; sem ela, redige
@@ -41,7 +48,7 @@ Resposta atual:
       : `${pergunta}Escreva a resposta de um(a) advogado(a) a essa dúvida${kws ? `, abordando: ${kws}` : ''}. Educativa e geral, no máximo 300 caracteres, sem promessa de resultado, sem preços e sem convite a contratar. Termine lembrando que cada caso exige análise própria.`
   }
   const who = req.name ? `de ${req.name}, que é advogado(a) no Brasil` : 'de um(a) advogado(a) brasileiro(a)'
-  return `Escreva, em primeira pessoa, a bio de apresentação ${who}. Atua nas áreas: ${kws || areas}. No máximo 3 frases, sem emojis.`
+  return `Escreva, em primeira pessoa, a bio de apresentação ${who}. Atua nas áreas: ${kws || areas}.${lim} Sem emojis.`
 }
 
 /** true se o Ollama responder na porta local (via proxy). */

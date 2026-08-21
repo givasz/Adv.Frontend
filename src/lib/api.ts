@@ -6,6 +6,7 @@
 
 import { authHeader } from './auth'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
+import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
 import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
 import { getFirm as getMockFirm, slugifyFirm, type Firm } from './escritorio'
@@ -800,7 +801,12 @@ export const api = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(req),
         })
-        if (res.ok) return res.json()
+        if (res.ok) {
+          // O teto é reaplicado aqui: o backend já corta, mas o texto que chega ao
+          // editor NUNCA pode estourar o limite do campo — é isso que trava o save.
+          const data = (await res.json()) as GenerateResult
+          return { ...data, text: fitToLimit(data.text, req.maxChars ?? 0) }
+        }
       } catch {
         /* backend indisponível → cai para Ollama/template abaixo */
       }
@@ -822,6 +828,7 @@ export const api = {
       text = draftText(req)
       usedFallback = true
     }
+    text = fitToLimit(text, req.maxChars ?? 0)
     const issues = checkCompliance(text)
     return {
       text,

@@ -270,6 +270,11 @@ export interface GenerateRequest {
   currentText?: string
   /** plano do perfil — controla profundidade/enriquecimento no backend */
   plan?: Plan
+  /**
+   * Teto de caracteres do campo de destino. Vai no prompt E é aplicado ao texto
+   * devolvido: gerar acima do limite deixava o perfil impossível de salvar.
+   */
+  maxChars?: number
 }
 
 export interface GenerateResult {

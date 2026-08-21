@@ -29,6 +29,7 @@ import {
   canUseVideo,
 } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
+import { fitToLimit } from '@/lib/textLimit'
 import { useSlugCheck } from '@/lib/useSlugCheck'
 import { BRAND_HOST } from '@/lib/publicUrl'
 import { canUseAi } from '@/lib/aiFeatures'
@@ -325,17 +326,27 @@ export default function Editor() {
     else setUpsell('ai')
   }
 
+  // Teto de caracteres do campo que vai receber o texto. É o mesmo número que o
+  // servidor cobra no save — passa para a IA no pedido e corta na aplicação.
+  function aiLimit(target: NonNullable<AiTarget>): number {
+    if (target.kind === 'faq') return FAQ_ANSWER_MAX
+    if (target.kind === 'headline') return lim.headline
+    if (target.kind === 'area') return lim.areaDesc
+    return lim.bio // bio e improve
+  }
+
   function applyAi(text: string) {
     if (!ai) return
-    if (ai.kind === 'bio' || ai.kind === 'improve') set({ bio: text })
-    else if (ai.kind === 'headline') set({ headline: text.replace(/[.]+$/, '').trim() })
+    // Corte final: nada aplicado pode estourar o limite do campo. Sem isto, um
+    // texto generoso da IA travava TODO o save do perfil com "excede o limite".
+    const texto = fitToLimit(text, aiLimit(ai))
+    if (ai.kind === 'bio' || ai.kind === 'improve') set({ bio: texto })
+    else if (ai.kind === 'headline') set({ headline: texto.replace(/[.]+$/, '').trim() })
     else if (ai.kind === 'area')
-      set({ areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: text } : a)) })
+      set({ areas: profile!.areas.map((a) => (a.id === ai.areaId ? { ...a, description: texto } : a)) })
     else if (ai.kind === 'faq')
       set({
-        faqs: (profile!.faqs ?? []).map((f) =>
-          f.id === ai.faqId ? { ...f, answer: text.slice(0, FAQ_ANSWER_MAX) } : f,
-        ),
+        faqs: (profile!.faqs ?? []).map((f) => (f.id === ai.faqId ? { ...f, answer: texto } : f)),
       })
   }
 
@@ -451,6 +462,7 @@ export default function Editor() {
                       placeholder="Escreva ou gere com IA…"
                     />
                   </Field>
+                  <OverLimit value={profile.bio} limit={lim.bio} onFix={(v) => set({ bio: v })} />
                   <MarginNotes issues={bioIssues} />
                   {profile.bio.trim() && (
                     <button
@@ -702,6 +714,7 @@ export default function Editor() {
             city={[profile.city, profile.state].filter(Boolean).join('/')}
             areas={profile.areas.map((a) => a.label).filter(Boolean)}
             currentText={ai.currentText}
+            limit={aiLimit(ai)}
             onApply={applyAi}
             onClose={() => setAi(null)}
           />
@@ -1223,6 +1236,39 @@ function OabVerifyRow({
   )
 }
 
+/**
+ * Aviso + conserto de um campo que passou do limite. Só aparece quando o texto
+ * já está acima do teto — situação que hoje só acontece com texto colado ou
+ * vindo de uma geração antiga (a IA passou a escrever dentro do orçamento).
+ */
+function OverLimit({
+  value,
+  limit,
+  onFix,
+}: {
+  value: string
+  limit: number
+  onFix: (v: string) => void
+}) {
+  const excedente = value.length - limit
+  if (excedente <= 0) return null
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-burgundy/25 bg-burgundy/[0.05] px-3 py-2">
+      <span className="text-[12px] font-medium text-burgundy-deep">
+        {excedente} {excedente === 1 ? 'caractere' : 'caracteres'} acima do limite — o perfil não salva
+        assim.
+      </span>
+      <button
+        type="button"
+        onClick={() => onFix(fitToLimit(value, limit))}
+        className="shrink-0 rounded-full border border-burgundy/40 px-3 py-1 text-[12px] font-semibold text-burgundy hover:bg-burgundy/10"
+      >
+        Cortar no limite
+      </button>
+    </div>
+  )
+}
+
 function AreaEditor({
   area,
   descLimit,
@@ -1262,9 +1308,20 @@ function AreaEditor({
           placeholder="Descrição do que você faz nessa área…"
           onChange={(e) => onChange({ description: e.target.value })}
         />
-        <p className="mt-1 text-right text-[11px] text-ink-faint">
+        <p
+          className={`mt-1 text-right text-[11px] tabular-nums ${
+            area.description.length > descLimit ? 'font-semibold text-burgundy-deep' : 'text-ink-faint'
+          }`}
+        >
           {area.description.length}/{descLimit}
         </p>
+        {/* Texto acima do teto trava o save do perfil INTEIRO. Em vez de deixar a
+            pessoa contar caracteres na mão, um toque corta na última frase que cabe. */}
+        <OverLimit
+          value={area.description}
+          limit={descLimit}
+          onFix={(v) => onChange({ description: v })}
+        />
       </div>
       <button
         type="button"

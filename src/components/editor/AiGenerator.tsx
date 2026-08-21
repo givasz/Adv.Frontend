@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { GenerateKind, Plan } from '@/lib/types'
 import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
+import { fitToLimit } from '@/lib/textLimit'
 import { templatesFor } from '@/lib/templates'
 import { useDialog } from '@/lib/a11y'
 import { SparkIcon } from '@/components/ui/icons'
@@ -17,6 +18,12 @@ interface AiGeneratorProps {
   areas?: string[]
   /** texto atual — usado quando kind === 'improve' */
   currentText?: string
+  /**
+   * Teto de caracteres do campo de destino. Vai no pedido (o modelo escreve dentro
+   * do orçamento), limita a edição manual aqui e é a garantia final no aplicar —
+   * texto acima do limite faz o servidor recusar o perfil inteiro no save.
+   */
+  limit?: number
   onApply: (text: string) => void
   onClose: () => void
 }
@@ -51,6 +58,7 @@ export function AiGenerator({
   city,
   areas,
   currentText,
+  limit,
   onApply,
   onClose,
 }: AiGeneratorProps) {
@@ -98,7 +106,17 @@ export function AiGenerator({
     setTyped('')
     setDraft('')
     try {
-      const res = await api.generate({ kind, keywords: list, areaLabel, name, plan, city, areas, currentText })
+      const res = await api.generate({
+        kind,
+        keywords: list,
+        areaLabel,
+        name,
+        plan,
+        city,
+        areas,
+        currentText,
+        maxChars: limit,
+      })
       startReveal(res.text)
     } finally {
       setLoading(false)
@@ -227,9 +245,17 @@ export function AiGenerator({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 rows={kind === 'faq' ? 6 : 5}
+                maxLength={limit}
                 aria-label="Texto gerado — edite se quiser antes de aplicar"
                 className="w-full resize-none rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-3 text-[14px] leading-relaxed focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
               />
+              {/* Contador do campo de destino: o que for editado aqui já sai no
+                  tamanho que o perfil aceita salvar. */}
+              {!!limit && (
+                <p className="mt-1 text-right text-[11px] tabular-nums text-ink-faint">
+                  {draft.length}/{limit}
+                </p>
+              )}
 
               {issues.length > 0 && (
                 <div
@@ -255,7 +281,7 @@ export function AiGenerator({
                   type="button"
                   disabled={blocked}
                   onClick={() => {
-                    onApply(draft.trim())
+                    onApply(fitToLimit(draft, limit ?? 0))
                     onClose()
                   }}
                   className="btn-primary flex-1"
