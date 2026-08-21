@@ -76,20 +76,23 @@
 
   .link-tile {
     @apply relative flex items-center gap-3 w-full rounded-xl2 border border-ink/10
-      bg-paper-soft px-4 py-3.5 text-left transition-all duration-300
+      bg-paper-soft px-4 py-3.5 text-left duration-300
       hover:border-brass/50 hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0;
+    transition-property: transform, border-color, box-shadow, background-color;
   }
 
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-burgundy
-      px-6 py-3 font-semibold text-paper-soft transition-all duration-300
+      px-6 py-3 font-semibold text-paper-soft duration-300
       hover:bg-burgundy-deep hover:shadow-lift active:scale-[0.98] disabled:opacity-50;
+    transition-property: transform, background-color, box-shadow, opacity;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15
-      px-5 py-2.5 font-medium text-ink transition-all duration-200
+      px-5 py-2.5 font-medium text-ink duration-200
       hover:border-ink/40 hover:bg-ink/[0.03] active:scale-[0.98];
+    transition-property: transform, border-color, background-color;
   }
 }
 
@@ -141,7 +144,8 @@
 
   .t-tile {
     @apply relative flex items-center gap-3 w-full border px-4 py-3.5
-      text-left transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0;
+      text-left duration-300 hover:-translate-y-0.5 active:translate-y-0;
+    transition-property: transform, border-color, box-shadow, background-color;
     border-radius: var(--tile-radius, 20px);
     border-color: var(--c-border);
     background: var(--c-surface);
@@ -193,7 +197,8 @@
 
   .t-btn {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3
-      font-semibold transition-all duration-300 active:scale-[0.98];
+      font-semibold duration-300 active:scale-[0.98];
+    transition-property: transform, background-color, box-shadow, opacity;
     border-radius: var(--btn-radius, 999px);
     background: var(--c-accent);
     color: var(--c-accent-ink);

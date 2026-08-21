@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { parseVideoUrl, VIDEO_CAPTION_MAX } from '@/lib/video'
@@ -150,15 +150,14 @@ function ComoFazer() {
         />
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
+      {/* Sem animar height: ver o comentário no FaqItem (ProfileView). Abrir e
+          fechar tem de ser instantâneo, não uma medição por quadro. */}
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
             <ol className="space-y-3 border-t border-brass/25 px-3.5 py-3.5">
               <Passo n={1} titulo="Grave no celular mesmo">
                 Um a dois minutos bastam. Luz na frente do rosto (janela serve), celular apoiado, e
@@ -200,9 +199,8 @@ function ComoFazer() {
               Prefere o Vimeo? Funciona igual: envie por lá e cole o link{' '}
               <span className="whitespace-nowrap font-mono text-[11.5px]">vimeo.com/123456789</span>.
             </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   )
 }

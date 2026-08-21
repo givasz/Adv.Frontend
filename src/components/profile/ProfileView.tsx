@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import type { Profile } from '@/lib/types'
@@ -639,14 +639,12 @@ function FaqItem({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const reduced = useReducedMotion()
-  const panelId = useId()
 
   return (
     <button
       type="button"
       onClick={() => setOpen((v) => !v)}
       aria-expanded={open}
-      aria-controls={panelId}
       className={`${tileClass} flex-col !items-stretch !gap-0 !py-4`}
       style={open ? { borderColor: 'var(--c-accent)' } : undefined}
     >
@@ -670,34 +668,29 @@ function FaqItem({
           aria-hidden
         />
       </span>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.span
-            id={panelId}
-            key="answer"
-            initial={reduced ? false : { opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
-            transition={{ duration: reduced ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
-            className="block overflow-hidden"
-          >
-            <span className="mt-2.5 flex items-start gap-2.5">
-              <span
-                aria-hidden
-                className="t-faint mt-[1px] shrink-0 font-display text-[13px] font-semibold leading-[1.45]"
-                style={{ letterSpacing: '0.04em' }}
-              >
-                R.
-              </span>
-              {/* whitespace-pre-line: se o advogado separou a resposta em duas
-                  linhas, a quebra dele é preservada. */}
-              <span className="t-muted min-w-0 flex-1 whitespace-pre-line break-words text-left text-[13.5px] font-normal leading-relaxed">
-                {answer}
-              </span>
+      {open && (
+        <motion.span
+          initial={reduced ? false : { opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduced ? 0 : 0.16, ease: 'easeOut' }}
+          className="block"
+        >
+          <span className="mt-2.5 flex items-start gap-2.5">
+            <span
+              aria-hidden
+              className="t-faint mt-[1px] shrink-0 font-display text-[13px] font-semibold leading-[1.45]"
+              style={{ letterSpacing: '0.04em' }}
+            >
+              R.
             </span>
-          </motion.span>
-        )}
-      </AnimatePresence>
+            {/* whitespace-pre-line: se o advogado separou a resposta em duas
+                linhas, a quebra dele é preservada. */}
+            <span className="t-muted min-w-0 flex-1 whitespace-pre-line break-words text-left text-[13.5px] font-normal leading-relaxed">
+              {answer}
+            </span>
+          </span>
+        </motion.span>
+      )}
     </button>
   )
 }
