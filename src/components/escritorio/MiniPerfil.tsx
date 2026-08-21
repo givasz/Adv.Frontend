@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FirmLawyer } from '@/lib/escritorio'
 import { Avatar } from '@/components/ui/Avatar'
 import { ArrowRight, LinkedinIcon } from '@/components/ui/icons'
-import { FirmVerified } from './FirmVerified'
+import { CnaLink } from '@/components/ui/CnaLink'
 import { PainelContato } from './PainelContato'
 
 // Mini-perfil do advogado exibido DENTRO da página do escritório (sem sair de domínio).
@@ -28,7 +28,7 @@ export function MiniPerfil({ lawyer, onBack }: { lawyer: FirmLawyer; onBack: () 
           <p className="mt-0.5 text-sm text-ink-soft">{lawyer.area}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <span className="text-[13px] font-medium text-brass-deep">{lawyer.oabNumber}</span>
-            {lawyer.oabVerified && <FirmVerified compact />}
+            {lawyer.oabNumber?.trim() && <CnaLink name={lawyer.name} compact />}
           </div>
         </div>
       </div>

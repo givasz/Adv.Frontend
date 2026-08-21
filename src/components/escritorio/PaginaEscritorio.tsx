@@ -11,7 +11,7 @@ import {
   SparkIcon,
   WhatsappIcon,
 } from '@/components/ui/icons'
-import { FirmVerified } from './FirmVerified'
+import { CnaLink } from '@/components/ui/CnaLink'
 import { MiniPerfil } from './MiniPerfil'
 import { PainelEmLinha } from './PainelEmLinha'
 import { AssistenteEscritorio } from './AssistenteEscritorio'
@@ -50,7 +50,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
           </h1>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span className="text-sm font-medium text-brass-deep">{firm.oabRegistry}</span>
-            {firm.oabVerified && <FirmVerified />}
+            {firm.oabRegistry?.trim() && <CnaLink name={firm.name} />}
           </div>
           <p className="mt-2 text-[15px] text-ink-soft">{firm.tagline}</p>
           <div className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-ink-faint">

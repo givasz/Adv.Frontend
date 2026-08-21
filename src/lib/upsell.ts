@@ -98,7 +98,6 @@ export type UpsellFeature =
   | 'qrcode'
   | 'agenda'
   | 'themes'
-  | 'oab'
   | 'branding'
   | 'ai'
 
@@ -114,7 +113,6 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   themes: [],
   ai: [],
   agenda: ['agenda'],
-  oab: ['oab_conferida'],
   branding: ['dominio', 'marca'],
 }
 
@@ -178,11 +176,6 @@ const FEATURE_META: Record<
     title: 'Temas visuais',
     subtitle: 'Identidades visuais para o seu perfil.',
     value: (p) => `${themeCount(p)} de ${THEMES.length} temas`,
-  },
-  oab: {
-    title: 'Selo “OAB conferida”',
-    subtitle: 'A plataforma confere seu registro e exibe a marca.',
-    value: (p) => (p === 'free' ? '—' : 'Incluído'),
   },
   branding: {
     title: 'Sua marca no perfil',

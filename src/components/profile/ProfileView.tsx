@@ -10,7 +10,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { AssistantChat } from '@/components/profile/AssistantChat'
 import { assistantTitle } from '@/lib/assistant'
-import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
+import { CnaLink } from '@/components/ui/CnaLink'
 import {
   ArrowRight,
   CalendarIcon,
@@ -123,7 +123,9 @@ export function ProfileView({
   const identity = (
     <>
       <span className="t-accent text-sm font-medium">{profile.oabNumber}</span>
-      {profile.oabVerified && <VerifiedBadge compact linkCna interactive={!preview} />}
+      {/* Ponteiro para a consulta pública do CNA — vale para QUALQUER perfil com
+          número informado, sem distinção de plano. Ver components/ui/CnaLink. */}
+      {profile.oabNumber.trim() && <CnaLink name={profile.name} compact interactive={!preview} />}
     </>
   )
 

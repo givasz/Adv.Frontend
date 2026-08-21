@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Plan, Profile } from '@/lib/types'
 import { slugify } from '@/lib/brFormat'
 import { PLAN_LABEL } from '@/lib/upsell'
-import { VerifiedBadge } from '@/components/ui/VerifiedBadge'
 import { CalendarIcon, CheckIcon, GlobeIcon, ScaleIcon, ShieldIcon } from '@/components/ui/icons'
 import { useSlugCheck } from '@/lib/useSlugCheck'
 import { BRAND_HOST } from '@/lib/publicUrl'
@@ -11,7 +10,7 @@ import { BRAND_HOST } from '@/lib/publicUrl'
 // Tópicos concretos de "como melhorar o perfil" travados por plano.
 //
 // Cada linha mostra uma PROVA em vez de uma frase: o endereço com o número
-// riscado virando o nome limpo, a marca de OAB conferida de verdade (o mesmo
+// riscado virando o nome limpo, a grade real da agenda (o mesmo
 // componente do perfil), horários de agenda, o domínio próprio, a assinatura
 // advoc.me riscada. Uma promessa que a pessoa consegue VER vende; uma linha de
 // texto cinza descrevendo a promessa, não.
@@ -80,17 +79,6 @@ const TOPICS: Topic[] = [
     // é a promessa mais fácil de quebrar do produto — basta existir outro
     // homônimo, e aí o advogado assina e recebe um número no fim mesmo assim.
     proof: (p) => <SlugProof profile={p} />,
-  },
-  {
-    key: 'oab',
-    title: 'Marca “OAB conferida”',
-    plan: 'pro',
-    proof: (p) => (
-      <span className="flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] text-ink-faint">{p.oabNumber || 'OAB/SP 000.000'}</span>
-        <VerifiedBadge compact interactive={false} />
-      </span>
-    ),
   },
   {
     key: 'agenda',

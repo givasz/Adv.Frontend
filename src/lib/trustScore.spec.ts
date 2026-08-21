@@ -13,8 +13,6 @@ const essential: Profile = {
   contact: { whatsapp: '5511999999999' },
   branding: undefined,
   schedulingMode: 'off',
-  oabStatus: 'none',
-  oabVerified: false,
   plan: 'free',
   areas: [{ id: 'a', label: 'Direito de Família', description: '' }],
 }
@@ -25,9 +23,9 @@ describe('trustScore — pesos', () => {
     expect(total).toBe(100)
   })
 
-  it('os fatores Free somam 72 (teto do plano gratuito)', () => {
+  it('os fatores Free somam 82 (teto do plano gratuito)', () => {
     const free = TRUST_FACTORS.filter((f) => !f.plan).reduce((s, f) => s + f.points, 0)
-    expect(free).toBe(72)
+    expect(free).toBe(82)
   })
 
   it('chaves de fator são únicas', () => {
@@ -51,15 +49,15 @@ describe('computeTrust', () => {
     expect(computeTrust(blank).score).toBe(0)
   })
 
-  it('perfil essencial pontua a base (>0 e < 72)', () => {
+  it('perfil essencial pontua a base (>0 e < 82)', () => {
     const r = computeTrust(essential)
     expect(r.score).toBeGreaterThan(0)
-    expect(r.score).toBeLessThan(72)
+    expect(r.score).toBeLessThan(82)
     // nome+cidade+oab+bio+whatsapp+area1 = 5+5+7+8+7+6 = 38
     expect(r.score).toBe(38)
   })
 
-  it('um perfil Free totalmente preenchido satura em 72, nunca mais', () => {
+  it('um perfil Free totalmente preenchido satura em 82, nunca mais', () => {
     const full: Profile = {
       ...essential,
       avatarUrl: 'https://x/y.jpg',
@@ -72,10 +70,10 @@ describe('computeTrust', () => {
         { id: 'b', label: 'Sucessões', description: '' },
       ],
     }
-    expect(computeTrust(full).score).toBe(72)
+    expect(computeTrust(full).score).toBe(82)
   })
 
-  it('itens PRO/MAX ficam travados no Free e destravam pontos além de 72', () => {
+  it('itens PRO/MAX ficam travados no Free e destravam pontos além de 82', () => {
     const r = computeTrust(essential)
     const agenda = TRUST_FACTORS.find((f) => f.key === 'agenda')!
     expect(r.locked(agenda)).toBe(true)

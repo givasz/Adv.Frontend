@@ -68,7 +68,6 @@ describe('upsell — slot fantasma ao atingir o limite', () => {
 describe('upsell — pontos do Índice de Confiança por recurso', () => {
   it('recursos gated por plano expõem os pontos de trustScore', () => {
     expect(featurePoints('agenda')).toBe(8)
-    expect(featurePoints('oab')).toBe(10)
     expect(featurePoints('branding')).toBe(10) // dominio (5) + marca (5)
   })
 

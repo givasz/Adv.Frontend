@@ -9,8 +9,6 @@ export interface FirmLawyer {
   name: string
   /** ex.: "OAB/SP 214.870" */
   oabNumber: string
-  /** número de OAB conferido pela plataforma (marca informativa, não endosso da OAB) */
-  oabVerified: boolean
   /** área principal — usada no card e na ordenação neutra */
   area: string
   /** bio curta e sóbria, sem tom promocional */
@@ -42,7 +40,6 @@ export interface FirmMember {
   name: string
   email?: string
   oabNumber?: string
-  oabVerified?: boolean
   area?: string
   role: FirmMemberRole
   status: FirmMemberState
@@ -79,8 +76,6 @@ export interface Firm {
   name: string
   /** registro da SOCIEDADE de advogados na OAB (não confundir com a OAB individual) */
   oabRegistry: string
-  /** registro da sociedade conferido pela plataforma */
-  oabVerified: boolean
   /** monograma exibido quando não há logo (ex.: "AV") */
   monogram: string
   /** frase institucional curta e sóbria (nunca promocional) */
@@ -117,7 +112,6 @@ export const sampleFirm: Firm = {
   slug: 'andrade-vieira',
   name: 'Andrade & Vieira Sociedade de Advogados',
   oabRegistry: 'OAB/SP 12.345 (Sociedade)',
-  oabVerified: true,
   monogram: 'AV',
   tagline: 'Advocacia empresarial e contenciosa desde 2004.',
   about:
@@ -152,7 +146,6 @@ export const sampleFirm: Firm = {
       id: 'l1',
       name: 'Beatriz Andrade',
       oabNumber: 'OAB/SP 198.402',
-      oabVerified: true,
       area: 'Direito Empresarial',
       bio: 'Atua em contratos empresariais, societário e consultoria preventiva para pequenas e médias empresas.',
       avatarUrl:
@@ -164,7 +157,6 @@ export const sampleFirm: Firm = {
       id: 'l2',
       name: 'Camila Nunes',
       oabNumber: 'OAB/SP 231.155',
-      oabVerified: true,
       area: 'Direito de Família',
       bio: 'Dedica-se a divórcio, guarda e sucessões, com foco em condução técnica e acordos quando possível.',
       avatarUrl:
@@ -176,7 +168,6 @@ export const sampleFirm: Firm = {
       id: 'l3',
       name: 'Eduardo Vieira',
       oabNumber: 'OAB/SP 156.708',
-      oabVerified: true,
       area: 'Direito Previdenciário',
       bio: 'Orienta segurados em aposentadorias, benefícios por incapacidade e revisões, esclarecendo cada etapa.',
       avatarUrl:
@@ -188,7 +179,6 @@ export const sampleFirm: Firm = {
       id: 'l4',
       name: 'Rafael Costa',
       oabNumber: 'OAB/SP 205.331',
-      oabVerified: false,
       area: 'Direito Trabalhista',
       bio: 'Atua em relações de trabalho, rescisões e demandas trabalhistas na esfera judicial e extrajudicial.',
       avatarUrl:
@@ -212,9 +202,9 @@ export function getFirm(slug: string): Firm | null {
 
 /**
  * O escritório é a fixture de demonstração da home? A página precisa saber para se
- * rotular: sociedade, advogados e números de OAB são inventados, e um selo de
- * conferência sobre dado inventado, sem aviso, seria informação enganosa
- * (Prov. 205/2021). Mesmo tratamento dos perfis-exemplo (ver pages/PublicProfile).
+ * rotular: sociedade, advogados e números de OAB são inventados, e um número de
+ * inscrição fictício exibido sem aviso — ainda que só linkado ao CNA — seria
+ * informação enganosa. Mesmo tratamento dos perfis-exemplo (ver pages/PublicProfile).
  */
 export function isExampleFirm(slug: string): boolean {
   return slug === sampleFirm.slug
@@ -254,7 +244,6 @@ export function blankFirm(): Firm {
     slug: '',
     name: '',
     oabRegistry: '',
-    oabVerified: false,
     monogram: '',
     tagline: '',
     about: '',

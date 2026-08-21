@@ -2,7 +2,6 @@
 // O painel sempre fala com o backend real (NestJS) — em dev, via proxy /api do Vite.
 // O token de sessão é guardado em sessionStorage e enviado como Bearer.
 
-import { mockOabQueue } from './api'
 import type { ModerationStatus, Profile, Report } from './types'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
@@ -72,30 +71,6 @@ export interface ModerationProfile extends Profile {
   reports: Report[]
 }
 
-export interface PendingOab {
-  id: string
-  name: string
-  oabNumber: string
-  city: string
-  state: string
-  slug: string
-  updatedAt: string
-  /** quando o advogado entrou na fila — é por ela que a fila é ordenada */
-  oabRequestedAt?: string | null
-  plan?: string
-}
-
-// Um evento do histórico de conferência de OAB (append-only no backend).
-export interface OabEvent {
-  id: string
-  fromStatus: string
-  toStatus: string
-  method: string
-  reviewer: string
-  reason: string
-  createdAt: string
-}
-
 export interface AdminProfile {
   id: string
   name: string
@@ -106,7 +81,6 @@ export interface AdminProfile {
   plan: 'free' | 'pro' | 'premium'
   published: boolean
   moderationStatus: ModerationStatus
-  oabStatus: string
 }
 
 // ---- Auth ----
@@ -163,30 +137,6 @@ export async function dismissReport(id: string): Promise<{ ok: boolean }> {
 
 export async function searchProfiles(q: string): Promise<AdminProfile[]> {
   return json(await adminFetch(`/admin/profiles?q=${encodeURIComponent(q)}`))
-}
-
-// ---- Fila de OAB (reaproveita endpoints existentes) ----
-
-export async function listPendingOab(): Promise<PendingOab[]> {
-  if (MOCK_ADMIN) return mockOabQueue.pending()
-  return json(await adminFetch('/admin/oab/pending'))
-}
-
-export async function decideOab(
-  id: string,
-  decision: 'verify' | 'reject',
-  reason?: string,
-): Promise<unknown> {
-  if (MOCK_ADMIN) return mockOabQueue.decide(id, decision, reason)
-  return json(await adminFetch(`/admin/profiles/${id}/oab/decision`, {
-    method: 'POST',
-    body: JSON.stringify({ decision, reason }),
-  }))
-}
-
-export async function oabHistory(id: string): Promise<OabEvent[]> {
-  if (MOCK_ADMIN) return mockOabQueue.history(id)
-  return json(await adminFetch(`/admin/profiles/${id}/oab/history`))
 }
 
 // ---- Suporte ao cliente ----

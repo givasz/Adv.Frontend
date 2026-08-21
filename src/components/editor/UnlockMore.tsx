@@ -18,7 +18,6 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     pitch: 'Mais espaço e recursos no seu perfil.',
     items: [
       'Assistente virtual que marca horários',
-      'Selo “OAB conferida”',
       '2 perguntas frequentes no perfil',
       'Endereço advoc.me/seu-nome',
       'QR Code e cartão de contato',

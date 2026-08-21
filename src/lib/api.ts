@@ -26,7 +26,6 @@ import type {
   DirectoryResult,
   GenerateRequest,
   GenerateResult,
-  OabStatus,
   Plan,
   Profile,
   ReportReason,
@@ -62,8 +61,6 @@ function firmErrorMessage(status: number, body: string): string {
   return 'Não foi possível salvar o escritório agora. Tente de novo em instantes.'
 }
 const BOOKINGS_KEY = 'advocme:bookings'
-// Histórico local da conferência de OAB (espelha OabVerificationEvent no backend).
-const OAB_EVENTS_KEY = 'advocme:oab:events'
 
 // ---- Mock de agenda (localStorage) — espelha o backend BookingsService ----
 type StoredBooking = Booking & { profileSlug: string }
@@ -136,8 +133,6 @@ function emptyDraft(): Profile {
     slug: '',
     name: '',
     oabNumber: '',
-    oabVerified: false,
-    oabStatus: 'none',
     headline: '',
     bio: '',
     city: '',
@@ -211,32 +206,6 @@ function trimFaqs(raw: Profile['faqs'], plan: Plan): Profile['faqs'] {
   return (raw ?? []).slice(0, max)
 }
 
-// ---- Conferência de OAB ----------------------------------------------------
-//
-// O estado da conferência pertence À PLATAFORMA: o advogado só PEDE. Aqui ficam o
-// recorte devolvido pelo pedido, a paridade do mock com as regras do backend e a
-// fila local que permite exercitar o ciclo pedido → decisão sem subir o NestJS.
-
-/** Estado do pedido de conferência devolvido pelo servidor (ou pelo mock). */
-export interface OabCheckState {
-  oabStatus: OabStatus
-  oabVerified?: boolean
-  oabRequestedAt?: string | null
-  oabDecidedAt?: string | null
-  oabReason?: string | null
-}
-
-/** Lê o estado da conferência de um perfil. */
-export function oabStateOf(p: Profile): OabCheckState {
-  return {
-    oabStatus: p.oabStatus ?? (p.oabVerified ? 'verified' : 'none'),
-    oabVerified: !!p.oabVerified,
-    oabRequestedAt: p.oabRequestedAt ?? null,
-    oabDecidedAt: p.oabDecidedAt ?? null,
-    oabReason: p.oabReason ?? null,
-  }
-}
-
 /** Mensagem de erro legível a partir da resposta do Nest ({"message": "..."}). */
 function parseApiMessage(raw: string): string {
   try {
@@ -246,128 +215,6 @@ function parseApiMessage(raw: string): string {
   } catch {
     return raw
   }
-}
-
-/**
- * Colunas de conferência que o mock preserva no save (o cliente não as escreve),
- * espelhando o backend — inclusive a queda da conferência quando o número muda:
- * o que foi conferido foi AQUELE número.
- */
-function mockOabColumns(stored: Profile, incoming: Profile): Partial<Profile> {
-  const status = stored.oabStatus ?? (stored.oabVerified ? 'verified' : 'none')
-  const changed = (incoming.oabNumber ?? '').trim() !== (stored.oabNumber ?? '').trim()
-  if (changed && status !== 'none') {
-    pushMockOabEvent({
-      profileId: stored.slug,
-      fromStatus: status,
-      toStatus: 'none',
-      reviewer: '',
-      reason: 'Número de inscrição alterado pelo advogado — conferência reiniciada.',
-    })
-    return {
-      oabStatus: 'none',
-      oabVerified: false,
-      oabRequestedAt: undefined,
-      oabDecidedAt: undefined,
-      oabReason: undefined,
-    }
-  }
-  return {
-    oabStatus: status,
-    oabVerified: !!stored.oabVerified,
-    oabRequestedAt: stored.oabRequestedAt,
-    oabDecidedAt: stored.oabDecidedAt,
-    oabReason: stored.oabReason,
-  }
-}
-
-export interface MockOabEvent {
-  id: string
-  profileId: string
-  fromStatus: OabStatus
-  toStatus: OabStatus
-  method: string
-  reviewer: string
-  reason: string
-  createdAt: string
-}
-
-function loadMockOabEvents(): MockOabEvent[] {
-  try {
-    const raw = localStorage.getItem(OAB_EVENTS_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? (parsed as MockOabEvent[]) : []
-  } catch {
-    return []
-  }
-}
-
-function pushMockOabEvent(e: Omit<MockOabEvent, 'id' | 'createdAt' | 'method'>) {
-  const list = loadMockOabEvents()
-  list.push({
-    ...e,
-    id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    method: 'manual',
-    createdAt: new Date().toISOString(),
-  })
-  localStorage.setItem(OAB_EVENTS_KEY, JSON.stringify(list))
-}
-
-/**
- * Fila de conferência do MOCK (sem backend). Existe para o ciclo completo —
- * pedido → análise → decisão com motivo — poder ser exercitado em desenvolvimento;
- * com backend configurado, o painel usa os endpoints reais e isto não é chamado.
- */
-export const mockOabQueue = {
-  pending() {
-    const draft = loadDraft()
-    const status = draft.oabStatus ?? (draft.oabVerified ? 'verified' : 'none')
-    if (status !== 'pending') return []
-    return [
-      {
-        id: draft.slug,
-        name: draft.name,
-        oabNumber: draft.oabNumber,
-        city: draft.city,
-        state: draft.state,
-        slug: draft.slug,
-        updatedAt: draft.oabRequestedAt ?? new Date().toISOString(),
-        oabRequestedAt: draft.oabRequestedAt ?? null,
-      },
-    ]
-  },
-
-  decide(id: string, decision: 'verify' | 'reject', reason?: string) {
-    const draft = loadDraft()
-    if (draft.slug !== id) throw new Error('Perfil não encontrado.')
-    if (decision === 'reject' && !reason?.trim()) {
-      throw new Error('Informe o motivo da rejeição — ele é devolvido ao advogado.')
-    }
-    const from = draft.oabStatus ?? (draft.oabVerified ? 'verified' : 'none')
-    const verified = decision === 'verify'
-    const next: Profile = {
-      ...draft,
-      oabStatus: verified ? 'verified' : 'rejected',
-      oabVerified: verified,
-      oabDecidedAt: new Date().toISOString(),
-      oabReason: verified ? undefined : reason?.trim(),
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    pushMockOabEvent({
-      profileId: id,
-      fromStatus: from,
-      toStatus: next.oabStatus!,
-      reviewer: 'admin (local)',
-      reason: reason?.trim() ?? '',
-    })
-    return oabStateOf(next)
-  },
-
-  history(id: string) {
-    return loadMockOabEvents()
-      .filter((e) => e.profileId === id)
-      .reverse()
-  },
 }
 
 function slugifyName(s: string): string {
@@ -565,17 +412,8 @@ export const api = {
         const res = await fetch(`${API_BASE}/api/profiles/me`, { headers: { ...authHeader() } })
         const text = res.ok ? await res.text() : ''
         const data = text ? (JSON.parse(text) as Partial<Profile>) : null
-        // Os campos da conferência são zerados ANTES do spread: eles só existem
-        // enquanto o servidor os manda, e um motivo de rejeição antigo guardado no
-        // rascunho local continuaria aparecendo depois de um novo pedido.
         if (data && data.slug) {
-          return {
-            ...loadDraft(),
-            oabRequestedAt: undefined,
-            oabDecidedAt: undefined,
-            oabReason: undefined,
-            ...data,
-          } as Profile
+          return { ...loadDraft(), ...data } as Profile
         }
       } catch {
         /* rede/JSON inválido → cai no rascunho local */
@@ -607,13 +445,9 @@ export const api = {
     // mantém o da assinatura vigente. Sem isso, mock e API real divergiriam — e um
     // plano "ativado" só na tela voltaria a travar tudo no próximo carregamento.
     const stored = loadDraft()
-    // A CONFERÊNCIA TAMBÉM É DO SERVIDOR: o editor manda o perfil inteiro a cada
-    // tecla e sobrescreveria o estado da fila (uma aprovação do admin evaporava no
-    // autosave seguinte). Aqui o mock repete a regra do backend.
     const withPlan: Profile = {
       ...profile,
       plan: stored.plan,
-      ...mockOabColumns(stored, profile),
       // FAQ segue o limite do plano vigente, como no backend (faqRows).
       faqs: trimFaqs(profile.faqs, stored.plan),
     }
@@ -696,69 +530,6 @@ export const api = {
     const resolved = { ...next, slug: resolveMockSlug(next, true) }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
     return resolved
-  },
-
-  /**
-   * Lê só o estado da conferência (sem baixar o perfil inteiro, que sobrescreveria
-   * o texto que o advogado está digitando). É como o editor descobre que a
-   * plataforma decidiu enquanto ele esperava.
-   */
-  async oabState(): Promise<OabCheckState> {
-    if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/me/oab`, { headers: { ...authHeader() } })
-      if (!res.ok) throw new Error('Não foi possível consultar o estado da conferência.')
-      return res.json()
-    }
-    return oabStateOf(loadDraft())
-  },
-
-  /**
-   * Solicita a conferência da OAB. NÃO concede a marca: o pedido entra na fila em
-   * 'pending' e só o admin promove a 'verified' (ou rejeita, com motivo). O retorno
-   * é o estado do pedido — quem chama adota esta resposta, nunca um palpite local.
-   */
-  async requestOabCheck(): Promise<OabCheckState> {
-    if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/me/oab/request`, {
-        method: 'POST',
-        headers: { ...authHeader() },
-      })
-      if (!res.ok) {
-        const msg = await res.text().catch(() => '')
-        throw new Error(parseApiMessage(msg) || 'Não foi possível enviar o pedido de conferência.')
-      }
-      return res.json()
-    }
-    await wait(300)
-    // Mock: mesmas travas do backend (plano pago, número preenchido, um pedido só).
-    const draft = loadDraft()
-    if (draft.plan === 'free') {
-      throw new Error('A conferência de OAB está disponível apenas nos planos pagos.')
-    }
-    if (!draft.oabNumber.trim()) {
-      throw new Error('Informe seu número de inscrição na OAB antes de pedir a conferência.')
-    }
-    const status = draft.oabStatus ?? (draft.oabVerified ? 'verified' : 'none')
-    if (status === 'pending' || status === 'verified') return oabStateOf(draft)
-
-    const now = new Date().toISOString()
-    const next: Profile = {
-      ...draft,
-      oabStatus: 'pending',
-      oabVerified: false,
-      oabRequestedAt: now,
-      oabDecidedAt: undefined,
-      oabReason: undefined,
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    pushMockOabEvent({
-      profileId: next.slug,
-      fromStatus: status,
-      toStatus: 'pending',
-      reviewer: '',
-      reason: '',
-    })
-    return oabStateOf(next)
   },
 
   // Denúncia de um perfil — qualquer visitante pode. Sem backend real (dev),

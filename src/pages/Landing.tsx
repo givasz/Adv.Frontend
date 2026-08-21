@@ -202,8 +202,8 @@ export default function Landing() {
             },
             {
               icon: <CheckIcon width={22} height={22} />,
-              title: 'OAB conferida',
-              body: 'A plataforma confere seu número de OAB e o exibe como marca informativa — sem selos, logotipos ou símbolos oficiais da OAB.',
+              title: 'Inscrição conferível na fonte',
+              body: 'Ao lado do seu número, o perfil leva à consulta pública do CNA, base oficial da OAB. Quem quiser confere na fonte — sem selo nosso, sem plano, sem intermediário.',
             },
             {
               icon: <SparkIcon width={22} height={22} />,
@@ -375,8 +375,8 @@ export default function Landing() {
               </p>
             </div>
             <p className="text-[12px] leading-relaxed text-ink-faint">
-              O advoc.me não constitui aconselhamento jurídico e não é filiado à OAB. “OAB conferida”
-              indica uma conferência feita pela plataforma, sem endosso oficial.
+              O advoc.me não constitui aconselhamento jurídico e não é filiado à OAB. Não conferimos,
+              não validamos e não endossamos inscrições — apontamos para a consulta pública do CNA.
             </p>
           </div>
         </div>
@@ -411,7 +411,6 @@ export default function Landing() {
             ctaLabel="Assinar Pro"
             features={[
               'Assistente virtual que marca horários por você',
-              'Selo “OAB conferida” no seu perfil',
               '2 perguntas frequentes respondidas no perfil',
               'Endereço personalizado (advoc.me/seu-nome)',
               'Cartão digital com QR Code e vCard',
@@ -558,7 +557,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 const FAQ: { q: string; a: string }[] = [
   {
     q: 'O advoc.me é filiado à OAB?',
-    a: 'Não. Somos uma plataforma independente. A marca “OAB conferida” indica que conferimos seu número de inscrição — não é selo, chancela ou endosso oficial da OAB, o que as regras vedam.',
+    a: 'Não. Somos uma plataforma independente e não exibimos selo, chancela ou endosso da OAB — as regras vedam isso. Quem quiser conferir uma inscrição usa o link para o CNA que fica no próprio perfil.',
   },
   {
     q: 'A checagem de conformidade substitui um advogado ou a OAB?',
@@ -569,8 +568,8 @@ const FAQ: { q: string; a: string }[] = [
     a: 'A IA é orientada pelas normas e o texto passa pela mesma checagem de conformidade. Ainda assim, nada é publicado sem a sua revisão e aprovação.',
   },
   {
-    q: 'Como funciona a conferência da OAB?',
-    a: 'Você solicita a conferência; a plataforma verifica seu número no Cadastro Nacional dos Advogados (CNA) da OAB. Só então o perfil exibe a marca informativa “OAB conferida”.',
+    q: 'Vocês verificam se a pessoa é mesmo advogada?',
+    a: 'Não fazemos essa verificação — e não fingimos que fazemos. Todo perfil traz, ao lado do número, um link para o Cadastro Nacional dos Advogados (CNA), a base pública da OAB, onde qualquer pessoa confere em segundos. Perfis com registro falso podem ser denunciados pelo próprio perfil e são retirados do ar.',
   },
   {
     q: 'O assistente virtual dá orientação jurídica aos visitantes?',

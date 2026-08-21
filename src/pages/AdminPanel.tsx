@@ -2,27 +2,23 @@ import { useEffect, useState } from 'react'
 import {
   adminLogin,
   adminLogout,
-  decideOab,
   dismissReport,
   getAdminToken,
   getModerationProfile,
-  listPendingOab,
   listReports,
   moderateProfile,
-  oabHistory,
   searchProfiles,
   type AdminProfile,
   type ModerationProfile,
-  type OabEvent,
-  type PendingOab,
   type ReportGroup,
   listTickets,
   setTicketStatus,
   type AdminTicket,
 } from '@/lib/adminApi'
 import { REASON_LABEL } from '@/lib/reportReasons'
+import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import type { ModerationStatus } from '@/lib/types'
-import { CheckIcon, ExternalLinkIcon, LockIcon, ScaleIcon, SearchIcon, XIcon } from '@/components/ui/icons'
+import { CheckIcon, ExternalLinkIcon, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
 
 const STATUS_META: Record<ModerationStatus, { label: string; cls: string }> = {
   active: { label: 'Ativo', cls: 'bg-ink/[0.06] text-ink-faint' },
@@ -134,10 +130,9 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ---- Dashboard ----
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<'reports' | 'search' | 'oab' | 'support'>('reports')
+  const [tab, setTab] = useState<'reports' | 'search' | 'support'>('reports')
   const TAB_LABEL = {
     reports: 'Denúncias',
-    oab: 'Conferência OAB',
     support: 'Suporte',
     search: 'Advogados',
   } as const
@@ -157,7 +152,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         <div className="mx-auto flex max-w-4xl gap-1 px-4">
           {/* Ordem = prioridade de atendimento: o que tem gente esperando resposta
               primeiro; a busca de advogados é ferramenta, não fila. */}
-          {(['reports', 'oab', 'support', 'search'] as const).map((t) => (
+          {(['reports', 'support', 'search'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -174,15 +169,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {tab === 'reports' ? (
-          <ReportsTab />
-        ) : tab === 'search' ? (
-          <SearchTab />
-        ) : tab === 'support' ? (
-          <SupportTab />
-        ) : (
-          <OabTab />
-        )}
+        {tab === 'reports' ? <ReportsTab /> : tab === 'search' ? <SearchTab /> : <SupportTab />}
       </main>
     </div>
   )
@@ -644,6 +631,17 @@ function SearchTab() {
                   Ver perfil
                   <ExternalLinkIcon width={12} height={12} strokeWidth={1.8} />
                 </a>
+                {/* Ferramenta de MODERAÇÃO, não de selo: é como se julga uma
+                    denúncia de registro falso (motivo `oab_invalid`). */}
+                <a
+                  href={cnaSearchUrl(p.name)}
+                  target="_blank"
+                  rel="noreferrer noopener nofollow"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-brass/50 hover:text-brass-deep"
+                >
+                  Conferir no CNA
+                  <ExternalLinkIcon width={12} height={12} strokeWidth={1.8} />
+                </a>
               </div>
               {open === p.id && (
                 <ModerationDetail profileId={p.id} onChanged={() => setTick((n) => n + 1)} />
@@ -653,216 +651,6 @@ function SearchTab() {
         </ul>
       )}
     </div>
-  )
-}
-
-// ---- Aba: Conferência OAB ----
-
-// Rótulo neutro para o método de conferência (sem insinuar chancela oficial da OAB).
-const OAB_METHOD_LABEL: Record<string, string> = {
-  manual: 'conferência manual',
-  cna_ws: 'assistente CNA',
-  confirmadv: 'ConfirmADV',
-}
-const OAB_STATUS_LABEL: Record<string, string> = {
-  none: 'sem conferência',
-  pending: 'em análise',
-  verified: 'conferida',
-  rejected: 'rejeitada',
-}
-
-// Consulta pública do Cadastro Nacional dos Advogados — fonte OFICIAL da OAB.
-// Levar o admin direto para lá, com o nome preenchido, é o que transforma a fila
-// em conferência de verdade em vez de aprovação no escuro.
-function cnaSearchUrl(name: string): string {
-  return `https://cna.oab.org.br/?nome=${encodeURIComponent(name)}`
-}
-
-function OabTab() {
-  const [copiado, setCopiado] = useState<string | null>(null)
-  const copiar = (texto: string) => {
-    navigator.clipboard?.writeText(texto).then(
-      () => {
-        setCopiado(texto)
-        setTimeout(() => setCopiado(null), 1600)
-      },
-      () => {},
-    )
-  }
-  const [pending, setPending] = useState<PendingOab[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
-  // Id do item cuja rejeição está sendo justificada (fluxo de motivo).
-  const [rejecting, setRejecting] = useState<string | null>(null)
-  // Erro de uma DECISÃO (≠ erro de carregar a fila, que troca a tela inteira).
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [reason, setReason] = useState('')
-  // Histórico carregado por perfil (toggle).
-  const [history, setHistory] = useState<Record<string, OabEvent[]>>({})
-
-  async function reload() {
-    setError(null)
-    try {
-      setPending(await listPendingOab())
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao carregar a fila.')
-    }
-  }
-
-  useEffect(() => {
-    reload()
-  }, [])
-
-  async function decide(id: string, decision: 'verify' | 'reject', why?: string) {
-    setBusy(id)
-    setActionError(null)
-    try {
-      await decideOab(id, decision, why)
-      setRejecting(null)
-      setReason('')
-      await reload()
-    } catch (e) {
-      // Uma decisão recusada pelo servidor (motivo em branco, perfil que saiu da
-      // fila) precisa aparecer: antes a promessa quebrava em silêncio e o item
-      // continuava lá como se nada tivesse sido clicado.
-      setActionError(e instanceof Error ? e.message : 'Não foi possível registrar a decisão.')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function toggleHistory(id: string) {
-    if (history[id]) {
-      setHistory((h) => {
-        const { [id]: _drop, ...rest } = h
-        return rest
-      })
-      return
-    }
-    try {
-      const events = await oabHistory(id)
-      setHistory((h) => ({ ...h, [id]: events }))
-    } catch {
-      /* silencioso: histórico é auxiliar */
-    }
-  }
-
-  if (error) {
-    return <p className="rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">{error}</p>
-  }
-  if (!pending) return <p className="py-10 text-center text-[13px] text-ink-faint">Carregando…</p>
-  if (pending.length === 0) return <p className="py-10 text-center text-[13px] text-ink-faint">Nenhuma conferência pendente.</p>
-
-  return (
-    <ul className="space-y-2.5">
-      {actionError && (
-        <li className="rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
-          {actionError}
-        </li>
-      )}
-      {pending.map((p) => (
-        <li key={p.id} className="rounded-xl2 border border-ink/10 bg-paper px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate font-medium text-ink">{p.name}</p>
-              <p className="truncate text-[12px] text-ink-faint">{p.oabNumber} · {p.city}/{p.state} · advoc.me/{p.slug}</p>
-              {/* Há quanto tempo esta pessoa espera — a fila é ordenada por isso. */}
-              <p className="text-[11.5px] text-ink-faint">
-                Pedido em {fmtDate(p.oabRequestedAt ?? p.updatedAt) || '—'}
-              </p>
-              {/* O CNA é a fonte oficial e aberta da OAB. Antes isso era só texto:
-                  o admin tinha de copiar o número e procurar o site na mão. Agora
-                  abre a consulta com o nome já preenchido — é o passo que a
-                  conferência realmente exige. */}
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-faint">
-                <a
-                  href={cnaSearchUrl(p.name)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="inline-flex items-center gap-1 rounded-full border border-brass/40 bg-brass/10 px-2.5 py-1 font-semibold text-brass-deep transition-colors hover:bg-brass/20"
-                >
-                  Consultar no CNA
-                  <ExternalLinkIcon width={11} height={11} />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => copiar(p.oabNumber)}
-                  className="rounded-full border border-ink/15 px-2.5 py-1 font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy"
-                >
-                  {copiado === p.oabNumber ? 'Copiado' : 'Copiar número'}
-                </button>
-                <button onClick={() => toggleHistory(p.id)} className="font-medium text-brass-deep hover:underline">
-                  {history[p.id] ? 'Ocultar histórico' : 'Ver histórico'}
-                </button>
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <button
-                onClick={() => decide(p.id, 'verify')}
-                disabled={busy === p.id}
-                className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep hover:bg-brass/30 disabled:opacity-50"
-              >
-                <CheckIcon width={13} height={13} strokeWidth={2.6} /> Conferir
-              </button>
-              <button
-                onClick={() => {
-                  setRejecting((r) => (r === p.id ? null : p.id))
-                  setReason('')
-                }}
-                disabled={busy === p.id}
-                className="inline-flex items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-faint hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
-              >
-                <XIcon width={13} height={13} /> Rejeitar
-              </button>
-            </div>
-          </div>
-
-          {rejecting === p.id && (
-            <div className="mt-3 rounded-lg border border-ink/10 bg-paper-soft p-3">
-              <label className="text-[12px] font-medium text-ink-soft">
-                Motivo da rejeição — <span className="text-burgundy-deep">o advogado lê este texto</span>
-              </label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                rows={2}
-                placeholder="Ex.: o nome informado não confere com o do CNA. Ajuste para o nome completo da inscrição e peça de novo."
-                className="mt-1.5 w-full resize-none rounded-lg border border-ink/15 bg-paper px-3 py-2 text-[12.5px] outline-none focus:border-burgundy/40"
-              />
-              <div className="mt-2 flex justify-end gap-2">
-                <button onClick={() => setRejecting(null)} className="rounded-full px-3 py-1.5 text-[12px] text-ink-faint hover:text-ink">Cancelar</button>
-                <button
-                  onClick={() => decide(p.id, 'reject', reason.trim())}
-                  disabled={busy === p.id || !reason.trim()}
-                  className="rounded-full bg-burgundy px-3 py-1.5 text-[12px] font-semibold text-paper-soft hover:bg-burgundy-deep disabled:opacity-50"
-                >
-                  Confirmar rejeição
-                </button>
-              </div>
-            </div>
-          )}
-
-          {history[p.id] && (
-            <ul className="mt-3 space-y-1.5 border-t border-ink/10 pt-3">
-              {history[p.id].length === 0 && (
-                <li className="text-[12px] text-ink-faint">Sem eventos registrados.</li>
-              )}
-              {history[p.id].map((ev) => (
-                <li key={ev.id} className="text-[12px] text-ink-soft">
-                  <span className="font-medium text-ink">{OAB_STATUS_LABEL[ev.toStatus] ?? ev.toStatus}</span>
-                  {' · '}
-                  {new Date(ev.createdAt).toLocaleString('pt-BR')}
-                  {' · '}
-                  {OAB_METHOD_LABEL[ev.method] ?? ev.method}
-                  {ev.reviewer && <> · por {ev.reviewer}</>}
-                  {ev.reason && <span className="text-ink-faint"> — {ev.reason}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
-    </ul>
   )
 }
 

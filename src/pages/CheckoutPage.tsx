@@ -21,7 +21,7 @@ import { CheckIcon, ScaleIcon } from '@/components/ui/icons'
 
 const PRICE: Record<Exclude<Plan, 'free'>, string> = { pro: 'R$ 19', premium: 'R$ 39' }
 const PROMISE: Record<Exclude<Plan, 'free'>, string> = {
-  pro: 'Assistente de agendamento, selo OAB conferida, perguntas frequentes e endereço sem número.',
+  pro: 'Assistente de agendamento, perguntas frequentes, cartão com QR e endereço sem número.',
   premium:
     'Tudo do Pro + vídeo no perfil, mais perguntas frequentes, domínio próprio e a sua marca no lugar da nossa.',
 }

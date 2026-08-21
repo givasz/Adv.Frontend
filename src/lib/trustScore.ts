@@ -20,12 +20,16 @@ export interface TrustFactor {
 
 const rank: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 const filledAreas = (p: Profile) => p.areas.filter((a) => a.label.trim()).length
-const oabVerified = (p: Profile) =>
-  (p.oabStatus ?? (p.oabVerified ? 'verified' : 'none')) === 'verified'
 
-// Fatores do índice. A soma dos pontos é exatamente 100; os itens Free somam 72
-// (um perfil Free completo satura em 72) e os 28 restantes vêm de PRO/MAX —
+// Fatores do índice. A soma dos pontos é exatamente 100; os itens Free somam 82
+// (um perfil Free completo satura em 82) e os 18 restantes vêm de PRO/MAX —
 // um upsell honesto: o teto só sobe assinando.
+//
+// Os 10 pontos que eram da conferência de OAB voltaram para os itens de conteúdo
+// do Free (+2 em cada um da faixa "Evolução"). A conferência saiu do produto: uma
+// distinção pública que se comprava não cabia no Prov. 205/2021, e a marca virou
+// um link para a consulta pública do CNA, igual para todo mundo — logo, não é
+// mais algo a "conquistar". Ver components/ui/CnaLink.
 export const TRUST_FACTORS: TrustFactor[] = [
   // ---- Essenciais (feitos já no onboarding) ----
   { key: 'nome', action: 'Informe seu nome', label: 'Nome', points: 5, done: (p) => !!p.name.trim() },
@@ -35,13 +39,12 @@ export const TRUST_FACTORS: TrustFactor[] = [
   { key: 'whatsapp', action: 'Adicione seu WhatsApp', label: 'WhatsApp', points: 7, done: (p) => !!p.contact.whatsapp },
   { key: 'area1', action: 'Defina sua área principal', label: 'Área principal', points: 6, done: (p) => filledAreas(p) >= 1 },
   // ---- Evolução (Free) ----
-  { key: 'foto', action: 'Adicionar foto', label: 'Foto', points: 11, done: (p) => !!p.avatarUrl },
-  { key: 'frase', action: 'Escrever uma frase de apresentação', label: 'Frase', points: 5, done: (p) => !!p.headline.trim() },
-  { key: 'redes', action: 'Conectar suas redes', label: 'Redes', points: 8, done: (p) => p.socials.length > 0 },
-  { key: 'email', action: 'Adicionar um e-mail de contato', label: 'E-mail', points: 3, done: (p) => !!p.contact.email },
-  { key: 'area2', action: 'Adicionar uma segunda área de atuação', label: '2ª área', points: 7, done: (p) => filledAreas(p) >= 2 },
+  { key: 'foto', action: 'Adicionar foto', label: 'Foto', points: 13, done: (p) => !!p.avatarUrl },
+  { key: 'frase', action: 'Escrever uma frase de apresentação', label: 'Frase', points: 7, done: (p) => !!p.headline.trim() },
+  { key: 'redes', action: 'Conectar suas redes', label: 'Redes', points: 10, done: (p) => p.socials.length > 0 },
+  { key: 'email', action: 'Adicionar um e-mail de contato', label: 'E-mail', points: 5, done: (p) => !!p.contact.email },
+  { key: 'area2', action: 'Adicionar uma segunda área de atuação', label: '2ª área', points: 9, done: (p) => filledAreas(p) >= 2 },
   // ---- Planos pagos ----
-  { key: 'oab_conferida', action: 'Solicitar conferência da OAB', label: 'OAB conferida', points: 10, plan: 'pro', done: oabVerified },
   { key: 'agenda', action: 'Ativar sua agenda de atendimento', label: 'Agenda', points: 8, plan: 'pro', done: (p) => resolveSchedulingMode(p) !== 'off' },
   // Domínio próprio saiu do índice enquanto o recurso não existe: dava 5 pontos de
   // credibilidade por DIGITAR um endereço que não ia para lugar nenhum. Os pontos

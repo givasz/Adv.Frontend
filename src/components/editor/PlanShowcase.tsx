@@ -27,7 +27,6 @@ const PERKS: Record<Plan, string[]> = {
   ],
   pro: [
     'Assistente virtual de agendamento',
-    'Selo “OAB conferida”',
     `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
     'Endereço advoc.me/seu-nome',
     'Cartão digital com QR e vCard',

@@ -4,9 +4,6 @@ import type { ThemeId } from './themes'
 
 export type Plan = 'free' | 'pro' | 'premium'
 
-/** Estado da conferência de OAB (workflow). A marca "OAB conferida" só quando 'verified'. */
-export type OabStatus = 'none' | 'pending' | 'verified' | 'rejected'
-
 /** Estado de moderação do perfil (resultado de denúncias avaliadas pelo admin). */
 export type ModerationStatus = 'active' | 'warned' | 'partial' | 'restricted'
 
@@ -191,16 +188,10 @@ export interface Profile {
    *  nome automaticamente. Sem isso, o endereço acompanha o nome (estilo linktree). */
   slugCustom?: boolean
   name: string
+  // Número informado pelo PRÓPRIO advogado — a plataforma não confere nem valida.
+  // O perfil público expõe, ao lado dele, um link para a consulta do CNA (base
+  // oficial da OAB), igual para todos os planos. Ver components/ui/CnaLink.
   oabNumber: string // ex: "OAB/SP 123.456"
-  oabVerified: boolean // espelha (oabStatus === 'verified') — controlado pela plataforma
-  /** estado da conferência de OAB (só a plataforma promove a 'verified') */
-  oabStatus?: OabStatus
-  /** ISO — quando o advogado entrou na fila de conferência (status 'pending') */
-  oabRequestedAt?: string
-  /** ISO — quando a plataforma decidiu (conferida ou rejeitada) */
-  oabDecidedAt?: string
-  /** devolutiva do admin ao advogado (motivo da rejeição). Só o dono do perfil vê. */
-  oabReason?: string
   headline: string // frase curta sob o nome
   bio: string
   avatarUrl?: string
@@ -251,7 +242,7 @@ export interface Profile {
 export interface DirectoryResult
   extends Pick<
     Profile,
-    'slug' | 'name' | 'oabNumber' | 'oabVerified' | 'headline' | 'city' | 'state' | 'avatarUrl'
+    'slug' | 'name' | 'oabNumber' | 'headline' | 'city' | 'state' | 'avatarUrl'
   > {
   areas: string[]
 }

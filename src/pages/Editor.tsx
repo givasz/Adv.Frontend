@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type {
   GenerateKind,
   ModerationStatus,
-  OabStatus,
   Plan,
   PracticeArea,
   Profile,
@@ -51,9 +50,9 @@ import { MarginNotes } from '@/components/editor/MarginNotes'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { DigitalCard } from '@/components/editor/DigitalCard'
 import { UpsellCard } from '@/components/editor/UpsellCard'
-import { GhostSlot, LockedFeature, QuotaCounter, TrustPointsChip } from '@/components/editor/upsellBits'
+import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upsellBits'
 import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
-import { CheckIcon, LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
+import { LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
 import { socialMeta } from '@/components/ui/icons'
 
 type AiTarget = {
@@ -71,7 +70,6 @@ type SectionId =
   | 'agenda'
   | 'aparencia'
   | 'marca'
-  | 'oab'
   | 'faq'
   | 'video'
   | 'conteudo'
@@ -112,7 +110,6 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   agenda: { title: 'Sua agenda', subtitle: 'Deixe que marquem um horário direto no perfil.' },
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
   marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
-  oab: { title: 'Confirmar sua OAB', subtitle: 'A gente confere e mostra que seu registro é real.' },
   faq: {
     title: 'Perguntas frequentes',
     subtitle: 'As dúvidas que você mais ouve, respondidas por você no perfil.',
@@ -228,42 +225,6 @@ export default function Editor() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [])
 
-  // Enquanto o pedido de conferência está na fila, o editor volta a perguntar o
-  // estado ao servidor: ao abrir a seção e sempre que a aba recupera o foco. Sem
-  // isso a decisão do admin só aparecia depois de recarregar a página inteira.
-  useEffect(() => {
-    if (section !== 'oab') return
-    const status = profile?.oabStatus ?? (profile?.oabVerified ? 'verified' : 'none')
-    if (status !== 'pending') return
-    let alive = true
-    const sync = async () => {
-      try {
-        const st = await api.oabState()
-        if (!alive || st.oabStatus === 'pending') return
-        setProfile((p) =>
-          p
-            ? {
-                ...p,
-                oabStatus: st.oabStatus,
-                oabVerified: !!st.oabVerified,
-                oabRequestedAt: st.oabRequestedAt ?? undefined,
-                oabDecidedAt: st.oabDecidedAt ?? undefined,
-                oabReason: st.oabReason ?? undefined,
-              }
-            : p,
-        )
-      } catch {
-        /* silencioso: é só uma atualização de estado, não bloqueia a edição */
-      }
-    }
-    sync()
-    window.addEventListener('focus', sync)
-    return () => {
-      alive = false
-      window.removeEventListener('focus', sync)
-    }
-  }, [section, profile?.oabStatus, profile?.oabVerified])
-
   // Sair da aparência encerra a prova: nas outras seções a prévia tem de mostrar o
   // perfil como ele está de verdade.
   useEffect(() => {
@@ -300,20 +261,6 @@ export default function Editor() {
     setTryTheme(null)
   }
   const lim = CHAR_LIMITS[profile.plan]
-
-  const oabStatus: OabStatus = profile.oabStatus ?? (profile.oabVerified ? 'verified' : 'none')
-  // O estado da conferência é do servidor: adotamos a resposta inteira (status,
-  // datas e motivo), nunca um palpite local. Erros sobem para o componente mostrar.
-  async function requestOab() {
-    const res = await api.requestOabCheck()
-    set({
-      oabStatus: res.oabStatus,
-      oabVerified: !!res.oabVerified,
-      oabRequestedAt: res.oabRequestedAt ?? undefined,
-      oabDecidedAt: res.oabDecidedAt ?? undefined,
-      oabReason: res.oabReason ?? undefined,
-    })
-  }
 
   // Abre o gerador de IA se o plano permite o recurso; senão, abre o upsell.
   function openAi(target: NonNullable<AiTarget>) {
@@ -590,37 +537,6 @@ export default function Editor() {
                     onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
                   />
                 </>
-              )}
-
-              {section === 'oab' && (
-                <Card title="Conferência da OAB">
-                  {profile.plan === 'free' ? (
-                    <div className="space-y-3 rounded-lg border border-brass/25 bg-brass/[0.06] px-3.5 py-3">
-                      <p className="text-[13px] leading-relaxed text-ink-soft">
-                        A conferência da OAB e o selo{' '}
-                        <span className="font-semibold text-brass-deep">“OAB conferida”</span> fazem
-                        parte dos planos pagos.
-                      </p>
-                      <TrustPointsChip points={featurePoints('oab')} />
-                      <button
-                        type="button"
-                        onClick={() => abrirUpsell('oab')}
-                        className="btn-primary !py-2 !px-4 text-[13px]"
-                      >
-                        Ver o que muda
-                      </button>
-                    </div>
-                  ) : (
-                    <OabVerifyRow
-                      status={oabStatus}
-                      requestedAt={profile.oabRequestedAt}
-                      decidedAt={profile.oabDecidedAt}
-                      reason={profile.oabReason}
-                      hasOabNumber={!!profile.oabNumber.trim()}
-                      onRequest={requestOab}
-                    />
-                  )}
-                </Card>
               )}
 
               {section === 'analytics' && <AnalyticsSection profile={profile} />}
@@ -1084,142 +1000,6 @@ function ModerationBanner({ status, note }: { status?: ModerationStatus; note?: 
           <span className="font-medium text-ink-faint">Moderador:</span> {note}
         </p>
       )}
-    </div>
-  )
-}
-
-// Data legível ("12 de agosto, 14:30") para as etapas da conferência.
-function fmtWhen(iso?: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return isNaN(d.getTime())
-    ? ''
-    : d.toLocaleString('pt-BR', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
-}
-
-// Conferência da OAB — feita pela plataforma, nunca auto-declarada pelo advogado.
-// O pedido tem TRÊS momentos visíveis para o advogado: enviado (em análise),
-// conferido e não aprovado (com o motivo que o admin escreveu). Antes o pedido era
-// um link solto no meio do texto e a rejeição nunca chegava a quem pediu.
-function OabVerifyRow({
-  status,
-  requestedAt,
-  decidedAt,
-  reason,
-  hasOabNumber,
-  onRequest,
-}: {
-  status: OabStatus
-  requestedAt?: string
-  decidedAt?: string
-  reason?: string
-  hasOabNumber: boolean
-  onRequest: () => Promise<void>
-}) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function pedir() {
-    setBusy(true)
-    setError(null)
-    try {
-      await onRequest()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível enviar o pedido. Tente de novo.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  if (status === 'verified') {
-    return (
-      <div className="flex items-start gap-2 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5">
-        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brass/20 text-brass-deep">
-          <CheckIcon width={11} height={11} strokeWidth={2.6} />
-        </span>
-        <p className="text-[12.5px] leading-relaxed text-ink-soft">
-          <span className="font-semibold text-brass-deep">OAB conferida</span> — o número foi conferido pela
-          plataforma{decidedAt ? ` em ${fmtWhen(decidedAt)}` : ''}. Não é selo oficial da OAB.
-        </p>
-      </div>
-    )
-  }
-  return (
-    <div className="rounded-lg border border-ink/12 bg-paper-soft px-3 py-2.5">
-      {status === 'pending' ? (
-        <div className="rounded-lg border border-brass/30 bg-brass/[0.08] px-3 py-2.5">
-          <p className="flex items-center gap-2 text-[13px] font-semibold text-brass-deep">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-brass-deep/70" />
-            Pedido enviado · em análise
-          </p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
-            {requestedAt ? `Recebemos seu pedido em ${fmtWhen(requestedAt)}. ` : ''}
-            Nossa equipe confere seu número no Cadastro Nacional dos Advogados. Enquanto isso você
-            pode seguir editando o perfil — avisamos aqui quando houver resposta.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {status === 'rejected' && (
-            <div className="rounded-lg border border-burgundy/30 bg-burgundy/[0.06] px-3 py-2.5">
-              <p className="text-[13px] font-semibold text-burgundy-deep">
-                Pedido não aprovado{decidedAt ? ` · ${fmtWhen(decidedAt)}` : ''}
-              </p>
-              {/* O motivo escrito pelo admin. É o que transforma "não aprovado" em
-                  algo acionável — sem ele o advogado só pode adivinhar e repetir. */}
-              {reason ? (
-                <p className="mt-1.5 rounded-lg bg-paper/70 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
-                  <span className="font-medium text-ink-faint">Motivo:</span> {reason}
-                </p>
-              ) : (
-                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
-                  A plataforma não confirmou o registro com os dados atuais.
-                </p>
-              )}
-              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">
-                Corrija o que for necessário (nome completo e número exatamente como no CNA) e peça de
-                novo.
-              </p>
-            </div>
-          )}
-          {!hasOabNumber && (
-            <p className="text-[12.5px] leading-relaxed text-ink-soft">
-              Informe seu número de inscrição em{' '}
-              <Link to="/editor?section=identidade" className="font-medium text-burgundy underline">
-                Seus dados
-              </Link>{' '}
-              antes de pedir a conferência.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={pedir}
-            disabled={busy || !hasOabNumber}
-            className="btn-primary !py-2 !px-4 text-[13px] disabled:opacity-50"
-          >
-            {busy
-              ? 'Enviando…'
-              : status === 'rejected'
-                ? 'Pedir nova conferência'
-                : 'Pedir a conferência'}
-          </button>
-          {error && (
-            <p role="alert" className="text-[12.5px] font-medium text-burgundy-deep">
-              {error}
-            </p>
-          )}
-        </div>
-      )}
-      <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-        A conferência é feita pela plataforma no cadastro da OAB. Você não pode se marcar como conferido.
-      </p>
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
-        Declarar registro falso ou apresentar documento falso pode configurar crime (arts. 297 e 304 do
-        Código Penal). A veracidade dos dados é de sua exclusiva responsabilidade.{' '}
-        <Link to="/legal/termos" target="_blank" className="font-medium text-ink-soft underline">
-          Ver Termos
-        </Link>
-      </p>
     </div>
   )
 }

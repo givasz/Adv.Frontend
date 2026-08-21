@@ -21,7 +21,7 @@ export const ScaleIcon = (p: IconProps) => (
   </svg>
 )
 
-// Selo estilo "chancela oficial" — NÃO usar em marca de verificação de perfil.
+// Selo estilo "chancela oficial" — NÃO usar perto de número de OAB nem de perfil.
 // O Prov. 205/2021 (Art.5º §2º) e o REGRAS.md §2.5 vedam ícones que lembrem
 // autorização/selo oficial da OAB. Mantido apenas para outros usos decorativos.
 export const CheckSeal = (p: IconProps) => (
@@ -31,7 +31,8 @@ export const CheckSeal = (p: IconProps) => (
   </svg>
 )
 
-// Check simples (sem forma de selo) — para a marca informativa "OAB conferida".
+// Check simples (sem forma de selo) — para confirmações de UI, nunca para sugerir
+// que a plataforma validou uma inscrição na OAB.
 export const CheckIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m4.5 12.5 5 5 10-11" />

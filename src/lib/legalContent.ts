@@ -48,14 +48,13 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Cadastro do advogado: e-mail e senha (armazenada apenas como hash), e os dados que você publica no perfil (nome, número de OAB, cidade/UF, áreas, bio, links de contato).',
           'Uso: métricas agregadas de visitas e cliques do seu perfil (analytics), sem identificar o visitante.',
-          'Conferência de OAB: número de inscrição e o histórico da conferência (data, método, responsável, decisão).',
           'Denúncias: motivo, descrição e, se o denunciante quiser, um e-mail para retorno (opcional).',
         ],
       },
       {
         heading: '2. Para que usamos',
         paragraphs: [
-          'Para operar a plataforma: publicar seu perfil, conferir a OAB, aplicar a checagem de conformidade, gerar a trilha de auditoria, moderar denúncias e melhorar o serviço. Não vendemos dados pessoais.',
+          'Para operar a plataforma: publicar seu perfil, aplicar a checagem de conformidade, gerar a trilha de auditoria, moderar denúncias e melhorar o serviço. Não vendemos dados pessoais.',
         ],
       },
       {
@@ -73,7 +72,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '5. Retenção',
         paragraphs: [
-          'Mantemos os dados enquanto sua conta existir e pelos prazos legais aplicáveis. Registros de auditoria e conferência são mantidos como comprovante de conformidade e depois eliminados ou anonimizados. Denúncias resolvidas são mantidas pelo tempo necessário à moderação.',
+          'Mantemos os dados enquanto sua conta existir e pelos prazos legais aplicáveis. Registros de auditoria são mantidos como comprovante de conformidade e depois eliminados ou anonimizados. Denúncias resolvidas são mantidas pelo tempo necessário à moderação.',
         ],
       },
       {
@@ -128,9 +127,11 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         ],
       },
       {
-        heading: '5. Marca “OAB conferida”',
+        heading: '5. Nós não verificamos inscrições na OAB',
         paragraphs: [
-          'Quando exibida, indica que a plataforma conferiu seu número de inscrição. Não é selo, chancela ou endosso oficial da OAB, cujo uso é vedado pelo Provimento 205/2021.',
+          'O advoc.me não confere, não valida e não endossa números de inscrição, e não exibe selo, marca de verificação ou qualquer sinal que sugira aval da OAB — o uso de símbolos e chancelas oficiais é vedado pelo Provimento 205/2021 (Art. 5º, §2º).',
+          'Cada perfil exibe, ao lado do número informado pelo próprio advogado, um link para a consulta pública do Cadastro Nacional dos Advogados (CNA), base oficial da OAB, onde qualquer pessoa confere a inscrição diretamente na fonte. Esse link é idêntico em todos os perfis e não depende de plano contratado.',
+          'A veracidade do número informado é de exclusiva responsabilidade de quem o publica (ver item 2). Perfis com registro falso podem ser denunciados pelo próprio perfil e ficam sujeitos à Política de Moderação.',
         ],
       },
       {
@@ -178,7 +179,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '1. Papéis',
         paragraphs: [
-          'O advoc.me é controlador dos dados necessários para operar a plataforma (conta, perfil, conferência, moderação). Quanto aos contatos que cada advogado recebe pelos seus canais, o advogado é o controlador, e o advoc.me atua como simples meio.',
+          'O advoc.me é controlador dos dados necessários para operar a plataforma (conta, perfil, moderação). Quanto aos contatos que cada advogado recebe pelos seus canais, o advogado é o controlador, e o advoc.me atua como simples meio.',
         ],
       },
       {

@@ -2,7 +2,6 @@ import type { Profile } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 import {
   CalendarIcon,
-  CheckIcon,
   MailIcon,
   PinIcon,
   ScaleIcon,
@@ -194,15 +193,6 @@ export function StepArt({ factorKey, profile }: { factorKey: string; profile: Pr
         </Plate>
       )
 
-    case 'oab_conferida':
-      return (
-        <Plate>
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brass/25">
-            <CheckIcon width={16} height={16} strokeWidth={2.6} className="text-brass-deep" />
-          </span>
-        </Plate>
-      )
-
     case 'agenda':
       return (
         <Plate>
@@ -244,6 +234,5 @@ export const STEP_HINT: Record<string, string> = {
   email: 'Um canal formal, para quem prefere não usar WhatsApp.',
   area2: 'Cada área a mais é uma porta a mais para quem busca por assunto.',
   faq: 'As dúvidas que você mais ouve, respondidas por você.',
-  oab_conferida: 'A plataforma confere seu registro e mostra isso no perfil.',
   agenda: 'Deixe que marquem um horário sem trocar dezenas de mensagens.',
 }

@@ -17,8 +17,6 @@ const base: Profile = {
   faqs: [],
   branding: undefined,
   schedulingMode: 'off',
-  oabStatus: 'none',
-  oabVerified: false,
   theme: 'papel',
   plan: 'free',
   bio: 'Atuo em Direito de Família.',
@@ -56,7 +54,6 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
   it('quem acabou de assinar o Pro vê o degrau inteiro como pendente', () => {
     const pending = featuresPending({ ...base, plan: 'pro' }).map((f) => f.key)
     expect(pending).toContain('agenda')
-    expect(pending).toContain('oab')
     // Itens automáticos (endereço, QR) não viram tarefa.
     expect(pending).not.toContain('endereco')
     expect(pending).not.toContain('qrcode')
@@ -96,7 +93,6 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       plan: 'premium',
       slug: 'marina-sales',
       schedulingMode: 'assistant',
-      oabStatus: 'verified',
       theme: 'toga',
       bio: 'x'.repeat(400),
       faqs: Array.from({ length: FAQ_LIMIT.premium }, (_, i) => ({
@@ -124,7 +120,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .map((f) => f.key)
     expect(sampleProfile.plan).toBe('premium')
     expect(usados).toEqual(
-      expect.arrayContaining(['agenda', 'oab', 'faq', 'faq_max', 'marca']),
+      expect.arrayContaining(['agenda', 'faq', 'faq_max', 'marca']),
     )
   })
 
