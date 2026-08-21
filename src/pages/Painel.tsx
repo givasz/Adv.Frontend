@@ -129,6 +129,20 @@ export default function Painel() {
     }
   }, [trust])
 
+  // Voltou da assinatura: comemora uma vez e limpa o parâmetro, para o recarregar
+  // não repetir a festa.
+  //
+  // ⚠️ TEM de ficar ACIMA do `return` de carregamento: hook depois de saída
+  // antecipada só roda em alguns renders, e a contagem de hooks muda entre um e
+  // outro — foi exatamente isso que deixou o painel em tela branca (React #310).
+  useEffect(() => {
+    if (!acabouDeAssinar) return
+    setJustUpgraded(true)
+    searchParams.delete('assinou')
+    setSearchParams(searchParams, { replace: true })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [acabouDeAssinar, searchParams, setSearchParams])
+
   if (!profile || !trust) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-paper-deep">
@@ -144,19 +158,6 @@ export default function Painel() {
   const freeSteps = trust.next.filter((f) => !f.plan)
   const unlockedThemes = THEMES.filter((t) => isThemeUnlocked(t, profile.plan)).length
 
-  // Ativa um plano (em teste, sem cobrança). O plano é do SERVIDOR: adotamos o
-  // perfil que ele devolve (com endereço e agendamento já reconciliados) em vez de
-  // remendar o objeto local — era isso que fazia o recurso comprado voltar a
-  // aparecer travado no recarregamento seguinte.
-  // Voltou da assinatura: comemora uma vez e limpa o parâmetro, para o recarregar
-  // não repetir a festa.
-  useEffect(() => {
-    if (!acabouDeAssinar) return
-    setJustUpgraded(true)
-    searchParams.delete('assinou')
-    setSearchParams(searchParams, { replace: true })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [acabouDeAssinar, searchParams, setSearchParams])
 
   return (
     <div className="grain min-h-dvh bg-paper-deep">
