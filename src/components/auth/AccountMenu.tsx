@@ -71,12 +71,20 @@ export function AccountMenu({
                 Falar com o suporte
               </Link>
             )}
+            <Link
+              to={`/conta/dados?voltar=${encodeURIComponent(location.pathname + location.search)}`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+            >
+              Seus dados
+            </Link>
             <button
               type="button"
               role="menuitem"
               onClick={() => {
                 setOpen(false)
-                logout()
+                void logout()
               }}
               className="block w-full px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
             >

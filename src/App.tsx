@@ -16,6 +16,7 @@ import ReportPage from './pages/ReportPage'
 import SchedulePage from './pages/SchedulePage'
 import SharePage from './pages/SharePage'
 import SupportPage from './pages/SupportPage'
+import DadosPage from './pages/DadosPage'
 import PlansPage from './pages/PlansPage'
 import CheckoutPage from './pages/CheckoutPage'
 
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
         <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
         <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
+        <Route path="/conta/dados" element={<RequireAuth><DadosPage /></RequireAuth>} />
         <Route path="/planos" element={<RequireAuth><PlansPage /></RequireAuth>} />
         <Route path="/assinar/:plano" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}

@@ -174,8 +174,60 @@ export async function login(emailRaw: string, password: string): Promise<Session
   return session
 }
 
-export function logout() {
+/**
+ * Sair. Avisa o servidor ANTES de esquecer o token: é lá que a sessão é apagada.
+ * Sem esse aviso, sair só limpava este navegador — um token copiado antes seguia
+ * entrando por até 7 dias, porque o servidor não tinha como saber que a sessão
+ * tinha acabado.
+ *
+ * A limpeza local acontece de qualquer jeito: se a rede falhar, a pessoa continua
+ * saindo daqui. O token vencerá sozinho no prazo dele.
+ */
+export async function logout(): Promise<void> {
+  const token = current?.token
   setSession(null)
+  if (!useReal || !token) return
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    /* rede fora — o token expira sozinho no prazo */
+  }
+}
+
+/**
+ * Encerra a sessão de TODOS os aparelhos. Para quando o celular some ou a senha
+ * vazou: derruba o que estiver aberto em qualquer lugar, e não só aqui.
+ */
+export async function logoutEverywhere(): Promise<number> {
+  const token = current?.token
+  if (!useReal || !token) {
+    setSession(null)
+    return 0
+  }
+  const res = await fetch(`${API_BASE}/api/auth/logout-all`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  setSession(null)
+  if (!res.ok) throw new Error('Não foi possível encerrar as sessões.')
+  const { encerradas } = (await res.json()) as { encerradas: number }
+  return encerradas
+}
+
+/** Quantos aparelhos estão logados nesta conta agora. */
+export async function countOpenSessions(): Promise<number | null> {
+  if (!useReal || !current?.token) return null
+  try {
+    const res = await fetch(`${API_BASE}/api/account/sessions`, { headers: authHeader() })
+    if (!res.ok) return null
+    const { abertas } = (await res.json()) as { abertas: number }
+    return abertas
+  } catch {
+    return null
+  }
 }
 
 // ---- Hook -------------------------------------------------------------------
@@ -189,5 +241,6 @@ export function useAuth() {
     signup,
     login,
     logout,
+    logoutEverywhere,
   }
 }

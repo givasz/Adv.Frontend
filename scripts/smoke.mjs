@@ -63,6 +63,7 @@ const ROTAS = [
   ['/editor?section=aparencia', 'editor · aparência'],
   ['/editor?section=plano', 'editor · plano'],
   ['/suporte', 'suporte'],
+  ['/conta/dados', 'seus dados (LGPD)'],
   ['/planos', 'planos'],
   ['/planos?recurso=faq&plano=free', 'planos · recurso'],
   ['/assinar/pro', 'checkout'],
