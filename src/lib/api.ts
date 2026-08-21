@@ -466,6 +466,13 @@ export const api = {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify(profile),
       })
+      // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
+      // caracteres, sessão expirada) virava um objeto de erro tratado como perfil
+      // salvo: o editor dizia "Tudo salvo" e o texto simplesmente não existia.
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '')
+        throw new Error(parseApiMessage(msg) || 'Não foi possível salvar as alterações.')
+      }
       return res.json()
     }
     await wait(200)

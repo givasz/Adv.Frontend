@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type {
@@ -132,7 +132,8 @@ const SECTION_IDS = Object.keys(SECTIONS) as SectionId[]
 
 export default function Editor() {
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [saved, setSaved] = useState(true)
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   // Recurso que motivou o modal de upsell contextual (null = fechado).
@@ -167,20 +168,69 @@ export default function Editor() {
     document.title = 'Editar · advoc.me'
   }, [])
 
-  // salva com debounce quando o rascunho muda
+  // Salva com debounce quando o rascunho muda. O que está em voo fica no `pending`
+  // para poder ser DESCARREGADO na saída: quem digitava e clicava em "Pronto" na
+  // sequência perdia os últimos caracteres — o timer morria com a tela e o texto
+  // nunca chegava ao servidor. Era isso que fazia uma área recém-digitada "não
+  // aparecer depois".
+  const pending = useRef<Profile | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const persist = useCallback(async (draft: Profile) => {
+    try {
+      const saved = await api.saveDraft(draft)
+      // Só limpa o pendente se nada novo entrou na fila enquanto salvávamos.
+      if (pending.current === draft) pending.current = null
+      setSaveState('saved')
+      if (saved?.slug) {
+        setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
+      }
+      return saved
+    } catch (e) {
+      // Falha de rede ou recusa do servidor NÃO pode passar por "Tudo salvo".
+      setSaveState('error')
+      setSaveError(e instanceof Error ? e.message : 'Não foi possível salvar agora.')
+      return null
+    }
+  }, [])
+
+  /** Grava agora o que estiver em voo. Chamado antes de sair do editor. */
+  const flush = useCallback(async () => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    const draft = pending.current
+    if (!draft) return
+    setSaveState('saving')
+    await persist(draft)
+  }, [persist])
+
   useEffect(() => {
     if (!profile) return
-    setSaved(false)
-    const t = setTimeout(() => {
-      api.saveDraft(profile).then((saved) => {
-        setSaved(true)
-        if (saved?.slug) {
-          setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
-        }
-      })
+    pending.current = profile
+    setSaveState('saving')
+    setSaveError(null)
+    timer.current = setTimeout(() => {
+      timer.current = null
+      void persist(profile)
     }, 700)
-    return () => clearTimeout(t)
-  }, [profile])
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [profile, persist])
+
+  // Fechar/recarregar a aba com algo por salvar pede confirmação — o navegador não
+  // espera um fetch pendente, e perder texto em silêncio é o pior desfecho possível.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!pending.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
 
   // Enquanto o pedido de conferência está na fila, o editor volta a perguntar o
   // estado ao servidor: ao abrir a seção e sempre que a aba recupera o foco. Sem
@@ -289,6 +339,18 @@ export default function Editor() {
       })
   }
 
+  // Sair do editor GRAVA o que estiver em voo antes de navegar. Se o servidor
+  // recusar, ficamos na tela com o aviso — sair calado perderia o texto.
+  async function sairParaPainel() {
+    // Na primeira falha o editor SEGURA a saída e mostra o aviso. Se a pessoa
+    // insistir, ela sai: ficar presa numa tela que não grava é pior do que perder
+    // a alteração — e o aviso já disse o que aconteceu.
+    const jaAvisado = saveState === 'error'
+    await flush()
+    if (pending.current && !jaAvisado) return
+    navigate('/painel')
+  }
+
   const meta = SECTIONS[section]
 
   return (
@@ -301,8 +363,15 @@ export default function Editor() {
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-[12px] text-ink-faint sm:inline" aria-live="polite">
-              {saved ? 'Tudo salvo' : 'Salvando…'}
+            {/* "Tudo salvo" só quando de fato salvou. Falha vira aviso visível com
+                botão de tentar de novo — antes um PUT recusado passava por salvo. */}
+            <span
+              className={`hidden text-[12px] sm:inline ${
+                saveState === 'error' ? 'font-semibold text-burgundy-deep' : 'text-ink-faint'
+              }`}
+              aria-live="polite"
+            >
+              {saveState === 'saved' ? 'Tudo salvo' : saveState === 'saving' ? 'Salvando…' : 'Não salvou'}
             </span>
             <Link to={`/${profile.slug}`} className="btn-primary !py-2 !px-4 text-[13px]" target="_blank">
               Ver perfil
@@ -332,12 +401,13 @@ export default function Editor() {
         {/* min-w-0: sem isso um conteúdo largo (uma grade de horários, por exemplo)
             vira a largura mínima da coluna e estoura a página no celular. */}
         <div className={`mx-auto w-full min-w-0 max-w-2xl space-y-5 lg:max-w-none ${tab === 'preview' ? 'hidden lg:block' : ''}`}>
-          <Link
-            to="/painel"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-burgundy"
+          <button
+            type="button"
+            onClick={sairParaPainel}
+            className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-burgundy"
           >
             ‹ Voltar ao painel
-          </Link>
+          </button>
 
           <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
 
@@ -587,11 +657,28 @@ export default function Editor() {
             </motion.div>
           </AnimatePresence>
 
+          {/* Aviso de falha de gravação: fica JUNTO do botão de sair, que é onde a
+              pessoa está olhando quando decide ir embora. */}
+          {saveState === 'error' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-burgundy/30 bg-burgundy/[0.06] px-3 py-2.5">
+              <p className="text-[12.5px] font-medium text-burgundy-deep">
+                {saveError ?? 'Não foi possível salvar as últimas alterações.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => void flush()}
+                className="rounded-full border border-burgundy/40 px-3 py-1.5 text-[12px] font-semibold text-burgundy hover:bg-burgundy/10"
+              >
+                Tentar de novo
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-3 pt-1">
-            <Link to="/painel" className="btn-ghost">
+            <button type="button" onClick={sairParaPainel} className="btn-ghost">
               ‹ Painel
-            </Link>
-            <button type="button" onClick={() => navigate('/painel')} className="btn-primary">
+            </button>
+            <button type="button" onClick={sairParaPainel} className="btn-primary">
               Pronto
             </button>
           </div>

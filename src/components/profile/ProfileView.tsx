@@ -199,67 +199,11 @@ export function ProfileView({
           </motion.p>
         )}
 
-        {owner && profile.socials.length === 0 && (
-          <motion.div variants={item} className="mt-6 flex justify-center">
-            <OwnerHint to="/editor?section=redes">
-              Suas redes e site ainda não aparecem aqui
-            </OwnerHint>
-          </motion.div>
-        )}
-
-        {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
-        {profile.socials.length > 0 && (
-          <motion.section variants={item} className="mt-6">
-            <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
-            <div
-              className={`mt-3 grid gap-2.5 ${
-                s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
-              }`}
-            >
-              {profile.socials.map((soc) => {
-                const meta = socialMeta[soc.kind]
-                const Icon = meta.Icon
-                return (
-                  <a
-                    key={soc.kind + soc.url}
-                    href={soc.url}
-                    onClick={stop}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={`${tile} !py-3 text-sm font-medium`}
-                  >
-                    {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
-                    <Icon
-                      width={24}
-                      height={24}
-                      className={`shrink-0 ${meta.color ? '' : 't-muted'}`}
-                      style={meta.color ? { color: meta.color } : undefined}
-                    />
-                    {meta.label}
-                    <ArrowRight width={15} height={15} className="t-faint ml-auto" />
-                  </a>
-                )
-              })}
-            </div>
-          </motion.section>
-        )}
-
-        <motion.div variants={item}>
-          <ThemeDivider type={s.rule} />
-        </motion.div>
-
-        {/* Bio */}
-        {profile.bio && (
-          <motion.p
-            variants={item}
-            className={`t-muted text-[15.5px] leading-relaxed ${left ? 'text-left' : 'text-center'}`}
-          >
-            {profile.bio}
-          </motion.p>
-        )}
-
-        {/* CTAs principais */}
-        <div className="mt-7 space-y-3">
+        {/* CTAs principais — logo abaixo da localização, de propósito: falar com o
+            advogado é o que a pessoa veio fazer. Ficavam depois da bio, embaixo de
+            tudo que ela ainda ia ler; agora o caminho está aberto assim que ela
+            reconhece quem é, onde atua e como atende. */}
+        <div className="mt-6 space-y-3">
           {whatsappHref && (
             <motion.a
               variants={item}
@@ -325,6 +269,65 @@ export function ProfileView({
             </motion.button>
           )}
         </div>
+
+        {owner && profile.socials.length === 0 && (
+          <motion.div variants={item} className="mt-6 flex justify-center">
+            <OwnerHint to="/editor?section=redes">
+              Suas redes e site ainda não aparecem aqui
+            </OwnerHint>
+          </motion.div>
+        )}
+
+        {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
+        {profile.socials.length > 0 && (
+          <motion.section variants={item} className="mt-6">
+            <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
+            <div
+              className={`mt-3 grid gap-2.5 ${
+                s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
+              }`}
+            >
+              {profile.socials.map((soc) => {
+                const meta = socialMeta[soc.kind]
+                const Icon = meta.Icon
+                return (
+                  <a
+                    key={soc.kind + soc.url}
+                    href={soc.url}
+                    onClick={stop}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`${tile} !py-3 text-sm font-medium`}
+                  >
+                    {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
+                    <Icon
+                      width={24}
+                      height={24}
+                      className={`shrink-0 ${meta.color ? '' : 't-muted'}`}
+                      style={meta.color ? { color: meta.color } : undefined}
+                    />
+                    {meta.label}
+                    <ArrowRight width={15} height={15} className="t-faint ml-auto" />
+                  </a>
+                )
+              })}
+            </div>
+          </motion.section>
+        )}
+
+        <motion.div variants={item}>
+          <ThemeDivider type={s.rule} />
+        </motion.div>
+
+        {/* Bio */}
+        {profile.bio && (
+          <motion.p
+            variants={item}
+            className={`t-muted text-[15.5px] leading-relaxed ${left ? 'text-left' : 'text-center'}`}
+          >
+            {profile.bio}
+          </motion.p>
+        )}
 
         {/* Áreas de atuação */}
         {areas.length > 0 && (
