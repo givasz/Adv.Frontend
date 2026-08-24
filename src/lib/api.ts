@@ -4,7 +4,7 @@
 // Amanhã: basta implementar as mesmas assinaturas apontando para `/api/...`
 // (o proxy do Vite já encaminha para o NestJS na porta 3333).
 
-import { isAuthenticated } from './auth'
+import { aguardarSessao, esquecerSessaoLocal, isAuthenticated, revalidarSessao } from './auth'
 import { apiFetch } from './http'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
@@ -97,10 +97,72 @@ const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
 // e-mail no editor deixava esses dados à vista do próximo visitante anônimo.
 const contaAtiva = () => USE_REAL_API && isAuthenticated()
 
+/**
+ * Como `contaAtiva`, mas ESPERA a conferência inicial da sessão.
+ *
+ * A versão síncrona responde "não" durante o primeiro instante do app — a
+ * resposta de /auth/me ainda está no ar. Quem perguntava naquele instante
+ * (o painel, o editor, o assistente de criação, todos carregam no primeiro
+ * render) concluía que não havia conta: mostrava o rascunho local em vez do
+ * perfil da pessoa e, pior, passava a GRAVAR no navegador em vez de na conta.
+ * Era o "criei a conta e caí num perfil genérico".
+ */
+async function contaAtivaConferida(): Promise<boolean> {
+  if (!USE_REAL_API) return false
+  await aguardarSessao()
+  return isAuthenticated()
+}
+
+/**
+ * A sessão acabou (ou nunca chegou ao servidor).
+ *
+ * Não basta avisar quem chamou: o retrato local também tem de cair, senão a
+ * interface segue mostrando a pessoa como logada enquanto todas as chamadas
+ * voltam 401. Ao esquecer o retrato, as telas protegidas (ver RequireAuth em
+ * App.tsx) devolvem a pessoa ao login sozinhas — em vez de desenharem um perfil
+ * vazio com o nome dela no cabeçalho.
+ */
+export class SessaoExpirada extends Error {
+  constructor(mensagem = 'Sua sessão expirou. Entre de novo para continuar.') {
+    super(mensagem)
+    this.name = 'SessaoExpirada'
+  }
+}
+
+function sessaoCaiu(mensagem?: string): SessaoExpirada {
+  esquecerSessaoLocal()
+  return new SessaoExpirada(mensagem)
+}
+
+/**
+ * Uma escrita autenticada, com uma segunda chance.
+ *
+ * O 403 aqui quase sempre é o token anti-CSRF fora de data: ele é derivado da
+ * sessão, e a sessão pode ter sido renovada noutra aba, ou o processo do servidor
+ * pode ter reiniciado. Buscar um token novo custa uma chamada e resolve na hora.
+ * Sem isso, o advogado só descobria o problema pelo texto que não salvava — e a
+ * única saída era recarregar a página no meio do que estava escrevendo.
+ *
+ * A segunda tentativa é UMA. Se o 403 persistir, ele é de verdade (perfil
+ * restrito pela moderação, origem não autorizada) e a mensagem do servidor tem de
+ * chegar a quem está na tela.
+ */
+async function escrever(path: string, init: RequestInit): Promise<Response> {
+  const res = await apiFetch(path, init)
+  if (res.status !== 403) return res
+  const sessao = await revalidarSessao()
+  if (!sessao) return res
+  return apiFetch(path, init)
+}
+
 // Chamada autenticada às rotas de gestão do escritório. Todas devolvem o escritório
 // inteiro e todas falham do mesmo jeito — daí um único caminho de erro.
 async function firmFetch(path: string, init: RequestInit = {}): Promise<Firm> {
-  const res = await apiFetch(path, init)
+  const res = init.method && init.method !== 'GET' ? await escrever(path, init) : await apiFetch(path, init)
+  // Sessão caída derruba o retrato junto (ver sessaoCaiu): sem isso a tela do
+  // escritório mostrava "sua sessão expirou" e continuava desenhando a pessoa
+  // como logada, sem caminho de volta a não ser recarregar na mão.
+  if (res.status === 401) throw sessaoCaiu(firmErrorMessage(res.status, ''))
   if (!res.ok) throw new Error(firmErrorMessage(res.status, await res.text().catch(() => '')))
   return (await res.json()) as Firm
 }
@@ -277,33 +339,36 @@ export const api = {
 
   // Escritório do usuário (dono) — para o editor. Mock: localStorage; real: /firms/me.
   async getMyFirm(): Promise<Firm | null> {
-    if (USE_REAL_API) {
+    if (await contaAtivaConferida()) {
+      let res: Response
       try {
-        const res = await apiFetch('/api/firms/me')
-        const text = res.ok ? await res.text() : ''
+        res = await apiFetch('/api/firms/me')
+      } catch {
+        return loadFirmDraft() // rede fora
+      }
+      if (res.status === 401 || res.status === 403) throw sessaoCaiu()
+      const text = res.ok ? await res.text().catch(() => '') : ''
+      try {
         return text ? (JSON.parse(text) as Firm) : null
       } catch {
-        return loadFirmDraft()
+        return null
       }
     }
+    if (USE_REAL_API) return null
     await wait(120)
     return loadFirmDraft()
   },
 
   async saveFirm(firm: Firm): Promise<Firm> {
     if (USE_REAL_API) {
-      const res = await apiFetch('/api/firms/me', {
+      if (!(await contaAtivaConferida())) throw sessaoCaiu(firmErrorMessage(401, ''))
+      // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
+      // "Tudo salvo": o corpo de erro não é um Firm.
+      return firmFetch('/api/firms/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(firm),
       })
-      // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
-      // "Tudo salvo": o corpo de erro não é um Firm.
-      if (!res.ok) {
-        const detail = await res.text().catch(() => '')
-        throw new Error(firmErrorMessage(res.status, detail))
-      }
-      return res.json()
     }
     await wait(200)
     const anterior = loadFirmDraft()
@@ -382,29 +447,53 @@ export const api = {
     }
   },
 
+  /**
+   * O perfil de quem está logado.
+   *
+   * Com conta, a fonte é o SERVIDOR e só ele: misturar o rascunho local por baixo
+   * (`{...loadDraft(), ...data}`) fazia campos de outra conta — a de quem usou o
+   * mesmo computador antes — reaparecerem no editor de quem acabou de se
+   * cadastrar. O rascunho local volta a ser o que sempre foi: o perfil de quem
+   * ainda não tem conta, e uma rede de segurança quando a rede cai.
+   */
   async getDraft(): Promise<Profile> {
-    if (contaAtiva()) {
-      // Blindagem: banco vazio / resposta vazia não pode travar o editor.
-      // Se o backend não devolver um perfil válido, começa com um rascunho local.
+    if (await contaAtivaConferida()) {
+      let res: Response
       try {
-        const res = await apiFetch('/api/profiles/me')
-        const text = res.ok ? await res.text() : ''
-        const data = text ? (JSON.parse(text) as Partial<Profile>) : null
-        if (data && data.slug) {
-          return { ...loadDraft(), ...data } as Profile
-        }
+        res = await apiFetch('/api/profiles/me')
       } catch {
-        /* rede/JSON inválido → cai no rascunho local */
+        return loadDraft() // rede fora: melhor o que há aqui do que uma tela travada
       }
-      return loadDraft()
+      // 401/403 = o cookie não vale mais (venceu, ou o navegador o descartou).
+      // Isto PRECISA ser distinguido de "conta sem perfil": tratar os dois como a
+      // mesma coisa é o que jogava a pessoa num assistente de criação em branco,
+      // com o nome dela ainda no cabeçalho.
+      if (res.status === 401) throw sessaoCaiu()
+      if (!res.ok) throw new Error('Não foi possível carregar seu perfil agora.')
+      const text = await res.text().catch(() => '')
+      let data: Partial<Profile> | null = null
+      try {
+        data = text ? (JSON.parse(text) as Partial<Profile>) : null
+      } catch {
+        data = null
+      }
+      // Conta sem perfil (200 com corpo vazio) começa um rascunho NOVO — o do
+      // servidor é a verdade, e ele diz que não há nada ainda.
+      return { ...emptyDraft(), ...(data ?? {}) } as Profile
     }
     await wait(120)
     return loadDraft()
   },
 
   async saveDraft(profile: Profile): Promise<Profile> {
+    // Modo real SEM sessão: recusa em vez de gravar no navegador. O silêncio era
+    // pior que o erro — o editor dizia "Tudo salvo", nada chegava à conta, e o
+    // trabalho sumia no próximo aparelho (ou na próxima limpeza do navegador).
+    if (USE_REAL_API && !(await contaAtivaConferida())) {
+      throw sessaoCaiu('Entre na sua conta para salvar o perfil.')
+    }
     if (contaAtiva()) {
-      const res = await apiFetch('/api/profiles/me', {
+      const res = await escrever('/api/profiles/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
@@ -412,6 +501,9 @@ export const api = {
       // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
       // caracteres, sessão expirada) virava um objeto de erro tratado como perfil
       // salvo: o editor dizia "Tudo salvo" e o texto simplesmente não existia.
+      if (res.status === 401) {
+        throw sessaoCaiu('Sua sessão expirou. Entre de novo para salvar o que faltou.')
+      }
       if (!res.ok) {
         const msg = await res.text().catch(() => '')
         throw new Error(parseApiMessage(msg) || 'Não foi possível salvar as alterações.')
@@ -485,13 +577,19 @@ export const api = {
    * desta função não muda.
    */
   async setPlan(plan: Plan): Promise<Profile> {
+    if (USE_REAL_API && !(await contaAtivaConferida())) {
+      throw sessaoCaiu('Entre na sua conta para ativar o plano.')
+    }
     if (contaAtiva()) {
-      const res = await apiFetch('/api/profiles/me/plan', {
+      const res = await escrever('/api/profiles/me/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan }),
       })
-      if (!res.ok) throw new Error('Não foi possível ativar o plano.')
+      if (res.status === 401) {
+        throw sessaoCaiu('Sua sessão expirou. Entre de novo para ativar o plano.')
+      }
+      if (!res.ok) throw new Error(parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível ativar o plano.')
       return res.json()
     }
     await wait(220)

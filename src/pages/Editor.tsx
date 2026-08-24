@@ -9,8 +9,9 @@ import type {
   Profile,
   SocialKind,
 } from '@/lib/types'
-import { api } from '@/lib/api'
+import { api, SessaoExpirada } from '@/lib/api'
 import { AccountMenu } from '@/components/auth/AccountMenu'
+import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
@@ -137,6 +138,7 @@ export default function Editor() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved')
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   // Upsell e checkout deixaram de ser modais: viram páginas (/planos, /assinar).
@@ -155,16 +157,24 @@ export default function Editor() {
     : 'identidade'
 
   useEffect(() => {
-    api.getDraft().then((d) => {
-      // Auto-correção de endereço órfão: um slug auto-gerado (nome-1234, do tempo
-      // de Free) que não foi personalizado à mão e não bate mais com o nome atual
-      // volta a seguir o nome. Evita mostrar o nome antigo depois de renomear.
-      if (!d.slugCustom && d.plan !== 'free' && /-\d{4}$/.test(d.slug) && d.slug !== slugify(d.name)) {
-        setProfile({ ...d, slug: slugify(d.name) })
-        return
-      }
-      setProfile(d)
-    })
+    api
+      .getDraft()
+      .then((d) => {
+        // Auto-correção de endereço órfão: um slug auto-gerado (nome-1234, do tempo
+        // de Free) que não foi personalizado à mão e não bate mais com o nome atual
+        // volta a seguir o nome. Evita mostrar o nome antigo depois de renomear.
+        if (!d.slugCustom && d.plan !== 'free' && /-\d{4}$/.test(d.slug) && d.slug !== slugify(d.name)) {
+          setProfile({ ...d, slug: slugify(d.name) })
+          return
+        }
+        setProfile(d)
+      })
+      .catch((e: unknown) => {
+        // Sessão caída → o RequireAuth devolve ao login. Falha do servidor vira
+        // tela de erro: o editor ficava girando o carregador para sempre.
+        if (e instanceof SessaoExpirada) return
+        setLoadError(e instanceof Error ? e.message : 'Falha ao carregar seu perfil.')
+      })
     document.title = 'Editar · advoc.me'
   }, [])
 
@@ -239,6 +249,8 @@ export default function Editor() {
   }, [section])
 
   const bioIssues = useMemo(() => (profile ? checkCompliance(profile.bio) : []), [profile])
+
+  if (loadError) return <FalhaAoCarregar mensagem={loadError} />
 
   if (!profile) {
     return (

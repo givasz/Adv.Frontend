@@ -21,12 +21,18 @@ const FIRM_SLUG = 'andrade-vieira' // escritório-modelo do mock
 // Sessão de mentira + rascunho PUBLICADO, para as rotas que exigem conta.
 // O rascunho é essencial: sem `published: true` o painel desvia para /comecar e a
 // rota nunca chega a renderizar de verdade — o teste passaria sem testar nada.
+//
+// ⚠️ A chave é `advocme:user` (o retrato de quem está logado). Ficou tempo demais
+// como `advocme:session`, do tempo em que a sessão era um token no localStorage:
+// depois que ela virou cookie, a semente parou de logar ninguém e TODA rota
+// protegida daqui só testava o redirecionamento para /entrar. Se mudar o nome da
+// chave em lib/auth.ts, mude aqui junto.
 const SEED = `
 try {
-  localStorage.setItem('advocme:session', JSON.stringify({
-    token: 'smoke',
+  localStorage.setItem('advocme:user', JSON.stringify({
     expiresAt: Date.now() + 3600000,
-    user: { id: 'u1', email: 'smoke@advoc.me', name: 'Smoke' },
+    remember: true,
+    user: { id: 'u1', email: 'smoke@advoc.me', name: 'Smoke', plan: 'premium' },
   }))
   localStorage.setItem('advocme:profile:draft', JSON.stringify({
     slug: 'ana-smoke-1234',
@@ -86,6 +92,10 @@ const ROTAS = [
 // Ruído conhecido do ambiente de desenvolvimento — não é falha do app.
 const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 
+// Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
+// aconteceu, calado, o tempo todo em que a semente usou a chave errada.
+const EXIGEM_CONTA = /^\/(painel|editor|suporte|conta|planos|assinar|comecar|escritorio\/editar)/
+
 const navegador = await chromium.launch()
 const falhas = []
 
@@ -104,6 +114,10 @@ for (const [rota, nome] of ROTAS) {
     // Tela branca não emite erro sozinha: conferimos que sobrou conteúdo visível.
     const texto = (await pagina.locator('body').innerText()).trim()
     if (texto.length < 20) erros.push(`tela em branco (${texto.length} caracteres visíveis)`)
+    const destino = new URL(pagina.url()).pathname
+    if (EXIGEM_CONTA.test(rota) && /^\/(entrar|criar-conta)/.test(destino)) {
+      erros.push(`desviou para ${destino} — a sessão semeada não foi reconhecida`)
+    }
   } catch (e) {
     erros.push(String(e))
   }

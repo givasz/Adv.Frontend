@@ -36,14 +36,34 @@ function ScrollToTop() {
 
 // Exige conta para acessar as áreas do app (criar/gerenciar perfil) — inclusive
 // no plano Free. Sem sessão, manda para o cadastro/login guardando o destino.
+//
+// A espera do meio é o que faltava: a credencial mora num cookie que a página não
+// consegue ler, então saber se a sessão vale custa uma ida ao servidor. Decidir
+// antes da resposta expulsava para o login quem estava logado — bastava abrir o
+// link direto numa aba nova, ou o navegador ter limpado o retrato local.
 function RequireAuth({ children, to = '/entrar' }: { children: ReactElement; to?: string }) {
-  const { isAuthed } = useAuth()
+  const { isAuthed, conferindo } = useAuth()
   const loc = useLocation()
+  if (conferindo && !isAuthed) return <Carregando />
   if (!isAuthed) {
     const next = encodeURIComponent(loc.pathname + loc.search)
     return <Navigate to={`${to}?next=${next}`} replace />
   }
   return children
+}
+
+// Mesma espera das telas do app (painel, editor) — a troca entre uma e outra não
+// deve piscar duas coisas diferentes.
+function Carregando() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-paper-deep">
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-2 border-ink/15 border-t-burgundy"
+        role="status"
+        aria-label="Carregando"
+      />
+    </div>
+  )
 }
 
 export default function App() {

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Plan, Profile } from '@/lib/types'
-import { api } from '@/lib/api'
+import { api, SessaoExpirada } from '@/lib/api'
+import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
 import { parseOab } from '@/lib/brFormat'
@@ -64,6 +65,9 @@ const LAST = REVIEW
 
 export default function Onboarding() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [erroAoSalvar, setErroAoSalvar] = useState<string | null>(null)
+  const [publicando, setPublicando] = useState(false)
   const [step, setStep] = useState(WELCOME)
   const [aiOpen, setAiOpen] = useState(false)
   const [published, setPublished] = useState(false)
@@ -72,19 +76,27 @@ export default function Onboarding() {
 
   useEffect(() => {
     document.title = 'Vamos criar seu perfil · advoc.me'
-    api.getDraft().then((d) => {
-      // Quem JÁ publicou nunca é jogado de volta no assistente de criação. Isto é o
-      // que fazia "trocar de plano" parecer refazer o perfil inteiro: os botões de
-      // plano da home apontam para /comecar?plan=pro, e aqui a pessoa caía na tela
-      // 1 de 6. Agora vai direto ao painel, com o checkout do plano já aberto.
-      if (d.published) {
-        const wanted = searchParams.get('plan')
-        const q = wanted === 'pro' || wanted === 'premium' ? `?assinar=${wanted}` : ''
-        navigate(`/painel${q}`, { replace: true })
-        return
-      }
-      setProfile(isUnstarted(d) ? blankEssentials(d) : d)
-    })
+    api
+      .getDraft()
+      .then((d) => {
+        // Quem JÁ publicou nunca é jogado de volta no assistente de criação. Isto é o
+        // que fazia "trocar de plano" parecer refazer o perfil inteiro: os botões de
+        // plano da home apontam para /comecar?plan=pro, e aqui a pessoa caía na tela
+        // 1 de 6. Agora vai direto ao painel, com o checkout do plano já aberto.
+        if (d.published) {
+          const wanted = searchParams.get('plan')
+          const q = wanted === 'pro' || wanted === 'premium' ? `?assinar=${wanted}` : ''
+          navigate(`/painel${q}`, { replace: true })
+          return
+        }
+        setProfile(isUnstarted(d) ? blankEssentials(d) : d)
+      })
+      .catch((e: unknown) => {
+        // Sessão caída → o RequireAuth já leva ao login. O resto vira mensagem, em
+        // vez de um assistente em branco que parece um perfil recém-criado.
+        if (e instanceof SessaoExpirada) return
+        setErro(e instanceof Error ? e.message : 'Falha ao carregar seu rascunho.')
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -99,16 +111,28 @@ export default function Onboarding() {
   useEffect(() => {
     if (!profile) return
     const t = setTimeout(() => {
-      api.saveDraft(profile).then((saved) => {
-        if (saved?.slug && saved.slug !== profile.slug) {
-          setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
-        }
-      })
+      api
+        .saveDraft(profile)
+        .then((saved) => {
+          setErroAoSalvar(null)
+          if (saved?.slug && saved.slug !== profile.slug) {
+            setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
+          }
+        })
+        .catch((e: unknown) => {
+          // Este `.catch` faltava: a recusa do servidor virava um erro solto no
+          // console e a pessoa seguia preenchendo seis telas que não estavam
+          // sendo gravadas em lugar nenhum.
+          if (e instanceof SessaoExpirada) return
+          setErroAoSalvar(e instanceof Error ? e.message : 'Não foi possível salvar agora.')
+        })
     }, 600)
     return () => clearTimeout(t)
   }, [profile])
 
   const blockedBio = useMemo(() => (profile ? hasBlockingIssue(profile.bio) : false), [profile])
+
+  if (erro) return <FalhaAoCarregar mensagem={erro} titulo="Não foi possível abrir o assistente" />
 
   if (!profile) {
     return (
@@ -141,9 +165,36 @@ export default function Onboarding() {
   const goNext = () => setStep((s) => Math.min(LAST, s + 1))
   const goBack = () => setStep((s) => Math.max(WELCOME, s - 1))
 
-  function publish() {
-    set({ published: true })
-    setPublished(true)
+  /**
+   * Publicar de verdade — e só comemorar depois que o servidor confirmar.
+   *
+   * Antes, "Publicar" só marcava o rascunho e trocava de tela; a gravação ficava
+   * a cargo do salvamento com atraso de 600ms, que morria junto com a tela se a
+   * pessoa saísse antes. Quando ele chegava a rodar e o servidor recusava (texto
+   * fora das normas da OAB, sessão vencida), ninguém ficava sabendo: a tela dizia
+   * "está no ar" e o perfil continuava despublicado — daí o painel devolver ao
+   * assistente de criação, em branco, na visita seguinte.
+   */
+  async function publish() {
+    if (publicando) return
+    setPublicando(true)
+    setErroAoSalvar(null)
+    const paraPublicar: Profile = { ...profile!, published: true }
+    setProfile(paraPublicar)
+    try {
+      const saved = await api.saveDraft(paraPublicar)
+      if (!saved?.published) throw new Error('O servidor não confirmou a publicação.')
+      setProfile(saved)
+      setPublished(true)
+    } catch (e) {
+      // Falhou: o perfil NÃO está no ar, e a tela tem de dizer isso.
+      setProfile((p) => (p ? { ...p, published: false } : p))
+      if (!(e instanceof SessaoExpirada)) {
+        setErroAoSalvar(e instanceof Error ? e.message : 'Não foi possível publicar agora.')
+      }
+    } finally {
+      setPublicando(false)
+    }
   }
 
   if (published) {
@@ -341,6 +392,17 @@ export default function Onboarding() {
                 </motion.div>
               </AnimatePresence>
 
+              {/* O que o servidor recusou. Ficava só no console — e a pessoa
+                  seguia preenchendo telas que não estavam sendo gravadas. */}
+              {erroAoSalvar && (
+                <p
+                  role="alert"
+                  className="mt-6 rounded-lg border border-burgundy/30 bg-burgundy/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-burgundy-deep"
+                >
+                  {erroAoSalvar}
+                </p>
+              )}
+
               {/* Navegação */}
               <div className="mt-8 flex items-center justify-between gap-3">
                 {step > WELCOME ? (
@@ -354,11 +416,11 @@ export default function Onboarding() {
                 {step === REVIEW ? (
                   <button
                     type="button"
-                    onClick={publish}
-                    disabled={!canPublish}
+                    onClick={() => void publish()}
+                    disabled={!canPublish || publicando}
                     className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Publicar perfil
+                    {publicando ? 'Publicando…' : 'Publicar perfil'}
                   </button>
                 ) : step === PHOTO ? (
                   <div className="flex items-center gap-3">

@@ -62,8 +62,24 @@ function lerRetrato(): Session | null {
   }
 }
 
-let current: Session | null = lerRetrato()
-let conferido = !useReal // no mock não há servidor a consultar
+/**
+ * O que a interface sabe sobre a sessão AGORA.
+ *
+ * `conferindo` existe porque o retrato do localStorage é um palpite: quem manda é
+ * o cookie, e saber se ele ainda vale custa uma ida ao servidor. Sem esse estado,
+ * toda tela protegida decidia no primeiro render — antes da resposta — e mandava
+ * para o login quem estava perfeitamente logado (ou, pior, deixava entrar quem
+ * não estava mais e caía num perfil em branco).
+ */
+export interface EstadoSessao {
+  session: Session | null
+  /** a conferência inicial com o servidor ainda não terminou */
+  conferindo: boolean
+}
+
+// Um objeto só, trocado por inteiro a cada mudança: `useSyncExternalStore` compara
+// por identidade, e devolver um objeto novo a cada leitura entraria em laço.
+let estado: EstadoSessao = { session: lerRetrato(), conferindo: useReal }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -73,46 +89,79 @@ function subscribe(cb: () => void) {
   listeners.add(cb)
   return () => listeners.delete(cb)
 }
-function snapshot() {
-  return current
+function snapshot(): EstadoSessao {
+  return estado
+}
+
+function setEstado(patch: Partial<EstadoSessao>) {
+  estado = { ...estado, ...patch }
+  emit()
 }
 
 function setSession(s: Session | null) {
-  current = s
   try {
     if (s) localStorage.setItem(USER_KEY, JSON.stringify(s))
     else localStorage.removeItem(USER_KEY)
   } catch {
     /* armazenamento indisponível (aba privativa) — a sessão segue no cookie */
   }
-  emit()
+  setEstado({ session: s })
+}
+
+/**
+ * Rascunhos guardados neste navegador. No modo REAL eles são só um cache do que
+ * está no servidor — e cache de conta alheia é vazamento: sem limpar ao sair, o
+ * próximo advogado a criar conta no mesmo computador abria o editor com pedaços
+ * do perfil de quem usou antes.
+ *
+ * No modo mock é o contrário: o rascunho É o perfil, e apagá-lo ao sair jogaria
+ * fora o trabalho da pessoa. Por isso a limpeza só acontece no modo real.
+ */
+const CHAVES_DE_RASCUNHO = ['advocme:profile:draft', 'advocme:firm:draft', 'advocme:trust:last']
+
+function limparRascunhosLocais(): void {
+  if (!useReal) return
+  for (const chave of CHAVES_DE_RASCUNHO) {
+    try {
+      localStorage.removeItem(chave)
+    } catch {
+      /* armazenamento indisponível */
+    }
+  }
 }
 
 /**
  * Esquece quem estava logado NESTE navegador, sem falar com o servidor.
  *
- * Para quando não há mais sessão a encerrar do outro lado: a conta acabou de ser
- * excluída. Precisa passar por aqui (e não por um `localStorage.removeItem`
- * solto) porque é o store reativo que faz o cabeçalho parar de mostrar a pessoa
- * como logada — apagar a chave por fora não avisa ninguém.
+ * Para quando não há mais sessão a encerrar do outro lado: a conta foi excluída,
+ * ou o cookie venceu e o servidor respondeu 401. Precisa passar por aqui (e não
+ * por um `localStorage.removeItem` solto) porque é o store reativo que faz o
+ * cabeçalho parar de mostrar a pessoa como logada — e é ele que faz as telas
+ * protegidas devolverem a pessoa ao login em vez de desenharem um perfil vazio.
  */
 export function esquecerSessaoLocal(): void {
   setCsrfToken(null)
-  setSession(null)
+  limparRascunhosLocais()
+  setEstado({ session: null, conferindo: false })
+  try {
+    localStorage.removeItem(USER_KEY)
+  } catch {
+    /* armazenamento indisponível */
+  }
 }
 
 /** Sessão atual (não reativa) — para uso fora de componentes (ex.: api.ts). */
 export function getSession(): Session | null {
-  return current
+  return estado.session
 }
 
 export function isAuthenticated(): boolean {
-  return !!current
+  return !!estado.session
 }
 
 /** A conferência inicial com o servidor já terminou? */
 export function sessaoConferida(): boolean {
-  return conferido
+  return !estado.conferindo
 }
 
 // ---- Conferência com o servidor ---------------------------------------------
@@ -136,6 +185,55 @@ function aplicar(dados: RespostaSessao): Session {
 }
 
 /**
+ * A frase que a pessoa lê quando o cadastro/entrada é recusado.
+ *
+ * O Nest recusa com um JSON (`{"message":"E-mail inválido.","statusCode":400}`) e
+ * o texto cru desse corpo estava indo direto para a tela — o advogado via a
+ * chaveta e o código de status no lugar do motivo.
+ */
+function mensagemDeErro(corpo: string, padrao: string): string {
+  const texto = corpo.trim()
+  if (!texto) return padrao
+  try {
+    const dados = JSON.parse(texto) as { message?: string | string[] }
+    const msg = Array.isArray(dados.message) ? dados.message[0] : dados.message
+    return msg || padrao
+  } catch {
+    return texto.startsWith('<') ? padrao : texto
+  }
+}
+
+/**
+ * O cookie da sessão realmente ficou guardado?
+ *
+ * Entrar responde 200 e devolve a pessoa — mas quem autentica as chamadas
+ * seguintes é o cookie, e ele pode simplesmente não ser aceito: com o site num
+ * domínio e a API em outro, o cookie é "de terceiros", e o Safari o descarta
+ * sempre, o Chrome em parte das configurações. O sintoma era cruel — a pessoa
+ * entrava, via o próprio nome no cabeçalho e caía num perfil vazio, como se a
+ * conta recém-criada não existisse, porque toda chamada seguinte chegava
+ * deslogada.
+ *
+ * Uma consulta a /auth/me logo depois de entrar transforma isso num aviso claro.
+ * Falha de rede aqui não derruba o login: o servidor já disse que a conta é boa.
+ */
+async function confirmarCookie(): Promise<void> {
+  let res: Response
+  try {
+    res = await apiFetch('/api/auth/me')
+  } catch {
+    return
+  }
+  if (res.ok || res.status !== 401) return
+  esquecerSessaoLocal()
+  throw new Error(
+    'Entramos na sua conta, mas seu navegador não guardou a sessão. ' +
+      'Isso costuma ser bloqueio de cookies: libere os cookies para este site ' +
+      '(ou desative a navegação anônima/proteção contra rastreamento) e tente de novo.',
+  )
+}
+
+/**
  * Pergunta ao servidor quem está logado neste navegador.
  *
  * É o que faz a sessão sobreviver a fechar e reabrir o navegador: o cookie volta
@@ -148,34 +246,48 @@ function aplicar(dados: RespostaSessao): Session {
  */
 export async function revalidarSessao(): Promise<Session | null> {
   if (!useReal) {
-    conferido = true
-    return current
+    setEstado({ conferindo: false })
+    return estado.session
   }
   try {
     const res = await apiFetch('/api/auth/me')
     if (res.ok) {
       const dados = (await res.json()) as RespostaSessao
       const sessao = aplicar(dados)
-      conferido = true
+      setEstado({ conferindo: false })
       return sessao
     }
     // 401 = não há sessão. Qualquer outra falha é do servidor, não da sessão:
     // derrubar o retrato ali seria deslogar alguém por causa de um deploy.
     if (res.status === 401) {
-      setCsrfToken(null)
-      setSession(null)
+      esquecerSessaoLocal()
+      return null
     }
   } catch {
     /* rede fora — mantém o retrato e tenta de novo na próxima */
   }
-  conferido = true
-  emit()
-  return current
+  setEstado({ conferindo: false })
+  return estado.session
 }
 
 // A conferência começa junto com o app. Sem `await`: a interface abre com o
 // retrato guardado e se corrige em seguida, se for o caso.
-if (useReal) void revalidarSessao()
+const conferenciaInicial: Promise<Session | null> = useReal
+  ? revalidarSessao()
+  : Promise.resolve(estado.session)
+
+/**
+ * Espera a conferência inicial terminar.
+ *
+ * Quem precisa disso é a camada de dados (api.ts): perguntar "tem sessão?" no
+ * primeiro instante do app respondia NÃO para todo mundo — a resposta do servidor
+ * ainda estava no ar — e o editor caía no rascunho local de um advogado que, na
+ * verdade, estava logado. Era assim que um perfil cheio abria em branco, e que o
+ * que se digitava depois ia parar no navegador em vez de na conta.
+ */
+export function aguardarSessao(): Promise<Session | null> {
+  return conferenciaInicial
+}
 
 // ---- Mock (localStorage) ----------------------------------------------------
 
@@ -226,9 +338,10 @@ export async function signup(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name: cleanName, remember }),
     })
-    if (!res.ok) throw new Error((await res.text().catch(() => '')) || 'Não foi possível criar a conta.')
-    conferido = true
-    return aplicar((await res.json()) as RespostaSessao)
+    if (!res.ok) throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível criar a conta.'))
+    const sessao = aplicar((await res.json()) as RespostaSessao)
+    await confirmarCookie()
+    return sessao
   }
 
   const accounts = loadAccounts()
@@ -255,9 +368,10 @@ export async function login(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, remember }),
     })
-    if (!res.ok) throw new Error((await res.text().catch(() => '')) || 'E-mail ou senha incorretos.')
-    conferido = true
-    return aplicar((await res.json()) as RespostaSessao)
+    if (!res.ok) throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'E-mail ou senha incorretos.'))
+    const sessao = aplicar((await res.json()) as RespostaSessao)
+    await confirmarCookie()
+    return sessao
   }
 
   const account = loadAccounts().find((a) => a.email === email)
@@ -279,9 +393,11 @@ export async function login(
  * saindo daqui.
  */
 export async function logout(): Promise<void> {
-  const eraReal = useReal && !!current
-  setCsrfToken(null)
-  setSession(null)
+  const eraReal = useReal && !!estado.session
+  // Sair apaga também o rascunho guardado neste navegador (só no modo real, em
+  // que ele é cache do servidor): quem entrar depois neste computador começa do
+  // zero, e não do perfil de quem saiu.
+  esquecerSessaoLocal()
   if (!eraReal) return
   try {
     await apiFetch('/api/auth/logout', { method: 'POST' })
@@ -295,13 +411,12 @@ export async function logout(): Promise<void> {
  * vazou: derruba o que estiver aberto em qualquer lugar, e não só aqui.
  */
 export async function logoutEverywhere(): Promise<number> {
-  if (!useReal || !current) {
-    setSession(null)
+  if (!useReal || !estado.session) {
+    esquecerSessaoLocal()
     return 0
   }
   const res = await apiFetch('/api/auth/logout-all', { method: 'POST' })
-  setCsrfToken(null)
-  setSession(null)
+  esquecerSessaoLocal()
   if (!res.ok) throw new Error('Não foi possível encerrar as sessões.')
   const { encerradas } = (await res.json()) as { encerradas: number }
   return encerradas
@@ -309,7 +424,7 @@ export async function logoutEverywhere(): Promise<number> {
 
 /** Quantos aparelhos estão logados nesta conta agora. */
 export async function countOpenSessions(): Promise<number | null> {
-  if (!useReal || !current) return null
+  if (!useReal || !estado.session) return null
   try {
     const res = await apiFetch('/api/account/sessions')
     if (!res.ok) return null
@@ -323,11 +438,17 @@ export async function countOpenSessions(): Promise<number | null> {
 // ---- Hook -------------------------------------------------------------------
 
 export function useAuth() {
-  const session = useSyncExternalStore(subscribe, snapshot, snapshot)
+  const { session, conferindo } = useSyncExternalStore(subscribe, snapshot, snapshot)
   return {
     session,
     user: session?.user ?? null,
     isAuthed: !!session,
+    /**
+     * Ainda estamos perguntando ao servidor quem está logado. Quem decide acesso
+     * (ver RequireAuth em App.tsx) tem de ESPERAR nesse estado — decidir aqui é
+     * decidir no escuro, e o erro cai sempre para o lado de expulsar quem entrou.
+     */
+    conferindo,
     signup,
     login,
     logout,

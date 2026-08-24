@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
-import { api } from '@/lib/api'
+import { api, SessaoExpirada } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { THEMES, isThemeUnlocked } from '@/lib/themes'
@@ -9,6 +9,7 @@ import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { Avatar } from '@/components/ui/Avatar'
+import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
 import {
@@ -59,6 +60,7 @@ function motivator(score: number): string {
 
 export default function Painel() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
   const [delta, setDelta] = useState(0)
   // true logo depois de confirmar uma assinatura — dá o tom de celebração ao
   // checklist do que abriu (some ao recarregar).
@@ -77,13 +79,22 @@ export default function Painel() {
 
   useEffect(() => {
     document.title = 'Evolua seu perfil · advoc.me'
-    api.getDraft().then((p) => {
-      if (!p.published) {
-        navigate('/comecar', { replace: true })
-        return
-      }
-      setProfile(p)
-    })
+    api
+      .getDraft()
+      .then((p) => {
+        if (!p.published) {
+          navigate('/comecar', { replace: true })
+          return
+        }
+        setProfile(p)
+      })
+      .catch((e: unknown) => {
+        // Sessão caída já derrubou o retrato (ver api.sessaoCaiu) e o RequireAuth
+        // leva ao login sozinho — aqui não há tela a desenhar. Qualquer outra
+        // falha vira mensagem: antes, o painel girava o carregador para sempre.
+        if (e instanceof SessaoExpirada) return
+        setErro(e instanceof Error ? e.message : 'Falha ao carregar o perfil.')
+      })
   }, [navigate])
 
   const trust = useMemo(() => (profile ? computeTrust(profile) : null), [profile])
@@ -113,6 +124,8 @@ export default function Painel() {
     setSearchParams(searchParams, { replace: true })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [acabouDeAssinar, searchParams, setSearchParams])
+
+  if (erro) return <FalhaAoCarregar mensagem={erro} />
 
   if (!profile || !trust) {
     return (
