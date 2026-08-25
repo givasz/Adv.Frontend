@@ -12,6 +12,30 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# A API é servida no MESMO endereço do site. Isto não é conforto: é a única
+# forma de o login funcionar no iPhone.
+#
+# Enquanto o site era `advocme.netlify.app` e a API `...nip.io`, os dois eram
+# SITES DIFERENTES para o navegador — e o cookie da sessão, um cookie "de
+# terceiros". O Safari (iOS e macOS) descarta esses cookies por padrão desde
+# 2020. O efeito observado: `POST /auth/login` respondia 201, o servidor mandava
+# o cookie, e a requisição SEGUINTE já chegava sem ele. A pessoa entrava, o site
+# não percebia, ela tentava de novo. Seis vezes seguidas, no caso real que
+# motivou isto (iPhone, iOS 18.7, 25/08/2026).
+#
+# Com este proxy o navegador só conversa com advocme.netlify.app: o cookie passa
+# a ser de primeira parte e vale em todo navegador. O Netlify repassa a chamada
+# ao backend por trás, com cabeçalhos e cookies.
+#
+# ⚠️ TEM de vir ANTES do catch-all abaixo: o Netlify aplica a PRIMEIRA regra que
+# casa, e `/*` casaria com `/api/...` primeiro, devolvendo o index.html no lugar
+# da resposta da API.
+[[redirects]]
+  from = "/api/*"
+  to = "https://advocme.74.208.118.111.nip.io/api/:splat"
+  status = 200
+  force = true
+
 # React Router: qualquer rota cai no index.html (SPA)
 [[redirects]]
   from = "/*"
