@@ -13,7 +13,36 @@
 // código não consegue ler — e é exatamente esse o ponto. Nada de token no
 // localStorage, nada que um XSS possa carregar embora.
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+/**
+ * Existe um backend de verdade, ou o app roda no mock (localStorage)?
+ *
+ * Fonte ÚNICA desta resposta — `auth.ts`, `api.ts`, `account.ts`, `support.ts` e
+ * `adminApi.ts` repetiam esta mesma linha, cada um com uma variação. Quando o
+ * endereço da API mudou, mudou em uns e não em outros.
+ */
+export const TEM_BACKEND =
+  import.meta.env.VITE_USE_REAL_API === 'true' || !!(import.meta.env.VITE_API_URL ?? '')
+
+/**
+ * Base das chamadas à API. **Vazia de propósito** — tudo sai como `/api/...`,
+ * no MESMO endereço do site.
+ *
+ * Isto não é estilo, é o que faz o login funcionar no iPhone. Enquanto as
+ * chamadas iam para o endereço absoluto do backend (`...nip.io`), o navegador
+ * via dois SITES diferentes, e o cookie da sessão era um cookie "de terceiros" —
+ * que o Safari descarta por padrão desde 2020. O login respondia 201, o cookie
+ * era gravado e jogado fora, e a chamada seguinte chegava deslogada. Reproduzido
+ * no WebKit: nenhum cookie guardado, tudo 401.
+ *
+ * Quem serve o `/api` no mesmo endereço:
+ *   • produção → o proxy do Netlify (ver `netlify.toml`);
+ *   • desenvolvimento → o proxy do Vite (ver `vite.config.ts`).
+ *
+ * `VITE_API_DIRECT` é a saída de emergência: aponta para o backend sem passar
+ * por proxy nenhum. Serve para depurar contra outra máquina — NÃO para produção,
+ * onde ela traz o problema do cookie de volta.
+ */
+export const API_BASE = (import.meta.env.VITE_API_DIRECT ?? '').trim().replace(/\/$/, '')
 
 /** Cabeçalho onde o token anti-CSRF volta. Espelha backend/src/auth/csrf.ts. */
 export const CSRF_HEADER = 'x-csrf-token'

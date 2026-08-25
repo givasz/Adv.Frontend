@@ -184,3 +184,47 @@ describe('sair', () => {
     expect(localStorage.getItem(USER_KEY)).toBeNull()
   })
 })
+
+describe('a API é servida no mesmo endereço do site', () => {
+  // Este bloco existe por causa de um bug que passou por 296 testes, por dois
+  // builds e por um smoke em navegador de verdade — e ainda assim deixava o app
+  // inutilizável em TODO iPhone.
+  //
+  // Enquanto as chamadas iam para o endereço absoluto do backend, o navegador
+  // via dois SITES diferentes e o cookie da sessão era "de terceiros". Safari
+  // descarta esses cookies: o login respondia 201, o cookie era gravado e jogado
+  // fora, e a chamada seguinte chegava deslogada. Em Chromium tudo funcionava,
+  // que é por isso que ninguém viu.
+  //
+  // A regra que não pode voltar a ser quebrada: mesmo com VITE_API_URL definida,
+  // a chamada sai RELATIVA. Quem serve o /api é o proxy (Netlify em produção,
+  // Vite em desenvolvimento).
+
+  it('chama caminho relativo mesmo com VITE_API_URL definida', async () => {
+    const chamadas: string[] = []
+    await carregarModulos(async (url) => {
+      chamadas.push(String(url))
+      return resposta(401)
+    })
+    const { apiFetch } = await import('./http')
+    await apiFetch('/api/auth/me')
+
+    for (const url of chamadas) {
+      expect(url.startsWith('/')).toBe(true)
+      expect(url).not.toContain('api.exemplo.com')
+    }
+  })
+
+  it('VITE_API_DIRECT é a única forma de sair do mesmo site', async () => {
+    vi.resetModules()
+    vi.stubGlobal('localStorage', new MemoriaLocal())
+    vi.stubGlobal('document', { cookie: '' })
+    vi.stubGlobal('fetch', async () => resposta(401))
+    vi.stubEnv('VITE_API_URL', 'https://api.exemplo.com')
+    vi.stubEnv('VITE_API_DIRECT', 'https://depuracao.exemplo.com')
+
+    const { API_BASE, TEM_BACKEND } = await import('./http')
+    expect(API_BASE).toBe('https://depuracao.exemplo.com')
+    expect(TEM_BACKEND).toBe(true)
+  })
+})

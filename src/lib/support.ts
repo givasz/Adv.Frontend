@@ -6,8 +6,7 @@
 
 import { apiFetch } from './http'
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+import { TEM_BACKEND as USE_REAL_API } from './http'
 
 const MOCK_KEY = 'advocme:support:mock'
 

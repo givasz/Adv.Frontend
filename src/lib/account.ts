@@ -9,8 +9,7 @@
 import { esquecerSessaoLocal, getSession } from './auth'
 import { apiFetch } from './http'
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-const useReal = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+import { TEM_BACKEND as useReal } from './http'
 
 const STORAGE_KEY = 'advocme:profile:draft'
 const ACCOUNTS_KEY = 'advocme:accounts'

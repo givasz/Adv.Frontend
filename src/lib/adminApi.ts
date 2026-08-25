@@ -13,13 +13,13 @@
 import type { ModerationStatus, Profile, Report } from './types'
 import { CSRF_HEADER } from './http'
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+import { API_BASE, TEM_BACKEND } from './http'
 // Sem backend configurado, o painel não teria como decidir nada — e o advogado
 // ficaria "em análise" para sempre no ambiente de desenvolvimento. Só aqui (build
 // de dev, sem VITE_API_URL) a fila de OAB usa o espelho local do api.ts; em
 // produção o painel fala exclusivamente com o NestJS.
 const MOCK_ADMIN =
-  import.meta.env.DEV && import.meta.env.VITE_USE_REAL_API !== 'true' && !API_BASE
+  import.meta.env.DEV && !TEM_BACKEND
 
 let csrfToken: string | null = null
 let mockAutenticado = false

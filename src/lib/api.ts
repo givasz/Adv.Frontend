@@ -5,7 +5,7 @@
 // (o proxy do Vite já encaminha para o NestJS na porta 3333).
 
 import { aguardarSessao, esquecerSessaoLocal, isAuthenticated, revalidarSessao } from './auth'
-import { apiFetch } from './http'
+import { API_BASE, apiFetch, TEM_BACKEND } from './http'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
@@ -82,14 +82,10 @@ function saveFirmDraft(firm: Firm): Firm {
 function sortMembers(members: FirmMember[]): FirmMember[] {
   return [...members].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 }
-// URL absoluta do backend (Render) em produção. Vazio em dev → usa caminho relativo
-// `/api` que o proxy do Vite encaminha para localhost:3333. No Netlify, defina
-// VITE_API_URL=https://<seu-backend>.onrender.com.
-const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-// Modo real (backend) quando explicitamente ligado OU quando há um backend
-// configurado (VITE_API_URL) — assim o deploy no Netlify usa o Render de ponta a
-// ponta (perfis, conta, IA), sem localStorage. Em dev sem VITE_API_URL, segue mock.
-const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === 'true' || !!API_BASE
+// Onde a API vive e se ela existe — as duas respostas vêm de `http.ts`, fonte
+// única. `API_BASE` é vazia: tudo sai como `/api/...`, no mesmo endereço do site
+// (é isso que faz o cookie da sessão valer no Safari — ver o comentário lá).
+const USE_REAL_API = TEM_BACKEND
 
 // O perfil no servidor é SEMPRE de uma conta. Sem sessão, o rascunho vive só
 // neste navegador: a API rejeita escrita anônima (401) porque, antes, todo mundo
@@ -612,7 +608,7 @@ export const api = {
     slug: string,
     input: { reason: ReportReason; details: string; reporterEmail?: string },
   ): Promise<{ ok: boolean }> {
-    if (USE_REAL_API || API_BASE) {
+    if (USE_REAL_API) {
       const res = await fetch(`${API_BASE}/api/profiles/${slug}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -657,7 +653,7 @@ export const api = {
     // Usa a IA do backend quando (a) estamos em modo real, ou (b) há um backend
     // configurado (VITE_API_URL) — assim o front no Netlify usa o Claude via Render
     // mesmo com os perfis em localStorage. Sem backend (dev), cai no Ollama/template.
-    if (USE_REAL_API || API_BASE) {
+    if (USE_REAL_API) {
       try {
         const res = await apiFetch('/api/ai/generate', {
           method: 'POST',

@@ -16,7 +16,7 @@
 // OBRIGATÓRIA para assinar um plano pago. O gate vive na UI (ver `requireAccount`).
 
 import { useSyncExternalStore } from 'react'
-import { apiFetch, setCsrfToken } from './http'
+import { apiFetch, setCsrfToken, TEM_BACKEND } from './http'
 import { passwordProblem } from './passwordStrength'
 
 export interface AuthUser {
@@ -41,11 +41,9 @@ export interface Session {
 const USER_KEY = 'advocme:user'
 const ACCOUNTS_KEY = 'advocme:accounts' // só no modo mock
 
-// Modo real (backend) quando explicitamente ligado OU quando há backend
-// configurado (VITE_API_URL). Assim, no Netlify, conta e perfil ficam no
-// servidor. Em dev sem VITE_API_URL, mock.
-const useReal =
-  import.meta.env.VITE_USE_REAL_API === 'true' || !!(import.meta.env.VITE_API_URL ?? '')
+// Modo real (backend) ou mock (localStorage) — a resposta vem de `http.ts`, que
+// é a fonte única. Em dev sem backend configurado, mock.
+const useReal = TEM_BACKEND
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
