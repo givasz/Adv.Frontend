@@ -69,6 +69,14 @@ export function ProfileView({
   // Perfil vivo (RFC-002): só existe o que tem conteúdo. Áreas sem nome não viram
   // card — nada de caixa vazia.
   const areas = profile.areas.filter((a) => a.label.trim())
+  // A primeira área COM descrição já abre, pela mesma razão do FAQ: uma pilha de
+  // sanfonas fechadas parece uma lista de rótulos, e ninguém toca no que não
+  // parece ter conteúdo. Aberta, a primeira mostra que as outras também têm.
+  //
+  // É "a primeira COM texto", e não "a primeira": área sem descrição nem vira
+  // sanfona — ela é um tile estático (ver AreaCard). Se o índice 0 fosse uma
+  // dessas, abrir "a primeira" não revelaria nada e o problema continuaria.
+  const primeiraAreaComTexto = areas.find((a) => a.description.trim())?.id
   // FAQ: recurso pago (o servidor já não devolve fora dos planos pagos; a trava
   // repetida aqui vale para a prévia do editor e para o mock). Só entra pergunta
   // COM resposta — dúvida pendurada sem resposta é pior que não ter FAQ nenhum.
@@ -357,7 +365,13 @@ export function ProfileView({
             <SectionTitle rule={s.rule}>Áreas de atuação</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {areas.map((a) => (
-                <AreaCard key={a.id} label={a.label} description={a.description} tileClass={tile} />
+                <AreaCard
+                  key={a.id}
+                  label={a.label}
+                  description={a.description}
+                  tileClass={tile}
+                  defaultOpen={a.id === primeiraAreaComTexto}
+                />
               ))}
             </div>
           </motion.section>
@@ -723,12 +737,15 @@ function AreaCard({
   label,
   description,
   tileClass,
+  defaultOpen = false,
 }: {
   label: string
   description: string
   tileClass: string
+  /** a primeira área com texto abre sozinha — ver a chamada em ProfileView */
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const hasDesc = description.trim().length > 0
 
   // Área sem descrição: tile estático e editorial. O nome sozinho, centralizado,
