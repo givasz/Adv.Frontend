@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { BRAND_HOST, profileUrl, profileUrlLabel, publicOrigin } from './publicUrl'
+import { hostLabel, profileUrl, profileUrlLabel, publicOrigin } from './publicUrl'
 
 // A regressão que estes testes travam: o cartão digital gerava o QR apontando
 // para https://advoc.me/<slug> — um domínio que não existe. Quem escaneava não
@@ -20,7 +20,7 @@ afterAll(() => {
 describe('publicUrl — o endereço que vai para o QR', () => {
   it('usa a origem real do app, não a marca', () => {
     expect(publicOrigin()).toBe(ORIGIN)
-    expect(publicOrigin()).not.toContain(BRAND_HOST)
+    expect(publicOrigin()).not.toContain('advoc.me/')
   })
 
   it('monta uma URL absoluta e navegável', () => {
@@ -39,8 +39,25 @@ describe('publicUrl — o endereço que vai para o QR', () => {
     expect(profileUrlLabel(slug)).toBe('advocme.netlify.app/givanildo-barbosa')
   })
 
-  it('BRAND_HOST é só rótulo de venda — nunca vira link', () => {
-    expect(BRAND_HOST).toBe('advoc.me')
-    expect(profileUrl('x')).not.toContain(BRAND_HOST)
+  it('o host mostrado nas telas é o mesmo que vai para o QR', () => {
+    // Antes havia dois: `hostLabel()` (real) e `BRAND_HOST` (a marca). Três telas
+    // do editor pegaram o segundo e passaram a exibir um endereço que não abre.
+    expect(profileUrl('x')).toContain(hostLabel())
+  })
+})
+
+describe('o endereço mostrado é o endereço que abre', () => {
+  // `advoc.me` é a MARCA; o endereço é onde o perfil está de fato. Um
+  // `BRAND_HOST = 'advoc.me'` existia "para textos de venda" e vazou para três
+  // telas do editor, que passaram a dizer ao advogado que o endereço dele era
+  // `advoc.me/joao-silva`. Quem copiasse dali compartilhava um link morto.
+  it('nenhuma tela usa a marca como se fosse host', async () => {
+    const mod = await import('./publicUrl')
+    expect('BRAND_HOST' in mod).toBe(false)
+  })
+
+  it('hostLabel devolve o host real, sem esquema', () => {
+    expect(hostLabel()).toBe(publicOrigin().replace(/^https?:\/\//, ''))
+    expect(hostLabel()).not.toMatch(/^https?:/)
   })
 })

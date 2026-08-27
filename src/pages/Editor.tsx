@@ -32,7 +32,7 @@ import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } fro
 import { comVolta } from '@/components/ui/SubPage'
 import { fitToLimit } from '@/lib/textLimit'
 import { useSlugCheck } from '@/lib/useSlugCheck'
-import { BRAND_HOST } from '@/lib/publicUrl'
+import { hostLabel } from '@/lib/publicUrl'
 import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
@@ -881,7 +881,7 @@ function SlugField({
         }`}
       >
         <span className="flex select-none items-center bg-paper-deep px-3 text-[13px] text-ink-faint">
-          {BRAND_HOST}/
+          {hostLabel()}/
         </span>
         <input
           value={profile.slug}

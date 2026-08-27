@@ -1,5 +1,5 @@
 import type { Branding, Plan } from '@/lib/types'
-import { BRAND_HOST } from '@/lib/publicUrl'
+import { hostLabel } from '@/lib/publicUrl'
 import { checkCompliance } from '@/lib/oab'
 import { Card, Field, TextInput, Toggle } from './fields'
 import { MarginNotes } from './MarginNotes'
@@ -62,7 +62,7 @@ export function BrandingCard({
           Domínio próprio · em preparo
         </p>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
-          Hoje o seu endereço é <span className="font-medium text-ink">{BRAND_HOST}/{slug}</span>.
+          Hoje o seu endereço é <span className="font-medium text-ink">{hostLabel()}/{slug}</span>.
           Estamos preparando o suporte a domínio próprio (o seu <span className="font-medium">.adv.br</span>,
           registrado no seu nome). Deixe abaixo qual você pretende usar e avisamos assim que abrir.
         </p>

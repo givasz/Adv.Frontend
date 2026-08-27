@@ -317,7 +317,7 @@ export default function Landing() {
             {
               n: 4,
               title: 'Publique e compartilhe',
-              body: 'Um endereço único (advoc.me/seu-nome) e QR Code para reunir seus canais com sobriedade.',
+              body: 'Um endereço só seu e um QR Code para reunir seus canais com sobriedade.',
             },
           ].map((s) => (
             <li key={s.n} className="flex gap-4 rounded-xl2 border border-ink/10 bg-paper-soft/60 p-5">

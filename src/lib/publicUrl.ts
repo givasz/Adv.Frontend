@@ -32,7 +32,15 @@ export function profileUrlLabel(slug: string): string {
 }
 
 /**
- * Marca comercial do endereço, para textos de VENDA ("Endereço advoc.me/seu-nome").
- * Nunca use para gerar link, QR ou vCard — para isso existe profileUrl().
+ * O HOST em que os perfis realmente vivem — para telas que mostram o endereço da
+ * pessoa ("seu endereço é ___/joao-silva") e para o prefixo do campo de endereço.
+ *
+ * Existia aqui um `BRAND_HOST = 'advoc.me'` "para textos de venda". Ele vazou
+ * para três telas do editor, que passaram a dizer ao advogado que o endereço
+ * dele era `advoc.me/joao-silva` — um endereço que não abre. Quem copiasse dali
+ * compartilharia um link morto com um cliente. A marca é `advoc.me`; o ENDEREÇO
+ * é o que este arquivo devolve, e são coisas diferentes até o domínio existir.
  */
-export const BRAND_HOST = 'advoc.me'
+export function hostLabel(): string {
+  return publicOrigin().replace(/^https?:\/\//, '')
+}

@@ -5,7 +5,7 @@ import { slugify } from '@/lib/brFormat'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { CalendarIcon, CheckIcon, GlobeIcon, ScaleIcon, ShieldIcon } from '@/components/ui/icons'
 import { useSlugCheck } from '@/lib/useSlugCheck'
-import { BRAND_HOST } from '@/lib/publicUrl'
+import { hostLabel } from '@/lib/publicUrl'
 
 // Tópicos concretos de "como melhorar o perfil" travados por plano.
 //
@@ -53,11 +53,11 @@ function SlugProof({ profile }: { profile: Profile }) {
     <span className="flex flex-col gap-1">
       <span className="flex flex-wrap items-center gap-1.5">
         <Addr muted>
-          {BRAND_HOST}/{profile.slug || 'seu-nome-4821'}
+          {hostLabel()}/{profile.slug || 'seu-nome-4821'}
         </Addr>
         <span className="text-ink-faint">→</span>
         <Addr>
-          {BRAND_HOST}/{final}
+          {hostLabel()}/{final}
         </Addr>
       </span>
       <span aria-live="polite" className="text-[11.5px] text-ink-faint">
