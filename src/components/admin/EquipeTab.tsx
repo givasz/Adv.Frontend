@@ -253,20 +253,27 @@ function DetalheAdmin({
         </div>
       </div>
 
-      <Motivo id={`motivo-${conta.id}`} valor={motivo} onChange={setMotivo} />
+      <Motivo id={`motivo-${conta.id}`} valor={motivo} onChange={setMotivo} label="Motivo (obrigatório)" />
+
+      {motivo.trim().length < 5 && (
+        <p className="mb-3 rounded-lg border border-brass/40 bg-brass/10 px-3 py-2 text-[12.5px] text-brass-deep">
+          <strong>Escreva o motivo acima</strong> para liberar os botões. Ele vai
+          para o histórico com o seu nome.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => void acao(() => atualizarAdmin(conta.id, { role: papel, reason: motivo }))}
           disabled={ocupado || souEu || papel === conta.role || motivo.trim().length < 5}
-          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:opacity-40"
+          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:border-transparent disabled:opacity-100"
         >
           Mudar papel
         </button>
         <button
           onClick={() => void acao(() => revogarSessoesAdmin(conta.id, motivo))}
           disabled={ocupado || conta.sessoes === 0 || motivo.trim().length < 5}
-          className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:opacity-40"
+          className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:border-transparent disabled:opacity-100"
         >
           Derrubar sessões
         </button>
@@ -274,7 +281,7 @@ function DetalheAdmin({
           <button
             onClick={() => void acao(() => atualizarAdmin(conta.id, { active: false, reason: motivo }))}
             disabled={ocupado || souEu || motivo.trim().length < 5}
-            className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:opacity-40"
+            className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:border-transparent disabled:opacity-100"
           >
             Desligar acesso
           </button>
@@ -282,7 +289,7 @@ function DetalheAdmin({
           <button
             onClick={() => void acao(() => atualizarAdmin(conta.id, { active: true, reason: motivo }))}
             disabled={ocupado || motivo.trim().length < 5}
-            className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:opacity-40"
+            className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:border-transparent disabled:opacity-100"
           >
             Reativar
           </button>

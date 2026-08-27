@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { listarAcoes, type AdminAcao } from '@/lib/adminApi'
 import { Aviso, fmtData } from './pecas'
+import { RodapeTrilha } from './Paginacao'
 
 /** Um nome de ação em linguagem de gente. O prefixo é o assunto. */
 const NOME: Record<string, string> = {
@@ -52,18 +53,43 @@ export default function HistoricoTab() {
   const [acoes, setAcoes] = useState<AdminAcao[] | null>(null)
   const [filtro, setFiltro] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  const [proximo, setProximo] = useState<string | null>(null)
+  const [temMais, setTemMais] = useState(false)
+  const [carregando, setCarregando] = useState(false)
 
+  // Trocar de filtro recomeça a trilha do topo — o cursor da anterior não vale
+  // nada num recorte diferente.
   useEffect(() => {
     let vivo = true
     setAcoes(null)
     setErro(null)
-    void listarAcoes({ action: filtro || undefined, limite: 200 })
-      .then((r) => vivo && setAcoes(r))
+    void listarAcoes({ action: filtro || undefined, limite: 50 })
+      .then((r) => {
+        if (!vivo) return
+        setAcoes(r.itens)
+        setProximo(r.proximo)
+        setTemMais(r.temMais)
+      })
       .catch((e: unknown) => vivo && setErro(e instanceof Error ? e.message : 'Falha ao carregar.'))
     return () => {
       vivo = false
     }
   }, [filtro])
+
+  async function mais() {
+    if (!proximo || carregando) return
+    setCarregando(true)
+    try {
+      const r = await listarAcoes({ action: filtro || undefined, limite: 50, cursor: proximo })
+      setAcoes((atual) => [...(atual ?? []), ...r.itens])
+      setProximo(r.proximo)
+      setTemMais(r.temMais)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao carregar mais.')
+    } finally {
+      setCarregando(false)
+    }
+  }
 
   return (
     <div>
@@ -116,6 +142,13 @@ export default function HistoricoTab() {
           </li>
         ))}
       </ol>
+
+      <RodapeTrilha
+        mostrando={acoes?.length ?? 0}
+        temMais={temMais}
+        carregando={carregando}
+        onMais={() => void mais()}
+      />
     </div>
   )
 }

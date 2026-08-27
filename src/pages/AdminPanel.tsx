@@ -21,6 +21,8 @@ import EquipeTab from '@/components/admin/EquipeTab'
 import HistoricoTab from '@/components/admin/HistoricoTab'
 import SegundoFator from '@/components/admin/SegundoFator'
 import { Etiqueta, Motivo } from '@/components/admin/pecas'
+import { Rodape } from '@/components/admin/Paginacao'
+import { usePaginado } from '@/components/admin/usePaginado'
 import { REASON_LABEL } from '@/lib/reportReasons'
 import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import type { ModerationStatus } from '@/lib/types'
@@ -327,23 +329,18 @@ function FaixaEmergencia({ producao }: { producao: boolean }) {
 // ---- Aba: Denúncias ----
 
 function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
-  const [groups, setGroups] = useState<ReportGroup[] | null>(null)
   const [status, setStatus] = useState<'open' | 'all'>('open')
   const [selected, setSelected] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  async function reload() {
-    setError(null)
-    try {
-      setGroups(await listReports(status))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao carregar denúncias.')
-    }
-  }
+  // A fila é paginada por PERFIL: um perfil com quarenta denúncias é uma linha.
+  const lista = usePaginado<ReportGroup>(
+    (offset) => listReports(status, offset),
+    'Falha ao carregar denúncias.',
+  )
+  const { itens: groups, erro: error, recomecar: reload } = lista
 
   useEffect(() => {
-    setGroups(null)
-    reload()
+    void reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status])
 
@@ -363,7 +360,7 @@ function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
             </button>
           ))}
         </div>
-        <button onClick={reload} className="text-[12.5px] font-medium text-ink-faint hover:text-burgundy">
+        <button onClick={() => void reload()} className="text-[12.5px] font-medium text-ink-faint hover:text-burgundy">
           Atualizar
         </button>
       </div>
@@ -410,13 +407,22 @@ function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
                 <ModerationDetail
                   profileId={g.profile.id}
                   podeDecidir={podeDecidir}
-                  onChanged={reload}
+                  onChanged={() => void reload()}
                 />
               )}
             </li>
           ))}
         </ul>
       )}
+
+      <Rodape
+        mostrando={groups?.length ?? 0}
+        total={lista.total}
+        temMais={lista.temMais}
+        carregando={lista.carregando}
+        onMais={() => void lista.mais()}
+        nome="perfis na fila"
+      />
     </div>
   )
 }
@@ -576,7 +582,7 @@ function ModerationDetail({
           id={`motivo-${profileId}`}
           valor={note}
           onChange={setNote}
-          label="Motivo da decisão"
+          label="Motivo da decisão (obrigatório)"
           dica="É o texto que o advogado lê no editor: diga qual regra foi contrariada e o que corrigir. Também vale como motivo ao arquivar uma denúncia ou liberar o perfil."
           linhas={3}
         />
@@ -599,32 +605,42 @@ function ModerationDetail({
         ))}
       </div>
 
-      {/* Ações */}
-      {!podeDecidir && (
+      {/* Ações
+          Um botão desabilitado que não explica o porquê é um botão quebrado: a
+          pessoa clica, nada acontece, e a conclusão razoável é "o painel não
+          funciona". Aqui a razão vem escrita, e ela é sempre uma de duas. */}
+      {!podeDecidir ? (
         <p className="mb-3 rounded-lg border border-ink/15 bg-paper-soft px-3 py-2 text-[12.5px] text-ink-soft">
           Seu papel no painel consulta a fila, mas não decide. Para tirar algo do
           ar, fale com a moderação.
         </p>
+      ) : (
+        semMotivo && (
+          <p className="mb-3 rounded-lg border border-brass/40 bg-brass/10 px-3 py-2 text-[12.5px] text-brass-deep">
+            <strong>Escreva o motivo acima</strong> para liberar as decisões. É o
+            texto que o advogado vai ler — e é o que permite a ele contestar.
+          </p>
+        )
       )}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => apply('warn')}
           disabled={busy || !podeDecidir || semMotivo}
-          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:opacity-50"
+          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
         >
           Enviar aviso
         </button>
         <button
           onClick={() => apply('partial')}
           disabled={busy || !podeDecidir || semMotivo || sections.size === 0}
-          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
         >
           Censurar selecionadas
         </button>
         <button
           onClick={() => apply('restrict')}
           disabled={busy || !podeDecidir || semMotivo}
-          className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:opacity-50"
+          className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
         >
           Restringir perfil inteiro
         </button>
@@ -632,7 +648,7 @@ function ModerationDetail({
           <button
             onClick={() => apply('clear')}
             disabled={busy || !podeDecidir || semMotivo}
-            className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:opacity-50"
+            className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100 disabled:border-transparent"
           >
             Remover restrições
           </button>
@@ -723,27 +739,29 @@ function ProfileSnapshot({ profile }: { profile: ModerationProfile }) {
 
 function SearchTab({ podeDecidir }: { podeDecidir: boolean }) {
   const [q, setQ] = useState('')
-  const [results, setResults] = useState<AdminProfile[] | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [tick, setTick] = useState(0) // bump para re-buscar após moderar
 
+  // A busca devolvia 50 e calava sobre o resto: quem procurasse um nome comum
+  // via meia lista sem nada dizendo que havia mais.
+  const lista = usePaginado<AdminProfile>(
+    (offset) => searchProfiles(q.trim(), offset),
+    'Falha na busca.',
+  )
+  const { itens: results, carregando: loading, erro: error } = lista
+
   useEffect(() => {
     const term = q.trim()
-    setError(null)
     if (term.length < 2) {
-      setResults(null)
+      lista.esvaziar()
       return
     }
-    setLoading(true)
-    const t = setTimeout(() => {
-      searchProfiles(term)
-        .then((r) => setResults(r))
-        .catch((e) => setError(e instanceof Error ? e.message : 'Falha na busca.'))
-        .finally(() => setLoading(false))
-    }, 300)
+    // O atraso é o que impede uma consulta por tecla digitada. A troca de termo
+    // no meio do caminho já é tratada pelo hook: só a resposta do pedido atual
+    // chega à tela.
+    const t = setTimeout(() => void lista.recomecar(), 300)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, tick])
 
   return (
@@ -835,6 +853,15 @@ function SearchTab({ podeDecidir }: { podeDecidir: boolean }) {
           ))}
         </ul>
       )}
+
+      <Rodape
+        mostrando={results?.length ?? 0}
+        total={lista.total}
+        temMais={lista.temMais}
+        carregando={lista.carregando}
+        onMais={() => void lista.mais()}
+        nome="advogados"
+      />
     </div>
   )
 }
@@ -866,24 +893,20 @@ const TICKET_FILTERS = [
 
 function SupportTab({ podeResponder }: { podeResponder: boolean }) {
   const [filtro, setFiltro] = useState<string>('open')
-  const [itens, setItens] = useState<AdminTicket[] | null>(null)
-  const [erro, setErro] = useState<string | null>(null)
   const [aberto, setAberto] = useState<string | null>(null)
   const [nota, setNota] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
 
-  async function recarregar(f: string) {
-    setErro(null)
-    try {
-      setItens(await listTickets(f || undefined))
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar os chamados.')
-    }
-  }
+  const lista = usePaginado<AdminTicket>(
+    (offset) => listTickets(filtro || undefined, offset),
+    'Falha ao carregar os chamados.',
+  )
+  const { itens, erro, setErro } = lista
+  const recarregar = lista.recomecar
 
   useEffect(() => {
-    setItens(null)
-    recarregar(filtro)
+    void recarregar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro])
 
   /**
@@ -905,7 +928,7 @@ function SupportTab({ podeResponder }: { podeResponder: boolean }) {
       await setTicketStatus(id, status, texto)
       setAberto(null)
       setNota('')
-      await recarregar(filtro)
+      await recarregar()
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao atualizar o chamado.')
     } finally {
@@ -1053,6 +1076,15 @@ function SupportTab({ podeResponder }: { podeResponder: boolean }) {
           </li>
         ))}
       </ul>
+
+      <Rodape
+        mostrando={itens?.length ?? 0}
+        total={lista.total}
+        temMais={lista.temMais}
+        carregando={lista.carregando}
+        onMais={() => void lista.mais()}
+        nome="chamados"
+      />
     </div>
   )
 }

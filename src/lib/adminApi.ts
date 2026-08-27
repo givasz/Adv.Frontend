@@ -65,6 +65,27 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ---- Paginação ----
+//
+// As quatro listas do painel cortavam em silêncio: a busca devolvia 50 e nada
+// dizia que havia um 51º. Agora toda lista diz de quantos ela é uma fatia.
+
+/** Uma fatia de lista que sabe de que tamanho é o todo. */
+export interface Pagina<T> {
+  itens: T[]
+  total: number
+  offset: number
+  limite: number
+  temMais: boolean
+}
+
+/** Uma fatia de trilha: sem total, com o ponto de onde continuar. */
+export interface Trilha<T> {
+  itens: T[]
+  proximo: string | null
+  temMais: boolean
+}
+
 // ---- Tipos de resposta ----
 
 export interface ReportGroup {
@@ -305,9 +326,21 @@ export interface AdminAcao {
   createdAt: string
 }
 
+/**
+ * O histórico é paginado por CURSOR: passe de volta o `proximo` que veio na
+ * resposta anterior. Com deslocamento, uma ação registrada entre um "carregar
+ * mais" e o seguinte empurraria a lista e a página seguinte repetiria o que já
+ * estava na tela — numa trilha de auditoria isso é uma leitura errada do que houve.
+ */
 export async function listarAcoes(
-  filtros: { action?: string; targetType?: string; targetId?: string; limite?: number } = {},
-): Promise<AdminAcao[]> {
+  filtros: {
+    action?: string
+    targetType?: string
+    targetId?: string
+    limite?: number
+    cursor?: string
+  } = {},
+): Promise<Trilha<AdminAcao>> {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(filtros)) if (v) q.set(k, String(v))
   const cauda = q.toString() ? `?${q}` : ''
@@ -316,10 +349,13 @@ export async function listarAcoes(
 
 // ---- Denúncias / moderação ----
 
+/** A fila é paginada por PERFIL: quarenta denúncias do mesmo perfil são uma linha. */
 export async function listReports(
   status: 'open' | 'resolved' | 'dismissed' | 'all' = 'open',
-): Promise<ReportGroup[]> {
-  return json(await adminFetch(`/admin/reports?status=${status}`))
+  offset = 0,
+  limite = 25,
+): Promise<Pagina<ReportGroup>> {
+  return json(await adminFetch(`/admin/reports?status=${status}&offset=${offset}&limite=${limite}`))
 }
 
 export async function getModerationProfile(id: string): Promise<ModerationProfile> {
@@ -363,8 +399,16 @@ export async function dismissReport(id: string, reason: string): Promise<{ ok: b
 
 // ---- Busca de advogados (painel) ----
 
-export async function searchProfiles(q: string): Promise<AdminProfile[]> {
-  return json(await adminFetch(`/admin/profiles?q=${encodeURIComponent(q)}`))
+export async function searchProfiles(
+  q: string,
+  offset = 0,
+  limite = 25,
+): Promise<Pagina<AdminProfile>> {
+  return json(
+    await adminFetch(
+      `/admin/profiles?q=${encodeURIComponent(q)}&offset=${offset}&limite=${limite}`,
+    ),
+  )
 }
 
 // ---- Suporte ao cliente ----
@@ -386,9 +430,14 @@ export interface AdminTicket {
   }
 }
 
-export async function listTickets(status?: string): Promise<AdminTicket[]> {
-  const q = status ? `?status=${encodeURIComponent(status)}` : ''
-  return json(await adminFetch(`/admin/support${q}`))
+export async function listTickets(
+  status?: string,
+  offset = 0,
+  limite = 25,
+): Promise<Pagina<AdminTicket>> {
+  const q = new URLSearchParams({ offset: String(offset), limite: String(limite) })
+  if (status) q.set('status', status)
+  return json(await adminFetch(`/admin/support?${q}`))
 }
 
 export async function ticketCounts(): Promise<Record<string, number>> {
