@@ -1,52 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
-import { CheckIcon } from '@/components/ui/icons'
+import { offerOf, seloDeCobranca } from '@/lib/planOffer'
+import { CheckIcon, ClockIcon } from '@/components/ui/icons'
 
 // Vitrine de planos. O CTA leva à PÁGINA de assinatura (/assinar/:plano), um
 // checkout de mentira que parece de verdade — sem cobrança, e sem modal.
-// Durante os testes todos os planos ficam liberados. Números (áreas, bio) vêm
-// de plans.ts para não mentir; o resto é copy curada de valor.
-
+// Durante os testes todos os planos ficam liberados.
+//
+// Preço, pitch e benefícios vêm de lib/planOffer.ts — a MESMA fonte da home.
+// Enquanto esta tela mantinha a própria lista, ela e a home discordavam sobre o
+// que o Pro entrega, e o comprador via uma coisa antes de assinar e outra depois.
 const ORDER: Plan[] = ['pro', 'premium', 'free']
-
-// O pitch DESCREVE o que o plano acrescenta ao perfil. Nada de "receba clientes"
-// ou "ganhe autoridade": vender captação para advogado é oferecer justamente o que
-// o Prov. 205/2021 veda a ele — e é a frase que uma fiscalização citaria primeiro.
-const PITCH: Record<Plan, string> = {
-  free: 'Seu perfil profissional no ar.',
-  pro: 'Agendamento e perguntas frequentes no perfil.',
-  premium: 'O perfil com a sua identidade visual.',
-}
-const PRICE: Record<Plan, string> = { free: 'R$ 0', pro: 'R$ 19', premium: 'R$ 39' }
-
-const PERKS: Record<Plan, string[]> = {
-  free: [
-    `${AREA_LIMIT.free} áreas de atuação`,
-    `Bio até ${CHAR_LIMITS.free.bio} caracteres`,
-    'WhatsApp e redes sociais',
-    '2 temas visuais',
-  ],
-  pro: [
-    'Assistente virtual de agendamento',
-    `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
-    'Endereço advoc.me/seu-nome',
-    'Cartão digital com QR e vCard',
-    `${AREA_LIMIT.pro} áreas · bio até ${CHAR_LIMITS.pro.bio}`,
-    '5 temas visuais',
-  ],
-  premium: [
-    'Tudo do Pro, e mais:',
-    `${FAQ_LIMIT.premium} perguntas frequentes (eram ${FAQ_LIMIT.pro})`,
-    'Vídeo de apresentação',
-    'Domínio próprio (.adv.br) — em breve',
-    'Sua marca no lugar da nossa',
-    'Comprovante de conformidade em PDF',
-    `${AREA_LIMIT.premium} áreas · bio até ${CHAR_LIMITS.premium.bio}`,
-    '8 temas visuais',
-  ],
-}
 
 export function PlanShowcase({
   plan,
@@ -73,6 +38,7 @@ export function PlanShowcase({
         {ORDER.map((p) => {
           const current = p === plan
           const recommended = p === 'pro'
+          const oferta = offerOf(p)
           return (
             <div
               key={p}
@@ -90,25 +56,52 @@ export function PlanShowcase({
               <div className={`flex items-baseline justify-between gap-2 ${recommended ? 'mt-1.5' : ''}`}>
                 <h3 className="font-display text-[20px] font-semibold text-ink">{PLAN_LABEL[p]}</h3>
                 <span className="text-right">
-                  <span className="font-display text-[19px] font-semibold text-ink">{PRICE[p]}</span>
+                  <span className="font-display text-[19px] font-semibold text-ink">{oferta.price}</span>
                   {p !== 'free' && <span className="text-[11px] text-ink-faint">/mês</span>}
                 </span>
               </div>
-              <p className="mt-1 text-[12.5px] font-semibold leading-snug text-brass-deep">{PITCH[p]}</p>
+              <p className="mt-1 text-[12.5px] font-semibold leading-snug text-brass-deep">{oferta.pitch}</p>
 
               <ul className="mt-3 flex-1 space-y-1.5">
-                {PERKS[p].map((perk) => (
-                  <li key={perk} className="flex items-start gap-2 text-[12.5px] leading-snug text-ink-soft">
-                    <CheckIcon
-                      width={13}
-                      height={13}
-                      strokeWidth={2.4}
-                      className="mt-0.5 shrink-0 text-brass-deep"
-                    />
-                    {perk}
+                {oferta.items.map((item) => (
+                  <li
+                    key={item.text}
+                    className={`flex items-start gap-2 text-[12.5px] leading-snug ${
+                      item.emPreparo ? 'text-ink-faint' : 'text-ink-soft'
+                    }`}
+                  >
+                    {item.emPreparo ? (
+                      <ClockIcon width={13} height={13} className="mt-0.5 shrink-0 text-ink-faint" />
+                    ) : (
+                      <CheckIcon
+                        width={13}
+                        height={13}
+                        strokeWidth={2.4}
+                        className="mt-0.5 shrink-0 text-brass-deep"
+                      />
+                    )}
+                    <span>
+                      {item.text}
+                      {item.emPreparo && (
+                        <span className="ml-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                          · em preparo
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
+              {/* O que este plano NÃO tem — a mesma franqueza da home. */}
+              {oferta.falta && oferta.falta.length > 0 && (
+                <ul className="mt-2.5 space-y-1 border-t border-ink/10 pt-2.5">
+                  {oferta.falta.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-[11.5px] leading-snug text-ink-faint">
+                      <span aria-hidden className="mt-[6px] h-px w-2.5 shrink-0 bg-ink/25" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <div className="mt-4">
                 {current ? (
@@ -136,7 +129,7 @@ export function PlanShowcase({
                       </Link>
                     )}
                     {p !== 'free' && (
-                      <p className="mt-1.5 text-center text-[11px] text-ink-faint">em teste · sem cobrança</p>
+                      <p className="mt-1.5 text-center text-[11px] text-ink-faint">{seloDeCobranca() ?? 'cobrança mensal'}</p>
                     )}
                   </>
                 )}

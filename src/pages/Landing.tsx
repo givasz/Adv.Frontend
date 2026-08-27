@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
-import { FIRM_PRICING } from '@/lib/plans'
+import { PLAN_OFFERS, avisoDeCobranca, seloDeCobranca, type PlanOffer } from '@/lib/planOffer'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -12,6 +12,7 @@ import {
   ArrowRight,
   CheckIcon,
   CalendarIcon,
+  ClockIcon,
   ChevronDown,
   InfoIcon,
   LockIcon,
@@ -59,6 +60,12 @@ export default function Landing() {
           </a>
           <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Como funciona
+          </a>
+          {/* Quem chega decidido a comparar preço não devia ter de adivinhar que
+              precisa rolar até o fim. O link aparece a partir de 480px porque
+              abaixo disso ele brigava por espaço com o CTA principal. */}
+          <a href="#planos" className="hidden text-sm font-medium text-ink-soft hover:text-ink min-[480px]:block">
+            Planos
           </a>
           <AccountMenu />
           <Link
@@ -383,76 +390,24 @@ export default function Landing() {
       </Section>
 
       {/* Planos */}
-      <section className="mx-auto max-w-6xl px-5 py-12">
+      <section id="planos" className="mx-auto max-w-6xl px-5 py-12">
         <h2 className="text-center font-display text-3xl font-semibold sm:text-4xl">
           Planos que crescem com você
         </h2>
+        {/* O aviso de cobrança vem ANTES dos preços, não depois.
+            Abaixo dos cartões ele seria uma letra miúda que a pessoa lê quando já
+            decidiu não assinar; acima, ele é o motivo de continuar lendo. E é a
+            mesma frase que o checkout já mostrava — a home é que estava calada. */}
+        {avisoDeCobranca() && (
+          <p className="mx-auto mt-4 max-w-xl text-center text-[14px] leading-relaxed text-ink-soft">
+            <span className="font-semibold text-brass-deep">Em testes:</span>{' '}
+            {avisoDeCobranca()!.replace('Plataforma em teste: os', 'Os')}
+          </p>
+        )}
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <PlanCard
-            name="Free"
-            price="R$ 0"
-            period="para sempre"
-            pitch="Um perfil profissional, no ar em minutos."
-            features={[
-              '1 perfil público',
-              'Até 2 áreas de atuação',
-              'Bio até 300 caracteres',
-              'WhatsApp e redes sociais',
-              'Marca d’água advoc.me',
-            ]}
-          />
-          <PlanCard
-            name="Pro"
-            price="R$ 19"
-            period="/mês"
-            pitch="Agendamento e perguntas frequentes no perfil."
-            featured
-            ctaTo="/comecar?plan=pro"
-            ctaLabel="Assinar Pro"
-            features={[
-              'Assistente virtual que marca horários por você',
-              '2 perguntas frequentes respondidas no perfil',
-              'Endereço personalizado (advoc.me/seu-nome)',
-              'Cartão digital com QR Code e vCard',
-              'Até 6 áreas e bio ampliada',
-              'Mais temas visuais',
-            ]}
-          />
-          <PlanCard
-            name="Max"
-            price="R$ 39"
-            period="/mês"
-            pitch="Vídeo, marca própria e o perfil por inteiro."
-            ctaTo="/comecar?plan=premium"
-            ctaLabel="Assinar Max"
-            features={[
-              'Tudo do Pro',
-              'Vídeo de apresentação no seu perfil',
-              'Até 5 perguntas frequentes (eram 2)',
-              'Domínio próprio (.adv.br) — em breve',
-              'Sua marca no lugar da nossa',
-              'Comprovante de conformidade em PDF',
-              'Até 20 áreas e bio de 1000 caracteres',
-            ]}
-          />
-          <PlanCard
-            name="Escritório"
-            price={`R$ ${FIRM_PRICING.basePrice}`}
-            period="/mês"
-            pitch="Toda a equipe reunida numa página."
-            ctaTo="/escritorio/editar"
-            ctaLabel="Criar escritório"
-            secondaryTo="/escritorio/andrade-vieira"
-            secondaryLabel="Ver exemplo"
-            features={[
-              'Página institucional da sociedade',
-              `Até ${FIRM_PRICING.includedSeats} advogados inclusos`,
-              `+ R$ ${FIRM_PRICING.extraSeatPrice}/mês por advogado extra`,
-              'Perfil Pro para cada advogado',
-              'Triagem de WhatsApp por área',
-              'Marca própria (white-label)',
-            ]}
-          />
+          {PLAN_OFFERS.map((oferta) => (
+            <PlanCard key={oferta.id} oferta={oferta} />
+          ))}
         </div>
       </section>
 
@@ -577,7 +532,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Posso usar de graça?',
-    a: 'Sim. O plano Free permite publicar um perfil em conformidade, sem cartão. Os planos pagos adicionam personalização, agendamento, analytics e recursos para escritórios.',
+    a: 'Sim. O plano Free publica um perfil completo e em conformidade, sem cartão e para sempre. Os planos pagos acrescentam agendamento pelo perfil, perguntas frequentes, identidade visual própria e a contagem de visitas — e você troca de plano ou volta ao Free quando quiser.',
   },
   {
     q: 'O que acontece se eu escrever algo fora das normas?',
@@ -585,29 +540,16 @@ const FAQ: { q: string; a: string }[] = [
   },
 ]
 
-function PlanCard({
-  name,
-  price,
-  period,
-  pitch,
-  features,
-  featured = false,
-  ctaTo = '/comecar',
-  ctaLabel = 'Começar',
-  secondaryTo,
-  secondaryLabel,
-}: {
-  name: string
-  price: string
-  period: string
-  pitch: string
-  features: string[]
-  featured?: boolean
-  ctaTo?: string
-  ctaLabel?: string
-  secondaryTo?: string
-  secondaryLabel?: string
-}) {
+/**
+ * Cartão de um plano na home. Todo o conteúdo vem de `lib/planOffer.ts` — este
+ * componente não sabe o nome de recurso nenhum, e é de propósito: enquanto a
+ * lista de benefícios morava aqui dentro, ela divergiu do que o produto fazia.
+ */
+function PlanCard({ oferta }: { oferta: PlanOffer }) {
+  const { name, price, period, pitch, items, falta, featured, ctaTo, ctaLabel } = oferta
+  const selo = seloDeCobranca()
+  const pago = oferta.id === 'pro' || oferta.id === 'premium'
+
   return (
     <div
       className={`relative flex h-full flex-col rounded-xl2 border p-6 ${
@@ -628,22 +570,86 @@ function PlanCard({
           {period}
         </span>
       </p>
-      <p className={`mt-2 text-[13.5px] font-medium leading-snug ${featured ? 'text-paper-soft/95' : 'text-burgundy'}`}>
+      {/* O preço de tabela fica, e ao lado dele a verdade de hoje. Riscar o valor
+          seria teatro de desconto; dizer o que se paga agora é informação. */}
+      {pago && selo && (
+        <p
+          className={`mt-1.5 text-[12px] font-semibold ${
+            featured ? 'text-brass-light' : 'text-brass-deep'
+          }`}
+        >
+          R$ 0 hoje — {selo}
+        </p>
+      )}
+      <p
+        className={`mt-2 text-[13.5px] font-medium leading-snug ${
+          featured ? 'text-paper-soft/95' : 'text-burgundy'
+        }`}
+      >
         {pitch}
       </p>
+
       <ul className="mt-6 space-y-2.5 text-[14px] leading-snug">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5">
-            <CheckIcon
-              width={16}
-              height={16}
-              strokeWidth={2.4}
-              className={`mt-0.5 shrink-0 ${featured ? 'text-brass-light' : 'text-brass-deep'}`}
-            />
-            <span className={featured ? 'text-paper-soft/95' : 'text-ink-soft'}>{f}</span>
+        {items.map((item) => (
+          <li key={item.text} className="flex items-start gap-2.5">
+            {item.emPreparo ? (
+              // Sem ✓: um recurso que ainda não existe não pode usar a mesma
+              // marca dos que existem. O relógio e o rótulo dizem o que é.
+              <ClockIcon
+                width={16}
+                height={16}
+                className={`mt-0.5 shrink-0 ${featured ? 'text-paper/50' : 'text-ink-faint'}`}
+              />
+            ) : (
+              <CheckIcon
+                width={16}
+                height={16}
+                strokeWidth={2.4}
+                className={`mt-0.5 shrink-0 ${featured ? 'text-brass-light' : 'text-brass-deep'}`}
+              />
+            )}
+            <span
+              className={
+                item.emPreparo
+                  ? featured
+                    ? 'text-paper/60'
+                    : 'text-ink-faint'
+                  : featured
+                    ? 'text-paper-soft/95'
+                    : 'text-ink-soft'
+              }
+            >
+              {item.text}
+              {item.emPreparo && (
+                <span
+                  className={`ml-1.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide ${
+                    featured ? 'bg-paper/15 text-paper/70' : 'bg-ink/[0.06] text-ink-faint'
+                  }`}
+                >
+                  em preparo
+                </span>
+              )}
+            </span>
           </li>
         ))}
       </ul>
+
+      {/* O que o plano NÃO tem. Quem escolhe o Free precisa descobrir aqui que
+          não há agendamento — e não meia hora depois, procurando no editor. */}
+      {falta && falta.length > 0 && (
+        <ul className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-[13px] leading-snug">
+          {falta.map((f) => (
+            <li key={f} className="flex items-start gap-2.5 text-ink-faint">
+              <span
+                aria-hidden
+                className="mt-[7px] h-px w-3 shrink-0 bg-ink/25"
+              />
+              {f}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* mt-auto empurra o CTA para a base → botões alinhados entre os cards */}
       <div className="mt-auto pt-7">
         <Link
@@ -656,15 +662,26 @@ function PlanCard({
         >
           {ctaLabel}
         </Link>
-        {secondaryTo && secondaryLabel && (
+        {oferta.secondaryTo && oferta.secondaryLabel && (
           <Link
-            to={secondaryTo}
+            to={oferta.secondaryTo}
             className={`mt-2.5 block text-center text-[13px] font-medium transition-colors ${
               featured ? 'text-paper/80 hover:text-paper' : 'text-ink-faint hover:text-burgundy'
             }`}
           >
-            {secondaryLabel}
+            {oferta.secondaryLabel}
           </Link>
+        )}
+        {/* Tirar o medo de errar a escolha é o que destrava a decisão: trocar de
+            plano não custa nada e não apaga o que já foi escrito. */}
+        {pago && (
+          <p
+            className={`mt-3 text-center text-[11.5px] leading-relaxed ${
+              featured ? 'text-paper/70' : 'text-ink-faint'
+            }`}
+          >
+            Troca ou volta ao Free quando quiser — seus textos continuam salvos.
+          </p>
         )}
       </div>
     </div>

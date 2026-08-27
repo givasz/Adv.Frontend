@@ -100,6 +100,16 @@ export const CalendarIcon = (p: IconProps) => (
   </svg>
 )
 
+// Relógio — marca o recurso ANUNCIADO mas ainda não disponível na tabela de
+// planos. Existe para que "em preparo" não use o mesmo ✓ dos recursos reais:
+// dois itens com a mesma marca são dois itens que o comprador espera receber.
+export const ClockIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5.2l3.2 2" />
+  </svg>
+)
+
 export const PinIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
