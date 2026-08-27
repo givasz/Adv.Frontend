@@ -136,6 +136,13 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: `${FAQ_LIMIT.pro} perguntas frequentes respondidas no perfil` },
       { text: ENDERECO },
       { text: 'Cartão digital: QR Code em alta e seu contato em vCard' },
+      // Entrou quando o recurso passou a existir. Antes, esta promessa morava só
+      // no cartão de venda DENTRO do editor — e ali ela prometia três coisas, das
+      // quais nenhuma era entregue: a tela lia um contador que ninguém
+      // incrementava e mostrava 0 visitas para todo mundo. "Origem das visitas"
+      // ficou de fora de propósito: saber de onde a pessoa veio exige guardar de
+      // onde ela veio, e não guardamos dado de visitante.
+      { text: 'Relatório do perfil: visitas, botões usados e horários de maior procura' },
       { text: `Até ${AREA_LIMIT.pro} áreas e bio de ${CHAR_LIMITS.pro.bio} caracteres` },
       { text: `${temaCount('pro')} dos ${THEMES.length} temas visuais` },
       { text: 'A IA também escreve sua frase de apresentação e revisa seus textos' },

@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { slugify } from '@/lib/brFormat'
 import { buildVCard, dataUrlToBlob, downloadFile } from '@/lib/vcard'
+import { registrarEvento } from '@/lib/eventos'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { CopyIcon, QrIcon } from '@/components/ui/icons'
 
@@ -103,7 +104,12 @@ export default function SharePage() {
           {profile && (
             <button
               type="button"
-              onClick={() => downloadFile(buildVCard(profile, url), `${slugify(profile.name)}.vcf`)}
+              onClick={() => {
+                // Salvar o contato na agenda é uma intenção de falar depois —
+                // conta junto com WhatsApp e agendamento (ver lib/eventos.ts).
+                registrarEvento(slug ?? '', 'cartao')
+                downloadFile(buildVCard(profile, url), `${slugify(profile.name)}.vcf`)
+              }}
               className="btn-ghost flex-1 !text-[13px]"
             >
               Baixar contato

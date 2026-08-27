@@ -99,3 +99,43 @@ export async function excluirConta(senha: string): Promise<void> {
   // interface parar de mostrar uma pessoa que não existe mais.
   esquecerSessaoLocal()
 }
+
+/**
+ * Troca a própria senha — exige a senha atual.
+ *
+ * NÃO é "esqueci minha senha": aquele fluxo precisa de e-mail, que a plataforma
+ * ainda não envia. Este funciona hoje porque não depende de nada além do que a
+ * pessoa já tem em mãos, e era o que faltava para quem desconfiava da própria
+ * senha ter o que fazer.
+ *
+ * Devolve quantas OUTRAS sessões caíram junto — trocar a fechadura e deixar o
+ * intruso conectado no aparelho dele não seria trocar fechadura nenhuma. A desta
+ * aba continua válida: o servidor a reabre no mesmo instante.
+ */
+export async function trocarSenha(
+  atual: string,
+  nova: string,
+): Promise<{ outrasSessoesEncerradas: number }> {
+  if (!useReal || !getSession()) {
+    // Sem backend não há senha: o modo local não autentica ninguém. Dizer isso é
+    // melhor que fingir sucesso e deixar a pessoa achando que trocou.
+    throw new Error('Disponível apenas com a sua conta conectada.')
+  }
+  const res = await apiFetch('/api/auth/senha', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ atual, nova }),
+  })
+  if (!res.ok) {
+    const texto = await res.text().catch(() => '')
+    let msg = 'Não foi possível trocar a senha.'
+    try {
+      const j = JSON.parse(texto) as { message?: string }
+      if (j.message) msg = j.message
+    } catch {
+      /* resposta sem JSON — fica a mensagem padrão */
+    }
+    throw new Error(msg)
+  }
+  return (await res.json()) as { outrasSessoesEncerradas: number }
+}

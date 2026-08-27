@@ -23,6 +23,7 @@ import {
   socialMeta,
 } from '@/components/ui/icons'
 import { safeHref } from '@/lib/safeUrl'
+import { cliqueDoPerfil, registrarEvento } from '@/lib/eventos'
 
 interface ProfileViewProps {
   profile: Profile
@@ -119,7 +120,16 @@ export function ProfileView({
       )}`
     : undefined
 
+  // Para os links que não são ação de contato (a marca d'água do rodapé): na
+  // prévia do editor eles não navegam, e não há nada a medir neles.
   const stop = preview ? (e: React.MouseEvent) => e.preventDefault() : undefined
+
+  // Um clique de contato faz duas coisas: na PRÉVIA, não navega; no perfil de
+  // verdade, avisa a métrica antes de seguir. Ver lib/eventos.ts — o aviso sai
+  // por sendBeacon justamente porque a página está prestes a ser trocada, e um
+  // fetch comum morreria junto com o documento.
+  const clique = (evento: Parameters<typeof cliqueDoPerfil>[1]) =>
+    cliqueDoPerfil(profile.slug, evento, !!preview)
 
   const identity = (
     <>
@@ -215,7 +225,7 @@ export function ProfileView({
             <motion.a
               variants={item}
               href={whatsappHref}
-              onClick={stop}
+              onClick={clique('whatsapp')}
               target="_blank"
               rel="noreferrer noopener"
               className="t-btn w-full text-[15px]"
@@ -228,7 +238,7 @@ export function ProfileView({
             <motion.a
               variants={item}
               href={safeHref(profile.contact.scheduling)}
-              onClick={stop}
+              onClick={clique('agendamento')}
               target="_blank"
               rel="noreferrer noopener"
               className={`${tile} justify-center !py-3.5 font-semibold`}
@@ -306,7 +316,7 @@ export function ProfileView({
                   <a
                     key={soc.kind + soc.url}
                     href={href}
-                    onClick={stop}
+                    onClick={clique(`rede:${soc.kind}`)}
                     target="_blank"
                     rel="noreferrer noopener"
                     className={`${tile} !py-3 text-sm font-medium`}
@@ -403,7 +413,7 @@ export function ProfileView({
           <motion.a
             variants={item}
             href={`mailto:${profile.contact.email}`}
-            onClick={stop}
+            onClick={clique('email')}
             className={`${tile} mt-9 justify-center !py-3 text-sm font-medium`}
           >
             <MailIcon width={18} height={18} className="t-muted" />
@@ -624,7 +634,13 @@ function AcaoAgendar({
       </button>
     )
   return (
-    <Link to={`/${slug}/agendar`} className={className}>
+    // Abrir a conversa guiada é uma tentativa de marcar horário como qualquer
+    // outra — entra na mesma conta do botão de agendar externo (ver lib/eventos).
+    <Link
+      to={`/${slug}/agendar`}
+      onClick={() => registrarEvento(slug, 'assistente')}
+      className={className}
+    >
       {children}
     </Link>
   )

@@ -46,6 +46,7 @@ import { ThemePicker } from '@/components/editor/ThemePicker'
 import { ThemeTrialBar } from '@/components/editor/ThemeTrialBar'
 import { LegalDocsCard } from '@/components/editor/LegalDocsCard'
 import { AuditReportCard } from '@/components/editor/AuditReportCard'
+import { MetricasCard } from '@/components/editor/MetricasCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
@@ -558,7 +559,7 @@ export default function Editor() {
                 </>
               )}
 
-              {section === 'analytics' && <AnalyticsSection profile={profile} />}
+              {section === 'analytics' && <MetricasCard />}
 
               {section === 'qrcode' &&
                 (canUseDigitalCard(profile.plan) ? (
@@ -979,33 +980,6 @@ function ContactSection({
 
 // Analytics — mostra o valor real (visitas) e convida ao PRO para os detalhes.
 // Nunca esconde: o número já aparece; o upgrade é para "descobrir mais".
-function AnalyticsSection({ profile }: { profile: Profile }) {
-  const views = profile.views ?? 0
-  return (
-    <div className="space-y-4">
-      <Card title="Visitas ao seu perfil">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display text-[40px] font-semibold leading-none text-ink">{views}</span>
-          <span className="text-[15px] text-ink-faint">{views === 1 ? 'visita' : 'visitas'}</span>
-        </div>
-        {profile.plan !== 'free' && (
-          <p className="mt-2 text-[12.5px] leading-relaxed text-ink-faint">
-            Em breve: origem das visitas, horários de pico e páginas mais acessadas.
-          </p>
-        )}
-      </Card>
-      {profile.plan === 'free' && (
-        <UpsellCard
-          plan="pro"
-          title="Descubra quem visita você"
-          body={`Você já recebeu ${views} ${views === 1 ? 'visita' : 'visitas'}. Atualize para entender de onde elas vêm.`}
-          bullets={['Origem das visitas', 'Horários de maior movimento', 'Botões e links mais clicados']}
-        />
-      )}
-    </div>
-  )
-}
-
 // Aviso de moderação — mostrado ao dono quando o perfil recebeu aviso/censura/restrição.
 function ModerationBanner({ status, note }: { status?: ModerationStatus; note?: string }) {
   if (!status || status === 'active') return null

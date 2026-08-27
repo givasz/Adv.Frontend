@@ -69,6 +69,10 @@ const ROTAS = [
   ['/editor?section=aparencia', 'editor · aparência'],
   ['/editor?section=plano', 'editor · plano'],
   ['/editor?section=cartao', 'editor · cartão de visita'],
+  // Esta busca métricas no servidor assim que monta. Sem backend a chamada não
+  // acontece (modo local), mas o caminho de renderização é o mesmo — e é o único
+  // lugar do editor que desenha gráfico.
+  ['/editor?section=analytics', 'editor · quem visita você'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.

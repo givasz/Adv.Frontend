@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { ShieldIcon, DocIcon, LockIcon, TrashIcon, CheckIcon } from '@/components/ui/icons'
-import { baixarComoArquivo, excluirConta, exportarDados } from '@/lib/account'
+import { baixarComoArquivo, excluirConta, exportarDados, trocarSenha } from '@/lib/account'
+import { passwordStrength } from '@/lib/passwordStrength'
 import { countOpenSessions, logoutEverywhere, useAuth } from '@/lib/auth'
 
 // "Seus dados" — /conta/dados.
@@ -132,6 +133,11 @@ export default function DadosPage() {
             </div>
           </div>
         </section>
+
+        {/* Trocar a senha. Vem ANTES de "aparelhos conectados" de propósito: quem
+            chega aqui desconfiando da conta quer trocar a senha primeiro e
+            derrubar os aparelhos depois — e trocar a senha já derruba. */}
+        <TrocaDeSenha />
 
         {/* Sessões abertas. */}
         <section className="rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card sm:p-5">
@@ -263,5 +269,152 @@ export default function DadosPage() {
         </p>
       </div>
     </SubPage>
+  )
+}
+
+/**
+ * Trocar a própria senha.
+ *
+ * Exige a senha ATUAL — e isso não é burocracia: sem essa etapa, quem roubasse o
+ * cookie de sessão trocaria a senha e trancaria o dono do lado de fora da própria
+ * conta. Com ela, o invasor precisaria ANTES saber a senha; e se soubesse, não
+ * precisaria do cookie.
+ *
+ * Não confundir com "esqueci minha senha", que ainda não existe porque depende de
+ * envio de e-mail. Esta fecha o item 6 de "Em aberto" do SEGURANCA.md.
+ */
+function TrocaDeSenha() {
+  const { user } = useAuth()
+  const [aberto, setAberto] = useState(false)
+  const [atual, setAtual] = useState('')
+  const [nova, setNova] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [ok, setOk] = useState<number | null>(null)
+
+  const forca = passwordStrength(nova, user?.email ?? '')
+  const pode = !salvando && atual.length > 0 && forca.acceptable
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault()
+    setSalvando(true)
+    setErro(null)
+    try {
+      const r = await trocarSenha(atual, nova)
+      setOk(r.outrasSessoesEncerradas)
+      setAtual('')
+      setNova('')
+      setAberto(false)
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível trocar a senha.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <section className="rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/[0.06] text-ink-soft">
+          <LockIcon width={18} height={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-[17px] font-semibold text-ink">Sua senha</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+            Trocar a senha encerra a sessão em todos os outros aparelhos — este continua conectado.
+          </p>
+
+          {ok !== null && (
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-brass/30 bg-brass/[0.07] px-3 py-2 text-[13px] text-ink-soft">
+              <CheckIcon width={16} height={16} className="mt-0.5 shrink-0 text-brass-deep" />
+              <span>
+                Senha trocada.
+                {ok > 0
+                  ? ` ${ok} ${ok === 1 ? 'outro aparelho foi desconectado' : 'outros aparelhos foram desconectados'}.`
+                  : ' Nenhum outro aparelho estava conectado.'}
+              </span>
+            </p>
+          )}
+
+          {!aberto ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAberto(true)
+                setOk(null)
+              }}
+              className="btn-ghost mt-3 !py-2 text-[13px]"
+            >
+              Trocar senha
+            </button>
+          ) : (
+            <form onSubmit={enviar} className="mt-3 space-y-3">
+              <label className="block">
+                <span className="text-[12.5px] font-medium text-ink-soft">Senha atual</span>
+                <input
+                  type="password"
+                  value={atual}
+                  onChange={(e) => setAtual(e.target.value)}
+                  autoComplete="current-password"
+                  className="input mt-1 w-full"
+                  required
+                />
+              </label>
+              <label className="block">
+                <span className="text-[12.5px] font-medium text-ink-soft">Senha nova</span>
+                <input
+                  type="password"
+                  value={nova}
+                  onChange={(e) => setNova(e.target.value)}
+                  autoComplete="new-password"
+                  className="input mt-1 w-full"
+                  required
+                />
+              </label>
+
+              {/* A mesma avaliação do cadastro (lib/passwordStrength.ts): a regra
+                  de força vale para senha NOVA em qualquer tela onde ela é
+                  escolhida. Só o login fica de fora, para não trancar quem criou a
+                  conta sob a regra antiga. */}
+              {nova.length > 0 && (
+                <div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.07]">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        forca.acceptable ? 'bg-brass' : 'bg-burgundy/60'
+                      }`}
+                      style={{ width: `${Math.max(8, forca.score * 25)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[12px] text-ink-faint">
+                    {forca.problems[0] ?? forca.label}
+                  </p>
+                </div>
+              )}
+
+              {erro && <p className="text-[13px] text-burgundy">{erro}</p>}
+
+              <div className="flex gap-2">
+                <button type="submit" disabled={!pode} className="btn-primary !py-2 text-[13px] disabled:opacity-60">
+                  {salvando ? 'Trocando…' : 'Confirmar troca'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAberto(false)
+                    setAtual('')
+                    setNova('')
+                    setErro(null)
+                  }}
+                  className="btn-ghost !py-2 text-[13px]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }

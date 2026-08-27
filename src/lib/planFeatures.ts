@@ -68,6 +68,18 @@ export const PLAN_FEATURES: PlanFeature[] = [
     done: (p) => (p.faqs ?? []).length > 0,
   },
   {
+    key: 'metricas',
+    plan: 'pro',
+    title: 'Relatório do que acontece no perfil',
+    body: 'Quantas visitas, quais botões foram usados e em que horários você é mais procurado. Contamos acontecimentos, nunca pessoas.',
+    to: '/editor?section=analytics',
+    cta: 'Ver meu relatório',
+    // Não há o que "concluir" aqui: o relatório passa a existir junto com o plano,
+    // e quem o preenche é o movimento do perfil, não uma ação do advogado.
+    automatic: true,
+    done: () => true,
+  },
+  {
     key: 'endereco',
     plan: 'pro',
     title: 'Seu nome no endereço, sem número',
