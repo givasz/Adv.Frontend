@@ -100,7 +100,12 @@ export interface ReportGroup {
 
 export interface ModerationProfile extends Profile {
   id: string
+  /** Dono da página — é por ele que se chega aos degraus 4 e 5. */
+  userId: string
   hiddenSections: string
+  /** Quando a medida vence sozinha. Nulo = sem prazo. */
+  moderationUntil: string | null
+  billingPausedAt: string | null
   reports: Report[]
 }
 
@@ -376,6 +381,8 @@ export async function moderateProfile(
     action: 'warn' | 'partial' | 'restrict' | 'clear'
     note?: string
     reason?: string
+    /** Por quantos dias a medida vale. 0 = sem prazo. */
+    dias?: number
     hiddenSections?: string[]
     reportIds?: string[]
   },
@@ -393,6 +400,78 @@ export async function dismissReport(id: string, reason: string): Promise<{ ok: b
     await adminFetch(`/admin/reports/${id}/dismiss`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    }),
+  )
+}
+
+// ---- A conta por trás do perfil ----
+//
+// Degraus 4 e 5 da escada (docs/politica-de-sancoes.md). Até esta fase o painel
+// parava no perfil: dava para tirar a página do ar e não dava para impedir que a
+// mesma pessoa publicasse outra no dia seguinte.
+
+export interface ContaFicha {
+  id: string
+  email: string
+  createdAt: string
+  suspendedAt: string | null
+  suspendedUntil: string | null
+  suspendedReason: string
+  closedAt: string | null
+  closedReason: string
+  sessoes: number
+  chamados: number
+  perfil: {
+    id: string
+    name: string
+    slug: string
+    plan: string
+    published: boolean
+    moderationStatus: ModerationStatus
+    moderationUntil: string | null
+    billingPausedAt: string | null
+    oabNumber: string
+    denuncias: number
+  } | null
+  historico: AdminAcao[]
+}
+
+export async function fichaDaConta(userId: string): Promise<ContaFicha> {
+  return json(await adminFetch(`/admin/users/${userId}`))
+}
+
+export async function suspenderConta(
+  userId: string,
+  reason: string,
+  dias?: number,
+): Promise<{ ok: boolean; ate: string | null }> {
+  return json(
+    await adminFetch(`/admin/users/${userId}/suspender`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, dias }),
+    }),
+  )
+}
+
+export async function reativarConta(userId: string, reason: string): Promise<{ ok: boolean }> {
+  return json(
+    await adminFetch(`/admin/users/${userId}/reativar`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  )
+}
+
+/** Definitivo. O servidor exige que a conta já esteja suspensa e o e-mail digitado. */
+export async function encerrarConta(
+  userId: string,
+  reason: string,
+  confirmacao: string,
+): Promise<{ ok: boolean; enderecoLiberado: string | null }> {
+  return json(
+    await adminFetch(`/admin/users/${userId}/encerrar`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, confirmacao }),
     }),
   )
 }

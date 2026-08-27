@@ -59,6 +59,21 @@ export const REPORT_REASONS: ReasonMeta[] = [
   },
 ]
 
+/**
+ * Motivos que NÃO aceitam denúncia anônima.
+ *
+ * Espelha backend/src/admin/sancoes.ts. Dizer que a inscrição é falsa, ou que o
+ * perfil se passa por outra pessoa, é acusação sobre QUEM A PESSOA É — ninguém
+ * tem o próprio nome retirado do ar por reclamação de quem não se identifica.
+ * Nos demais motivos o anonimato continua valendo, de propósito: quem denuncia
+ * captação irregular de um colega não deve precisar se expor.
+ */
+export const MOTIVOS_QUE_EXIGEM_IDENTIFICACAO: ReportReason[] = ['oab_invalid', 'impersonation']
+
+export function exigeIdentificacao(motivo?: string): boolean {
+  return !!motivo && (MOTIVOS_QUE_EXIGEM_IDENTIFICACAO as string[]).includes(motivo)
+}
+
 export const REASON_LABEL: Record<ReportReason, string> = Object.fromEntries(
   REPORT_REASONS.map((r) => [r.id, r.label]),
 ) as Record<ReportReason, string>
@@ -79,5 +94,7 @@ export const REPORT_GUIDELINES = {
     'Denúncias falsas ou de má-fé podem ser desconsideradas.',
   ],
   outcome:
-    'Se procedente, o moderador pode retirar o perfil do ar, censurar apenas a parte irregular ou enviar um aviso ao titular. Nada é publicado com seu nome — o e-mail é opcional e só serve para retorno.',
+    'Se procedente, o moderador pode enviar um aviso, ocultar só a parte irregular, retirar o perfil do ar ou — em fraude de identidade — suspender a conta. Toda medida tem prazo e motivo escrito, e o titular pode contestar. Nada é publicado com seu nome.',
+  identificacao:
+    'Denúncia sobre a IDENTIDADE de alguém — registro falso ou perfil se passando por outra pessoa — exige o seu e-mail. Ninguém tem o próprio nome retirado do ar por reclamação anônima. Nos demais motivos o e-mail é opcional e só serve para retorno.',
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
-import { REPORT_GUIDELINES, REPORT_REASONS } from '@/lib/reportReasons'
+import { REPORT_GUIDELINES, REPORT_REASONS, exigeIdentificacao } from '@/lib/reportReasons'
 import type { ReportReason } from '@/lib/types'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
@@ -41,7 +41,14 @@ export default function ReportPage() {
   }, [slug])
 
   const needsDetails = reason === 'other'
-  const canSubmit = !!reason && (!needsDetails || details.trim().length >= 5)
+  // Acusação sobre a IDENTIDADE de alguém não é anônima: ninguém tem o próprio
+  // nome retirado do ar por reclamação de quem não se identifica. O servidor
+  // recusa de qualquer forma; a tela recusa antes para o "não" chegar aqui e
+  // não depois do envio.
+  const precisaEmail = exigeIdentificacao(reason ?? undefined)
+  const emailOk = !precisaEmail || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+  const canSubmit =
+    !!reason && (!needsDetails || details.trim().length >= 5) && emailOk
 
   async function submit() {
     if (!reason || !canSubmit) return
@@ -184,8 +191,16 @@ export default function ReportPage() {
         />
 
         <label htmlFor="report-email" className="mb-1.5 mt-4 block text-[13px] font-semibold text-ink">
-          Seu e-mail <span className="font-normal text-ink-faint">(opcional, para retorno)</span>
+          Seu e-mail{' '}
+          <span className="font-normal text-ink-faint">
+            {precisaEmail ? '(obrigatório neste motivo)' : '(opcional, para retorno)'}
+          </span>
         </label>
+        {precisaEmail && (
+          <p className="mb-1.5 rounded-lg border border-brass/40 bg-brass/10 px-2.5 py-2 text-[12px] leading-relaxed text-brass-deep">
+            {REPORT_GUIDELINES.identificacao}
+          </p>
+        )}
         <input
           id="report-email"
           type="email"

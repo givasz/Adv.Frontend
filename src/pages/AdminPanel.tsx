@@ -3,13 +3,9 @@ import {
   adminLogin,
   adminLogout,
   adminSessao,
-  dismissReport,
-  getModerationProfile,
   listReports,
-  moderateProfile,
   searchProfiles,
   type AdminProfile,
-  type ModerationProfile,
   type ReportGroup,
   listTickets,
   setTicketStatus,
@@ -20,10 +16,10 @@ import {
 import EquipeTab from '@/components/admin/EquipeTab'
 import HistoricoTab from '@/components/admin/HistoricoTab'
 import SegundoFator from '@/components/admin/SegundoFator'
-import { Etiqueta, Motivo } from '@/components/admin/pecas'
+import { Etiqueta } from '@/components/admin/pecas'
 import { Rodape } from '@/components/admin/Paginacao'
+import FichaDoPerfil from '@/components/admin/FichaDoPerfil'
 import { usePaginado } from '@/components/admin/usePaginado'
-import { REASON_LABEL } from '@/lib/reportReasons'
 import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import type { ModerationStatus } from '@/lib/types'
 import { CheckIcon, ExternalLinkIcon, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
@@ -33,12 +29,6 @@ const STATUS_META: Record<ModerationStatus, { label: string; cls: string }> = {
   warned: { label: 'Avisado', cls: 'bg-brass/15 text-brass-deep' },
   partial: { label: 'Censura parcial', cls: 'bg-brass/20 text-brass-deep' },
   restricted: { label: 'Restrito', cls: 'bg-burgundy/10 text-burgundy-deep' },
-}
-
-function fmtDate(iso?: string | null) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 export default function AdminPanel() {
@@ -247,6 +237,7 @@ function Dashboard({
   const [tab, setTab] = useState<AbaId>(abas[0]?.id ?? 'reports')
   const podeDecidir = me.permissoes.includes('moderacao:decidir')
   const podeResponder = me.permissoes.includes('suporte:responder')
+  const podeSancionar = me.permissoes.includes('contas:sancionar')
 
   return (
     <div className="min-h-dvh bg-paper-deep">
@@ -292,9 +283,9 @@ function Dashboard({
         {me.totpPendente && <SegundoFator onPronto={onAtualizar} />}
         {me.emergencia && <FaixaEmergencia producao={me.producao} />}
 
-        {tab === 'reports' && <ReportsTab podeDecidir={podeDecidir} />}
+        {tab === 'reports' && <ReportsTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
         {tab === 'support' && <SupportTab podeResponder={podeResponder} />}
-        {tab === 'search' && <SearchTab podeDecidir={podeDecidir} />}
+        {tab === 'search' && <SearchTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
         {tab === 'historico' && <HistoricoTab />}
         {tab === 'equipe' && <EquipeTab eu={me} />}
       </main>
@@ -328,7 +319,7 @@ function FaixaEmergencia({ producao }: { producao: boolean }) {
 
 // ---- Aba: Denúncias ----
 
-function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
+function ReportsTab({ podeDecidir, podeSancionar }: { podeDecidir: boolean; podeSancionar: boolean }) {
   const [status, setStatus] = useState<'open' | 'all'>('open')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -404,9 +395,10 @@ function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
                 </span>
               </button>
               {selected === g.profile.id && (
-                <ModerationDetail
+                <FichaDoPerfil
                   profileId={g.profile.id}
                   podeDecidir={podeDecidir}
+                  podeSancionar={podeSancionar}
                   onChanged={() => void reload()}
                 />
               )}
@@ -427,317 +419,7 @@ function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
   )
 }
 
-const SECTIONS: { key: string; label: string }[] = [
-  { key: 'avatar', label: 'Foto' },
-  { key: 'headline', label: 'Frase de apresentação' },
-  { key: 'bio', label: 'Bio' },
-  { key: 'regionNote', label: 'Observação de região' },
-  { key: 'areas', label: 'Todas as áreas' },
-  { key: 'faqs', label: 'Perguntas frequentes' },
-  { key: 'socials', label: 'Redes e site' },
-]
-
-function ModerationDetail({
-  profileId,
-  podeDecidir,
-  onChanged,
-}: {
-  profileId: string
-  podeDecidir: boolean
-  onChanged: () => void
-}) {
-  const [profile, setProfile] = useState<ModerationProfile | null>(null)
-  const [note, setNote] = useState('')
-  const [sections, setSections] = useState<Set<string>>(new Set())
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function load() {
-    setError(null)
-    try {
-      const p = await getModerationProfile(profileId)
-      setProfile(p)
-      setNote(p.moderationNote ?? '')
-      try {
-        const parsed = JSON.parse(p.hiddenSections || '[]')
-        setSections(new Set(Array.isArray(parsed) ? parsed : []))
-      } catch {
-        setSections(new Set())
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao carregar o perfil.')
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileId])
-
-  function toggle(key: string) {
-    setSections((prev) => {
-      const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
-      return next
-    })
-  }
-
-  /**
-   * O texto escrito no motivo é o MESMO que o advogado lê no editor — por isso
-   * ele é obrigatório nas três ações que restringem alguma coisa. Ao liberar o
-   * perfil o aviso sai da página, então o motivo vai só para o histórico
-   * (`reason`); o servidor exige um dos dois de qualquer forma.
-   */
-  async function apply(action: 'warn' | 'partial' | 'restrict' | 'clear') {
-    setBusy(true)
-    setError(null)
-    try {
-      const motivo = note.trim()
-      const updated = await moderateProfile(profileId, {
-        action,
-        note: action === 'clear' ? undefined : motivo,
-        reason: action === 'clear' ? motivo : undefined,
-        hiddenSections: action === 'partial' ? Array.from(sections) : undefined,
-      })
-      setProfile(updated)
-      onChanged()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao aplicar a moderação.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function dismiss(id: string) {
-    setBusy(true)
-    setError(null)
-    try {
-      await dismissReport(id, note.trim())
-      await load()
-      onChanged()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao arquivar a denúncia.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // Sem motivo escrito não há decisão: é ele que a pessoa afetada lê, e é ele
-  // que permite contestar. A tela recusa antes do clique para o "não" do
-  // servidor não chegar depois.
-  const semMotivo = note.trim().length < 5
-
-  if (!profile) {
-    return <div className="border-t border-ink/10 px-4 py-4 text-[12.5px] text-ink-faint">Carregando perfil…</div>
-  }
-
-  return (
-    <div className="border-t border-ink/10 bg-paper-soft/50 px-4 py-4">
-      {error && (
-        <p className="mb-3 rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
-          {error}
-        </p>
-      )}
-
-      {/* Denúncias */}
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-        Denúncias ({profile.reports.length})
-      </h3>
-      <ul className="mb-5 space-y-2">
-        {profile.reports.map((r) => (
-          <li key={r.id} className="rounded-lg border border-ink/10 bg-paper p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium text-ink">{REASON_LABEL[r.reason] ?? r.reason}</p>
-                {r.details && (
-                  <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink-soft">{r.details}</p>
-                )}
-                <p className="mt-1.5 text-[11px] text-ink-faint">
-                  {fmtDate(r.createdAt)}
-                  {r.reporterEmail ? ` · ${r.reporterEmail}` : ' · anônima'}
-                  {r.status !== 'open' ? ` · ${r.status}${r.resolution ? ` (${r.resolution})` : ''}` : ''}
-                </p>
-              </div>
-              {r.status === 'open' && (
-                <button
-                  onClick={() => dismiss(r.id)}
-                  disabled={busy || !podeDecidir || semMotivo}
-                  title={semMotivo ? 'Escreva o motivo abaixo antes de arquivar.' : undefined}
-                  className="shrink-0 rounded-lg border border-ink/10 px-2 py-1 text-[11.5px] font-medium text-ink-faint transition-colors hover:border-ink/30 hover:text-ink disabled:opacity-40"
-                >
-                  Arquivar
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      {/* Conteúdo do perfil (para avaliar) */}
-      <ProfileSnapshot profile={profile} />
-
-      {/* Motivo — obrigatório em toda decisão */}
-      <div className="mt-4">
-        <Motivo
-          id={`motivo-${profileId}`}
-          valor={note}
-          onChange={setNote}
-          label="Motivo da decisão (obrigatório)"
-          dica="É o texto que o advogado lê no editor: diga qual regra foi contrariada e o que corrigir. Também vale como motivo ao arquivar uma denúncia ou liberar o perfil."
-          linhas={3}
-        />
-      </div>
-
-      {/* Censura parcial */}
-      <p className="mb-2 text-[12.5px] font-medium text-ink">Censurar partes do perfil</p>
-      <div className="mb-4 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-        {SECTIONS.map((s) => (
-          <SectionCheck key={s.key} label={s.label} checked={sections.has(s.key)} onToggle={() => toggle(s.key)} />
-        ))}
-        {profile.areas.map((a) => (
-          <SectionCheck
-            key={a.id}
-            label={`Área: ${a.label || '—'}`}
-            checked={sections.has(`area:${a.id}`) || sections.has('areas')}
-            disabled={sections.has('areas')}
-            onToggle={() => toggle(`area:${a.id}`)}
-          />
-        ))}
-      </div>
-
-      {/* Ações
-          Um botão desabilitado que não explica o porquê é um botão quebrado: a
-          pessoa clica, nada acontece, e a conclusão razoável é "o painel não
-          funciona". Aqui a razão vem escrita, e ela é sempre uma de duas. */}
-      {!podeDecidir ? (
-        <p className="mb-3 rounded-lg border border-ink/15 bg-paper-soft px-3 py-2 text-[12.5px] text-ink-soft">
-          Seu papel no painel consulta a fila, mas não decide. Para tirar algo do
-          ar, fale com a moderação.
-        </p>
-      ) : (
-        semMotivo && (
-          <p className="mb-3 rounded-lg border border-brass/40 bg-brass/10 px-3 py-2 text-[12.5px] text-brass-deep">
-            <strong>Escreva o motivo acima</strong> para liberar as decisões. É o
-            texto que o advogado vai ler — e é o que permite a ele contestar.
-          </p>
-        )
-      )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => apply('warn')}
-          disabled={busy || !podeDecidir || semMotivo}
-          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
-        >
-          Enviar aviso
-        </button>
-        <button
-          onClick={() => apply('partial')}
-          disabled={busy || !podeDecidir || semMotivo || sections.size === 0}
-          className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
-        >
-          Censurar selecionadas
-        </button>
-        <button
-          onClick={() => apply('restrict')}
-          disabled={busy || !podeDecidir || semMotivo}
-          className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100"
-        >
-          Restringir perfil inteiro
-        </button>
-        {profile.moderationStatus !== 'active' && (
-          <button
-            onClick={() => apply('clear')}
-            disabled={busy || !podeDecidir || semMotivo}
-            className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:cursor-not-allowed disabled:bg-ink/[0.07] disabled:text-ink-faint disabled:opacity-100 disabled:border-transparent"
-          >
-            Remover restrições
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function SectionCheck({
-  label,
-  checked,
-  disabled,
-  onToggle,
-}: {
-  label: string
-  checked: boolean
-  disabled?: boolean
-  onToggle: () => void
-}) {
-  return (
-    <label
-      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12px] transition-colors ${
-        disabled
-          ? 'cursor-not-allowed border-ink/10 text-ink-faint/60'
-          : checked
-            ? 'cursor-pointer border-burgundy/40 bg-burgundy/[0.05] text-ink'
-            : 'cursor-pointer border-ink/10 text-ink-soft hover:border-ink/25'
-      }`}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={onToggle}
-        className="h-3.5 w-3.5 accent-burgundy"
-      />
-      <span className="truncate">{label}</span>
-    </label>
-  )
-}
-
-// Prévia enxuta do conteúdo textual do perfil, para o moderador avaliar.
-function ProfileSnapshot({ profile }: { profile: ModerationProfile }) {
-  return (
-    <details className="rounded-lg border border-ink/10 bg-paper">
-      <summary className="cursor-pointer px-3 py-2 text-[12.5px] font-medium text-ink-soft">
-        Ver conteúdo do perfil
-      </summary>
-      <div className="space-y-2 border-t border-ink/10 px-3 py-3 text-[12.5px] text-ink-soft">
-        {profile.headline && <p><span className="text-ink-faint">Frase:</span> {profile.headline}</p>}
-        {profile.bio && <p><span className="text-ink-faint">Bio:</span> {profile.bio}</p>}
-        {profile.areas.length > 0 && (
-          <div>
-            <span className="text-ink-faint">Áreas:</span>
-            <ul className="mt-0.5 list-disc pl-5">
-              {profile.areas.map((a) => (
-                <li key={a.id}>
-                  <span className="font-medium">{a.label}</span>
-                  {a.description ? ` — ${a.description}` : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {(profile.faqs ?? []).length > 0 && (
-          <div>
-            <span className="text-ink-faint">Perguntas frequentes:</span>
-            <ul className="mt-0.5 list-disc pl-5">
-              {(profile.faqs ?? []).map((f) => (
-                <li key={f.id}>
-                  <span className="font-medium">{f.question}</span>
-                  {f.answer ? ` — ${f.answer}` : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {profile.socials.length > 0 && (
-          <p><span className="text-ink-faint">Redes:</span> {profile.socials.map((s) => s.url).join(', ')}</p>
-        )}
-      </div>
-    </details>
-  )
-}
-
-// ---- Aba: Advogados (busca) ----
-
-function SearchTab({ podeDecidir }: { podeDecidir: boolean }) {
+function SearchTab({ podeDecidir, podeSancionar }: { podeDecidir: boolean; podeSancionar: boolean }) {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<string | null>(null)
   const [tick, setTick] = useState(0) // bump para re-buscar após moderar
@@ -843,9 +525,10 @@ function SearchTab({ podeDecidir }: { podeDecidir: boolean }) {
                 </a>
               </div>
               {open === p.id && (
-                <ModerationDetail
+                <FichaDoPerfil
                   profileId={p.id}
                   podeDecidir={podeDecidir}
+                  podeSancionar={podeSancionar}
                   onChanged={() => setTick((n) => n + 1)}
                 />
               )}

@@ -25,8 +25,8 @@ export interface LegalDocContent {
   sections: LegalSection[]
 }
 
-const UPDATED = '10 de julho de 2026'
-const TERMS_UPDATED = '18 de agosto de 2026' // Termos revisados (responsabilidade/veracidade)
+const UPDATED = '27 de agosto de 2026'
+const TERMS_UPDATED = '27 de agosto de 2026' // escada de sanções, prazos e contestação
 const CONTACT = 'contato@advoc.me'
 
 export const LEGAL_DOCS: LegalDocContent[] = [
@@ -142,13 +142,26 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         ],
       },
       {
-        heading: '7. Moderação e suspensão',
+        heading: '7. Moderação, suspensão e encerramento',
         paragraphs: [
-          'Podemos avisar, ocultar seções ou retirar do ar perfis que violem estes Termos ou as normas da advocacia, conforme a Política de Moderação.',
+          'Podemos avisar, ocultar seções, retirar um perfil do ar, suspender a conta e, em último caso, encerrá-la — nesta ordem, conforme a Política de Moderação, que faz parte destes Termos.',
+          'O que garantimos em troca, e que vale como cláusula: toda medida tem motivo escrito, que é o texto que você lê; toda medida tem prazo e cai sozinha ao vencer, salvo o encerramento; a partir da retirada do perfil do ar, a cobrança do plano é suspensa enquanto durar a medida; e você tem 15 dias para contestar (30 no encerramento), com 10 dias para a nossa resposta — silêncio nosso nesse prazo derruba a medida.',
+          'O encerramento só ocorre depois de suspensão, ou por ordem judicial, e nele a parte não usada do plano é devolvida. A conta encerrada libera o endereço público para outra pessoa; o registro da decisão permanece, e os seus direitos de titular de dados continuam valendo (ver Política de Privacidade).',
         ],
       },
       {
-        heading: '8. Limitação de responsabilidade',
+        heading: '8. Situações que levam direto à suspensão',
+        paragraphs: [
+          'Sem passar pelos degraus anteriores, porque o dano corre contra terceiros enquanto se espera:',
+        ],
+        bullets: [
+          'usar inscrição na OAB, nome ou imagem de outro profissional;',
+          'burlar de forma reiterada a checagem de conformidade;',
+          'usar a plataforma para fim ilícito, ou publicar conteúdo de ilicitude grave.',
+        ],
+      },
+      {
+        heading: '9. Limitação de responsabilidade',
         paragraphs: [
           'O serviço é fornecido “no estado em que se encontra”. A checagem de conformidade é um apoio automatizado que sinaliza e pode bloquear violações — não é garantia de adequação integral do conteúdo às normas. Na máxima extensão permitida pela lei, o advoc.me não se responsabiliza:',
         ],
@@ -160,7 +173,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         ],
       },
       {
-        heading: '9. Alterações e contato',
+        heading: '10. Alterações e contato',
         paragraphs: [`Podemos atualizar estes Termos, avisando quando houver mudança relevante. Dúvidas: ${CONTACT}.`],
       },
     ],
@@ -251,45 +264,87 @@ export const LEGAL_DOCS: LegalDocContent[] = [
     slug: 'moderacao',
     navLabel: 'Moderação',
     title: 'Política de Moderação',
-    summary: 'Como avaliamos e agimos sobre conteúdo que viola as normas.',
+    summary: 'O que podemos fazer, com que fundamento, por quanto tempo e como você contesta.',
     updated: UPDATED,
     sections: [
       {
         paragraphs: [
-          'Esta Política descreve como o advoc.me modera conteúdo de perfis, para manter a plataforma em conformidade com o Provimento 205/2021 e o Código de Ética.',
+          'Esta Política diz o que a plataforma pode fazer com um perfil ou uma conta, de onde vem esse direito, por quanto tempo cada medida vale e o que você tem em troca. Ela vale junto com os Termos de Uso.',
+          'Duas coisas valem para tudo o que vem abaixo. Primeira: nenhuma medida é aplicada sem um motivo escrito, e esse motivo é exatamente o texto que você lê — se você não consegue ler por que algo aconteceu, não temos como esperar que você concorde. Segunda: não editamos o seu texto. Podemos ocultá-lo ou retirá-lo do ar; reescrevê-lo, não. O conteúdo é de responsabilidade exclusiva de quem o publica (Provimento 205/2021, Art. 1º, § 1º), e essa atribuição precisa continuar sendo verdadeira.',
         ],
       },
       {
-        heading: '1. Prevenção automática',
+        heading: '1. Antes de tudo: a checagem automática',
         paragraphs: [
-          'Antes de publicar, todo conteúdo passa pela checagem de conformidade. Termos que configuram violação clara (ex.: promessa de resultado, preços, captação) bloqueiam a publicação até serem ajustados.',
+          'Todo conteúdo passa pela checagem de conformidade antes de ir ao ar. O que configura violação clara — promessa de resultado, honorários, captação — bloqueia a publicação até ser ajustado. É prevenção, não sanção: nada é registrado contra você.',
         ],
       },
       {
-        heading: '2. Avaliação de denúncias',
+        heading: '2. De onde vem o nosso direito de agir',
         paragraphs: [
-          'Denúncias recebidas entram em uma fila e são avaliadas por nossa equipe à luz das normas. Analisamos o contexto antes de qualquer medida.',
+          'Três fundamentos diferentes, com consequências diferentes:',
         ],
-      },
-      {
-        heading: '3. Medidas possíveis',
         bullets: [
-          'Aviso: o responsável é notificado e o perfil segue no ar.',
-          'Ocultação parcial: seções específicas (ex.: bio, uma área, redes) são retiradas do público.',
-          'Restrição: o perfil inteiro é retirado do ar até a regularização.',
-          'Arquivamento: quando a denúncia é improcedente, nenhuma medida é aplicada.',
+          'Ilícito grave (atos antidemocráticos, terrorismo, crimes sexuais contra vulnerável, incitação à violência, crimes contra a saúde pública): removemos assim que somos notificados, sem esperar ordem judicial. É dever legal nosso, e avisamos você junto ou logo depois — nunca antes.',
+          'Ofensa à honra de alguém: aqui não somos juízes. Só respondemos por não remover depois de ordem judicial. Agimos por conta própria quando o texto também viola os Termos ou as normas da advocacia — o que quase sempre é o caso.',
+          'Violação das normas da advocacia ou destes Termos: o fundamento é contratual. Decidimos sobre a presença do conteúdo aqui dentro, e só isso. Não julgamos conduta profissional — isso é da OAB, e é para lá que encaminhamos o que for do âmbito dela.',
         ],
       },
       {
-        heading: '4. Transparência e trilha',
+        heading: '3. As medidas, em ordem',
         paragraphs: [
-          'O responsável pelo perfil é informado do motivo da medida. Decisões de moderação são registradas para fins de auditoria.',
+          'A regra é subir um degrau por vez. Pular exige razão escrita no registro, e reincidência é o que mais frequentemente justifica.',
+        ],
+        bullets: [
+          '1. Aviso — o perfil segue no ar e você lê o motivo no editor. Vale 30 dias e vence sozinho.',
+          '2. Ocultação parcial — só as seções apontadas saem do ar. 30 dias.',
+          '3. Restrição — a página inteira sai do ar. 30 dias. Se o seu plano é pago, a cobrança é suspensa enquanto durar.',
+          '4. Suspensão da conta — o login para de funcionar e o perfil sai do ar. Cabe em fraude de identidade, burla reiterada da checagem ou uso da plataforma para fim ilícito. Cobrança suspensa.',
+          '5. Encerramento — definitivo. A conta é encerrada e o endereço público é liberado. Só depois de suspensão, ou por ordem judicial. A parte não usada do plano é devolvida.',
         ],
       },
       {
-        heading: '5. Revisão',
+        heading: '4. Prazo — e por que ele existe',
         paragraphs: [
-          `Se você discorda de uma medida, pode solicitar revisão por ${CONTACT}, corrigindo o ponto apontado.`,
+          'Toda medida tem prazo, e vencido o prazo ela cai sozinha. Uma restrição sem prazo não é sanção: é uma página esquecida numa fila. Se a medida precisar continuar depois do prazo, ela é renovada — com um motivo novo, escrito.',
+        ],
+      },
+      {
+        heading: '5. Ação imediata, sem aviso antes',
+        paragraphs: [
+          'Em três situações agimos primeiro e avisamos no mesmo dia: ilícito grave, ordem judicial com prazo, e uso da inscrição ou do nome de outro profissional. Nesta última, quem está sendo prejudicado normalmente nem sabe que existe um perfil com o nome dele — esperar contraditório seria fazer a vítima esperar.',
+        ],
+      },
+      {
+        heading: '6. Como você contesta',
+        bullets: [
+          'Você tem 15 dias para contestar qualquer medida (30 dias no encerramento), contados do aviso.',
+          'Temos 10 dias para responder. Se não respondermos no prazo, a medida cai.',
+          'Sempre que houver mais de um responsável pela moderação, quem analisa a contestação não é quem decidiu.',
+          'A reversão é registrada como qualquer outra decisão, com motivo.',
+          `Enquanto o canal de contestação no painel não estiver pronto, o caminho é ${CONTACT} — e os mesmos prazos correm.`,
+        ],
+      },
+      {
+        heading: '7. Ordem judicial',
+        paragraphs: [
+          'Cumprimos ordens judiciais no prazo delas e registramos o recebimento. Avisamos você de que houve ordem e do que foi cumprido, salvo quando a própria ordem determinar sigilo. Ordem judicial não é contestável conosco — o caminho é o processo.',
+        ],
+      },
+      {
+        heading: '8. Registro',
+        paragraphs: [
+          'Toda decisão fica registrada com quem decidiu, quando e por quê. O registro é a sua defesa tanto quanto a nossa, e é guardado por 5 anos. O conteúdo removido é guardado por 6 meses, como prova em eventual contestação; depois disso fica apenas o registro da decisão.',
+        ],
+      },
+      {
+        heading: '9. O que não fazemos',
+        bullets: [
+          'Não editamos o seu texto. Ocultamos, retiramos do ar, avisamos — nunca reescrevemos.',
+          'Não julgamos a sua conduta profissional. Isso é da OAB.',
+          'Não sancionamos posição jurídica, opinião ou tese impopular.',
+          'Não criamos selo, ranking, destaque ou ordenação por plano.',
+          'Não retemos pagamento de serviço que nós mesmos suspendemos.',
         ],
       },
     ],
