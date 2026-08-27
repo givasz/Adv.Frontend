@@ -20,7 +20,10 @@ describe('limites do FAQ por plano', () => {
 
   it('os textos são curtos — FAQ é orientação, não parecer', () => {
     expect(FAQ_QUESTION_MAX).toBeLessThanOrEqual(120)
-    expect(FAQ_ANSWER_MAX).toBeLessThanOrEqual(300)
+    // Baixado de 300 para 220 em 27/08: a 300 a IA escrevia até encostar no teto
+    // e a resposta virava cinco linhas no celular. O teto é o que a IA recebe
+    // como instrução (ver ai.service.ts), então mexer aqui muda o texto gerado.
+    expect(FAQ_ANSWER_MAX).toBeLessThanOrEqual(240)
   })
 
   it('a cota aponta o plano que destrava o próximo slot', () => {

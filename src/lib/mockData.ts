@@ -52,7 +52,7 @@ export const sampleProfile: Profile = {
       id: 'fq1',
       question: 'Como funciona a guarda compartilhada?',
       answer:
-        'Na guarda compartilhada, as decisões sobre a vida da criança são tomadas pelos dois pais, e o convívio é dividido de forma equilibrada — o que não significa tempo idêntico. Cada família define o arranjo possível, e o caso concreto precisa ser analisado.',
+        'As decisões sobre a vida da criança cabem aos dois pais, e o convívio é dividido de forma equilibrada — o que não significa tempo idêntico. Cada família define o arranjo possível, e cada caso exige análise própria.',
     },
     {
       id: 'fq2',
@@ -70,7 +70,7 @@ export const sampleProfile: Profile = {
       id: 'fq4',
       question: 'O que muda em cada regime de bens?',
       answer:
-        'O regime define o que entra na partilha. Na comunhão parcial, divide-se o adquirido durante o casamento; na universal, praticamente todo o patrimônio; na separação total, cada um mantém o seu. A escolha depende do planejamento de cada casal.',
+        'O regime define o que entra na partilha: na comunhão parcial, o adquirido durante o casamento; na universal, quase todo o patrimônio; na separação total, cada um mantém o seu. A escolha depende de cada casal.',
     },
     {
       id: 'fq5',
