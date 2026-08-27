@@ -217,9 +217,42 @@ async function conversaDoEscritorio() {
   return erros
 }
 
+// Painel: entra e percorre TODAS as abas.
+//
+// Abrir a tela de login não prova nada sobre o que existe do lado de dentro — e
+// é lá que moram as telas novas (equipe, histórico, segundo fator). Sem backend
+// as listas mostram erro de rede, o que é esperado: o que este passo procura é
+// tela branca e erro de runtime, não dado.
+async function painelDeModeracao() {
+  const { contexto, pagina, erros } = await abrir('/painel-mod-7fq3k9x2a')
+  try {
+    await pagina.getByLabel('E-mail').fill('admin')
+    await pagina.getByLabel('Senha').fill('dev-admin-123')
+    await clicar(pagina, 'Entrar')
+    // As abas dependem das permissões que o servidor devolve: se nenhuma
+    // aparecer, é porque entrar deixou de funcionar.
+    await pagina.getByRole('button', { name: 'Denúncias', exact: true }).waitFor({ timeout: ESPERA })
+
+    for (const aba of ['Suporte', 'Advogados', 'Histórico', 'Equipe', 'Denúncias']) {
+      // Escopo no cabeçalho: as abas convivem com filtros de mesmo nome dentro
+      // do conteúdo, e clicar no primeiro que aparecer testaria outra coisa.
+      const botao = pagina.locator('header').getByRole('button', { name: aba, exact: true })
+      await botao.waitFor({ timeout: ESPERA })
+      await botao.click()
+      const texto = (await pagina.locator('main').innerText()).trim()
+      if (texto.length < 10) erros.push(`aba "${aba}" abriu vazia`)
+    }
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
   ['assistente do perfil', conversaDoPerfil],
   ['assistente do escritório', conversaDoEscritorio],
+  ['painel de moderação (por dentro)', painelDeModeracao],
 ]
 
 for (const [nome, percorrer] of CONVERSAS) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   adminLogin,
   adminLogout,
-  adminSessaoAtiva,
+  adminSessao,
   dismissReport,
   getModerationProfile,
   listReports,
@@ -14,7 +14,13 @@ import {
   listTickets,
   setTicketStatus,
   type AdminTicket,
+  type AdminMe,
+  PrecisaSegundoFator,
 } from '@/lib/adminApi'
+import EquipeTab from '@/components/admin/EquipeTab'
+import HistoricoTab from '@/components/admin/HistoricoTab'
+import SegundoFator from '@/components/admin/SegundoFator'
+import { Etiqueta, Motivo } from '@/components/admin/pecas'
 import { REASON_LABEL } from '@/lib/reportReasons'
 import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import type { ModerationStatus } from '@/lib/types'
@@ -34,16 +40,20 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function AdminPanel() {
-  // `null` = ainda perguntando ao servidor. A sessão do painel é um cookie
+  // `undefined` = ainda perguntando ao servidor. A sessão do painel é um cookie
   // HttpOnly: recarregar a página apaga tudo o que esta tela sabia, e só o
-  // servidor pode dizer se ela continua aberta. Sem o estado intermediário, o
-  // painel piscaria a tela de login em toda recarga de quem já está dentro.
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  // servidor pode dizer se ela continua aberta — e para QUEM. Sem o estado
+  // intermediário, o painel piscaria a tela de login em toda recarga.
+  const [me, setMe] = useState<AdminMe | null | undefined>(undefined)
+
+  // Uma fonte só para "o que este papel abre": o servidor. A tela desenha o que
+  // ele disser; quem recusa de verdade continua sendo a API.
+  const reconferir = () => void adminSessao().then(setMe)
 
   useEffect(() => {
     let vivo = true
-    void adminSessaoAtiva().then((ok) => {
-      if (vivo) setAuthed(ok)
+    void adminSessao().then((r) => {
+      if (vivo) setMe(r)
     })
     return () => {
       vivo = false
@@ -62,13 +72,15 @@ export default function AdminPanel() {
     }
   }, [])
 
-  if (authed === null) return <Conferindo />
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />
+  if (me === undefined) return <Conferindo />
+  if (!me) return <LoginScreen onLogin={setMe} />
   return (
     <Dashboard
+      me={me}
+      onAtualizar={reconferir}
       onLogout={() => {
         void adminLogout()
-        setAuthed(false)
+        setMe(null)
       }}
     />
   )
@@ -90,9 +102,13 @@ function Conferindo() {
 
 // ---- Login ----
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (me: AdminMe) => void }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  // O campo do código só aparece depois que a senha passou. Mostrá-lo de saída
+  // faria toda entrada parecer exigir um aplicativo que nem todo papel usa.
+  const [pedeCodigo, setPedeCodigo] = useState(false)
+  const [codigo, setCodigo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -101,14 +117,21 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     setBusy(true)
     setError(null)
     try {
-      await adminLogin(username, password)
-      onLogin()
-    } catch {
-      setError('Usuário ou senha inválidos.')
+      onLogin(await adminLogin(username, password, codigo))
+    } catch (err) {
+      if (err instanceof PrecisaSegundoFator) {
+        setPedeCodigo(true)
+        setError(codigo ? 'Código incorreto. Tente o próximo.' : null)
+      } else {
+        setError(err instanceof Error ? err.message : 'Usuário ou senha inválidos.')
+      }
     } finally {
       setBusy(false)
     }
   }
+
+  const campo =
+    'w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15'
 
   return (
     <div className="grain flex min-h-dvh items-center justify-center px-6">
@@ -120,14 +143,15 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           <span className="flex h-11 w-11 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
             <LockIcon width={20} height={20} />
           </span>
-          <h1 className="font-display text-lg font-semibold text-ink">Painel de moderação</h1>
-          <p className="text-[12px] text-ink-faint">Acesso restrito à equipe advoc.me</p>
+          <h1 className="font-display text-lg font-semibold text-ink">Painel advoc.me</h1>
+          <p className="text-[12px] text-ink-faint">Acesso restrito à equipe</p>
         </div>
+
         {/* htmlFor/id: os rótulos estavam soltos, sem associação com os campos —
             clicar no texto não focava nada e leitor de tela anunciava input sem
             nome. */}
         <label htmlFor="admin-user" className="mb-1.5 block text-[12.5px] font-medium text-ink">
-          Usuário
+          E-mail
         </label>
         <input
           id="admin-user"
@@ -136,7 +160,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           autoComplete="username"
           spellCheck={false}
           autoCapitalize="none"
-          className="mb-3 w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+          disabled={pedeCodigo}
+          className={`mb-3 ${campo} disabled:opacity-60`}
         />
         <label htmlFor="admin-pass" className="mb-1.5 block text-[12.5px] font-medium text-ink">
           Senha
@@ -148,14 +173,40 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
           spellCheck={false}
-          className="mb-4 w-full rounded-lg border border-ink/15 bg-paper-soft px-3 py-2.5 text-[14px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
+          disabled={pedeCodigo}
+          className={`mb-4 ${campo} disabled:opacity-60`}
         />
+
+        {pedeCodigo && (
+          <>
+            <label htmlFor="admin-totp" className="mb-1.5 block text-[12.5px] font-medium text-ink">
+              Código de 6 dígitos
+            </label>
+            <input
+              id="admin-totp"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              className={`mb-1 ${campo} font-mono tracking-[0.3em]`}
+            />
+            <p className="mb-4 text-[11.5px] text-ink-faint">
+              O que está no seu aplicativo de autenticação agora.
+            </p>
+          </>
+        )}
+
         {error && (
-          <p className="mb-3 rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
+          <p role="alert" className="mb-3 rounded-lg border border-burgundy/30 bg-burgundy/5 px-3 py-2 text-[12.5px] text-burgundy-deep">
             {error}
           </p>
         )}
-        <button type="submit" disabled={busy} className="btn-primary w-full">
+        <button
+          type="submit"
+          disabled={busy || (pedeCodigo && codigo.length !== 6)}
+          className="btn-primary w-full disabled:opacity-50"
+        >
           {busy ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
@@ -165,55 +216,117 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
 // ---- Dashboard ----
 
-function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<'reports' | 'search' | 'support'>('reports')
-  const TAB_LABEL = {
-    reports: 'Denúncias',
-    support: 'Suporte',
-    search: 'Advogados',
-  } as const
+/**
+ * As abas, e a permissão que cada uma pede.
+ *
+ * Quem não tem a permissão não vê a aba — e, se forçar a URL, a API recusa do
+ * mesmo jeito. Esconder é conforto; a fronteira é o servidor.
+ */
+const ABAS = [
+  { id: 'reports', label: 'Denúncias', permissao: 'moderacao:ler' },
+  { id: 'support', label: 'Suporte', permissao: 'suporte:ler' },
+  { id: 'search', label: 'Advogados', permissao: 'contas:ler' },
+  { id: 'historico', label: 'Histórico', permissao: 'auditoria:ler' },
+  { id: 'equipe', label: 'Equipe', permissao: 'admins:gerir' },
+] as const
+
+type AbaId = (typeof ABAS)[number]['id']
+
+function Dashboard({
+  me,
+  onAtualizar,
+  onLogout,
+}: {
+  me: AdminMe
+  onAtualizar: () => void
+  onLogout: () => void
+}) {
+  const abas = ABAS.filter((a) => me.permissoes.includes(a.permissao))
+  const [tab, setTab] = useState<AbaId>(abas[0]?.id ?? 'reports')
+  const podeDecidir = me.permissoes.includes('moderacao:decidir')
+  const podeResponder = me.permissoes.includes('suporte:responder')
 
   return (
     <div className="min-h-dvh bg-paper-deep">
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <span className="flex items-center gap-2 font-display text-lg font-semibold">
-            <ScaleIcon width={20} height={20} className="text-burgundy" />
-            Moderação
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
+          <span className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold">
+            <ScaleIcon width={20} height={20} className="shrink-0 text-burgundy" />
+            <span className="truncate">Painel</span>
           </span>
-          <button onClick={onLogout} className="text-[13px] font-medium text-ink-faint hover:text-burgundy">
-            Sair
-          </button>
-        </div>
-        <div className="mx-auto flex max-w-4xl gap-1 px-4">
-          {/* Ordem = prioridade de atendimento: o que tem gente esperando resposta
-              primeiro; a busca de advogados é ferramenta, não fila. */}
-          {(['reports', 'support', 'search'] as const).map((t) => (
+          {/* Quem está logado, sempre à vista: num painel que decide o que sai do
+              ar, "em nome de quem" é a primeira informação da tela. */}
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="hidden truncate text-[12.5px] text-ink-faint sm:inline">{me.name}</span>
+            <Etiqueta papel={me.role} />
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`border-b-2 px-3 py-2 text-[13.5px] font-medium transition-colors ${
-                tab === t
+              onClick={onLogout}
+              className="text-[13px] font-medium text-ink-faint transition-colors hover:text-burgundy"
+            >
+              Sair
+            </button>
+          </span>
+        </div>
+        <div className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-4">
+          {/* Ordem = prioridade de atendimento: o que tem gente esperando resposta
+              primeiro; busca, histórico e equipe são ferramenta, não fila. */}
+          {abas.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setTab(a.id)}
+              className={`shrink-0 border-b-2 px-3 py-2 text-[13.5px] font-medium transition-colors ${
+                tab === a.id
                   ? 'border-burgundy text-burgundy'
                   : 'border-transparent text-ink-faint hover:text-ink'
               }`}
             >
-              {TAB_LABEL[t]}
+              {a.label}
             </button>
           ))}
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {tab === 'reports' ? <ReportsTab /> : tab === 'search' ? <SearchTab /> : <SupportTab />}
+        {me.totpPendente && <SegundoFator onPronto={onAtualizar} />}
+        {me.emergencia && <FaixaEmergencia producao={me.producao} />}
+
+        {tab === 'reports' && <ReportsTab podeDecidir={podeDecidir} />}
+        {tab === 'support' && <SupportTab podeResponder={podeResponder} />}
+        {tab === 'search' && <SearchTab podeDecidir={podeDecidir} />}
+        {tab === 'historico' && <HistoricoTab />}
+        {tab === 'equipe' && <EquipeTab eu={me} />}
       </main>
     </div>
   )
 }
 
+/**
+ * Você entrou pela credencial do .env, que só vale enquanto não existe
+ * administrador nenhum. Enquanto for assim, nenhuma decisão tem autor de
+ * verdade — então a faixa não é decorativa, é a primeira tarefa do painel.
+ */
+function FaixaEmergencia({ producao }: { producao: boolean }) {
+  return (
+    <section className="mb-5 rounded-xl2 border border-burgundy/30 bg-burgundy/[0.06] p-4">
+      <h2 className="mb-1 font-display text-[15px] font-semibold text-burgundy-deep">
+        Ninguém administra este painel ainda
+      </h2>
+      <p className="max-w-prose text-[13px] text-ink-soft">
+        Você entrou pela credencial de emergência do ambiente. Ela existe só para
+        criar o primeiro acesso — e para de valer sozinha assim que ele existir.
+        Enquanto isso, as decisões ficam registradas sem um nome por trás.
+      </p>
+      <p className="mt-2 max-w-prose text-[13px] text-ink-soft">
+        Crie o seu acesso na aba <strong>Equipe</strong>
+        {producao ? '' : ' (ou por `npm run admin:create` no servidor)'}.
+      </p>
+    </section>
+  )
+}
+
 // ---- Aba: Denúncias ----
 
-function ReportsTab() {
+function ReportsTab({ podeDecidir }: { podeDecidir: boolean }) {
   const [groups, setGroups] = useState<ReportGroup[] | null>(null)
   const [status, setStatus] = useState<'open' | 'all'>('open')
   const [selected, setSelected] = useState<string | null>(null)
@@ -296,6 +409,7 @@ function ReportsTab() {
               {selected === g.profile.id && (
                 <ModerationDetail
                   profileId={g.profile.id}
+                  podeDecidir={podeDecidir}
                   onChanged={reload}
                 />
               )}
@@ -317,7 +431,15 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'socials', label: 'Redes e site' },
 ]
 
-function ModerationDetail({ profileId, onChanged }: { profileId: string; onChanged: () => void }) {
+function ModerationDetail({
+  profileId,
+  podeDecidir,
+  onChanged,
+}: {
+  profileId: string
+  podeDecidir: boolean
+  onChanged: () => void
+}) {
   const [profile, setProfile] = useState<ModerationProfile | null>(null)
   const [note, setNote] = useState('')
   const [sections, setSections] = useState<Set<string>>(new Set())
@@ -354,13 +476,21 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
     })
   }
 
+  /**
+   * O texto escrito no motivo é o MESMO que o advogado lê no editor — por isso
+   * ele é obrigatório nas três ações que restringem alguma coisa. Ao liberar o
+   * perfil o aviso sai da página, então o motivo vai só para o histórico
+   * (`reason`); o servidor exige um dos dois de qualquer forma.
+   */
   async function apply(action: 'warn' | 'partial' | 'restrict' | 'clear') {
     setBusy(true)
     setError(null)
     try {
+      const motivo = note.trim()
       const updated = await moderateProfile(profileId, {
         action,
-        note: note.trim() || undefined,
+        note: action === 'clear' ? undefined : motivo,
+        reason: action === 'clear' ? motivo : undefined,
         hiddenSections: action === 'partial' ? Array.from(sections) : undefined,
       })
       setProfile(updated)
@@ -374,14 +504,22 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
 
   async function dismiss(id: string) {
     setBusy(true)
+    setError(null)
     try {
-      await dismissReport(id)
+      await dismissReport(id, note.trim())
       await load()
       onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao arquivar a denúncia.')
     } finally {
       setBusy(false)
     }
   }
+
+  // Sem motivo escrito não há decisão: é ele que a pessoa afetada lê, e é ele
+  // que permite contestar. A tela recusa antes do clique para o "não" do
+  // servidor não chegar depois.
+  const semMotivo = note.trim().length < 5
 
   if (!profile) {
     return <div className="border-t border-ink/10 px-4 py-4 text-[12.5px] text-ink-faint">Carregando perfil…</div>
@@ -417,8 +555,9 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
               {r.status === 'open' && (
                 <button
                   onClick={() => dismiss(r.id)}
-                  disabled={busy}
-                  className="shrink-0 rounded-lg border border-ink/10 px-2 py-1 text-[11.5px] font-medium text-ink-faint transition-colors hover:border-ink/30 hover:text-ink"
+                  disabled={busy || !podeDecidir || semMotivo}
+                  title={semMotivo ? 'Escreva o motivo abaixo antes de arquivar.' : undefined}
+                  className="shrink-0 rounded-lg border border-ink/10 px-2 py-1 text-[11.5px] font-medium text-ink-faint transition-colors hover:border-ink/30 hover:text-ink disabled:opacity-40"
                 >
                   Arquivar
                 </button>
@@ -431,17 +570,17 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
       {/* Conteúdo do perfil (para avaliar) */}
       <ProfileSnapshot profile={profile} />
 
-      {/* Aviso / motivo */}
-      <label className="mb-1.5 mt-4 block text-[12.5px] font-medium text-ink">
-        Aviso ao titular / motivo da decisão
-      </label>
-      <textarea
-        rows={2}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Texto que o dono do perfil verá no editor (ex.: qual regra foi violada e o que corrigir)."
-        className="mb-4 w-full rounded-lg border border-ink/15 bg-paper px-3 py-2.5 text-[13px] focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-      />
+      {/* Motivo — obrigatório em toda decisão */}
+      <div className="mt-4">
+        <Motivo
+          id={`motivo-${profileId}`}
+          valor={note}
+          onChange={setNote}
+          label="Motivo da decisão"
+          dica="É o texto que o advogado lê no editor: diga qual regra foi contrariada e o que corrigir. Também vale como motivo ao arquivar uma denúncia ou liberar o perfil."
+          linhas={3}
+        />
+      </div>
 
       {/* Censura parcial */}
       <p className="mb-2 text-[12.5px] font-medium text-ink">Censurar partes do perfil</p>
@@ -461,24 +600,30 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
       </div>
 
       {/* Ações */}
+      {!podeDecidir && (
+        <p className="mb-3 rounded-lg border border-ink/15 bg-paper-soft px-3 py-2 text-[12.5px] text-ink-soft">
+          Seu papel no painel consulta a fila, mas não decide. Para tirar algo do
+          ar, fale com a moderação.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => apply('warn')}
-          disabled={busy}
+          disabled={busy || !podeDecidir || semMotivo}
           className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:opacity-50"
         >
           Enviar aviso
         </button>
         <button
           onClick={() => apply('partial')}
-          disabled={busy || sections.size === 0}
+          disabled={busy || !podeDecidir || semMotivo || sections.size === 0}
           className="rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Censurar selecionadas
         </button>
         <button
           onClick={() => apply('restrict')}
-          disabled={busy}
+          disabled={busy || !podeDecidir || semMotivo}
           className="rounded-full bg-burgundy px-4 py-2 text-[13px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep disabled:opacity-50"
         >
           Restringir perfil inteiro
@@ -486,7 +631,7 @@ function ModerationDetail({ profileId, onChanged }: { profileId: string; onChang
         {profile.moderationStatus !== 'active' && (
           <button
             onClick={() => apply('clear')}
-            disabled={busy}
+            disabled={busy || !podeDecidir || semMotivo}
             className="rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-ink/40 disabled:opacity-50"
           >
             Remover restrições
@@ -576,7 +721,7 @@ function ProfileSnapshot({ profile }: { profile: ModerationProfile }) {
 
 // ---- Aba: Advogados (busca) ----
 
-function SearchTab() {
+function SearchTab({ podeDecidir }: { podeDecidir: boolean }) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState<AdminProfile[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -680,7 +825,11 @@ function SearchTab() {
                 </a>
               </div>
               {open === p.id && (
-                <ModerationDetail profileId={p.id} onChanged={() => setTick((n) => n + 1)} />
+                <ModerationDetail
+                  profileId={p.id}
+                  podeDecidir={podeDecidir}
+                  onChanged={() => setTick((n) => n + 1)}
+                />
               )}
             </li>
           ))}
@@ -715,7 +864,7 @@ const TICKET_FILTERS = [
   { value: '', label: 'Todos' },
 ] as const
 
-function SupportTab() {
+function SupportTab({ podeResponder }: { podeResponder: boolean }) {
   const [filtro, setFiltro] = useState<string>('open')
   const [itens, setItens] = useState<AdminTicket[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -737,13 +886,28 @@ function SupportTab() {
     recarregar(filtro)
   }, [filtro])
 
+  /**
+   * A nota é o que o advogado lê em /suporte — e por isso é obrigatória. Fechar
+   * um chamado sem uma linha de resposta é fechá-lo na cara de quem escreveu, e
+   * o histórico ficaria com "resolvido" e nada mais.
+   */
   async function mudar(id: string, status: 'open' | 'in_progress' | 'resolved') {
+    const texto = (aberto === id ? nota : (itens?.find((t) => t.id === id)?.adminNote ?? '')).trim()
+    if (texto.length < 5) {
+      setAberto(id)
+      setNota(itens?.find((t) => t.id === id)?.adminNote ?? '')
+      setErro('Escreva a resposta antes de mudar a situação — é o que o advogado vai ler.')
+      return
+    }
     setBusy(id)
+    setErro(null)
     try {
-      await setTicketStatus(id, status, aberto === id ? nota : undefined)
+      await setTicketStatus(id, status, texto)
       setAberto(null)
       setNota('')
       await recarregar(filtro)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao atualizar o chamado.')
     } finally {
       setBusy(null)
     }
@@ -851,14 +1015,15 @@ function SupportTab() {
                   setAberto((a) => (a === t.id ? null : t.id))
                   setNota(t.adminNote ?? '')
                 }}
-                className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                disabled={!podeResponder}
+                className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-40"
               >
                 {aberto === t.id ? 'Cancelar resposta' : t.adminNote ? 'Editar resposta' : 'Responder'}
               </button>
               {t.status !== 'in_progress' && (
                 <button
                   type="button"
-                  disabled={busy === t.id}
+                  disabled={busy === t.id || !podeResponder}
                   onClick={() => mudar(t.id, 'in_progress')}
                   className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
                 >
@@ -868,7 +1033,7 @@ function SupportTab() {
               {t.status !== 'resolved' ? (
                 <button
                   type="button"
-                  disabled={busy === t.id}
+                  disabled={busy === t.id || !podeResponder}
                   onClick={() => mudar(t.id, 'resolved')}
                   className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:opacity-50"
                 >
@@ -877,7 +1042,7 @@ function SupportTab() {
               ) : (
                 <button
                   type="button"
-                  disabled={busy === t.id}
+                  disabled={busy === t.id || !podeResponder}
                   onClick={() => mudar(t.id, 'open')}
                   className="rounded-full border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-50"
                 >
