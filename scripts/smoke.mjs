@@ -70,6 +70,9 @@ const ROTAS = [
   ['/editor?section=plano', 'editor · plano'],
   ['/editor?section=cartao', 'editor · cartão de visita'],
   ['/suporte', 'suporte'],
+  // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
+  // justamente essa pessoa que mais precisa desta página.
+  ['/contestar', 'contestar uma decisão'],
   ['/conta/dados', 'seus dados (LGPD)'],
   ['/planos', 'planos'],
   ['/planos?recurso=faq&plano=free', 'planos · recurso'],
@@ -233,7 +236,7 @@ async function painelDeModeracao() {
     // aparecer, é porque entrar deixou de funcionar.
     await pagina.getByRole('button', { name: 'Denúncias', exact: true }).waitFor({ timeout: ESPERA })
 
-    for (const aba of ['Suporte', 'Advogados', 'Histórico', 'Equipe', 'Denúncias']) {
+    for (const aba of ['Contestações', 'Suporte', 'Advogados', 'Histórico', 'Equipe', 'Denúncias']) {
       // Escopo no cabeçalho: as abas convivem com filtros de mesmo nome dentro
       // do conteúdo, e clicar no primeiro que aparecer testaria outra coisa.
       const botao = pagina.locator('header').getByRole('button', { name: aba, exact: true })

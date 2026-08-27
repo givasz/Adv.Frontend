@@ -316,6 +316,55 @@ export async function revogarSessoesAdmin(
   )
 }
 
+// ---- Contestações ----
+//
+// O que torna o prazo real. A plataforma tem 10 dias para responder e, se não
+// responder, a medida cai sozinha — o relógio é o `moderationUntil` encurtado
+// na abertura, não uma máquina nova. Ver docs/politica-de-sancoes.md § 5.
+
+export interface AdminAppeal {
+  id: string
+  alvo: 'profile' | 'account'
+  medida: string
+  texto: string
+  respondeAte: string
+  status: 'open' | 'accepted' | 'rejected' | 'expired'
+  resposta: string
+  decidedAt: string | null
+  createdAt: string
+  user: {
+    email: string
+    suspendedUntil: string | null
+    closedAt: string | null
+    profile: { id: string; name: string; slug: string; moderationNote: string } | null
+  }
+}
+
+export async function listarContestacoes(
+  status = 'open',
+  offset = 0,
+  limite = 25,
+): Promise<Pagina<AdminAppeal>> {
+  return json(await adminFetch(`/admin/appeals?status=${status}&offset=${offset}&limite=${limite}`))
+}
+
+export async function contadoresContestacoes(): Promise<{ abertas: number; vencendo: number }> {
+  return json(await adminFetch('/admin/appeals/counts'))
+}
+
+export async function decidirContestacao(
+  id: string,
+  aceita: boolean,
+  resposta: string,
+): Promise<{ ok: boolean; aceita: boolean }> {
+  return json(
+    await adminFetch(`/admin/appeals/${id}/decidir`, {
+      method: 'POST',
+      body: JSON.stringify({ aceita, resposta }),
+    }),
+  )
+}
+
 // ---- Histórico ----
 
 export interface AdminAcao {

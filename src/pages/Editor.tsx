@@ -1036,6 +1036,17 @@ function ModerationBanner({ status, note }: { status?: ModerationStatus; note?: 
           <span className="font-medium text-ink-faint">Moderador:</span> {note}
         </p>
       )}
+      {/* Uma decisão que a pessoa não consegue contestar é uma decisão
+          indefensável. O caminho precisa estar aqui, junto do motivo — não
+          escondido numa página de ajuda. */}
+      <Link
+        to="/contestar"
+        className={`mt-2.5 inline-block text-[12.5px] font-medium underline underline-offset-2 ${
+          meta.danger ? 'text-burgundy-deep' : 'text-brass-deep'
+        }`}
+      >
+        Não concordo — contestar esta decisão
+      </Link>
     </div>
   )
 }

@@ -15,6 +15,7 @@ import {
 } from '@/lib/adminApi'
 import EquipeTab from '@/components/admin/EquipeTab'
 import HistoricoTab from '@/components/admin/HistoricoTab'
+import ContestacoesTab from '@/components/admin/ContestacoesTab'
 import SegundoFator from '@/components/admin/SegundoFator'
 import { Etiqueta } from '@/components/admin/pecas'
 import { Rodape } from '@/components/admin/Paginacao'
@@ -216,6 +217,10 @@ function LoginScreen({ onLogin }: { onLogin: (me: AdminMe) => void }) {
  */
 const ABAS = [
   { id: 'reports', label: 'Denúncias', permissao: 'moderacao:ler' },
+  // Logo depois das denúncias, e de propósito: é a única fila com relógio
+  // correndo contra a plataforma — se ninguém responder em 10 dias, a medida
+  // cai sozinha.
+  { id: 'appeals', label: 'Contestações', permissao: 'moderacao:ler' },
   { id: 'support', label: 'Suporte', permissao: 'suporte:ler' },
   { id: 'search', label: 'Advogados', permissao: 'contas:ler' },
   { id: 'historico', label: 'Histórico', permissao: 'auditoria:ler' },
@@ -284,6 +289,7 @@ function Dashboard({
         {me.emergencia && <FaixaEmergencia producao={me.producao} />}
 
         {tab === 'reports' && <ReportsTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
+        {tab === 'appeals' && <ContestacoesTab podeDecidir={podeDecidir} />}
         {tab === 'support' && <SupportTab podeResponder={podeResponder} />}
         {tab === 'search' && <SearchTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
         {tab === 'historico' && <HistoricoTab />}

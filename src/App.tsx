@@ -16,6 +16,7 @@ import ReportPage from './pages/ReportPage'
 import SchedulePage from './pages/SchedulePage'
 import SharePage from './pages/SharePage'
 import SupportPage from './pages/SupportPage'
+import ContestarPage from './pages/ContestarPage'
 import DadosPage from './pages/DadosPage'
 import PlansPage from './pages/PlansPage'
 import CheckoutPage from './pages/CheckoutPage'
@@ -79,6 +80,9 @@ export default function App() {
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
         <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
         <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
+        {/* Sem RequireAuth de propósito: quem foi suspenso não consegue entrar,
+            e é justamente essa pessoa que mais precisa desta página. */}
+        <Route path="/contestar" element={<ContestarPage />} />
         <Route path="/conta/dados" element={<RequireAuth><DadosPage /></RequireAuth>} />
         <Route path="/planos" element={<RequireAuth><PlansPage /></RequireAuth>} />
         <Route path="/assinar/:plano" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
