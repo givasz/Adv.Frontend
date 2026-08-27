@@ -1,0 +1,15 @@
+{
+  "name": "advoc.me",
+  "short_name": "advoc.me",
+  "description": "A página de perfil única e compartilhável para advogados. Dentro das normas da OAB.",
+  "lang": "pt-BR",
+  "start_url": "/painel",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e6",
+  "theme_color": "#f5f0e6",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

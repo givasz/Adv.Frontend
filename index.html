@@ -9,6 +9,28 @@
       name="description"
       content="A página de perfil única e compartilhável para advogados. Dentro das normas da OAB."
     />
+
+    <!-- Identidade da aba e da tela de início. O favicon.svg acompanha o tema do
+         sistema em navegadores modernos; o apple-touch-icon é o que o iOS usa ao
+         salvar o site na tela de início, e sem ele o iPhone recorta um retrato da
+         página, que sai ilegível. Ambos gerados/versionados — ver scripts/gen-brand-assets.mjs. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Prévia de link da HOME. As páginas de perfil recebem as suas próprias,
+         montadas por perfil na borda (netlify/edge-functions/perfil.ts) — estas
+         valem para a home e para qualquer rota que não seja um perfil. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="advoc.me" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:title" content="advoc.me — o link na bio, para advogados" />
+    <meta
+      property="og:description"
+      content="A página de perfil única e compartilhável para advogados. Dentro das normas da OAB."
+    />
+    <meta property="og:image" content="/og-padrao.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- Uma família de display por tema (ver src/lib/themes.ts): trocar de tema
          muda a VOZ do perfil, não só a cor. É um pedido de CSS só; o navegador
          baixa apenas os arquivos da fonte que o tema em uso realmente aplica. -->

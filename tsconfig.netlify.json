@@ -1,0 +1,25 @@
+{
+  // As funções de borda rodam em Deno, não no navegador nem no Node — por isso
+  // ficam fora do tsconfig.json principal (que cobre só `src`).
+  //
+  // Mas ficar fora da checagem seria pior que o problema: um erro de tipo aqui
+  // não quebra o build, não quebra teste nenhum, e se manifesta como a prévia do
+  // link voltando a ser genérica — em silêncio, no aparelho de quem recebeu o
+  // link. O `npm run lint` roda os dois.
+  "compilerOptions": {
+    "target": "ES2022",
+    // ES2022 pelo `AbortSignal.timeout` (o prazo da chamada à API); DOM pelos
+    // Request/Response/URL, que na borda são os mesmos do padrão web.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "include": ["netlify/edge-functions"]
+}

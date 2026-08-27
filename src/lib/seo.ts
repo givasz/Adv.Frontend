@@ -1,112 +1,101 @@
-// SEO local automático — gera título, meta description, Open Graph e JSON-LD
-// (schema.org/Attorney) a partir do perfil, sem o advogado precisar entender de SEO.
+// SEO do perfil aplicado NO NAVEGADOR — a segunda metade da dupla.
+//
+// A primeira metade é lib/ogTags.ts, que monta as mesmas tags como HTML e é
+// servida pela edge function ANTES da página existir (netlify/edge-functions/
+// perfil.ts). Aquela é a que os robôs de prévia leem; esta é a que mantém o
+// <head> correto enquanto a pessoa navega dentro do app, onde não há recarga de
+// página e portanto nenhuma nova visita ao servidor.
+//
+// As duas escrevem as MESMAS tags, com o MESMO texto, porque a lista sai de uma
+// função só (`tagsDoPerfil`). Antes de existir a edge function, este era o único
+// lugar — e por isso era o único lugar onde o texto podia estar certo sem que
+// ninguém percebesse que a prévia estava errada.
 //
 // O texto gerado é FACTUAL e informativo ("Advogada de Direito de Família em São
 // Paulo/SP") — descrição geográfica/de área é permitida pelo Prov. 205/2021. Não
 // injetamos superlativos, promessas nem CTA.
 
 import type { Profile } from './types'
+import {
+  MANAGED,
+  seoDescription,
+  seoTitle,
+  tagsDoPerfil,
+  type TagDeCabecalho,
+} from './ogTags'
 
-const MANAGED = 'data-advocme-seo'
-
-/** Frase de SEO factual: "Advogado(a) de [áreas] em [cidade]/[UF]". */
-export function seoTitle(p: Profile): string {
-  const areas = p.areas.map((a) => a.label).filter(Boolean)
-  const areaPart = areas.length ? ` de ${areas.slice(0, 2).join(' e ')}` : ''
-  const local = [p.city, p.state].filter(Boolean).join('/')
-  const localPart = local ? ` em ${local}` : ''
-  return `${p.name} — Advogado(a)${areaPart}${localPart}`
-}
-
-export function seoDescription(p: Profile): string {
-  const areas = p.areas.map((a) => a.label).filter(Boolean)
-  const local = [p.city, p.state].filter(Boolean).join('/')
-  const areaPart = areas.length ? `Atuação em ${areas.slice(0, 3).join(', ')}. ` : ''
-  const localPart = local ? `Atendimento em ${local}. ` : ''
-  const base = `${areaPart}${localPart}${p.oabNumber}.`.trim()
-  // fallback para a headline/bio se faltar dado estruturado
-  return base.length > 12 ? base : p.headline || p.bio.slice(0, 150)
-}
-
-function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
-  let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
-  if (!el) {
-    el = document.createElement('meta')
-    el.setAttribute(attr, key)
-    el.setAttribute(MANAGED, '')
-    document.head.appendChild(el)
-  }
-  el.setAttribute('content', content)
-}
-
-function attorneyJsonLd(p: Profile, url: string) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Attorney',
-    name: p.name,
-    description: seoDescription(p),
-    url,
-    ...(p.avatarUrl ? { image: p.avatarUrl } : {}),
-    areaServed: [p.city, p.state].filter(Boolean).join(', ') || undefined,
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: p.city || undefined,
-      addressRegion: p.state || undefined,
-      addressCountry: 'BR',
-    },
-    knowsAbout: p.areas.map((a) => a.label).filter(Boolean),
-    ...(p.contact.email ? { email: p.contact.email } : {}),
-  }
-}
-
-/**
- * FAQPage (schema.org) a partir das perguntas respondidas no perfil. É o dado
- * estruturado que o Google usa para mostrar as perguntas direto no resultado da
- * busca — e é de graça para quem já respondeu. Só entra pergunta COM resposta.
- */
-function faqJsonLd(p: Profile) {
-  const faqs = (p.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim())
-  if (!faqs.length) return null
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqs.map((f) => ({
-      '@type': 'Question',
-      name: f.question.trim(),
-      acceptedAnswer: { '@type': 'Answer', text: f.answer.trim() },
-    })),
-  }
-}
+export { seoTitle, seoDescription }
 
 /**
  * Aplica o SEO do perfil ao <head> e devolve uma função de limpeza (para o
  * useEffect do React remover ao trocar de perfil).
+ *
+ * `meta` e `link` são ATUALIZADOS quando já existem — inclusive os que não são
+ * nossos. É o caso da `<meta name="description">` estática do index.html: criar
+ * outra ao lado deixaria a página com duas descrições concorrentes, e o buscador
+ * escolheria uma das duas sem critério que possamos prever. O mesmo vale para as
+ * tags que a edge function já serviu no HTML: elas carregam a marca
+ * `data-advocme-seo`, então são encontradas e reaproveitadas em vez de somarem.
  */
 export function applyProfileSeo(p: Profile, url = window.location.href): () => void {
-  const title = seoTitle(p)
-  const description = seoDescription(p)
-  document.title = `${title} · advoc.me`
+  const criadas: Element[] = []
+  const restaurar: (() => void)[] = []
 
-  upsertMeta('name', 'description', description)
-  upsertMeta('property', 'og:title', title)
-  upsertMeta('property', 'og:description', description)
-  upsertMeta('property', 'og:type', 'profile')
-  upsertMeta('property', 'og:url', url)
-  if (p.avatarUrl) upsertMeta('property', 'og:image', p.avatarUrl)
-  upsertMeta('name', 'twitter:card', 'summary')
-
-  const addLd = (data: unknown) => {
-    const ld = document.createElement('script')
-    ld.type = 'application/ld+json'
-    ld.setAttribute(MANAGED, '')
-    ld.textContent = JSON.stringify(data)
-    document.head.appendChild(ld)
+  for (const tag of tagsDoPerfil(p, url, window.location.origin)) {
+    aplicar(tag, criadas, restaurar)
   }
-  addLd(attorneyJsonLd(p, url))
-  const faq = faqJsonLd(p)
-  if (faq) addLd(faq)
 
   return () => {
-    document.head.querySelectorAll(`[${MANAGED}]`).forEach((n) => n.remove())
+    // Os JSON-LD e o que criamos do zero saem; o que existia antes volta ao valor
+    // anterior. Sair de um perfil não pode deixar a página seguinte descrevendo o
+    // advogado que a pessoa acabou de fechar.
+    criadas.forEach((n) => n.remove())
+    restaurar.forEach((f) => f())
   }
+}
+
+function aplicar(tag: TagDeCabecalho, criadas: Element[], restaurar: (() => void)[]) {
+  if (tag.tipo === 'title') {
+    const anterior = document.title
+    document.title = tag.texto
+    restaurar.push(() => {
+      document.title = anterior
+    })
+    return
+  }
+
+  if (tag.tipo === 'ld') {
+    // Dado estruturado é sempre nosso e sempre novo — não há o que atualizar.
+    const el = document.createElement('script')
+    el.type = 'application/ld+json'
+    el.setAttribute(MANAGED, '')
+    el.textContent = JSON.stringify(tag.dados)
+    document.head.appendChild(el)
+    criadas.push(el)
+    return
+  }
+
+  const seletor =
+    tag.tipo === 'meta' ? `meta[${tag.attr}="${tag.chave}"]` : `link[rel="${tag.rel}"]`
+  const valor = tag.tipo === 'meta' ? tag.valor : tag.href
+  const campo = tag.tipo === 'meta' ? 'content' : 'href'
+
+  const existente = document.head.querySelector(seletor)
+  if (existente) {
+    const anterior = existente.getAttribute(campo)
+    existente.setAttribute(campo, valor)
+    restaurar.push(() => {
+      if (anterior === null) existente.removeAttribute(campo)
+      else existente.setAttribute(campo, anterior)
+    })
+    return
+  }
+
+  const el = document.createElement(tag.tipo)
+  if (tag.tipo === 'meta') el.setAttribute(tag.attr, tag.chave)
+  else el.setAttribute('rel', tag.rel)
+  el.setAttribute(campo, valor)
+  el.setAttribute(MANAGED, '')
+  document.head.appendChild(el)
+  criadas.push(el)
 }

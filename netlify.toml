@@ -42,6 +42,36 @@
   to = "/index.html"
   status = 200
 
+# ---------------------------------------------------------------------------
+# Funções de borda (Deno) — ver netlify/edge-functions/.
+#
+# Rodam ANTES dos redirecionamentos acima, o que é justamente o que a prévia do
+# link precisa: `perfil` chama `ctx.next()`, recebe o index.html que a regra do
+# SPA produziu, e injeta as meta tags do advogado antes de entregar. O robô do
+# WhatsApp não executa JavaScript — sem esta etapa, todo perfil compartilhado
+# aparece com o título genérico da plataforma. Ver src/lib/ogTags.ts.
+#
+# `perfil` roda em TODA página HTML, e faz duas coisas: nas de perfil injeta as
+# tags do advogado; em qualquer uma transforma o og:image relativo do index.html
+# em absoluto (o LinkedIn descarta o relativo). Quem decide se um caminho é
+# perfil é `ehSlugDePerfil()`, que recusa as rotas do app e tudo que tem ponto no
+# nome — e a lista de rotas reservadas tem teste que a compara com o App.tsx.
+[[edge_functions]]
+  path = "/*"
+  # A API e os arquivos com hash no nome não passam por aqui: a função só faz
+  # sentido sobre HTML, e deixá-la no caminho de toda chamada de API somaria
+  # uma etapa a cada requisição do app para não fazer nada.
+  excludedPath = ["/api/*", "/assets/*"]
+  function = "perfil"
+
+[[edge_functions]]
+  path = "/sitemap.xml"
+  function = "sitemap"
+
+[[edge_functions]]
+  path = "/robots.txt"
+  function = "robots"
+
 # Cabeçalhos de segurança da PÁGINA. A API tem os seus próprios
 # (backend/src/security/headers.ts); estes valem para o que o navegador executa.
 #
