@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
-import { parseVideoUrl, VIDEO_CAPTION_MAX } from '@/lib/video'
+import {
+  orientacaoDoVideo,
+  parseVideoUrl,
+  VIDEO_CAPTION_MAX,
+  type ParsedVideo,
+  type VideoOrientation,
+} from '@/lib/video'
 import { themeStyle } from '@/lib/themes'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { Card, Field, TextInput } from './fields'
@@ -88,6 +94,13 @@ export function VideoCard({
           </Field>
           <MarginNotes issues={captionIssues} />
 
+          <EscolhaDeFormato
+            video={video}
+            escolha={profile.videoOrientation ?? 'auto'}
+            disabled={preview}
+            onChange={(videoOrientation) => set({ videoOrientation })}
+          />
+
           <div>
             <span className="mb-1.5 block text-[13px] font-semibold text-ink">
               Como vai aparecer
@@ -97,7 +110,13 @@ export function VideoCard({
                 um botão sem fundo. max-w para não ficar desproporcional na coluna
                 larga do desktop — no perfil real ele acompanha a largura da página. */}
             <div className="themed max-w-sm rounded-xl2 p-3" style={themeStyle(profile.theme)}>
-              <VideoPlayer video={video} caption={caption} name={profile.name} inert />
+              <VideoPlayer
+                video={video}
+                caption={caption}
+                name={profile.name}
+                orientation={profile.videoOrientation}
+                inert
+              />
             </div>
           </div>
 
@@ -216,5 +235,96 @@ function Passo({ n, titulo, children }: { n: number; titulo: string; children: R
         <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-soft">{children}</span>
       </span>
     </li>
+  )
+}
+
+/**
+ * Deitado ou em pé — e por que a pergunta existe.
+ *
+ * O quadro do vídeo era fixo em 16:9. Quem gravasse em pé (que é como quase todo
+ * mundo grava hoje) via o próprio vídeo minúsculo entre duas tarjas pretas.
+ *
+ * Metade do problema o sistema resolve sozinho: um Short do YouTube é vertical
+ * por definição, e a URL diz isso. A outra metade não tem como saber — um vídeo
+ * gravado em pé e publicado como vídeo COMUM, ou qualquer vídeo do Vimeo, só
+ * entregaria a proporção se perguntássemos ao provedor (oEmbed), e este produto
+ * não faz o navegador de quem visita conversar com terceiros para montar a
+ * página. Um toque do advogado custa menos e acerta sempre.
+ *
+ * Por isso "Automático" é a opção padrão e vem primeiro, dizendo o que deduziu:
+ * na maioria dos casos não há nada a fazer, e a escolha manual existe para quando
+ * a dedução erra.
+ */
+function EscolhaDeFormato({
+  video,
+  escolha,
+  disabled,
+  onChange,
+}: {
+  video: ParsedVideo
+  escolha: VideoOrientation
+  disabled?: boolean
+  onChange: (v: VideoOrientation) => void
+}) {
+  const rotuloId = useId()
+  const deduzido = orientacaoDoVideo(video, 'auto')
+  const opcoes: { valor: VideoOrientation; rotulo: string; forma: string }[] = [
+    { valor: 'auto', rotulo: 'Automático', forma: '16 / 10' },
+    { valor: 'horizontal', rotulo: 'Deitado', forma: '16 / 9' },
+    { valor: 'vertical', rotulo: 'Em pé', forma: '9 / 16' },
+  ]
+
+  // NÃO usa `Field`: ele envolve o conteúdo num <label>, e um rótulo de campo
+  // aponta para UM controle. Envolvendo três botões, o leitor de tela anunciava
+  // "Formato do vídeo, reconhecido: em pé" ao chegar no primeiro deles, em vez de
+  // "Automático" — o nome do grupo comendo o nome da opção. Isto é um grupo de
+  // botões, e a marcação certa é `role="group"` com rótulo próprio.
+  return (
+    <div>
+      <span className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2">
+        <span id={rotuloId} className="text-[13px] font-semibold text-ink">
+          Formato do vídeo
+        </span>
+        {escolha === 'auto' && (
+          <span className="shrink-0 text-[11px] text-ink-faint">
+            reconhecido: {deduzido === 'vertical' ? 'em pé' : 'deitado'}
+          </span>
+        )}
+      </span>
+      <div className="flex gap-2" role="group" aria-labelledby={rotuloId}>
+        {opcoes.map((o) => {
+          const ativo = escolha === o.valor
+          return (
+            <button
+              key={o.valor}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(o.valor)}
+              aria-pressed={ativo}
+              className={`flex flex-1 flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-[12px] transition-colors disabled:opacity-50 ${
+                ativo
+                  ? 'border-brass bg-brass/10 font-semibold text-ink'
+                  : 'border-ink/12 text-ink-soft hover:border-brass/40'
+              }`}
+            >
+              {/* O desenho da proporção diz o que a palavra levaria uma frase para
+                  explicar — e é o que a pessoa está de fato escolhendo. */}
+              <span
+                aria-hidden
+                className={`w-9 rounded-[3px] border-2 ${ativo ? 'border-brass-deep' : 'border-ink/25'}`}
+                style={{
+                  aspectRatio: o.forma,
+                  // "Automático" não tem forma própria: mostra a que foi deduzida.
+                  ...(o.valor === 'auto' && deduzido === 'vertical'
+                    ? { aspectRatio: '9 / 16', width: '1.35rem' }
+                    : null),
+                }}
+              />
+              {o.rotulo}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }

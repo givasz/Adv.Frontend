@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isValidVideoUrl, parseVideoUrl } from './video'
+import { isValidVideoUrl, orientacaoDoVideo, parseVideoUrl } from './video'
 
 describe('video — links aceitos', () => {
   const youtube = [
@@ -69,5 +69,53 @@ describe('video — embed sem rastreio', () => {
     expect(v.embedUrl).toBe(
       'https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ?rel=0&modestbranding=1',
     )
+  })
+})
+
+// ORIENTAÇÃO — o quadro era fixo em 16:9, e quem gravasse em pé (que é como quase
+// todo mundo grava hoje) via o próprio vídeo minúsculo entre duas tarjas pretas.
+describe('deitado ou em pé', () => {
+  it('reconhece um Short do YouTube como vertical, sem perguntar a ninguém', () => {
+    const v = parseVideoUrl('https://www.youtube.com/shorts/abc123XYZ')
+    expect(v?.orientacaoDetectada).toBe('vertical')
+    expect(orientacaoDoVideo(v!, 'auto')).toBe('vertical')
+  })
+
+  it('vídeo comum do YouTube não entrega a orientação — e assume deitado', () => {
+    const v = parseVideoUrl('https://www.youtube.com/watch?v=abc123XYZ')
+    expect(v?.orientacaoDetectada).toBeNull()
+    expect(orientacaoDoVideo(v!, 'auto')).toBe('horizontal')
+  })
+
+  it('Vimeo nunca entrega — descobrir exigiria chamar o provedor', () => {
+    const v = parseVideoUrl('https://vimeo.com/123456789')
+    expect(v?.orientacaoDetectada).toBeNull()
+    expect(orientacaoDoVideo(v!, 'auto')).toBe('horizontal')
+  })
+
+  it('a escolha do advogado vence a dedução', () => {
+    const short = parseVideoUrl('https://www.youtube.com/shorts/abc123XYZ')!
+    expect(orientacaoDoVideo(short, 'horizontal')).toBe('horizontal')
+    const comum = parseVideoUrl('https://www.youtube.com/watch?v=abc123XYZ')!
+    expect(orientacaoDoVideo(comum, 'vertical')).toBe('vertical')
+  })
+
+  it('perfil antigo, sem o campo, continua deitado', () => {
+    const v = parseVideoUrl('https://www.youtube.com/watch?v=abc123XYZ')!
+    expect(orientacaoDoVideo(v, undefined)).toBe('horizontal')
+  })
+
+  // A capa 16:9 de um Short traz o vídeo em pé espremido no meio; num quadro
+  // vertical com object-cover sobraria uma tira do centro.
+  it('Short pede a capa na proporção dele (oar), com as 16:9 como reserva', () => {
+    const v = parseVideoUrl('https://www.youtube.com/shorts/abc123XYZ')!
+    expect(v.posters[0]).toContain('oardefault')
+    expect(v.posters.length).toBeGreaterThan(1)
+  })
+
+  it('Short e vídeo comum tocam pelo mesmo player — só o enquadramento muda', () => {
+    const short = parseVideoUrl('https://www.youtube.com/shorts/abc123XYZ')!
+    const comum = parseVideoUrl('https://www.youtube.com/watch?v=abc123XYZ')!
+    expect(short.embedUrl).toBe(comum.embedUrl)
   })
 })

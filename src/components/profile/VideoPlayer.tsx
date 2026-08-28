@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ParsedVideo } from '@/lib/video'
+import { orientacaoDoVideo, type ParsedVideo, type VideoOrientation } from '@/lib/video'
 import { PlayIcon } from '@/components/ui/icons'
 
 // Reprodutor do vídeo de apresentação.
@@ -17,9 +17,14 @@ import { PlayIcon } from '@/components/ui/icons'
 //    imagem estática de CDN, com `referrerpolicy=no-referrer` (não revela de que
 //    perfil veio) e `loading=lazy`.
 //
-// 2. A proporção vem de `aspect-ratio: 16/9` sobre `w-full`, sem altura fixa. É o
-//    que faz o mesmo componente caber no telefone da prévia (≈300px), no celular
-//    de verdade e na coluna larga do desktop sem nenhum breakpoint.
+// 2. A proporção vem de `aspect-ratio` sobre `w-full`, sem altura fixa. É o que
+//    faz o mesmo componente caber no telefone da prévia (≈300px), no celular de
+//    verdade e na coluna larga do desktop sem nenhum breakpoint.
+//
+//    Ela era FIXA em 16/9, e um vídeo gravado em pé aparecia minúsculo entre duas
+//    tarjas pretas — que é como a maioria das pessoas grava vídeo hoje. Agora
+//    segue a orientação (ver lib/video.ts): o sistema reconhece sozinho um Short
+//    do YouTube, e para o que a URL não entrega quem responde é o advogado.
 
 export function VideoPlayer({
   video,
@@ -27,24 +32,43 @@ export function VideoPlayer({
   name,
   /** true no editor: a capa aparece, mas não toca (não faz sentido no rascunho) */
   inert = false,
+  /** 'auto' deduz do link (Short = em pé) — ver orientacaoDoVideo */
+  orientation,
 }: {
   video: ParsedVideo
   caption?: string
   name: string
   inert?: boolean
+  orientation?: VideoOrientation
 }) {
+  const emPe = orientacaoDoVideo(video, orientation) === 'vertical'
   const [playing, setPlaying] = useState(false)
   // Índice da capa em uso. maxresdefault não existe para todo vídeo, então uma
   // falha avança para a próxima; esgotadas, fica a capa desenhada.
   const [posterIndex, setPosterIndex] = useState(0)
   const poster = video.posters[posterIndex]
+  // A capa em uso é vertical? Só a primeira de um Short é (`oardefault`, a capa na
+  // proporção original). Se ela faltar, o 404 avança para as 16:9 de sempre.
+  const capaVertical = video.orientacaoDetectada === 'vertical' && posterIndex === 0
   const firstName = name.split(' ')[0] || 'advogado(a)'
 
   return (
     <figure className="m-0">
       <div
         className="relative w-full overflow-hidden rounded-xl2"
-        style={{ aspectRatio: '16 / 9', background: 'var(--c-accent-soft)' }}
+        style={{
+          aspectRatio: emPe ? '9 / 16' : '16 / 9',
+          background: 'var(--c-accent-soft)',
+          // Vídeo em pé precisa de RÉDEA na largura. Sem isto, 9:16 ocupando a
+          // coluna inteira (≈440px no perfil) daria quase 780px de altura: o
+          // vídeo empurraria o rodapé para fora da tela e viraria a página
+          // inteira. Estreitando para 300px ele fica com ~533px — alto, como
+          // convém a um vídeo em pé, sem engolir o perfil.
+          //
+          // `margin: auto` porque, mais estreito que a coluna, ele precisa ficar
+          // centralizado — encostado à esquerda pareceria desalinhamento.
+          ...(emPe ? { maxWidth: '300px', marginInline: 'auto' } : null),
+        }}
       >
         {playing ? (
           <iframe
@@ -73,9 +97,17 @@ export function VideoPlayer({
                 decoding="async"
                 referrerPolicy="no-referrer"
                 onError={() => setPosterIndex((i) => i + 1)}
-                // object-cover recorta as tarjas pretas do hqdefault (4:3) e
-                // devolve o quadro 16:9 sem deformar a imagem.
-                className="absolute inset-0 h-full w-full object-cover"
+                // `cover` recorta as tarjas pretas do hqdefault (4:3) e devolve o
+                // quadro 16:9 sem deformar a imagem.
+                //
+                // Num quadro EM PÉ com capa 16:9, porém, `cover` cortaria ~68% da
+                // largura: sobra uma tira do centro, num zoom que não mostra nada.
+                // Aí `contain` é o certo — a capa aparece inteira, com a cor do
+                // tema em volta. Só a capa do Short (`oardefault`) já é vertical, e
+                // essa preenche o quadro sem cortar nada.
+                className={`absolute inset-0 h-full w-full ${
+                  emPe && !capaVertical ? 'object-contain' : 'object-cover'
+                }`}
               />
             )}
             {/* Véu escuro: garante contraste do botão e do rótulo sobre qualquer

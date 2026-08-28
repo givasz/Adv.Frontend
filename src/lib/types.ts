@@ -2,6 +2,7 @@
 
 import type { ThemeId } from './themes'
 import type { CardConfig } from './cardArt'
+import type { VideoOrientation } from './video'
 import type { Subscription } from './assinatura'
 
 export type Plan = 'free' | 'pro' | 'premium'
@@ -193,6 +194,11 @@ export interface Profile {
   videoUrl?: string
   /** legenda curta sob o vídeo — passa pela checagem de conformidade */
   videoCaption?: string
+  /**
+   * Enquadramento: deitado (16:9) ou em pé (9:16). Ausente ou `auto` deixa o
+   * sistema deduzir — ver `orientacaoDoVideo` em lib/video.ts.
+   */
+  videoOrientation?: VideoOrientation
   socials: SocialLink[]
   contact: ContactChannels
   /** comportamento do botão "Agendar" (ver SchedulingMode). Ausente = derivar de contact.scheduling. */

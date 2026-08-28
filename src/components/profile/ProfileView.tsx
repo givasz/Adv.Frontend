@@ -416,6 +416,7 @@ export function ProfileView({
                 video={video}
                 caption={profile.videoCaption}
                 name={profile.name}
+                orientation={profile.videoOrientation}
                 inert={preview && !chatEnabled}
               />
             </div>

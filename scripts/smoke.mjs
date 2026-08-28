@@ -76,6 +76,8 @@ const ROTAS = [
   // Lista reordenável (framer-motion Reorder) — o único lugar do editor com
   // arrasto, e o que mais tem estado por linha.
   ['/editor?section=redes', 'editor · redes'],
+  // Monta o VideoPlayer dentro do editor (prévia inerte) e o seletor de formato.
+  ['/editor?section=video', 'editor · vídeo'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
