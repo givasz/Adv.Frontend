@@ -15,7 +15,7 @@ import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { SocialsCard } from '@/components/editor/SocialsCard'
-import { getTheme, isThemeUnlocked, THEMES, type ThemeId } from '@/lib/themes'
+import { isThemeUnlocked, THEMES, type ThemeId } from '@/lib/themes'
 import {
   AREA_LABEL_MAX,
   CHAR_LIMITS,
@@ -38,6 +38,7 @@ import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
 import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { AvisoCobranca } from '@/components/editor/AvisoCobranca'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { FaqCard } from '@/components/editor/FaqCard'
 import { VideoCard } from '@/components/editor/VideoCard'
@@ -260,24 +261,11 @@ export default function Editor() {
   }
 
   const set = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
-  // A troca de plano passa pelo servidor (api.setPlan) e o resultado dele é adotado
-  // como novo estado: quem manda é a assinatura vigente, não o objeto local. Sem
-  // isso, o recurso "comprado" destravava só na tela e voltava a travar no reload.
-  // Hoje só o DOWNGRADE passa por aqui — assinar acontece em /assinar/:plano.
-  const changePlan = async (plan: Plan) => {
-    // Grava o que estiver em voo antes de trocar: setPlan devolve o perfil do
-    // servidor e nós o adotamos por inteiro — sem este flush, os últimos
-    // caracteres digitados (ainda no debounce) seriam sobrescritos.
-    await api.saveDraft(profile)
-    const saved = await api.setPlan(plan)
-    // Quem assinou provando um tema fica com ele: obrigar a escolher de novo
-    // depois de pagar seria perder justamente o que motivou a compra.
-    const wanted = tryTheme && isThemeUnlocked(getTheme(tryTheme), plan) ? tryTheme : saved.theme
-    // Tema de plano superior não sobrevive a um downgrade — volta ao neutro.
-    const theme = isThemeUnlocked(getTheme(wanted), plan) ? wanted : 'papel'
-    setProfile({ ...saved, theme })
-    setTryTheme(null)
-  }
+  // O editor NÃO troca mais de plano por conta própria. Subir acontece em
+  // /assinar/:plano e descer em /plano/mudar/:plano — as duas telas dizem o que
+  // vai acontecer antes de acontecer, e as duas voltam para cá, que recarrega o
+  // perfil do servidor. Enquanto a troca morava aqui, "Voltar ao Free" era um
+  // clique sem confirmação e sem uma palavra sobre o efeito.
   const lim = CHAR_LIMITS[profile.plan]
 
   // Abre o gerador de IA se o plano permite o recurso; senão, abre o upsell.
@@ -635,13 +623,14 @@ export default function Editor() {
                 <>
                   {/* Quem já assina vê primeiro o que ainda não usou do que pagou —
                       não uma vitrine para comprar de novo. */}
+                  <AvisoCobranca profile={profile} className="mb-4" />
                   <PlanChecklist profile={profile} />
                   <Card title="Planos">
-                    <PlanShowcase plan={profile.plan} onPick={changePlan} voltar={aqui} />
+                    <PlanShowcase plan={profile.plan} voltar={aqui} tema={tryTheme} />
                     <p className="text-[11.5px] leading-relaxed text-ink-faint">
                       Plataforma em teste: a assinatura é ativada na hora e nenhuma cobrança é
-                      feita. Você pode voltar ao Free quando quiser — seus textos continuam
-                      guardados.
+                      feita. Você pode mudar de plano quando quiser — nada do que você escreveu é
+                      apagado, e seu endereço continua o mesmo.
                     </p>
                   </Card>
                 </>

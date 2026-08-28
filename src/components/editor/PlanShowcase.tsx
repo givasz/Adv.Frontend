@@ -13,15 +13,16 @@ import { CheckIcon, ClockIcon } from '@/components/ui/icons'
 // que o Pro entrega, e o comprador via uma coisa antes de assinar e outra depois.
 const ORDER: Plan[] = ['pro', 'premium', 'free']
 
+// Ordem dos planos — separa SUBIR de DESCER, que são decisões diferentes e por
+// isso têm caminhos diferentes.
+const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
+
 export function PlanShowcase({
   plan,
-  onPick,
   voltar,
   tema,
 }: {
   plan: Plan
-  /** só para o downgrade ("Voltar ao Free"), que não passa por checkout */
-  onPick?: (p: Plan) => void
   /** para onde a assinatura devolve a pessoa (padrão: a rota atual) */
   voltar?: string
   /** tema em prova, preservado através do checkout */
@@ -31,6 +32,8 @@ export function PlanShowcase({
   const volta = voltar ?? `${loc.pathname}${loc.search}`
   const checkoutUrl = (p: Exclude<Plan, 'free'>) =>
     `/assinar/${p}${tema ? `?tema=${tema}&` : '?'}voltar=${encodeURIComponent(volta)}`
+  // Descer tem página própria, que diz o que muda ANTES de mudar.
+  const descerUrl = (p: Plan) => `/plano/mudar/${p}?voltar=${encodeURIComponent(volta)}`
 
   return (
     <>
@@ -111,24 +114,28 @@ export function PlanShowcase({
                   </div>
                 ) : (
                   <>
-                    {p === 'free' ? (
-                      // Downgrade não passa por checkout — é só desligar a assinatura.
-                      <button
-                        type="button"
-                        onClick={() => onPick?.('free')}
-                        className="w-full rounded-full border border-ink/15 py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                    {RANK[p] < RANK[plan] ? (
+                      // DESCER. Não passa pelo checkout — e não pode passar: o
+                      // checkout diz "Processando pagamento…" e "Assinatura
+                      // confirmada!", que era o que um Max vendo o card do Pro
+                      // recebia ao clicar. Encenar um rebaixamento como compra é
+                      // errado antes mesmo de haver cobrança real; com ela, seria
+                      // cobrança indevida.
+                      <Link
+                        to={descerUrl(p)}
+                        className="block w-full rounded-full border border-ink/15 py-2.5 text-center text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy"
                       >
-                        Voltar ao Free
-                      </button>
+                        {p === 'free' ? 'Voltar ao Free' : `Mudar para o ${PLAN_LABEL[p]}`}
+                      </Link>
                     ) : (
                       <Link
-                        to={checkoutUrl(p)}
+                        to={checkoutUrl(p as Exclude<Plan, 'free'>)}
                         className="block w-full rounded-full bg-burgundy py-2.5 text-center text-[13.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep"
                       >
                         Assinar {PLAN_LABEL[p]}
                       </Link>
                     )}
-                    {p !== 'free' && (
+                    {p !== 'free' && RANK[p] > RANK[plan] && (
                       <p className="mt-1.5 text-center text-[11px] text-ink-faint">{seloDeCobranca() ?? 'cobrança mensal'}</p>
                     )}
                   </>

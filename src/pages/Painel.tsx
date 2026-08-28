@@ -8,6 +8,7 @@ import { THEMES, isThemeUnlocked } from '@/lib/themes'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
+import { AvisoCobranca } from '@/components/editor/AvisoCobranca'
 import { Avatar } from '@/components/ui/Avatar'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
@@ -185,6 +186,12 @@ export default function Painel() {
             <p className="text-[14px] text-ink-soft">Olá, {firstName}. Seu perfil já está online.</p>
           </div>
         </div>
+
+        {/* Situação da cobrança — antes de tudo. Se o pagamento falhou, é a primeira
+            coisa que a pessoa precisa saber, e é a única que ela não descobre
+            sozinha olhando a própria página. Some sozinha quando não há nada a
+            dizer (ver lib/assinatura.ts). */}
+        <AvisoCobranca profile={profile} className="mt-6" />
 
         {/* Índice de Confiança — roda que esverdeia conforme melhora */}
         <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-6 shadow-card">

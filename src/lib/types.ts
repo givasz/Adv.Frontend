@@ -2,6 +2,7 @@
 
 import type { ThemeId } from './themes'
 import type { CardConfig } from './cardArt'
+import type { Subscription } from './assinatura'
 
 export type Plan = 'free' | 'pro' | 'premium'
 
@@ -200,7 +201,21 @@ export interface Profile {
   booking?: BookingConfig
   /** config do assistente virtual (só relevante no modo 'assistant') */
   assistant?: AssistantConfig
+  /**
+   * O plano que VALE AGORA. Não é necessariamente o que foi contratado: quando a
+   * cobrança falha e a carência acaba, o servidor devolve `free` aqui mesmo com o
+   * Max gravado no banco. É de propósito — assim todo portão do produto continua
+   * lendo um campo só, sem precisar saber que cobrança existe.
+   *
+   * O que foi contratado, e por que está ou não valendo, vem em `subscription`.
+   */
   plan: Plan
+  /**
+   * Situação da assinatura — presente só no perfil do próprio dono (getMine). O
+   * visitante não tem nada a ver com a cobrança de quem ele está lendo.
+   * Ver lib/assinatura.ts.
+   */
+  subscription?: Subscription
   /** tema visual escolhido pelo advogado — desbloqueado por plano (ver lib/themes.ts) */
   theme: ThemeId
   views?: number

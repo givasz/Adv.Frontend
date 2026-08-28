@@ -84,6 +84,10 @@ const ROTAS = [
   ['/planos', 'planos'],
   ['/planos?recurso=faq&plano=free', 'planos · recurso'],
   ['/assinar/pro', 'checkout'],
+  // Descer de plano. A semente está no Max, então esta rota renderiza de verdade
+  // (subir redireciona para o checkout, e aí não haveria tela a conferir).
+  ['/plano/mudar/pro', 'mudar de plano · descer'],
+  ['/plano/mudar/free', 'mudar de plano · voltar ao Free'],
   ['/legal', 'documentos legais'],
   ['/legal/termos', 'termos'],
   ['/escritorio/editar', 'escritório · editor'],
@@ -104,7 +108,7 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
-const EXIGEM_CONTA = /^\/(painel|editor|suporte|conta|planos|assinar|comecar|escritorio\/editar)/
+const EXIGEM_CONTA = /^\/(painel|editor|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar)/
 
 const navegador = await chromium.launch()
 const falhas = []

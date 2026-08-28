@@ -20,6 +20,7 @@ import ContestarPage from './pages/ContestarPage'
 import DadosPage from './pages/DadosPage'
 import PlansPage from './pages/PlansPage'
 import CheckoutPage from './pages/CheckoutPage'
+import MudarPlanoPage from './pages/MudarPlanoPage'
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -86,6 +87,9 @@ export default function App() {
         <Route path="/conta/dados" element={<RequireAuth><DadosPage /></RequireAuth>} />
         <Route path="/planos" element={<RequireAuth><PlansPage /></RequireAuth>} />
         <Route path="/assinar/:plano" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
+        {/* Descer de plano tem página própria: ela diz o que muda ANTES de mudar.
+            Subir continua indo pelo checkout — são decisões diferentes. */}
+        <Route path="/plano/mudar/:plano" element={<RequireAuth><MudarPlanoPage /></RequireAuth>} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />

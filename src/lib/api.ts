@@ -20,6 +20,7 @@ import {
 } from './escritorio'
 import { DEFAULT_BOOKING_CONFIG } from './booking'
 import { canUseScheduling, FAQ_LIMIT } from './plans'
+import { getTheme, isThemeUnlocked } from './themes'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import type {
   DirectoryResult,
@@ -256,6 +257,9 @@ function parseApiMessage(raw: string): string {
   }
 }
 
+/** Ordem dos planos — o mock precisa saber o que é SUBIR para reescrever o slug. */
+const RANK_DO_PLANO: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
+
 function slugifyName(s: string): string {
   return (
     s
@@ -282,7 +286,11 @@ function resolveMockSlug(p: Profile, stripAutoNumber = false): string {
     const autoNumbered = stripAutoNumber && !!base && new RegExp(`^${base}-\\d+$`).test(desired)
     return slugifyName(!desired || autoNumbered ? p.name : desired)
   }
-  if (p.slug && new RegExp(`^${base}-\\d+$`).test(p.slug)) return p.slug
+  // Free: o endereço que JÁ existe é preservado, qualquer que seja ele. Só
+  // sorteia quando não há endereço nenhum. Espelha resolveSlug do backend — e é
+  // o que impede que rebaixar de plano (ou corrigir um typo no nome) mate um
+  // endereço que já está impresso em cartão de visita e indexado no Google.
+  if (p.slug) return p.slug
   return `${base}-${Math.floor(1000 + Math.random() * 9000)}`
 }
 
@@ -589,15 +597,19 @@ export const api = {
       return res.json()
     }
     await wait(220)
-    // Mock: espelha a reconciliação do servidor (agendamento é recurso pago; o
-    // endereço segue a escada de plano).
+    // Mock: espelha a reconciliação do servidor. Agendamento e tema caem com o
+    // plano; o ENDEREÇO só é reescrito ao SUBIR (para tirar o número automático do
+    // Free), nunca ao descer. Conteúdo (vídeo, marca, perguntas) fica intacto no
+    // rascunho — some da tela pelos portões de plano e volta se o plano voltar.
     const draft = loadDraft()
+    const subiu = RANK_DO_PLANO[plan] > RANK_DO_PLANO[draft.plan]
     const next: Profile = {
       ...draft,
       plan,
       schedulingMode: canUseScheduling(plan) ? draft.schedulingMode : 'off',
+      theme: isThemeUnlocked(getTheme(draft.theme), plan) ? draft.theme : 'papel',
     }
-    const resolved = { ...next, slug: resolveMockSlug(next, true) }
+    const resolved = subiu ? { ...next, slug: resolveMockSlug(next, true) } : next
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
     return resolved
   },
