@@ -68,12 +68,22 @@ export default function Landing() {
             Planos
           </a>
           <AccountMenu />
+          {/* No celular esta linha carrega a marca, o nome da conta e este botão.
+              Com "Ver meu perfil" por extenso, o texto quebrava em duas linhas e o
+              botão virava um bloco alto no canto da tela.
+
+              O que encolhe é o TEXTO, não o alvo: `!py-2.5` continua igual em
+              qualquer largura, porque a altura de um botão de dedo não é o lugar
+              de economizar espaço. `whitespace-nowrap` fecha a porta de vez —
+              sem ele, um rótulo mais longo no futuro quebra de novo, e ninguém
+              descobre até abrir num telefone estreito. */}
           <Link
             to={meu.to}
             {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-            className="btn-primary !py-2.5 !px-5 text-[14px]"
+            className="btn-primary whitespace-nowrap !py-2.5 !px-4 text-[13.5px] sm:!px-5 sm:text-[14px]"
           >
-            {meu.label}
+            <span className="sm:hidden">{meu.short}</span>
+            <span className="hidden sm:inline">{meu.label}</span>
           </Link>
         </div>
       </nav>

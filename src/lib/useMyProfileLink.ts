@@ -17,11 +17,25 @@ import { useAuth } from './auth'
 export interface MyProfileLink {
   to: string
   label: string
+  /**
+   * O mesmo destino em duas palavras, para a barra do topo no celular.
+   *
+   * Ali o botão divide a linha com a marca e com o nome da conta, e "Ver meu
+   * perfil" não cabia: quebrava em duas linhas e virava um bloco alto no canto
+   * da tela. Encurtar o TEXTO resolve sem encolher a área de toque, que é o que
+   * não se deve mexer num botão de dedo.
+   */
+  short: string
   /** true quando o destino é o perfil público (abre em nova aba) */
   external: boolean
 }
 
-const CRIAR: MyProfileLink = { to: '/comecar', label: 'Criar meu perfil', external: false }
+const CRIAR: MyProfileLink = {
+  to: '/comecar',
+  label: 'Criar meu perfil',
+  short: 'Criar perfil',
+  external: false,
+}
 
 export function useMyProfileLink(): MyProfileLink {
   const { isAuthed } = useAuth()
@@ -35,15 +49,15 @@ export function useMyProfileLink(): MyProfileLink {
     let alive = true
     // Enquanto o rascunho não chega, o rótulo segue neutro: prometer "Ver meu
     // perfil" antes de saber se existe um levaria a uma página inexistente.
-    setLink({ to: '/painel', label: 'Meu painel', external: false })
+    setLink({ to: '/painel', label: 'Meu painel', short: 'Painel', external: false })
     api
       .getDraft()
       .then((p) => {
         if (!alive) return
         if (p.published && p.slug) {
-          setLink({ to: `/${p.slug}`, label: 'Ver meu perfil', external: true })
+          setLink({ to: `/${p.slug}`, label: 'Ver meu perfil', short: 'Meu perfil', external: true })
         } else {
-          setLink({ to: '/comecar', label: 'Continuar meu perfil', external: false })
+          setLink({ to: '/comecar', label: 'Continuar meu perfil', short: 'Continuar', external: false })
         }
       })
       .catch(() => {
