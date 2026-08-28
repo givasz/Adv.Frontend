@@ -84,13 +84,29 @@
 #     style dos elementos; sem isso, as animações do perfil param.
 #   • fonts.googleapis/gstatic — as famílias por tema (ver index.html).
 #   • img-src data: — a foto de perfil é embutida como data URI.
+#   • frame-src com os DOIS provedores de vídeo, e mais ninguém.
+#
+#     Estava `frame-src 'none'`, e isso quebrava o vídeo de apresentação — o
+#     recurso mais caro do plano Max — em produção, sem deixar rastro na tela:
+#     quem clicasse em "Assistir" via uma caixa vazia, e o motivo só aparecia no
+#     console do navegador. Comprovado no perfil de um cliente real:
+#       Framing 'https://www.youtube-nocookie.com/' violates the following
+#       Content Security Policy directive: "frame-src 'none'".
+#
+#     Ninguém notou porque o defeito exige três coisas ao mesmo tempo: um perfil
+#     Max, com vídeo preenchido, e alguém clicando para assistir.
+#
+#     A lista é fechada nos hosts que o código realmente monta (ver lib/video.ts):
+#     continua não havendo como emoldurar um site qualquer.
+#   • media-src 'self' — o vídeo do perfil de demonstração é servido por nós
+#     mesmos (arquivo em public/), e não por um provedor.
 #   • connect-src https: — a API fica num host definido por variável de ambiente
 #     (VITE_API_URL). Ao fixar o domínio do backend, troque `https:` pela origem
 #     exata (ex.: https://api.advoc.me) e o vazamento por fetch fica fechado.
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"

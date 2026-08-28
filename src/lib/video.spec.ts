@@ -119,3 +119,48 @@ describe('deitado ou em pé', () => {
     expect(short.embedUrl).toBe(comum.embedUrl)
   })
 })
+
+// ARQUIVO DO PRÓPRIO SITE — o vídeo do perfil de demonstração fica em `public/`.
+// Não é upload: o servidor continua recusando qualquer coisa que não seja YouTube
+// ou Vimeo (backend/src/video.ts), então nenhum advogado consegue gravar um
+// caminho destes. Este reconhecimento vale só para o que já vem no pacote.
+describe('vídeo servido pelo próprio site', () => {
+  it('reconhece um caminho da nossa origem', () => {
+    const v = parseVideoUrl('/video_de_apresentacao.mp4')
+    expect(v?.provider).toBe('arquivo')
+    expect(v?.embedUrl).toBe('/video_de_apresentacao.mp4')
+  })
+
+  it('a capa é o mesmo caminho com .jpg', () => {
+    expect(parseVideoUrl('/video_de_apresentacao.mp4')?.posters).toEqual([
+      '/video_de_apresentacao.jpg',
+    ])
+    expect(parseVideoUrl('/midia/ana.webm')?.posters).toEqual(['/midia/ana.jpg'])
+  })
+
+  // A trava que não pode cair: `//evil.com/x.mp4` é uma URL relativa a protocolo,
+  // que o navegador lê como OUTRO domínio. Uma barra, e só uma.
+  it('recusa endereço de outro domínio disfarçado de caminho', () => {
+    expect(parseVideoUrl('//evil.com/x.mp4')).toBeNull()
+    expect(parseVideoUrl('https://evil.com/x.mp4')).toBeNull()
+    expect(parseVideoUrl('http://evil.com/x.mp4')).toBeNull()
+  })
+
+  it('recusa caminho relativo e travessia de diretório', () => {
+    expect(parseVideoUrl('video.mp4')).toBeNull()
+    expect(parseVideoUrl('/../segredo.mp4')).toBeNull()
+  })
+
+  it('recusa extensão que o navegador não toca como vídeo', () => {
+    expect(parseVideoUrl('/arquivo.exe')).toBeNull()
+    expect(parseVideoUrl('/arquivo.svg')).toBeNull()
+    expect(parseVideoUrl('/arquivo.mp3')).toBeNull()
+  })
+
+  it('não tem orientação deduzida — quem sobe o arquivo é quem sabe', () => {
+    const v = parseVideoUrl('/video_de_apresentacao.mp4')!
+    expect(v.orientacaoDetectada).toBeNull()
+    expect(orientacaoDoVideo(v, 'auto')).toBe('horizontal')
+    expect(orientacaoDoVideo(v, 'vertical')).toBe('vertical')
+  })
+})

@@ -15,7 +15,7 @@
 // checkCompliance dos outros textos. Prov. 205/2021 Art.4º §2º veda mencionar
 // decisões ou resultados em imagens e vídeos de atuação profissional.
 
-export type VideoProvider = 'youtube' | 'vimeo'
+export type VideoProvider = 'youtube' | 'vimeo' | 'arquivo'
 
 /**
  * Como o vídeo é enquadrado no perfil.
@@ -64,10 +64,46 @@ const YOUTUBE_PATTERNS = [
 ]
 const VIMEO_PATTERNS = [/vimeo\.com\/(?:video\/)?(\d{6,12})/i]
 
+/**
+ * Vídeo servido pelo PRÓPRIO site — um arquivo em `public/`.
+ *
+ * Isto NÃO abre a porta do upload, e a distinção importa: um arquivo em
+ * `public/` é asset do aplicativo, versionado e publicado no build; um upload é
+ * mídia de terceiro entrando no nosso disco, com custo, banda e moderação. O
+ * primeiro é conteúdo NOSSO — hoje, o vídeo do perfil de demonstração.
+ *
+ * A trava real não está aqui, está no servidor: `normalizeVideoUrl`
+ * (backend/src/video.ts) recusa qualquer coisa que não seja YouTube ou Vimeo, e
+ * é ele quem grava. Um advogado não consegue salvar um caminho destes nem
+ * tentando — conferido contra a API. Este reconhecimento existe só para o
+ * conteúdo que já vem no pacote (ver lib/mockData.ts).
+ *
+ * `(?!\/)` depois da primeira barra é a parte que não pode cair: sem ela,
+ * `//evil.com/x.mp4` casaria — uma URL relativa a protocolo, que o navegador lê
+ * como OUTRO domínio. O caminho tem de começar com uma barra e só uma.
+ */
+const ARQUIVO_PROPRIO = /^\/(?!\/)(?!.*\.\.)[\w./-]*\.(?:mp4|webm)$/i
+
 /** Reconhece o link e devolve o necessário para tocar — null se não for suportado. */
 export function parseVideoUrl(raw: string | undefined): ParsedVideo | null {
   const url = (raw ?? '').trim()
   if (!url) return null
+
+  if (ARQUIVO_PROPRIO.test(url)) {
+    return {
+      provider: 'arquivo',
+      id: url,
+      // Um arquivo nosso não tem pista de orientação no nome — e não precisa:
+      // quem o coloca aqui sabe o que gravou e ajusta `videoOrientation`.
+      orientacaoDetectada: null,
+      // Não é `embed`: o VideoPlayer monta um <video>, não um <iframe>.
+      embedUrl: url,
+      label: 'Vídeo',
+      // Convenção: a capa é o mesmo caminho com extensão .jpg, ao lado do
+      // arquivo. Se não existir, o `onError` cai na capa desenhada, como no Vimeo.
+      posters: [url.replace(/\.(mp4|webm)$/i, '.jpg')],
+    }
+  }
 
   const short = YOUTUBE_SHORTS.exec(url)?.[1]
   if (short) return youtube(short, 'vertical')

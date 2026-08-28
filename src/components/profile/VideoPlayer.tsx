@@ -6,9 +6,13 @@ import { PlayIcon } from '@/components/ui/icons'
 //
 // Duas decisões que valem a pena não desfazer:
 //
-// 1. O <iframe> só é montado DEPOIS do clique. É ele que carrega scripts, grava
+// 1. O reprodutor só é montado DEPOIS do clique. É ele que carrega scripts, grava
 //    cookies e pesa — não a capa. Assim, quem apenas abre o perfil não entra num
 //    player de terceiro (LGPD) e a página continua leve em rede ruim.
+//
+//    Vale também para o vídeo servido pelo próprio site (`provider: 'arquivo'`),
+//    onde não há terceiro nenhum: ali o motivo que sobra é o peso — são
+//    megabytes que ninguém deve baixar por ter aberto um perfil.
 //
 //    A CAPA vem do provedor já no carregamento. A primeira versão desenhava um
 //    retângulo com as cores do tema para não fazer requisição nenhuma, mas o
@@ -70,7 +74,23 @@ export function VideoPlayer({
           ...(emPe ? { maxWidth: '300px', marginInline: 'auto' } : null),
         }}
       >
-        {playing ? (
+        {playing && video.provider === 'arquivo' ? (
+          // Arquivo do próprio site: <video>, não <iframe>. Não há terceiro para
+          // isolar, então não há iframe a montar — e o controle nativo do
+          // navegador é melhor do que qualquer coisa que desenhássemos.
+          //
+          // `playsInline` é obrigatório: sem ele, o iPhone joga o vídeo em tela
+          // cheia no primeiro toque, tirando a pessoa do perfil.
+          <video
+            src={video.embedUrl}
+            title={`Vídeo de apresentação de ${firstName}`}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full bg-black"
+          />
+        ) : playing ? (
           <iframe
             src={`${video.embedUrl}&autoplay=1`}
             title={`Vídeo de apresentação de ${firstName}`}
@@ -84,7 +104,11 @@ export function VideoPlayer({
           <button
             type="button"
             onClick={inert ? undefined : () => setPlaying(true)}
-            aria-label={`Assistir ao vídeo de apresentação de ${firstName} (${video.label})`}
+            aria-label={
+              video.provider === 'arquivo'
+                ? `Assistir ao vídeo de apresentação de ${firstName}`
+                : `Assistir ao vídeo de apresentação de ${firstName} (${video.label})`
+            }
             className="group absolute inset-0 block"
             style={{ border: '1px solid var(--c-border)' }}
           >
@@ -131,7 +155,10 @@ export function VideoPlayer({
                   poster ? 'font-medium text-white/90' : 't-faint'
                 }`}
               >
-                Assistir · {video.label}
+                {/* "Assistir · YouTube" avisa que o clique leva a um serviço de
+                    terceiro. Num arquivo nosso não há terceiro, e o nome do
+                    provedor viraria "Assistir · Vídeo" — ruído sem informação. */}
+                {video.provider === 'arquivo' ? 'Assistir' : `Assistir · ${video.label}`}
               </span>
             </span>
           </button>

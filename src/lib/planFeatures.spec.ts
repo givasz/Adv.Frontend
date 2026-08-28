@@ -18,6 +18,11 @@ const base: Profile = {
   faqs: [],
   branding: undefined,
   card: undefined,
+  // O exemplo passou a ter vídeo de apresentação (arquivo em public/ — ver
+  // mockData). Aqui ele precisa sair junto com o resto: `base` é o perfil de
+  // quem acabou de publicar e ainda não configurou NADA.
+  videoUrl: undefined,
+  videoCaption: undefined,
   schedulingMode: 'off',
   theme: 'papel',
   plan: 'free',
@@ -122,8 +127,12 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .filter((f) => f.done(sampleProfile))
       .map((f) => f.key)
     expect(sampleProfile.plan).toBe('premium')
+    // 'video' entrou quando o exemplo ganhou um vídeo de apresentação de verdade.
+    // Era o recurso mais caro do Max sendo vendido por uma vitrine que não o
+    // mostrava — e, pior, ele nem tocava em produção (o CSP barrava o iframe;
+    // ver lib/csp.spec.ts).
     expect(usados).toEqual(
-      expect.arrayContaining(['agenda', 'faq', 'faq_max', 'marca']),
+      expect.arrayContaining(['agenda', 'faq', 'faq_max', 'marca', 'video']),
     )
   })
 

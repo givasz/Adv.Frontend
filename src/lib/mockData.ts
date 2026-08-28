@@ -107,6 +107,26 @@ export const sampleProfile: Profile = {
   },
   plan: 'premium',
   theme: 'papel',
+  // Vídeo de apresentação (perk do Max). Servido pelo PRÓPRIO site — o arquivo
+  // está em `public/`, versionado e publicado no build, com a capa ao lado
+  // (mesma raiz, extensão .jpg — ver a convenção em lib/video.ts).
+  //
+  // Não é upload e não abre a porta para ele: o servidor só grava YouTube e Vimeo
+  // (backend/src/video.ts), então este caminho só existe para o conteúdo de
+  // demonstração que já vem no pacote. Um advogado não consegue salvar um destes.
+  //
+  // Por que não subir no YouTube: o exemplo é a primeira coisa que alguém vê, e
+  // depender de um serviço de terceiro para ela significa uma conta a manter, um
+  // vídeo que pode ser removido e um player que grava cookie em quem só veio
+  // olhar a home. Sendo nosso, ele nasce e morre com o deploy.
+  //
+  // A pessoa do vídeo é a MESMA da foto do perfil (gerada a partir dela), e o
+  // perfil já se anuncia como demonstração fictícia — ver o aviso em
+  // PublicProfile.
+  videoUrl: '/video_de_apresentacao.mp4',
+  // Sem prometer duração ("um minuto"): o arquivo tem 10 segundos, e o exemplo é
+  // o lugar onde uma imprecisão dói mais — é dali que o advogado copia o tom.
+  videoCaption: 'Uma apresentação rápida, para você saber com quem vai falar.',
   // Identidade própria (white-label do Max) — o exemplo público demonstra o topo
   // da escada: nome do escritório no rodapé, sem a marca advoc.me.
   branding: {
