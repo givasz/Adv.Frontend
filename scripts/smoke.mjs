@@ -73,6 +73,9 @@ const ROTAS = [
   // acontece (modo local), mas o caminho de renderização é o mesmo — e é o único
   // lugar do editor que desenha gráfico.
   ['/editor?section=analytics', 'editor · quem visita você'],
+  // Lista reordenável (framer-motion Reorder) — o único lugar do editor com
+  // arrasto, e o que mais tem estado por linha.
+  ['/editor?section=redes', 'editor · redes'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.

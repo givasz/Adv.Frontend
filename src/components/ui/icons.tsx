@@ -143,6 +143,32 @@ export const ExternalLinkIcon = (p: IconProps) => (
   </svg>
 )
 
+// Pega de arrastar. Os seis pontos são a convenção que as pessoas já conhecem de
+// listas reordenáveis — um ícone inventado aqui obrigaria a descobrir o gesto.
+export const GripIcon = (p: IconProps) => (
+  <svg {...base(p)} fill="currentColor" stroke="none">
+    <circle cx="9" cy="6" r="1.5" />
+    <circle cx="15" cy="6" r="1.5" />
+    <circle cx="9" cy="12" r="1.5" />
+    <circle cx="15" cy="12" r="1.5" />
+    <circle cx="9" cy="18" r="1.5" />
+    <circle cx="15" cy="18" r="1.5" />
+  </svg>
+)
+
+// Setas de mover — o caminho de teclado para a mesma reordenação do arrasto.
+export const ArrowUpIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 19V5M5 12l7-7 7 7" />
+  </svg>
+)
+
+export const ArrowDownIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </svg>
+)
+
 // Círculo vazado — marcador NEUTRO de item "pendente" (sem conotação de erro/semáforo).
 export const DotIcon = (p: IconProps) => (
   <svg {...base(p)}>

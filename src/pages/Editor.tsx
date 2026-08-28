@@ -7,7 +7,6 @@ import type {
   Plan,
   PracticeArea,
   Profile,
-  SocialKind,
 } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -15,7 +14,7 @@ import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { allAreas } from '@/lib/mockData'
 import { slugify } from '@/lib/brFormat'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
-import { validateSocialUrl } from '@/lib/socials'
+import { SocialsCard } from '@/components/editor/SocialsCard'
 import { getTheme, isThemeUnlocked, THEMES, type ThemeId } from '@/lib/themes'
 import {
   AREA_LABEL_MAX,
@@ -57,7 +56,6 @@ import { UpsellCard } from '@/components/editor/UpsellCard'
 import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upsellBits'
 import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
 import { LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
-import { socialMeta } from '@/components/ui/icons'
 
 type AiTarget = {
   kind: GenerateKind
@@ -936,30 +934,10 @@ function ContactSection({
 }) {
   return (
     <Card title="Redes e contato">
-      <div className="grid gap-3">
-        {(Object.keys(socialMeta) as SocialKind[]).map((kind) => {
-          const existing = profile.socials.find((s) => s.kind === kind)
-          const check = validateSocialUrl(kind, existing?.url ?? '')
-          const warn = check.status === 'invalid' || check.status === 'mismatch'
-          return (
-            <Field key={kind} label={socialMeta[kind].label}>
-              <TextInput
-                value={existing?.url ?? ''}
-                placeholder="https://…"
-                aria-invalid={warn}
-                onChange={(e) => {
-                  const url = e.target.value
-                  const rest = profile.socials.filter((s) => s.kind !== kind)
-                  set({ socials: url ? [...rest, { kind, url }] : rest })
-                }}
-              />
-              {warn && (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-brass-deep">{check.message}</p>
-              )}
-            </Field>
-          )
-        })}
-      </div>
+      {/* Lista reordenável + interpretação do que foi digitado. Eram seis campos
+          fixos que não davam para ordenar e engoliam "@usuario" em silêncio —
+          ver components/editor/SocialsCard.tsx. */}
+      <SocialsCard profile={profile} set={set} />
       <div className="rule-brass my-1" />
       <Field label="WhatsApp" hint="DDD + número">
         <WhatsappInput
