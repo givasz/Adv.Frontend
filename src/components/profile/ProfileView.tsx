@@ -303,12 +303,16 @@ export function ProfileView({
           </motion.div>
         )}
 
-        {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização) */}
+        {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização).
+            `redes-grade` marca a seção como contêiner de consulta: a grade cai
+            para uma coluna quando a largura RECEBIDA não comporta duas (ver
+            index.css). É por contêiner e não por tela porque o mesmo perfil é
+            desenhado em dois lugares de largura bem diferente. */}
         {profile.socials.length > 0 && (
-          <motion.section variants={item} className="mt-6">
+          <motion.section variants={item} className="redes-grade mt-6">
             <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
             <div
-              className={`mt-3 grid gap-2.5 ${
+              className={`redes-colunas mt-3 grid gap-2.5 ${
                 s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
               }`}
             >
@@ -336,8 +340,14 @@ export function ProfileView({
                       className={`shrink-0 ${meta.color ? '' : 't-muted'}`}
                       style={meta.color ? { color: meta.color } : undefined}
                     />
-                    {meta.label}
-                    <ArrowRight width={15} height={15} className="t-faint ml-auto" />
+                    {/* O rótulo era um nó de texto solto: sem `min-w-0` ele não
+                        encolhe, e sem `truncate` não tem para onde ir — o ladrilho
+                        simplesmente transbordava e "Instagram" saía cortado pela
+                        borda. Acontecia no telefone da home, onde a coluna é
+                        estreita. Agora, se um dia faltar espaço, a palavra termina
+                        em reticências em vez de ser decepada. */}
+                    <span className="min-w-0 truncate">{meta.label}</span>
+                    <ArrowRight width={15} height={15} className="t-faint ml-auto shrink-0" />
                   </a>
                 )
               })}

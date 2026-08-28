@@ -88,7 +88,18 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
   return (
     // hero (home): maior, e rolável como o perfil de verdade — é o exemplo vivo do
     // produto. Padrão (editor/onboarding): menor no mobile, também rolável.
-    <div className={`mx-auto w-full ${hero ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[300px] sm:max-w-[340px]'}`}>
+    //
+    // O hero estava travado em 300px enquanto a coluna oferecia 320 (a home tem
+    // `px-5`): sobrava folga dos dois lados e o telefone ficava menor do que
+    // podia. Pior, o aperto passava para DENTRO — os ladrilhos de rede social
+    // ficavam com 115px, e "Instagram" não cabia ao lado do ícone; a palavra saía
+    // cortada. Num perfil de verdade isso não acontece, porque lá a mesma coluna
+    // tem a largura da tela inteira.
+    //
+    // `w-full` com um teto alto deixa o telefone ocupar o que houver: 320px num
+    // aparelho de 360, 340 num de 400 para cima. O teto existe para ele não virar
+    // um retângulo largo demais para parecer um celular.
+    <div className={`mx-auto w-full ${hero ? 'max-w-[340px] sm:max-w-[380px]' : 'max-w-[300px] sm:max-w-[340px]'}`}>
       <div className="relative rounded-[2.5rem] border-[10px] border-ink bg-ink p-0 shadow-lift">
         {/* notch */}
         {/* notch acima da faixa de status (que também é z-10, porém depois no DOM) */}

@@ -142,6 +142,33 @@
     font-family: var(--font-display, 'Fraunces', Georgia, serif);
   }
 
+  /* GRADE DAS REDES — duas colunas só quando duas colunas cabem.
+   *
+   * O ladrilho gasta 95px fixos antes do texto: 32 de preenchimento, 24 de
+   * espaçamento entre os três filhos, e 39 dos dois ícones (a marca e a seta).
+   * Num ladrilho de 125px sobram 30px para "Instagram", que precisa de 71 — e a
+   * palavra saía cortada pela borda.
+   *
+   * Não era só a prévia da home: medido no perfil REAL a 360px (o Android mais
+   * comum), o ladrilho fica com 155px e o rótulo ainda falta 5px. Numa tela
+   * dessas, todo perfil com Instagram mostrava a palavra pela metade.
+   *
+   * A consulta é de CONTÊINER, não de tela, e é isso que resolve os dois casos de
+   * uma vez: o que decide não é o tamanho do aparelho, é a largura que a lista
+   * realmente recebeu — 320px num celular de verdade, 280px dentro do telefone
+   * desenhado na home. Uma media query acertaria um e erraria o outro.
+   *
+   * 342px é a conta: 2 × 166 (o mínimo em que "Instagram" cabe) + 10 do vão.
+   */
+  .redes-grade {
+    container-type: inline-size;
+  }
+  @container (max-width: 342px) {
+    .redes-grade > .redes-colunas {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .t-tile {
     @apply relative flex items-center gap-3 w-full border px-4 py-3.5
       text-left duration-300 hover:-translate-y-0.5 active:translate-y-0;
