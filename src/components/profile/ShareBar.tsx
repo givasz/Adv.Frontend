@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { ShareIcon } from '@/components/ui/icons'
 
 // Botão "Compartilhar" que flutua no canto do perfil.
 //
@@ -40,6 +41,16 @@ export function ShareBar({
       className="fixed right-4 z-20 inline-flex h-10 items-center gap-1.5 rounded-full border border-ink/10 bg-paper-soft/80 px-4 text-sm font-medium text-ink shadow-card backdrop-blur transition-colors hover:border-brass/50"
       aria-label="Compartilhar perfil"
     >
+      {/* O `gap-1.5` da classe já esperava por este ícone. `aria-hidden` porque o
+          botão já se anuncia pelo aria-label — o ícone repetiria a mesma palavra
+          para quem usa leitor de tela.
+
+          `text-burgundy` (paleta do APP) e não `t-accent` (paleta do TEMA): este
+          botão é montado FORA do ProfileView, então `--c-accent` não existe aqui
+          e `t-accent` cairia no valor de reserva — que hoje é o mesmo burgundy,
+          por coincidência. Todo o resto do botão (fundo, borda, texto) também é
+          do app: ele flutua SOBRE o perfil, não faz parte dele. */}
+      <ShareIcon width={16} height={16} className="text-burgundy" aria-hidden />
       Compartilhar
     </button>
   )

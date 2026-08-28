@@ -143,6 +143,22 @@ export const ExternalLinkIcon = (p: IconProps) => (
   </svg>
 )
 
+// Compartilhar — três nós ligados, e não a caixa-com-seta do iOS.
+//
+// O botão do perfil faz duas coisas conforme o aparelho: abre a folha nativa de
+// compartilhamento (celular) ou leva à página com QR e link (computador). A
+// caixa-com-seta é o símbolo da Apple e prometeria a primeira das duas em todo
+// lugar; os nós ligados são o desenho que Android, WhatsApp e a web em geral
+// usam, e dizem "mandar para alguém" sem prometer COMO.
+export const ShareIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+  </svg>
+)
+
 // Pega de arrastar. Os seis pontos são a convenção que as pessoas já conhecem de
 // listas reordenáveis — um ícone inventado aqui obrigaria a descobrir o gesto.
 export const GripIcon = (p: IconProps) => (
