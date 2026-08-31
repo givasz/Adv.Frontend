@@ -159,10 +159,14 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
       <header className="flex items-center gap-3 pb-3">
         <span className="relative shrink-0">
           <span
-            className="flex h-[42px] w-[42px] items-center justify-center rounded-full border font-display text-[15px] font-semibold"
+            className="flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full border font-display text-[15px] font-semibold"
             style={{ borderColor: 'var(--c-ring)', color: 'var(--c-accent)' }}
           >
-            {firm.monogram}
+            {firm.logoUrl ? (
+              <img src={firm.logoUrl} alt="" className="h-full w-full object-contain p-1" />
+            ) : (
+              firm.monogram
+            )}
           </span>
           <span
             className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full"

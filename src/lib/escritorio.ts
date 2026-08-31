@@ -78,6 +78,15 @@ export interface Firm {
   oabRegistry: string
   /** monograma exibido quando não há logo (ex.: "AV") */
   monogram: string
+  /**
+   * Logo do escritório — imagem enviada pelo dono, guardada como data URI (o
+   * mesmo caminho da foto do advogado; ver components/escritorio/LogoUpload).
+   *
+   * A coluna existia no banco desde o começo e nada a preenchia: o editor não
+   * oferecia o campo e o backend não gravava. Todo escritório era duas letras num
+   * círculo, sem caminho para trocar. Vazio = usa o monograma.
+   */
+  logoUrl?: string
   /** frase institucional curta e sóbria (nunca promocional) */
   tagline: string
   /** texto institucional sobre o escritório */

@@ -38,13 +38,22 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
         {/* Cabeçalho institucional */}
         <header className="flex flex-col items-center text-center">
           <div className="rule-brass mb-6 w-24" />
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-brass/40 bg-paper-soft">
-            <span
-              className="font-display text-2xl font-semibold"
-              style={{ color: 'var(--firm-accent)' }}
-            >
-              {firm.monogram}
-            </span>
+          {/* A logo quando existe; as iniciais quando não. O monograma sempre foi
+              descrito como substituto de uma logo que não tinha como ser enviada —
+              agora tem (ver components/escritorio/LogoUpload). */}
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-brass/40 bg-paper-soft">
+            {firm.logoUrl ? (
+              // `contain` e não `cover`: logo é marca, e cortar marca é pior do
+              // que deixar sobrar espaço em volta.
+              <img src={firm.logoUrl} alt="" className="h-full w-full object-contain p-2" />
+            ) : (
+              <span
+                className="font-display text-2xl font-semibold"
+                style={{ color: 'var(--firm-accent)' }}
+              >
+                {firm.monogram}
+              </span>
+            )}
           </div>
           <h1 className="mt-4 font-display text-[26px] font-semibold leading-tight text-ink sm:text-[30px]">
             {firm.name}

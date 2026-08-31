@@ -10,6 +10,8 @@ import {
 } from '@/lib/escritorio'
 import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
+import { OabNumberInput } from '@/components/editor/inputs'
+import { LogoUpload } from '@/components/escritorio/LogoUpload'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { ScaleIcon, TrashIcon } from '@/components/ui/icons'
 
@@ -184,23 +186,47 @@ export default function FirmEditor() {
             />
           </Field>
           <ComplianceHint issues={nameIssues} />
-          <div className="grid grid-cols-[1fr_88px] gap-3">
-            <Field label="Registro da sociedade na OAB" hint="≠ OAB individual">
-              <TextInput
-                value={firm.oabRegistry}
-                maxLength={40}
-                placeholder="OAB/SP 12.345 (Sociedade)"
-                onChange={(e) => set({ oabRegistry: e.target.value })}
-              />
-            </Field>
-            <Field label="Monograma" hint="logo">
+          {/* Mesmo campo do advogado (OabNumberInput): a UF é uma lista, e o
+              número é só número. Era um texto livre com "OAB/SP 12.345
+              (Sociedade)" de exemplo — quem digitava saía com uma sigla inventada
+              ou o estado escrito por extenso, e não havia nada segurando isso.
+              O registro da sociedade tem o mesmo formato do individual; o que muda
+              é de quem ele é, e isso o rótulo já diz. */}
+          <Field label="Registro da sociedade na OAB" hint="≠ OAB individual">
+            <OabNumberInput
+              value={firm.oabRegistry}
+              onChange={(oabRegistry) => set({ oabRegistry })}
+            />
+          </Field>
+
+          {/* Sem `Field`: ele envolve o conteúdo num <label>, e um rótulo de campo
+              aponta para UM controle. O LogoUpload tem vários (o seletor de
+              arquivo escondido, os botões, o campo de link), e o <label> se
+              grudava no input de arquivo — o mesmo engano que já tinha acontecido
+              no seletor de formato do vídeo. O componente traz o próprio rótulo. */}
+          <LogoUpload
+            monogram={firm.monogram}
+            value={firm.logoUrl}
+            onChange={(logoUrl) => set({ logoUrl })}
+          />
+
+          {/* O monograma só é editável quando NÃO há logo: com a imagem no ar ele
+              deixa de aparecer em qualquer lugar, e um campo que não muda nada na
+              tela é um campo que faz a pessoa duvidar do que está vendo. */}
+          {!firm.logoUrl && (
+            <Field label="Iniciais" hint="usadas enquanto não há logo">
               <TextInput
                 value={firm.monogram}
                 maxLength={3}
+                // `!w-24`: o estilo base do TextInput traz `w-full`, e entre duas
+                // utilidades de largura quem vence é a ordem no CSS gerado, não a
+                // ordem no atributo. Sem o `!`, o campo de três letras ficava com
+                // a largura da tela.
+                className="!w-24 text-center"
                 onChange={(e) => set({ monogram: e.target.value.toUpperCase() })}
               />
             </Field>
-          </div>
+          )}
           <p className="-mt-1 text-[11.5px] leading-relaxed text-ink-faint">
             A conferência do registro da sociedade é feita pela plataforma (não é selo oficial da OAB).
             Cada advogado tem sua própria conferência de OAB individual.
@@ -475,8 +501,19 @@ function MemberRow({ member, onRemove }: { member: FirmMember; onRemove: () => v
   const dono = member.role === 'owner'
   const convidado = member.status === 'invited'
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-ink/10 bg-paper-soft px-3 py-2.5">
-      <div className="min-w-0 flex-1">
+    // `min-w-0` não é enfeite: esta linha é item de uma GRADE, e item de grade
+    // tem `min-width: auto` por padrão — ele se recusa a encolher abaixo do
+    // próprio conteúdo. Resultado medido a 360px: a lista com 286px e a linha com
+    // 374, vazando 88px para fora. Não aparecia como barra de rolagem porque um
+    // ancestral tem `overflow-x-hidden` e simplesmente CORTAVA o excesso: o nome
+    // e o selo saíam pela borda direita do cartão.
+    <li className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-ink/10 bg-paper-soft px-3 py-2.5">
+      {/* `basis-[11rem]` é o que faz o selo e o botão DESCEREM para a linha de
+          baixo quando não cabem, em vez de espremerem o nome até virar "Maria …".
+          A quebra do flex é decidida pela base, antes de encolher — sem uma base,
+          este bloco cedia todo o espaço e o nome sumia. O `min-w-0` continua para
+          o texto poder truncar depois de já ter ganhado a linha inteira. */}
+      <div className="min-w-0 flex-1 basis-[11rem]">
         <p className="truncate text-[14px] font-medium text-ink">{member.name}</p>
         <p className="truncate text-[12px] text-ink-faint">
           {[member.oabNumber, member.area, member.email].filter(Boolean).join(' · ') || 'Sem dados ainda'}
