@@ -241,17 +241,23 @@ export function ProfileView({
         {enderecoVisivel(profile.address) && (
           <motion.p
             variants={item}
-            className={`t-faint mt-1 text-[13px] ${left ? 'text-left' : 'text-center'}`}
+            className={`t-faint mt-1 text-[12px] leading-snug opacity-90 ${
+              left ? 'text-left' : 'text-center'
+            }`}
           >
             <a
               href={linkDoMapa(profile.address, profile.city, profile.state)}
               onClick={clique('endereco')}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex items-baseline gap-1.5 hover:underline"
+              className="inline hover:underline"
             >
-              {enderecoCurto(profile.address)}
-              <ExternalLinkIcon width={11} height={11} className="shrink-0 opacity-70" />
+              {enderecoCurto(profile.address)}{' '}
+              <ExternalLinkIcon
+                width={10}
+                height={10}
+                className="inline shrink-0 -translate-y-px opacity-70"
+              />
             </a>
           </motion.p>
         )}

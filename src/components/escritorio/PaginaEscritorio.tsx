@@ -77,10 +77,14 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
               href={linkDoMapa(firm.address, firm.city, firm.state)}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-1 inline-flex items-baseline gap-1.5 text-[13px] text-ink-faint hover:underline"
+              className="mt-1 inline text-[12px] leading-snug text-ink-faint hover:underline"
             >
-              {enderecoCurto(firm.address)}
-              <ExternalLinkIcon width={11} height={11} className="shrink-0 opacity-70" />
+              {enderecoCurto(firm.address)}{' '}
+              <ExternalLinkIcon
+                width={10}
+                height={10}
+                className="inline shrink-0 -translate-y-px opacity-70"
+              />
             </a>
           )}
         </header>

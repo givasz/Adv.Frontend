@@ -72,10 +72,18 @@ describe('as linhas lidas por humano', () => {
     expect(linhaLocalidade(undefined, '', '')).toBe('')
   })
 
-  it('a linha curta omite a cidade — ela já está escrita logo acima no perfil', () => {
-    expect(enderecoCurto(completo)).toBe('Av. Paulista, 1000 — Conj. 121 · Bela Vista · 01310-100')
+  it('a linha curta omite a cidade e o CEP — ninguém chega a um escritório pelo CEP', () => {
+    expect(enderecoCurto(completo)).toBe('Av. Paulista, 1000 — Conj. 121 · Bela Vista')
     expect(enderecoCurto({ rua: 'Rua das Flores', numero: '12' })).toBe('Rua das Flores, 12')
     expect(enderecoCurto(undefined)).toBe('')
+  })
+
+  it('mas o CEP continua inteiro onde ele trabalha', () => {
+    // A linha curta é só o que o visitante LÊ. O que leva alguém até a porta —
+    // mapa, contato salvo, dado estruturado — não pode perder o CEP junto.
+    expect(enderecoEmLinha(completo, 'São Paulo', 'SP')).toContain('01310-100')
+    expect(decodeURIComponent(linkDoMapa(completo, 'São Paulo', 'SP')!)).toContain('01310-100')
+    expect(adrDoVCard(completo, 'São Paulo', 'SP')).toContain('01310-100')
   })
 
   it('a linha única junta as duas', () => {

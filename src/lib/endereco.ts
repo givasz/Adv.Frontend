@@ -95,16 +95,22 @@ export function linhaLocalidade(e: Endereco | null | undefined, cidade: string, 
 }
 
 /**
- * O endereço SEM a cidade: "Av. Paulista, 1000 — Conj. 121 · Bela Vista · 01310-100".
+ * O endereço como o VISITANTE precisa dele: "Av. Paulista, 1000 — Conj. 121 · Bela Vista".
  *
- * Existe para o perfil público, onde a cidade já está escrita na linha de cima.
- * Repeti-la logo abaixo faz o bloco parecer mais longo — e mais importante — do
- * que é: quem chegou ali já sabe em que cidade a pessoa atende, e o que falta
- * saber é a rua.
+ * Duas coisas ficam de fora, e as duas de propósito.
+ *
+ * A CIDADE, porque no perfil ela já está escrita na linha de cima. Repeti-la
+ * logo abaixo faz o bloco parecer mais longo — e mais importante — do que é.
+ *
+ * O CEP, porque ele não é para ler: ninguém chega a um escritório pelo CEP,
+ * chega pela rua. Ele servia só para a linha ficar mais comprida — e comprida
+ * ela quebrava em duas dentro do telefone da home, com o "01310-" numa linha e
+ * o "100" na outra, empurrando o botão de agendar para fora da tela. O CEP
+ * continua inteiro onde ele de fato trabalha: na busca do mapa, no cartão de
+ * contato (vCard), no dado estruturado do Google e no cartão impresso.
  */
 export function enderecoCurto(e?: Endereco | null): string {
-  const cep = e?.cep ? formatarCep(e.cep) : ''
-  return [linhaLogradouro(e), e?.bairro?.trim(), cep].filter(Boolean).join(' · ')
+  return [linhaLogradouro(e), e?.bairro?.trim()].filter(Boolean).join(' · ')
 }
 
 /** As duas linhas numa só, para vCard, PDF e qualquer lugar de uma linha só. */
