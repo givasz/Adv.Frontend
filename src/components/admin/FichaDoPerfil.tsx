@@ -32,7 +32,8 @@ import { REASON_LABEL } from '@/lib/reportReasons'
 import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import { Aviso, Motivo, entrada, fmtData } from './pecas'
 import AcoesDaConta from './AcoesDaConta'
-import { CheckIcon, ChevronDown, ExternalLinkIcon, FlagIcon, ScaleIcon } from '@/components/ui/icons'
+import { CheckIcon, ChevronDown, ExternalLinkIcon, FlagIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 const SECOES: { key: string; label: string }[] = [
   { key: 'avatar', label: 'Foto' },
@@ -569,7 +570,7 @@ export function CabecalhoDoPerfil({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-faint">
-      <ScaleIcon width={13} height={13} className="text-brass-deep" />
+      <Marca size={17} />
       <span className="font-mono">advoc.me/{slug}</span>
       <span>·</span>
       <span>{oab}</span>

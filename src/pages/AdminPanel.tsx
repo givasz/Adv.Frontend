@@ -23,7 +23,8 @@ import FichaDoPerfil from '@/components/admin/FichaDoPerfil'
 import { usePaginado } from '@/components/admin/usePaginado'
 import { cnaSearchUrl } from '@/components/ui/CnaLink'
 import type { ModerationStatus } from '@/lib/types'
-import { CheckIcon, ExternalLinkIcon, LockIcon, ScaleIcon, SearchIcon } from '@/components/ui/icons'
+import { CheckIcon, ExternalLinkIcon, LockIcon, SearchIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 const STATUS_META: Record<ModerationStatus, { label: string; cls: string }> = {
   active: { label: 'Ativo', cls: 'bg-ink/[0.06] text-ink-faint' },
@@ -249,7 +250,7 @@ function Dashboard({
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <span className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold">
-            <ScaleIcon width={20} height={20} className="shrink-0 text-burgundy" />
+            <Marca size={26} />
             <span className="truncate">Painel</span>
           </span>
           {/* Quem está logado, sempre à vista: num painel que decide o que sai do

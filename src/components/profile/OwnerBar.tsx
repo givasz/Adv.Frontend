@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, ScaleIcon } from '@/components/ui/icons'
+import { ArrowRight } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 // Barra do DONO, sobre o próprio perfil público.
 //
@@ -17,7 +18,7 @@ export function OwnerBar() {
     <div className="sticky top-0 z-30 border-b border-ink/10 bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
         <span className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px] leading-snug text-ink-soft">
-          <ScaleIcon width={15} height={15} className="shrink-0 text-burgundy" />
+          <Marca size={19} />
           <span className="min-w-0">
             <span className="font-semibold text-ink">Este é o seu perfil</span>
             <span className="hidden sm:inline"> — é assim que ele aparece para quem abre o link.</span>

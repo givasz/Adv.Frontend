@@ -21,7 +21,7 @@ import { TrustGauge } from '@/components/ui/TrustGauge'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { CidadeUfCampos } from '@/components/editor/CidadeInput'
-import { SparkIcon, ScaleIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
+import { SparkIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
 let uid = 0
@@ -465,9 +465,12 @@ function WelcomeStep({ onStart }: { onStart: () => void }) {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="flex h-16 w-16 items-center justify-center rounded-2xl bg-burgundy/10 text-burgundy"
+        // O ladrilho acompanha a marca: era um quadrado em vinho porque a
+        // balança desenhada era vinho. Com a logo dourada dentro, o vinho
+        // vira uma terceira cor sem motivo.
+        className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brass/10"
       >
-        <ScaleIcon width={32} height={32} />
+        <Marca size={38} />
       </motion.span>
       <span className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[12px] font-semibold text-brass-deep">
         <CheckIcon width={13} height={13} strokeWidth={2.4} />

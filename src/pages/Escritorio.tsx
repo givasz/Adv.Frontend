@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { isExampleFirm, type Firm } from '@/lib/escritorio'
 import { PaginaEscritorio } from '@/components/escritorio/PaginaEscritorio'
-import { ScaleIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 export default function Escritorio() {
   const { slug = '' } = useParams()
@@ -38,7 +38,7 @@ export default function Escritorio() {
   if (state === 'notfound' || !firm) {
     return (
       <div className="grain flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <ScaleIcon width={40} height={40} className="text-burgundy/60" />
+        <Marca size={46} className="opacity-80" />
         <h1 className="font-display text-2xl font-semibold">Escritório não encontrado</h1>
         <p className="max-w-xs text-ink-faint">
           O endereço <span className="font-medium">advoc.me/escritorio/{slug}</span> ainda não
@@ -55,7 +55,7 @@ export default function Escritorio() {
     <>
       {isExampleFirm(slug) && (
         <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
-          <ScaleIcon width={13} height={13} className="shrink-0 text-brass-light" />
+          <Marca size={16} />
           Escritório de demonstração — sociedade, advogados e registros fictícios, apenas para
           exemplo do advoc.me.
         </div>

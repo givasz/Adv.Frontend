@@ -8,7 +8,8 @@ import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { OwnerBar } from '@/components/profile/OwnerBar'
-import { FlagIcon, ScaleIcon } from '@/components/ui/icons'
+import { FlagIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 export default function PublicProfile() {
   const { slug = '' } = useParams()
@@ -87,7 +88,7 @@ export default function PublicProfile() {
   if (state === 'notfound' || !profile) {
     return (
       <div className="grain flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <ScaleIcon width={40} height={40} className="text-burgundy/60" />
+        <Marca size={46} className="opacity-80" />
         <h1 className="text-2xl font-semibold">Perfil não encontrado</h1>
         <p className="max-w-xs text-ink-faint">
           O endereço <span className="font-medium">advoc.me/{slug}</span> ainda não existe.
@@ -111,7 +112,7 @@ export default function PublicProfile() {
       <div ref={barsRef}>
         {isExample && (
           <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
-            <ScaleIcon width={13} height={13} className="shrink-0 text-brass-light" />
+            <Marca size={16} />
             Perfil de demonstração — pessoa e dados fictícios, apenas para exemplo do advoc.me.
           </div>
         )}

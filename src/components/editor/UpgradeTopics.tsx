@@ -6,6 +6,7 @@ import { PLAN_LABEL } from '@/lib/upsell'
 import { CalendarIcon, CheckIcon, GlobeIcon, ScaleIcon, ShieldIcon } from '@/components/ui/icons'
 import { useSlugCheck } from '@/lib/useSlugCheck'
 import { hostLabel } from '@/lib/publicUrl'
+import { Marca } from '@/components/ui/Marca'
 
 // Tópicos concretos de "como melhorar o perfil" travados por plano.
 //
@@ -120,7 +121,7 @@ const TOPICS: Topic[] = [
     proof: () => (
       <span className="flex flex-wrap items-center gap-1.5 text-[12px]">
         <span className="inline-flex items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-ink-faint line-through decoration-burgundy/50">
-          <ScaleIcon width={11} height={11} />
+          <Marca size={14} />
           criado com advoc.me
         </span>
         <span className="text-ink-faint">→</span>

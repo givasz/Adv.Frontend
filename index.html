@@ -10,11 +10,17 @@
       content="A página de perfil única e compartilhável para advogados. Dentro das normas da OAB."
     />
 
-    <!-- Identidade da aba e da tela de início. O favicon.svg acompanha o tema do
-         sistema em navegadores modernos; o apple-touch-icon é o que o iOS usa ao
-         salvar o site na tela de início, e sem ele o iPhone recorta um retrato da
-         página, que sai ilegível. Ambos gerados/versionados — ver scripts/gen-brand-assets.mjs. -->
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Identidade da aba e da tela de início — a marca de verdade, não mais uma
+         balança desenhada em SVG parecida com o ícone da interface.
+         São PNG porque a marca é uma imagem com degradê: um SVG dela seria o
+         mesmo PNG embutido em base64, com o peso e sem a nitidez. Duas medidas
+         porque a aba pede 32 e o atalho do Android pede 192 — deixar o navegador
+         reduzir o de 512 para 32 borra os dois pratos de baixo.
+         O apple-touch-icon é o que o iOS usa ao salvar na tela de início; sem
+         ele o iPhone recorta um retrato da página, que sai ilegível.
+         Todos gerados/versionados — ver scripts/gen-brand-assets.mjs. -->
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/favicon-192.png" sizes="192x192" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
