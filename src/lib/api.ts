@@ -414,8 +414,61 @@ export const api = {
     return saveFirmDraft({ ...firm, members: sortMembers([...(firm.members ?? []), convite]) })
   },
 
+  /**
+   * Insere um advogado na lista da sociedade — sem conta e sem convite.
+   *
+   * O que destrava: montar a página exigia que cada advogado se cadastrasse e
+   * aceitasse um convite ANTES de aparecer. Um escritório de doze pessoas ficava
+   * com a página vazia esperando doze cadastros.
+   */
+  async addFirmLawyer(d: { name: string; oabNumber?: string; area?: string }): Promise<Firm> {
+    if (USE_REAL_API) {
+      return firmFetch('/api/firms/me/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(d),
+      })
+    }
+    await wait(160)
+    const firm = loadFirmDraft() ?? blankFirm()
+    const novo: FirmMember = {
+      id: `mock-${Date.now()}`,
+      kind: 'roster',
+      name: d.name,
+      oabNumber: d.oabNumber,
+      area: d.area,
+      role: 'member',
+      status: 'listed',
+    }
+    return saveFirmDraft({ ...firm, members: sortMembers([...(firm.members ?? []), novo]) })
+  },
+
+  /** Associa um e-mail a um advogado já listado — é o passo que lhe dá acesso. */
+  async linkFirmLawyer(id: string, email: string, role: 'member' | 'admin'): Promise<Firm> {
+    if (USE_REAL_API) {
+      return firmFetch(`/api/firms/me/roster/${id}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role }),
+      })
+    }
+    await wait(160)
+    const firm = loadFirmDraft() ?? blankFirm()
+    return saveFirmDraft({
+      ...firm,
+      members: (firm.members ?? []).map((m) =>
+        m.id === id ? { ...m, email, role, status: 'invited' as const } : m,
+      ),
+    })
+  },
   async removeFirmMember(member: FirmMember): Promise<Firm> {
     if (USE_REAL_API) {
+      // Advogado LISTADO tem porta própria: ele não é vínculo nem convite, e a
+      // rota de membros responderia 404 para o id dele. Sem este desvio, o botão
+      // "Remover" ficava sem efeito justamente para quem foi inserido à mão.
+      if (member.kind === 'roster') {
+        return firmFetch(`/api/firms/me/roster/${member.id}`, { method: 'DELETE' })
+      }
       return firmFetch(`/api/firms/me/members/${member.kind}/${member.id}`, { method: 'DELETE' })
     }
     await wait(160)

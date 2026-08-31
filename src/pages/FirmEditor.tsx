@@ -12,6 +12,7 @@ import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput } from '@/components/editor/inputs'
 import { LogoUpload } from '@/components/escritorio/LogoUpload'
+import { AdicionarAdvogado, DarAcesso } from '@/components/escritorio/GestaoAdvogados'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { ScaleIcon, TrashIcon } from '@/components/ui/icons'
 
@@ -35,6 +36,7 @@ export default function FirmEditor() {
   const [convite, setConvite] = useState('')
   const [conviteErro, setConviteErro] = useState('')
   const [convidando, setConvidando] = useState(false)
+  const [rosterErro, setRosterErro] = useState('')
 
   // Separa a resposta do servidor em institucional (estado editável) e gestão.
   const receber = useCallback((f: Firm): Firm => {
@@ -105,6 +107,32 @@ export default function FirmEditor() {
       setConviteErro(e instanceof Error ? e.message : 'Não foi possível convidar agora.')
     } finally {
       setConvidando(false)
+    }
+  }
+
+  // Insere um advogado sem conta e sem convite. O nome vai para uma página
+  // pública, então o servidor confere os textos e pode recusar — o erro dele é o
+  // que a tela mostra.
+  const adicionarAdvogado = async (d: { name: string; oabNumber: string; area: string }) => {
+    setRosterErro('')
+    try {
+      receber(await api.addFirmLawyer(d))
+      return true
+    } catch (e: unknown) {
+      setRosterErro(e instanceof Error ? e.message : 'Não foi possível adicionar agora.')
+      return false
+    }
+  }
+
+  // Associa um e-mail a quem já está listado — o passo que lhe dá autonomia.
+  const darAcesso = async (m: FirmMember, email: string, role: 'member' | 'admin') => {
+    setConviteErro('')
+    try {
+      receber(await api.linkFirmLawyer(m.id, email, role))
+      return true
+    } catch (e: unknown) {
+      setConviteErro(e instanceof Error ? e.message : 'Não foi possível associar agora.')
+      return false
     }
   }
 
@@ -410,15 +438,30 @@ export default function FirmEditor() {
           ) : (
             <ul className="grid gap-2">
               {gestao.members.map((m) => (
-                <MemberRow key={`${m.kind}-${m.id}`} member={m} onRemove={() => removerMembro(m)} />
+                <MemberRow
+                  key={`${m.kind}-${m.id}`}
+                  member={m}
+                  onRemove={() => removerMembro(m)}
+                  onLink={darAcesso}
+                />
               ))}
             </ul>
           )}
 
+          {/* Inserir um advogado SEM convite prévio. Vem antes do convite por
+              e-mail de propósito: é o caminho que resolve o problema de quem está
+              montando a página agora e não tem como esperar doze cadastros. */}
+          <AdicionarAdvogado
+            onAdd={adicionarAdvogado}
+            erro={rosterErro}
+            ocupados={seatsUsed}
+            contratados={seatsPurchased}
+          />
+
           {/* Convite EM LINHA — sem tela sobreposta (ver components/ui/SubPage). */}
           <div className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
             <label htmlFor="convite-email" className="text-[12.5px] font-medium text-ink-soft">
-              Convidar advogado
+              Convidar advogado que já tem conta
             </label>
             <div className="flex flex-wrap gap-2">
               <input
@@ -497,9 +540,19 @@ function RotaOption({
 // Uma pessoa do escritório na visão de quem administra. É deliberadamente uma
 // linha de LEITURA: o conteúdo do perfil (bio, área, foto) pertence ao advogado e
 // se edita no editor dele, não aqui.
-function MemberRow({ member, onRemove }: { member: FirmMember; onRemove: () => void }) {
+function MemberRow({
+  member,
+  onRemove,
+  onLink,
+}: {
+  member: FirmMember
+  onRemove: () => void
+  onLink: (m: FirmMember, email: string, role: 'member' | 'admin') => Promise<boolean>
+}) {
   const dono = member.role === 'owner'
   const convidado = member.status === 'invited'
+  // Listado pelo escritório e ainda sem e-mail: é a ele que se oferece acesso.
+  const listado = member.status === 'listed'
   return (
     // `min-w-0` não é enfeite: esta linha é item de uma GRADE, e item de grade
     // tem `min-width: auto` por padrão — ele se recusa a encolher abaixo do
@@ -524,8 +577,17 @@ function MemberRow({ member, onRemove }: { member: FirmMember; onRemove: () => v
           convidado ? 'bg-brass/15 text-brass-deep' : 'bg-ink/[0.06] text-ink-faint'
         }`}
       >
-        {dono ? 'Responsável' : convidado ? 'Convite enviado' : 'No escritório'}
+        {dono
+          ? 'Responsável'
+          : listado
+            ? 'Listado'
+            : convidado
+              ? 'Convite enviado'
+              : 'No escritório'}
       </span>
+      {/* Só quem foi LISTADO à mão pode receber acesso por aqui: quem já tem
+          vínculo tem conta, e quem é convite já tem e-mail. */}
+      {listado && <DarAcesso member={member} onLink={onLink} />}
       {!dono && (
         <button
           type="button"

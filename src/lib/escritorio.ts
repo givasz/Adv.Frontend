@@ -24,18 +24,29 @@ export interface FirmLawyer {
  *  edita a página e convida; `member` cuida apenas do próprio perfil. */
 export type FirmMemberRole = 'owner' | 'admin' | 'member'
 
-/** Estado do vínculo: convidado (não aparece na página) ou ativo (aparece). */
-export type FirmMemberState = 'invited' | 'active'
+/**
+ * Estado do vínculo, do mais frouxo ao mais forte:
+ *
+ *   listed  → o ESCRITÓRIO inseriu o advogado e ele ainda não tem conta. Aparece
+ *             na página da sociedade, mas não acessa nada — quem respondeu por
+ *             ele foi quem o listou.
+ *   invited → já existe um e-mail associado e um convite à espera de resposta.
+ *   active  → aceitou; o perfil dele assume o lugar no grid.
+ */
+export type FirmMemberState = 'listed' | 'invited' | 'active'
 
 /**
  * Pessoa ligada ao escritório, na visão de QUEM ADMINISTRA. São duas naturezas na
  * mesma lista porque para o dono são a mesma coisa ("gente que eu chamei"):
  *   • `membership` → já tem conta; o perfil é dela e continua dela se sair.
  *   • `invite`     → convite por e-mail para quem ainda não tem conta.
+ *   • `roster`     → o escritório inseriu à mão, sem conta e sem convite. É o que
+ *                    faz a página ficar pronta no mesmo dia, em vez de esperar
+ *                    cada advogado se cadastrar.
  */
 export interface FirmMember {
   id: string
-  kind: 'membership' | 'invite'
+  kind: 'membership' | 'invite' | 'roster'
   /** nome do perfil; no convite por e-mail, o próprio e-mail */
   name: string
   email?: string
