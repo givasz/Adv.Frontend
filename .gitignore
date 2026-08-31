@@ -18,3 +18,7 @@ coverage
 
 # cache do tsc
 *.tsbuildinfo
+
+# Capturas temporárias de verificação (Playwright) — nunca versionadas.
+*.tmp.png
+*.tmp.mjs
