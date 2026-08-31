@@ -135,6 +135,7 @@ export function CardStudio({
           <Toggle checked={card.showWhatsapp} onChange={(v) => mexer({ showWhatsapp: v })} label="Telefone" />
           <Toggle checked={card.showEmail} onChange={(v) => mexer({ showEmail: v })} label="E-mail" />
           <Toggle checked={card.showCity} onChange={(v) => mexer({ showCity: v })} label="Cidade e estado" />
+          <Toggle checked={card.showAddress} onChange={(v) => mexer({ showAddress: v })} label="Endereço" />
           <Toggle checked={card.showAreas} onChange={(v) => mexer({ showAreas: v })} label="Áreas de atuação" />
           <Toggle checked={card.showPhoto} onChange={(v) => mexer({ showPhoto: v })} label="Sua foto" />
           <Toggle checked={card.showQr} onChange={(v) => mexer({ showQr: v })} label="QR do perfil no verso" />

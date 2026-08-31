@@ -11,6 +11,8 @@
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
     "brand": "node scripts/gen-brand-assets.mjs",
+    "municipios": "node scripts/gen-municipios.mjs",
+    "logo": "node scripts/gen-logo.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {

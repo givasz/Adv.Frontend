@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getLegalDoc, LEGAL_DOCS } from '@/lib/legalContent'
-import { ArrowRight, ScaleIcon } from '@/components/ui/icons'
+import { ArrowRight } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 // Renderiza a documentação jurídica DA PLATAFORMA (rota /legal/:slug). Sem :slug,
 // mostra o índice. Conteúdo em lib/legalContent.ts. Mantém a identidade visual sóbria.
@@ -21,7 +22,7 @@ export default function LegalPage() {
     <div className="grain min-h-dvh overflow-x-hidden">
       <nav className="mx-auto flex max-w-3xl items-center justify-between px-5 py-5">
         <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold">
-          <ScaleIcon width={22} height={22} className="text-burgundy" />
+          <Marca size={32} />
           advoc.me
         </Link>
         <Link to="/legal" className="text-sm font-medium text-ink-soft hover:text-ink">

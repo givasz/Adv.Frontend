@@ -55,8 +55,11 @@ import { DigitalCard } from '@/components/editor/DigitalCard'
 import { CARD_PREVIEW, CardStudio } from '@/components/editor/CardStudio'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upsellBits'
-import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
-import { LockIcon, ScaleIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
+import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
+import { CidadeUfCampos } from '@/components/editor/CidadeInput'
+import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
+import { LockIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 type AiTarget = {
   kind: GenerateKind
@@ -334,7 +337,7 @@ export default function Editor() {
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link to="/painel" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <ScaleIcon width={20} height={20} className="text-burgundy" />
+            <Marca size={29} />
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
@@ -768,14 +771,14 @@ function IdentitySection({
       </Card>
 
       <Card title="Localização e atendimento">
-        <div className="grid grid-cols-[1fr_80px] gap-3">
-          <Field label="Cidade">
-            <TextInput value={profile.city} onChange={(e) => set({ city: e.target.value })} />
-          </Field>
-          <Field label="UF">
-            <UfSelect value={profile.state} onChange={(state) => set({ state })} />
-          </Field>
-        </div>
+        {/* Cidade escolhida na lista do IBGE, não digitada no escuro: a grafia
+            daqui sai no título de SEO, no link do mapa e na busca do diretório,
+            e "São Paolo" quebrava os três sem avisar ninguém. */}
+        <CidadeUfCampos
+          city={profile.city}
+          state={profile.state}
+          onChange={({ city, state }) => set({ city, state })}
+        />
         <Field label="Observação de região" hint="opcional">
           <TextInput
             value={profile.regionNote ?? ''}
@@ -796,6 +799,23 @@ function IdentitySection({
             label="Online"
           />
         </div>
+      </Card>
+
+      {/* Endereço em cartão PRÓPRIO, e não junto da cidade: são seis campos, uma
+          consulta de CEP e uma escolha de privacidade — dentro do cartão de
+          localização eles afogariam a única linha que todo perfil precisa ter. */}
+      <Card title="Endereço do escritório">
+        <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
+          Opcional. Quando preenchido, o perfil ganha o endereço e um botão que abre o mapa —
+          é o que falta para quem procura um advogado para ir até lá.
+        </p>
+        <EnderecoCampos
+          address={profile.address}
+          city={profile.city}
+          state={profile.state}
+          onChange={(address) => set({ address })}
+          onLocal={({ city, state }) => set({ city, state })}
+        />
       </Card>
 
       <Card

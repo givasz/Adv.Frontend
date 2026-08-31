@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ScaleIcon } from '@/components/ui/icons'
+import { ArrowRight } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 // Esqueleto das PÁGINAS que substituíram os modais do app.
 //
@@ -99,7 +100,7 @@ export function SubPage({
             {backLabel}
           </button>
           <span className="ml-auto flex items-center gap-1.5 text-[13px] font-semibold text-ink-faint">
-            <ScaleIcon width={16} height={16} className="text-burgundy/70" aria-hidden />
+            <Marca size={22} />
             advoc.me
           </span>
         </div>

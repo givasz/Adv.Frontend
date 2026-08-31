@@ -21,6 +21,7 @@ import {
   SparkIcon,
   WhatsappIcon,
 } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 const fade = {
   hidden: { opacity: 0, y: 24 },
@@ -51,7 +52,7 @@ export default function Landing() {
       {/* Nav */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <span className="flex items-center gap-2 font-display text-xl font-semibold">
-          <ScaleIcon width={22} height={22} className="text-burgundy" />
+          <Marca size={32} />
           advoc.me
         </span>
         <div className="flex items-center gap-2 sm:gap-4">

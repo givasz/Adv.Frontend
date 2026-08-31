@@ -54,6 +54,20 @@ export interface PerfilCompartilhavel {
   areas: { label: string }[]
   faqs?: { question: string; answer: string }[]
   contact?: { email?: string }
+  /**
+   * Endereço do escritório — os mesmos campos de lib/endereco.ts, redeclarados
+   * aqui em vez de importados. Não é descuido: quem lê este arquivo do outro
+   * lado é uma edge function em Deno, que exige extensão `.ts` em todo import;
+   * um `import './endereco'` daqui derrubaria a geração das meta tags de TODO
+   * perfil. A forma é estrutural — `Endereco` satisfaz esta declaração.
+   */
+  address?: {
+    cep?: string
+    rua?: string
+    numero?: string
+    bairro?: string
+    publico?: boolean
+  }
 }
 
 /** Frase de SEO factual: "Advogado(a) de [áreas] em [cidade]/[UF]". */
@@ -128,8 +142,20 @@ function attorneyJsonLd(p: PerfilCompartilhavel, url: string, imagem: string) {
     url,
     image: imagem,
     areaServed: [p.city, p.state].filter(Boolean).join(', ') || undefined,
+    // Endereço estruturado. Rua, bairro e CEP entram SÓ quando o advogado
+    // mandou o endereço aparecer: este JSON-LD é lido por buscador, e um
+    // endereço que a página esconde não pode vazar pelo dado estruturado dela.
+    // É o mesmo cuidado do vCard (ver lib/vcard.ts).
     address: {
       '@type': 'PostalAddress',
+      ...(p.address && p.address.publico !== false && p.address.rua
+        ? {
+            streetAddress:
+              [p.address.rua, p.address.numero].filter(Boolean).join(', ') || undefined,
+            ...(p.address.bairro ? { addressNeighborhood: p.address.bairro } : {}),
+            ...(p.address.cep ? { postalCode: p.address.cep } : {}),
+          }
+        : {}),
       addressLocality: p.city || undefined,
       addressRegion: p.state || undefined,
       addressCountry: 'BR',

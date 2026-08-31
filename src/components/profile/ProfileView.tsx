@@ -18,12 +18,18 @@ import {
   ChevronDown,
   MailIcon,
   PinIcon,
-  ScaleIcon,
   WhatsappIcon,
   socialMeta,
 } from '@/components/ui/icons'
 import { safeHref } from '@/lib/safeUrl'
 import { cliqueDoPerfil, registrarEvento } from '@/lib/eventos'
+import {
+  enderecoVisivel,
+  linhaLocalidade,
+  linhaLogradouro,
+  linkDoMapa,
+} from '@/lib/endereco'
+import { Marca } from '@/components/ui/Marca'
 
 interface ProfileViewProps {
   profile: Profile
@@ -222,6 +228,36 @@ export function ProfileView({
           >
             {profile.regionNote}
           </motion.p>
+        )}
+
+        {/* Endereço do escritório.
+            Fica logo abaixo da localização e ANTES dos botões de contato: quem
+            pretende ir até lá está respondendo "onde?", e essa pergunta vem
+            antes de "como falo?". Só aparece com rua preenchida e o interruptor
+            ligado (ver lib/endereco.ts) — sem logradouro o mapa abriria no meio
+            da cidade, fingindo apontar para o escritório.
+            O bloco inteiro é o link: no celular, um alvo de toque do tamanho do
+            endereço é a diferença entre abrir o mapa e errar a linha. */}
+        {enderecoVisivel(profile.address) && (
+          <motion.a
+            variants={item}
+            href={linkDoMapa(profile.address, profile.city, profile.state)}
+            onClick={clique('endereco')}
+            target="_blank"
+            rel="noreferrer noopener"
+            className={`${tile} mt-4 !py-3 text-left`}
+          >
+            <PinIcon width={17} height={17} className="t-accent shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-medium leading-snug">
+                {linhaLogradouro(profile.address)}
+              </span>
+              <span className="t-faint block text-[12px] leading-snug">
+                {linhaLocalidade(profile.address, profile.city, profile.state)}
+              </span>
+            </span>
+            <ArrowRight width={15} height={15} className="t-faint shrink-0" />
+          </motion.a>
         )}
 
         {/* CTAs principais — logo abaixo da localização, de propósito: falar com o
@@ -454,7 +490,7 @@ export function ProfileView({
               onClick={stop}
               className="t-link inline-flex items-center gap-1.5 text-xs"
             >
-              <ScaleIcon width={14} height={14} />
+              <Marca size={20} />
               criado com <span className="font-semibold">advoc.me</span>
             </a>
           )}

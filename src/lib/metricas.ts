@@ -51,6 +51,7 @@ export function rotuloDoEvento(evento: string): string {
     assistente: 'Assistente de agendamento',
     email: 'E-mail',
     cartao: 'Salvou o contato',
+    endereco: 'Abriu o endereço no mapa',
   }
   if (fixos[evento]) return fixos[evento]
   if (evento.startsWith('rede:')) {

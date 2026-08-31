@@ -11,15 +11,13 @@ import {
 import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput } from '@/components/editor/inputs'
+import { CidadeUfCampos } from '@/components/editor/CidadeInput'
+import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
 import { LogoUpload } from '@/components/escritorio/LogoUpload'
 import { AdicionarAdvogado, DarAcesso } from '@/components/escritorio/GestaoAdvogados'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { ScaleIcon, TrashIcon } from '@/components/ui/icons'
-
-const UF_LIST = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-]
+import { TrashIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 export default function FirmEditor() {
   // O estado é dividido de propósito: `firm` é só o INSTITUCIONAL (o que o
@@ -155,7 +153,7 @@ export default function FirmEditor() {
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <ScaleIcon width={20} height={20} className="text-burgundy" />
+            <Marca size={29} />
             advoc.me
           </Link>
           <div className="flex items-center gap-3">
@@ -259,29 +257,32 @@ export default function FirmEditor() {
             A conferência do registro da sociedade é feita pela plataforma (não é selo oficial da OAB).
             Cada advogado tem sua própria conferência de OAB individual.
           </p>
-          <div className="grid grid-cols-[1fr_80px] gap-3">
-            <Field label="Cidade">
-              <TextInput value={firm.city} onChange={(e) => set({ city: e.target.value })} />
-            </Field>
-            <Field label="UF">
-              <select
-                value={firm.state}
-                onChange={(e) => set({ state: e.target.value })}
-                aria-label="UF da sociedade"
-                className="w-full rounded-lg border border-ink/15 bg-paper-soft px-2 py-2.5 text-[14px] text-ink focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15"
-              >
-                <option value="">UF</option>
-                {UF_LIST.map((u) => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          <CidadeUfCampos
+            city={firm.city}
+            state={firm.state}
+            onChange={({ city, state }) => set({ city, state })}
+          />
           {firm.slug && (
             <Field label="Endereço da página" hint="gerado do nome">
               <TextInput value={`advoc.me/escritorio/${firm.slug}`} readOnly className="!bg-paper-deep text-ink-faint" />
             </Field>
           )}
+        </Card>
+
+        {/* Endereço da sede. É no escritório que ele mais fazia falta: uma
+            sociedade tem porta física, e a página institucional dizia só a
+            cidade — quem ia até lá tinha de perguntar o resto por mensagem. */}
+        <Card title="Endereço da sede">
+          <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
+            Opcional. Aparece na página do escritório com um botão que abre o mapa.
+          </p>
+          <EnderecoCampos
+            address={firm.address}
+            city={firm.city}
+            state={firm.state}
+            onChange={(address) => set({ address })}
+            onLocal={({ city, state }) => set({ city, state })}
+          />
         </Card>
 
         {/* Apresentação */}

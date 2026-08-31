@@ -20,6 +20,7 @@
 // e aí um fundo de CSS sai branco. Como elemento, sai sempre.
 
 import { create as createQr } from 'qrcode'
+import { enderecoVisivel, linhaLogradouro } from './endereco'
 import type { Profile } from './types'
 import { getTheme } from './themes'
 import { maskBrLocal } from './brFormat'
@@ -66,6 +67,13 @@ export interface CardConfig {
   showWhatsapp: boolean
   showEmail: boolean
   showCity: boolean
+  /**
+   * Rua e número no cartão impresso. Ligado por padrão: um cartão de visita de
+   * advogado com endereço é o caso comum, e quem não quiser desliga aqui. Só
+   * sai se o endereço existir E estiver marcado como público no perfil — o
+   * interruptor de privacidade vale para o papel também.
+   */
+  showAddress: boolean
   showAreas: boolean
   /** linha livre sob o nome — passa pela checagem de conformidade */
   tagline: string
@@ -80,6 +88,7 @@ export const DEFAULT_CARD: CardConfig = {
   showWhatsapp: true,
   showEmail: true,
   showCity: true,
+  showAddress: true,
   showAreas: true,
   tagline: '',
 }
@@ -100,6 +109,7 @@ export function resolveCard(raw: Partial<CardConfig> | undefined | null): CardCo
     showWhatsapp: raw?.showWhatsapp ?? DEFAULT_CARD.showWhatsapp,
     showEmail: raw?.showEmail ?? DEFAULT_CARD.showEmail,
     showCity: raw?.showCity ?? DEFAULT_CARD.showCity,
+    showAddress: raw?.showAddress ?? DEFAULT_CARD.showAddress,
     showAreas: raw?.showAreas ?? DEFAULT_CARD.showAreas,
     tagline: String(raw?.tagline ?? '').slice(0, CARD_TAGLINE_MAX),
   }
@@ -182,6 +192,11 @@ export function cardLines(profile: Profile, card: CardConfig): CardLines {
   const contacts: string[] = []
   if (card.showWhatsapp && profile.contact?.whatsapp) contacts.push(phoneLabel(profile.contact.whatsapp))
   if (card.showEmail && profile.contact?.email) contacts.push(profile.contact.email.trim())
+  // Rua ANTES de cidade/UF: é a ordem em que endereço se lê, e no cartão as
+  // duas linhas ficam vizinhas.
+  if (card.showAddress && enderecoVisivel(profile.address)) {
+    contacts.push(linhaLogradouro(profile.address))
+  }
   if (card.showCity && (profile.city || profile.state)) {
     contacts.push([profile.city, profile.state].filter(Boolean).join('/'))
   }

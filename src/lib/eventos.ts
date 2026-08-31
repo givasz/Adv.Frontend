@@ -35,6 +35,7 @@ export type Evento =
   | 'assistente'
   | 'email'
   | 'cartao'
+  | 'endereco'
   | `rede:${string}`
 
 /**

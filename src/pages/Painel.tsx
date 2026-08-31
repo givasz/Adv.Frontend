@@ -21,11 +21,11 @@ import {
   LockIcon,
   PlayIcon,
   QrIcon,
-  ScaleIcon,
   ShieldIcon,
 } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
+import { Marca } from '@/components/ui/Marca'
 
 // Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
 // lá o próprio recurso mostra seu valor antes de pedir upgrade (upsell natural).
@@ -154,7 +154,7 @@ export default function Painel() {
             to="/"
             className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold"
           >
-            <ScaleIcon width={20} height={20} className="shrink-0 text-burgundy" />
+            <Marca size={29} />
             {/* Abaixo de 360px a balança sozinha identifica melhor que um "ad…"
                 cortado — truncar um wordmark de 8 letras não economiza nada. */}
             <span className="hidden min-[360px]:inline">advoc.me</span>

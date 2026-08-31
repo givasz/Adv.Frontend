@@ -3,8 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { login, signup, useAuth } from '@/lib/auth'
 import { passwordStrength } from '@/lib/passwordStrength'
-import { ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, ScaleIcon, SparkIcon } from '@/components/ui/icons'
+import { ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, SparkIcon } from '@/components/ui/icons'
 import { caminhoDeVolta } from '@/components/ui/SubPage'
+import { Marca } from '@/components/ui/Marca'
 
 type Mode = 'login' | 'signup'
 
@@ -88,7 +89,7 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     <div className="grain flex min-h-dvh flex-col bg-paper-deep">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5">
         <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold">
-          <ScaleIcon width={22} height={22} className="text-burgundy" />
+          <Marca size={32} />
           advoc.me
         </Link>
         <Link to="/" className="-my-2 inline-block py-2 text-[13px] font-medium text-ink-faint hover:text-ink">

@@ -4,6 +4,7 @@
 // questionado sobre uma publicação (ver REGRAS.md §4 — Registro e auditoria).
 
 import { POLICY_VERSION, RULESET_REV, type checkCompliance } from './oab'
+import { enderecoEmLinha, enderecoVisivel } from './endereco'
 import type { Profile } from './types'
 
 type Issues = ReturnType<typeof checkCompliance>
@@ -74,6 +75,11 @@ function reportHtml(profile: Profile, issues: Issues, dateStr: string): string {
     <tr><td>Advogado(a)</td><td>${esc(profile.name)}</td></tr>
     <tr><td>Inscrição</td><td>${esc(profile.oabNumber)}</td></tr>
     <tr><td>Localidade</td><td>${esc([profile.city, profile.state].filter(Boolean).join('/') || '—')}</td></tr>
+    <tr><td>Endereço do escritório</td><td>${esc(
+      enderecoVisivel(profile.address)
+        ? enderecoEmLinha(profile.address, profile.city, profile.state)
+        : 'não publicado',
+    )}</td></tr>
     <tr><td>Endereço do perfil</td><td>advoc.me/${esc(profile.slug)}</td></tr>
   </table>
 

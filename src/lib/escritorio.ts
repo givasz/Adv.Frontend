@@ -3,6 +3,8 @@
 // o Prov. 205/2021 e o CED da OAB: sem promessa de resultado, ranking, exposição de
 // clientes/casos, urgência ou linguagem de venda.
 
+import type { Endereco } from './endereco'
+
 /** Advogado integrante do escritório (card do grid + mini-perfil interno). */
 export interface FirmLawyer {
   id: string
@@ -104,6 +106,12 @@ export interface Firm {
   about: string
   city: string
   state: string
+  /**
+   * Endereço da sede. O escritório é o caso em que ele mais falta: uma
+   * sociedade tem porta física, e a página institucional existia dizendo só a
+   * cidade. Ver lib/endereco.ts.
+   */
+  address?: Endereco
   contact: FirmContact
   areas: FirmArea[]
   lawyers: FirmLawyer[]
@@ -139,6 +147,14 @@ export const sampleFirm: Firm = {
     'Nosso trabalho é orientado por informação clara, técnica e acompanhamento próximo em cada etapa dos processos.',
   city: 'São Paulo',
   state: 'SP',
+  address: {
+    cep: '04538133',
+    rua: 'Av. Brigadeiro Faria Lima',
+    numero: '3900',
+    complemento: '10º andar',
+    bairro: 'Itaim Bibi',
+    publico: true,
+  },
   // O exemplo encaminha DIRETO para o advogado escolhido — é o que a opção
   // 'lawyer' faz, e sem isso a demonstração nunca mostrava o encaminhamento.
   // Sem escolha (ou sem número dele), volta para o WhatsApp institucional.

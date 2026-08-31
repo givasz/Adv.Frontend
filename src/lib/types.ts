@@ -4,6 +4,7 @@ import type { ThemeId } from './themes'
 import type { CardConfig } from './cardArt'
 import type { VideoOrientation } from './video'
 import type { Subscription } from './assinatura'
+import type { Endereco } from './endereco'
 
 export type Plan = 'free' | 'pro' | 'premium'
 
@@ -182,6 +183,12 @@ export interface Profile {
   avatarUrl?: string
   city: string
   state: string
+  /**
+   * Endereço do escritório — rua, número, bairro e CEP. Opcional e com
+   * interruptor próprio (`publico`): quem atende de casa preenche para o
+   * cartão de contato sem publicar. Ver lib/endereco.ts.
+   */
+  address?: Endereco
   regionNote?: string // ex: "Atendimento em toda a Grande SP"
   serviceMode: ServiceMode
   areas: PracticeArea[]

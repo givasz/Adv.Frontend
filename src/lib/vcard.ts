@@ -5,6 +5,7 @@
 // (OAB, congressos) como captação passiva, dentro do Prov. 205/2021.
 
 import type { Profile } from './types'
+import { adrDoVCard } from './endereco'
 
 export function buildVCard(profile: Profile, url: string): string {
   const lines = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${profile.name}`, `N:${profile.name};;;;`]
@@ -15,9 +16,18 @@ export function buildVCard(profile: Profile, url: string): string {
   const site = profile.socials.find((s) => s.kind === 'website')?.url
   if (site) lines.push(`URL:${site}`)
   lines.push(`URL:${url}`)
-  if (profile.city || profile.state) {
-    lines.push(`ADR;TYPE=WORK:;;;${profile.city};${profile.state};;Brasil`)
-  }
+  // O endereço vai INTEIRO quando existe: era só cidade/UF, e um contato salvo
+  // sem rua nem CEP é um contato que não leva ninguém ao escritório. O ADR
+  // completo (e o escape que a RFC exige) vive em lib/endereco.ts.
+  //
+  // O endereço marcado como não-público NÃO entra: o cartão que o visitante
+  // salva é conteúdo público como qualquer outro, e vazá-lo por aqui seria a
+  // forma mais silenciosa de furar o interruptor.
+  const adr =
+    profile.address?.publico === false
+      ? adrDoVCard(undefined, profile.city, profile.state)
+      : adrDoVCard(profile.address, profile.city, profile.state)
+  if (adr) lines.push(adr)
   lines.push('END:VCARD')
   return lines.join('\r\n')
 }

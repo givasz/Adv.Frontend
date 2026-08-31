@@ -16,6 +16,7 @@ import { MiniPerfil } from './MiniPerfil'
 import { PainelEmLinha } from './PainelEmLinha'
 import { AssistenteEscritorio } from './AssistenteEscritorio'
 import { safeHref } from '@/lib/safeUrl'
+import { enderecoVisivel, linhaLocalidade, linhaLogradouro, linkDoMapa } from '@/lib/endereco'
 
 // Página institucional standalone do escritório (sociedade de advogados). Estilo próprio
 // baseado na paleta "Papel & Tinta" (bege/grafite/dourado) — NÃO usa o sistema de temas
@@ -67,6 +68,32 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
             <PinIcon width={15} height={15} />
             {firm.city}/{firm.state}
           </div>
+          {/* Endereço da sede, quando houver. O bloco inteiro é o link para o
+              mapa — mesma decisão do perfil individual (ver ProfileView). */}
+          {enderecoVisivel(firm.address) && (
+            <a
+              href={linkDoMapa(firm.address, firm.city, firm.state)}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="mt-4 flex w-full items-center gap-3 rounded-xl2 border border-ink/10 bg-paper-soft p-3.5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
+            >
+              <PinIcon
+                width={17}
+                height={17}
+                className="shrink-0"
+                style={{ color: 'var(--firm-accent)' }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-medium leading-snug text-ink">
+                  {linhaLogradouro(firm.address)}
+                </span>
+                <span className="block text-[12px] leading-snug text-ink-faint">
+                  {linhaLocalidade(firm.address, firm.city, firm.state)}
+                </span>
+              </span>
+              <ArrowRight width={15} height={15} className="shrink-0 text-ink-faint" />
+            </a>
+          )}
         </header>
 
         {/* Redes institucionais (topo) — separadas das redes pessoais dos advogados */}

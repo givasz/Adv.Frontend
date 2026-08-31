@@ -10,6 +10,17 @@ export const sampleProfile: Profile = {
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
   city: 'São Paulo',
   state: 'SP',
+  // O exemplo tem endereço porque a demonstração da home é onde a maioria vê o
+  // recurso pela primeira vez — sem ele, o botão do mapa não existiria em lugar
+  // nenhum até alguém preencher o próprio.
+  address: {
+    cep: '01310100',
+    rua: 'Av. Paulista',
+    numero: '1000',
+    complemento: 'Conj. 121',
+    bairro: 'Bela Vista',
+    publico: true,
+  },
   regionNote: 'Atendimento em toda a Grande São Paulo',
   serviceMode: { inPerson: true, online: true },
   areas: [

@@ -19,8 +19,10 @@ import { PhonePreview } from '@/components/editor/PhonePreview'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
-import { OabNumberInput, UfSelect, WhatsappInput } from '@/components/editor/inputs'
+import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
+import { CidadeUfCampos } from '@/components/editor/CidadeInput'
 import { SparkIcon, ScaleIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
+import { Marca } from '@/components/ui/Marca'
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
@@ -207,7 +209,7 @@ export default function Onboarding() {
     <div className="grain flex min-h-dvh flex-col bg-paper-deep">
       <header className="flex items-center justify-between px-5 py-4">
         <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold">
-          <ScaleIcon width={20} height={20} className="text-burgundy" />
+          <Marca size={29} />
           advoc.me
         </Link>
         <AccountMenu compact />
@@ -275,18 +277,14 @@ export default function Onboarding() {
                     }}
                   />
                 </Field>
-                <div className="grid grid-cols-[1fr_88px] gap-3">
-                  <Field label="Cidade">
-                    <TextInput
-                      value={profile.city}
-                      onChange={(e) => set({ city: e.target.value })}
-                      placeholder="São Paulo"
-                    />
-                  </Field>
-                  <Field label="Estado">
-                    <UfSelect value={profile.state} onChange={(state) => set({ state })} />
-                  </Field>
-                </div>
+                {/* A UF já vem preenchida pela seccional da OAB acima, então o
+                    campo de cidade abre com a busca restrita ao estado certo —
+                    e a escolha grava a grafia oficial do IBGE. */}
+                <CidadeUfCampos
+                  city={profile.city}
+                  state={profile.state}
+                  onChange={({ city, state }) => set({ city, state })}
+                />
               </StepShell>
             )}
 
