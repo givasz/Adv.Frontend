@@ -12,6 +12,7 @@
 
 import { MONTHS_SHORT, WEEKDAYS_FULL, WEEKDAYS_SHORT } from './booking'
 import type { AssistantConfig, AssistantDay, Profile } from './types'
+import { enderecoEmLinha, enderecoVisivel, type Endereco } from './endereco'
 
 /** Grade de horários oferecida no editor: 08:00 → 20:00, de 30 em 30 minutos. */
 export const TIME_PRESETS: string[] = (() => {
@@ -173,6 +174,31 @@ const MONTHS_FULL = [
   'novembro',
   'dezembro',
 ]
+
+// ---- Endereço no roteiro presencial ----
+
+/**
+ * A fala do assistente logo depois de alguém escolher **presencial**.
+ *
+ * Quem marca uma conversa presencial acabou de decidir sair de casa, e a
+ * pergunta imediata é "onde?". Deixar isso para o visitante procurar de volta no
+ * topo da página — ou, pior, perguntar no WhatsApp — é a conversa devolvendo ao
+ * usuário um trabalho que ela já tinha como fazer.
+ *
+ * Vem com a cidade, ao contrário da linha do perfil: o histórico da conversa é
+ * lido (e às vezes fotografado) fora do contexto da página.
+ *
+ * Devolve string vazia quando não há endereço publicado — e aí a conversa segue
+ * exatamente como seguia antes, sem uma fala pela metade.
+ */
+export function falaDoEnderecoPresencial(local: {
+  address?: Endereco
+  city: string
+  state: string
+}): string {
+  if (!enderecoVisivel(local.address)) return ''
+  return `O atendimento presencial é em ${enderecoEmLinha(local.address, local.city, local.state)}.`
+}
 
 // ---- Identidade do assistente ----
 

@@ -3,6 +3,7 @@ import {
   adrDoVCard,
   cepCompleto,
   digitosDeCep,
+  enderecoCurto,
   enderecoEmLinha,
   enderecoVisivel,
   formatarCep,
@@ -69,6 +70,12 @@ describe('as linhas lidas por humano', () => {
     expect(linhaLogradouro({ rua: 'Rua das Flores' })).toBe('Rua das Flores')
     expect(linhaLocalidade({}, 'Curitiba', 'PR')).toBe('Curitiba/PR')
     expect(linhaLocalidade(undefined, '', '')).toBe('')
+  })
+
+  it('a linha curta omite a cidade — ela já está escrita logo acima no perfil', () => {
+    expect(enderecoCurto(completo)).toBe('Av. Paulista, 1000 — Conj. 121 · Bela Vista · 01310-100')
+    expect(enderecoCurto({ rua: 'Rua das Flores', numero: '12' })).toBe('Rua das Flores, 12')
+    expect(enderecoCurto(undefined)).toBe('')
   })
 
   it('a linha única junta as duas', () => {

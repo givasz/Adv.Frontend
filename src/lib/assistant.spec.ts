@@ -3,6 +3,7 @@ import {
   assistantTitle,
   buildAssistantDays,
   buildAssistantMessage,
+  falaDoEnderecoPresencial,
   normalizeTimes,
   resolveAssistantConfig,
   weeklySlotCount,
@@ -118,5 +119,42 @@ describe('assistantTitle', () => {
   it('sempre deixa claro que é um assistente virtual', () => {
     expect(assistantTitle({ name: 'Pedro Almeida' })).toBe('Assistente virtual de Pedro')
     expect(assistantTitle({ name: '' })).toBe('Assistente virtual')
+  })
+})
+
+describe('falaDoEnderecoPresencial', () => {
+  const local = {
+    city: 'São Paulo',
+    state: 'SP',
+    address: {
+      cep: '01310100',
+      rua: 'Av. Paulista',
+      numero: '1000',
+      complemento: 'Conj. 121',
+      bairro: 'Bela Vista',
+    },
+  }
+
+  it('diz o endereço inteiro, com a cidade', () => {
+    // Com cidade, ao contrário da linha do perfil: o histórico da conversa é
+    // lido (e fotografado) longe do cabeçalho da página.
+    expect(falaDoEnderecoPresencial(local)).toBe(
+      'O atendimento presencial é em Av. Paulista, 1000 — Conj. 121, Bela Vista, São Paulo/SP · 01310-100.',
+    )
+  })
+
+  it('cala quando o advogado escondeu o endereço', () => {
+    // O interruptor de privacidade vale na conversa também — seria o caminho
+    // mais silencioso de publicar o endereço de quem atende em casa.
+    expect(falaDoEnderecoPresencial({ ...local, address: { ...local.address, publico: false } })).toBe('')
+  })
+
+  it('cala quando não há endereço, e a conversa segue como antes', () => {
+    expect(falaDoEnderecoPresencial({ city: 'Curitiba', state: 'PR' })).toBe('')
+    expect(falaDoEnderecoPresencial({ city: 'Curitiba', state: 'PR', address: { bairro: 'Centro' } })).toBe('')
+  })
+
+  it('não tem nada de captação — é fala operacional', () => {
+    expect(falaDoEnderecoPresencial(local)).not.toMatch(/venha|garant|melhor|atendimento exclusivo/i)
   })
 })

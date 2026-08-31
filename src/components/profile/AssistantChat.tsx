@@ -22,6 +22,7 @@ import {
   assistantWhatsappHref,
   buildAssistantDays,
   firstName,
+  falaDoEnderecoPresencial,
   formatChoice,
   MAX_DAY_CHIPS,
   resolveAssistantConfig,
@@ -87,6 +88,9 @@ export function AssistantChat({
   const bothFormats = profile.serviceMode.inPerson && profile.serviceMode.online
   const soloFormat = profile.serviceMode.online ? 'online' : 'presencial'
   const first = firstName(profile.name)
+  // A fala do endereço, pronta. Vazia quando o advogado não publicou um — e aí a
+  // conversa segue como sempre seguiu. Ver falaDoEnderecoPresencial.
+  const endereco = falaDoEnderecoPresencial(profile)
 
   // Falas, "digitando…" e o cancelamento das falas pendentes vivem no motor
   // compartilhado com o assistente do escritório (components/assistant).
@@ -157,21 +161,28 @@ export function AssistantChat({
       return
     }
     setAnswers((a) => ({ ...a, time, format: soloFormat }))
-    askSubject()
+    // Perfil que só atende presencial nunca chega à pergunta de formato — mas o
+    // endereço faz a mesma falta. Ele entra aqui, no mesmo ponto do roteiro.
+    askSubject(soloFormat === 'presencial' ? endereco : '')
   }
 
   function pickFormat(format: string) {
     push('user', cap(format))
     setAnswers((a) => ({ ...a, format }))
-    askSubject()
+    askSubject(format === 'presencial' ? endereco : '')
   }
 
-  function askSubject() {
+  /** `antes` é a fala do endereço, quando houver — ver falaDoEnderecoPresencial. */
+  function askSubject(antes = '') {
+    const abre = antes ? [antes] : []
     if (!areas.length) {
-      void say(['Sobre qual assunto seria a conversa? Pode escrever em poucas palavras.'], 'detail')
+      void say(
+        [...abre, 'Sobre qual assunto seria a conversa? Pode escrever em poucas palavras.'],
+        'detail',
+      )
       return
     }
-    void say(['Sobre qual assunto seria a conversa?'], 'subject')
+    void say([...abre, 'Sobre qual assunto seria a conversa?'], 'subject')
   }
 
   function pickSubject(subject: string) {

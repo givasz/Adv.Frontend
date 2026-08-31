@@ -14,6 +14,7 @@ import { CnaLink } from '@/components/ui/CnaLink'
 import {
   ArrowRight,
   CalendarIcon,
+  ExternalLinkIcon,
   SparkIcon,
   ChevronDown,
   MailIcon,
@@ -23,12 +24,7 @@ import {
 } from '@/components/ui/icons'
 import { safeHref } from '@/lib/safeUrl'
 import { cliqueDoPerfil, registrarEvento } from '@/lib/eventos'
-import {
-  enderecoVisivel,
-  linhaLocalidade,
-  linhaLogradouro,
-  linkDoMapa,
-} from '@/lib/endereco'
+import { enderecoCurto, enderecoVisivel, linkDoMapa } from '@/lib/endereco'
 import { Marca } from '@/components/ui/Marca'
 
 interface ProfileViewProps {
@@ -230,34 +226,34 @@ export function ProfileView({
           </motion.p>
         )}
 
-        {/* Endereço do escritório.
-            Fica logo abaixo da localização e ANTES dos botões de contato: quem
-            pretende ir até lá está respondendo "onde?", e essa pergunta vem
-            antes de "como falo?". Só aparece com rua preenchida e o interruptor
-            ligado (ver lib/endereco.ts) — sem logradouro o mapa abriria no meio
-            da cidade, fingindo apontar para o escritório.
-            O bloco inteiro é o link: no celular, um alvo de toque do tamanho do
-            endereço é a diferença entre abrir o mapa e errar a linha. */}
+        {/* Endereço do escritório — mais uma linha do bloco de localização, e
+            não um cartão.
+            Já foi um ladrilho com borda, duas linhas e seta, do tamanho dos
+            botões de contato. Ficava com mais peso do que merece: endereço é
+            informação de referência, não é a ação que a pessoa veio fazer — e
+            um retângulo daquele tamanho logo acima do botão de WhatsApp disputa
+            atenção com ele. Aqui é texto miúdo, na mesma família da observação
+            de região, com a cidade omitida (`enderecoCurto`) porque ela já está
+            escrita na linha de cima.
+            Só aparece com rua preenchida e o interruptor ligado (ver
+            lib/endereco.ts): sem logradouro o mapa abriria no meio da cidade,
+            fingindo apontar para o escritório. */}
         {enderecoVisivel(profile.address) && (
-          <motion.a
+          <motion.p
             variants={item}
-            href={linkDoMapa(profile.address, profile.city, profile.state)}
-            onClick={clique('endereco')}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={`${tile} mt-4 !py-3 text-left`}
+            className={`t-faint mt-1 text-[13px] ${left ? 'text-left' : 'text-center'}`}
           >
-            <PinIcon width={17} height={17} className="t-accent shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-medium leading-snug">
-                {linhaLogradouro(profile.address)}
-              </span>
-              <span className="t-faint block text-[12px] leading-snug">
-                {linhaLocalidade(profile.address, profile.city, profile.state)}
-              </span>
-            </span>
-            <ArrowRight width={15} height={15} className="t-faint shrink-0" />
-          </motion.a>
+            <a
+              href={linkDoMapa(profile.address, profile.city, profile.state)}
+              onClick={clique('endereco')}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-baseline gap-1.5 hover:underline"
+            >
+              {enderecoCurto(profile.address)}
+              <ExternalLinkIcon width={11} height={11} className="shrink-0 opacity-70" />
+            </a>
+          </motion.p>
         )}
 
         {/* CTAs principais — logo abaixo da localização, de propósito: falar com o

@@ -94,6 +94,19 @@ export function linhaLocalidade(e: Endereco | null | undefined, cidade: string, 
   return [antes, cep].filter(Boolean).join(' · ')
 }
 
+/**
+ * O endereço SEM a cidade: "Av. Paulista, 1000 — Conj. 121 · Bela Vista · 01310-100".
+ *
+ * Existe para o perfil público, onde a cidade já está escrita na linha de cima.
+ * Repeti-la logo abaixo faz o bloco parecer mais longo — e mais importante — do
+ * que é: quem chegou ali já sabe em que cidade a pessoa atende, e o que falta
+ * saber é a rua.
+ */
+export function enderecoCurto(e?: Endereco | null): string {
+  const cep = e?.cep ? formatarCep(e.cep) : ''
+  return [linhaLogradouro(e), e?.bairro?.trim(), cep].filter(Boolean).join(' · ')
+}
+
 /** As duas linhas numa só, para vCard, PDF e qualquer lugar de uma linha só. */
 export function enderecoEmLinha(
   e: Endereco | null | undefined,

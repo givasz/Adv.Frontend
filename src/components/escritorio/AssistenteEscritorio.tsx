@@ -4,6 +4,7 @@ import { lawyersInNeutralOrder, type Firm } from '@/lib/escritorio'
 import {
   FIRM_ANY_LAWYER,
   FIRM_PERIODS,
+  falaDoEnderecoPresencial,
   firmAssistantDestination,
   firmAssistantWhatsappHref,
   type FirmAssistantAnswers,
@@ -106,7 +107,13 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   function pickFormat(format: string) {
     push('user', cap(format))
     setAnswers((a) => ({ ...a, format }))
-    void say(['Que dia e período são melhores para você?'], 'period')
+    // Presencial numa sociedade é ir até a sede — e o endereço dela é o que a
+    // pessoa vai precisar em seguida. Vazio quando não há endereço publicado.
+    const endereco = format === 'presencial' ? falaDoEnderecoPresencial(firm) : ''
+    void say(
+      [...(endereco ? [endereco] : []), 'Que dia e período são melhores para você?'],
+      'period',
+    )
   }
 
   function pickPeriod(period: string) {
