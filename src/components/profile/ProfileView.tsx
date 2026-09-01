@@ -9,6 +9,7 @@ import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
 import { AssistantChat } from '@/components/profile/AssistantChat'
+import { BalaoDeConversa, balaoVisivel } from '@/components/profile/BalaoDeConversa'
 import { assistantTitle } from '@/lib/assistant'
 import { CnaLink } from '@/components/ui/CnaLink'
 import {
@@ -516,6 +517,17 @@ export function ProfileView({
           </p>
         </motion.footer>
       </motion.div>
+
+      {/* Balão de conversa no canto — atalho para a MESMA conversa do corpo da
+          página. Três condições, e todas precisam valer:
+            • o advogado ligou (`assistant.floating`, desligado por padrão);
+            • o servidor deixou (o campo só vem `true` em Pro/Max);
+            • o assistente é de fato o modo de agendamento escolhido — um
+              atalho para uma conversa que não existe seria um botão quebrado.
+          `canSchedule` mantém a prévia do editor inerte, como o resto. */}
+      {balaoVisivel(profile, { schedulingMode, podeAgendar: canSchedule }) && (
+        <BalaoDeConversa profile={profile} demo={demoChat} onDemo={() => setSchedOpen(true)} />
+      )}
 
       {/* Única sobreposição que sobrou no perfil, e só na DEMONSTRAÇÃO da home:
           ali a conversa precisa acontecer dentro do telefone, senão não é demo. */}

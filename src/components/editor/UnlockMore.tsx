@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
+import { precoDoPlano } from '@/lib/plans'
 import { ArrowRight, CheckIcon, SparkIcon } from '@/components/ui/icons'
 
 // Upsell "positivo": os planos pagos não desbloqueiam recursos abstratos — eles
@@ -14,7 +15,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
   pro: {
     id: 'pro',
     tier: 'Pro',
-    price: 'R$ 19',
+    price: precoDoPlano('pro'),
     pitch: 'Mais espaço e recursos no seu perfil.',
     items: [
       'Assistente virtual que marca horários',
@@ -29,7 +30,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
   premium: {
     id: 'premium',
     tier: 'Max',
-    price: 'R$ 39',
+    price: precoDoPlano('premium'),
     pitch: 'Vídeo, marca própria e o perfil por inteiro.',
     items: [
       'Até 5 perguntas frequentes no perfil',

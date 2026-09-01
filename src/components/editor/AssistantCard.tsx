@@ -11,7 +11,7 @@ import {
   weeklySlotCount,
 } from '@/lib/assistant'
 import { checkCompliance } from '@/lib/oab'
-import { Field, TextArea } from './fields'
+import { Field, TextArea, Toggle } from './fields'
 import { InfoTip } from './InfoTip'
 import { MarginNotes } from './MarginNotes'
 import { CalendarIcon, CheckIcon, WhatsappIcon } from '@/components/ui/icons'
@@ -282,6 +282,21 @@ export function AssistantCard({
             />
           </Field>
           <MarginNotes issues={greetingIssues} />
+
+          {/* 5 — balão no canto da página */}
+          <div className="rounded-lg border border-ink/10 bg-paper-deep/60 p-3">
+            <Toggle
+              checked={config.floating === true}
+              onChange={(floating) => patch({ floating })}
+              label="Mostrar um balão de conversa no canto do perfil"
+            />
+            <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+              {config.floating
+                ? 'O balão acompanha a rolagem e abre esta mesma conversa. Ele não pede nada a quem visita: quem escreve é a pessoa, no WhatsApp dela.'
+                : 'Desligado, o agendamento continua no corpo da página — o balão é só um atalho a mais, sempre à vista.'}
+            </p>
+          </div>
+
 
           {/* resumo do que o visitante vai ver */}
           <div className="flex items-start gap-2.5 rounded-lg border border-ink/10 bg-paper-soft/60 px-3.5 py-3">

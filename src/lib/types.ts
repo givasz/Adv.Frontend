@@ -119,6 +119,15 @@ export interface AssistantConfig {
   horizonDays: number
   /** frase de abertura personalizada (opcional) — passa pela checagem de conformidade */
   greeting?: string
+  /**
+   * Balão no canto da página pública, que segue a rolagem e abre a conversa.
+   *
+   * Desligado por padrão, e é o advogado quem liga. Um elemento que persegue o
+   * visitante é o oposto da sobriedade que o Prov. 205/2021 pede — ele cabe em
+   * quem atende muito pelo perfil, e não cabe em quem prefere uma página
+   * discreta. Perk de plano pago (Pro e Max): a trava vale no servidor.
+   */
+  floating?: boolean
 }
 
 /**

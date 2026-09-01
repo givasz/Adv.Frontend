@@ -13,6 +13,7 @@ import {
   canUsePrintCard,
   canUseScheduling,
   canUseVideo,
+  precoDoPlano,
   type LimitedField,
 } from './plans'
 import { TRUST_FACTORS } from './trustScore'
@@ -20,7 +21,12 @@ import { THEMES, isThemeUnlocked } from './themes'
 
 // Rótulo de plano exibido ao usuário (premium é comercializado como "Max").
 export const PLAN_LABEL: Record<Plan, string> = { free: 'Free', pro: 'Pro', premium: 'Max' }
-export const PLAN_PRICE: Record<Exclude<Plan, 'free'>, string> = { pro: 'R$ 19', premium: 'R$ 39' }
+// Reexportado de plans.ts, que é a fonte única do preço — quatro cópias de um
+// preço é a vitrine e o checkout se contradizendo na frente do cliente.
+export const PLAN_PRICE: Record<Exclude<Plan, 'free'>, string> = {
+  pro: precoDoPlano('pro'),
+  premium: precoDoPlano('premium'),
+}
 
 const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
 const PAID: Exclude<Plan, 'free'>[] = ['pro', 'premium']

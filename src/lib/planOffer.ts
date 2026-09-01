@@ -21,7 +21,7 @@
 // uma fiscalização citaria, contra ele e contra a plataforma. Ver REGRAS.md.
 
 import type { Plan } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, FIRM_PRICING } from './plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, FIRM_PRICING, precoDoPlano } from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
 
 /**
@@ -93,6 +93,13 @@ export interface PlanOffer {
 const ASSISTENTE =
   'Assistente de agendamento: quem visita escolhe dia e horário, e o pedido chega pronto no seu WhatsApp'
 
+// O balão é do MESMO assistente, e por isso entra como linha própria em vez de
+// virar um plano à parte: o que o Pro compra é a conversa; onde ela fica à mão é
+// preferência de quem publica. Descrito pelo que ele faz — "atalho", "se quiser"
+// —, sem o vocabulário de conversão que a norma de publicidade não admite.
+const BALAO =
+  'Atalho de conversa fixo no canto do perfil, se você quiser — dá para deixar desligado'
+
 /**
  * `advoc.me` é o nome do produto, NÃO um domínio no ar — os perfis hoje ficam em
  * advocme.netlify.app (ver lib/publicUrl.ts, que existe por causa de um QR Code
@@ -106,7 +113,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'free',
     name: 'Free',
-    price: 'R$ 0',
+    price: precoDoPlano('free'),
     period: 'para sempre',
     pitch: 'Um perfil profissional, no ar em minutos.',
     items: [
@@ -127,12 +134,13 @@ export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 'R$ 19',
+    price: precoDoPlano('pro'),
     period: '/mês',
     pitch: 'Agendamento e respostas às dúvidas de sempre.',
     featured: true,
     items: [
       { text: ASSISTENTE },
+      { text: BALAO },
       { text: `${FAQ_LIMIT.pro} perguntas frequentes respondidas no perfil` },
       { text: ENDERECO },
       { text: 'Cartão digital: QR Code em alta e seu contato em vCard' },
@@ -153,7 +161,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'premium',
     name: 'Max',
-    price: 'R$ 39',
+    price: precoDoPlano('premium'),
     period: '/mês',
     pitch: 'O perfil com a sua identidade, não a nossa.',
     items: [

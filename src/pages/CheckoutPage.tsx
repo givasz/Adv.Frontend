@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import type { Plan } from '@/lib/types'
 import { api } from '@/lib/api'
 import { PLAN_LABEL } from '@/lib/upsell'
+import { precoDoPlano } from '@/lib/plans'
 import { getTheme, isThemeUnlocked, type ThemeId } from '@/lib/themes'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { PlanFeaturePeek } from '@/components/editor/PlanChecklist'
@@ -19,7 +20,12 @@ import { CheckIcon, ScaleIcon } from '@/components/ui/icons'
 // Continua SEM cobrança (plataforma em teste). Quem grava o plano é o servidor
 // (POST /profiles/me/plan) — ver lib/api.ts.
 
-const PRICE: Record<Exclude<Plan, 'free'>, string> = { pro: 'R$ 19', premium: 'R$ 39' }
+// De plans.ts, a fonte única. O checkout é o ÚLTIMO lugar onde um preço pode
+// divergir da vitrine: quem descobre a diferença aqui descobre no pior momento.
+const PRICE: Record<Exclude<Plan, 'free'>, string> = {
+  pro: precoDoPlano('pro'),
+  premium: precoDoPlano('premium'),
+}
 const PROMISE: Record<Exclude<Plan, 'free'>, string> = {
   pro: 'Assistente de agendamento, perguntas frequentes, cartão com QR e endereço sem número.',
   premium:

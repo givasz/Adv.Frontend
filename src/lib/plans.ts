@@ -74,6 +74,30 @@ export function canUseNativeAgenda(plan: Plan): boolean {
   return plan === 'pro' || plan === 'premium'
 }
 
+// ---- Preço dos planos individuais — FONTE ÚNICA ----
+//
+// Estava escrito em QUATRO lugares: planOffer.ts (a home e o editor), upsell.ts
+// (o convite que aparece ao esbarrar num recurso pago), UnlockMore.tsx (o cartão
+// do editor) e CheckoutPage.tsx (a tela que confirma a assinatura).
+//
+// Quatro cópias de um preço é uma promessa que se contradiz sozinha: a home
+// anuncia um valor, o checkout cobra outro, e quem descobre a diferença é o
+// cliente no momento em que ele mais repara. Um preço é a última coisa que pode
+// divergir entre a vitrine e a caixa registradora.
+//
+// Em REAIS (número), não em texto: quem formata é `precoDoPlano()`. Guardar
+// "R$ 29" como string espalha a decisão de formato junto com o valor, e foi
+// assim que as quatro cópias nasceram.
+export const PLAN_PRICE: Record<Exclude<Plan, 'free'>, number> = {
+  pro: 29,
+  premium: 49,
+}
+
+/** O preço como ele aparece na tela. `free` é o único que não é um número. */
+export function precoDoPlano(plan: Plan): string {
+  return plan === 'free' ? 'R$ 0' : `R$ ${PLAN_PRICE[plan]}`
+}
+
 // ---- Plano Escritório (espelha backend/src/plans.ts) ----
 // R$ 99/mês incluindo 5 advogados; +R$ 20/mês por advogado adicional.
 export const FIRM_PRICING = { basePrice: 99, includedSeats: 5, extraSeatPrice: 20 } as const
