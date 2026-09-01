@@ -525,8 +525,15 @@ export function ProfileView({
             • o assistente é de fato o modo de agendamento escolhido — um
               atalho para uma conversa que não existe seria um botão quebrado.
           `canSchedule` mantém a prévia do editor inerte, como o resto. */}
-      {balaoVisivel(profile, { schedulingMode, podeAgendar: canSchedule }) && (
-        <BalaoDeConversa profile={profile} demo={demoChat} onDemo={() => setSchedOpen(true)} />
+      {balaoVisivel(profile, { schedulingMode }) && (
+        <BalaoDeConversa
+          profile={profile}
+          demo={demoChat}
+          // Na prévia do editor ele APARECE e não navega — é onde o advogado
+          // acabou de ligar o interruptor, e precisa ver o que ligou.
+          inert={!canSchedule}
+          onDemo={() => setSchedOpen(true)}
+        />
       )}
 
       {/* Única sobreposição que sobrou no perfil, e só na DEMONSTRAÇÃO da home:

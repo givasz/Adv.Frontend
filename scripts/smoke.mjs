@@ -265,7 +265,58 @@ async function painelDeModeracao() {
   return erros
 }
 
+/**
+ * O balão de conversa fica DENTRO do celularzinho da home.
+ *
+ * Ele é `position: fixed`, e isso é uma armadilha que nenhum teste de unidade
+ * pega: dentro de um ancestral com `transform` (o ProfileView anima o próprio
+ * contêiner na entrada), `fixed` ancora no ancestral e não na janela. Já saiu
+ * errado duas vezes — desenhado no fim do documento, e depois flutuando por
+ * cima da home inteira, fora da maquete. As duas passavam em tsc e em 469
+ * testes, porque as duas dependem de geometria de verdade.
+ */
+async function balaoNoCelular() {
+  const { contexto, pagina, erros } = await abrir('/')
+  try {
+    const moldura = pagina.locator('[data-moldura-telefone]').first()
+    await moldura.waitFor({ timeout: ESPERA })
+    const fechar = pagina.locator('[aria-label="Fechar o atalho de conversa"]')
+
+    if (await fechar.isVisible()) erros.push('o balão aparece antes de a pessoa rolar o telefone')
+
+    await pagina
+      .locator('[data-moldura-telefone] .overflow-y-auto')
+      .first()
+      .evaluate((el) => {
+        el.scrollTop = 600
+      })
+    await fechar.waitFor({ timeout: ESPERA })
+
+    const m = await moldura.boundingBox()
+    const b = await fechar.boundingBox()
+    if (!m || !b) {
+      erros.push('não deu para medir o balão')
+    } else {
+      const dentro =
+        b.x >= m.x - 2 &&
+        b.x + b.width <= m.x + m.width + 2 &&
+        b.y >= m.y - 2 &&
+        b.y + b.height <= m.y + m.height + 2
+      if (!dentro) erros.push('o balão escapou da moldura do celular')
+    }
+
+    // E o balão não pede nada a quem visita — a trava de conformidade, no DOM.
+    const campos = await pagina.locator('[data-moldura-telefone] input, [data-moldura-telefone] form').count()
+    if (campos) erros.push('apareceu campo de entrada dentro do telefone')
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
+  ['balão de conversa no celular da home', balaoNoCelular],
   ['assistente do perfil', conversaDoPerfil],
   ['assistente do escritório', conversaDoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],

@@ -104,7 +104,11 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
         {/* notch */}
         {/* notch acima da faixa de status (que também é z-10, porém depois no DOM) */}
         <div className="absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
-        <div className="relative overflow-hidden rounded-[1.8rem]">
+        {/* `data-moldura-telefone` é o que o balão de conversa procura para saber
+            que está dentro de uma maquete e não numa página de verdade: ali ele
+            se prende a ESTA caixa, e não à janela do navegador. Ver
+            BalaoDeConversa.tsx. */}
+        <div data-moldura-telefone className="relative overflow-hidden rounded-[1.8rem]">
           <div
             ref={scrollRef}
             // as variáveis do tema aqui deixam a faixa de status abaixo usar a cor do perfil

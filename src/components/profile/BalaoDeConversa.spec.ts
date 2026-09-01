@@ -30,11 +30,21 @@ import type { Profile } from '@/lib/types'
 const perfil = (floating?: boolean) =>
   ({ assistant: { floating } }) as unknown as Pick<Profile, 'assistant'>
 
-const ligado = { schedulingMode: 'assistant', podeAgendar: true }
+const ligado = { schedulingMode: 'assistant' }
 
 describe('quando o balão aparece', () => {
   it('aparece quando o advogado ligou e o assistente é o modo escolhido', () => {
     expect(balaoVisivel(perfil(true), ligado)).toBe(true)
+  })
+
+  it('vale também na prévia do editor — lá ele aparece, só não navega', () => {
+    // Esta decisão NÃO consulta o modo de prévia, e é de propósito: a prévia é
+    // onde o advogado acabou de ligar o interruptor. Um interruptor que não muda
+    // nada na prévia ao lado é indistinguível de um quebrado — a pessoa liga e
+    // desliga procurando o efeito. Quem torna o balão inerte lá é a prop `inert`
+    // do componente, depois de ele ter sido decidido visível aqui.
+    const chaves = Object.keys(ligado)
+    expect(chaves).toEqual(['schedulingMode'])
   })
 
   it('NÃO aparece por padrão — ligar é ato deliberado', () => {
@@ -58,15 +68,11 @@ describe('quando o balão aparece', () => {
     }
   })
 
-  it('fica inerte na prévia do editor, como o resto do perfil', () => {
-    expect(balaoVisivel(perfil(true), { ...ligado, podeAgendar: false })).toBe(false)
-  })
-
   it('a trava de plano é do SERVIDOR, e o modo já a carrega', () => {
     // `schedulingMode` chega 'off' em perfil Free (resolveSchedulingMode chama
     // canUseScheduling), e o campo `floating` só vem `true` do backend em
     // Pro/Max. São duas camadas independentes, e a de fora é o servidor.
-    expect(balaoVisivel(perfil(true), { schedulingMode: 'off', podeAgendar: true })).toBe(false)
+    expect(balaoVisivel(perfil(true), { schedulingMode: 'off' })).toBe(false)
   })
 })
 
