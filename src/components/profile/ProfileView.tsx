@@ -342,18 +342,25 @@ export function ProfileView({
         )}
 
         {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização).
-            `redes-grade` marca a seção como contêiner de consulta: a grade cai
-            para uma coluna quando a largura RECEBIDA não comporta duas (ver
-            index.css). É por contêiner e não por tela porque o mesmo perfil é
-            desenhado em dois lugares de largura bem diferente. */}
+            `redes-grade` marca a seção como contêiner de consulta, e é por
+            CONTÊINER e não por tela porque o mesmo perfil é desenhado em dois
+            lugares de largura bem diferente (a página inteira e o telefone da
+            home, que tem 320px).
+            A grade fica em DUAS colunas mesmo no estreito: quando o espaço
+            aperta, o que encolhe é o ladrilho — a seta some, o ícone diminui e
+            o respiro interno fecha (ver index.css). Duas colunas de links
+            curtos leem melhor do que uma coluna alta, e a seta era o elemento
+            mais dispensável dos três: o ladrilho inteiro já é o link. */}
         {profile.socials.length > 0 && (
           <motion.section variants={item} className="redes-grade mt-6">
             <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
-            <div
-              className={`redes-colunas mt-3 grid gap-2.5 ${
-                s.tile === 'underline' ? 'grid-cols-1' : 'grid-cols-2'
-              }`}
-            >
+            {/* Duas colunas em TODOS os temas, inclusive no de ladrilho
+                'underline' — que antes ficava em coluna única. O caráter de
+                "links em lista" desse tema está no ladrilho (sem moldura, com
+                filete embaixo), não na quantidade de colunas; e quatro links
+                empilhados são uma torre que empurra o resto do perfil para
+                baixo, em qualquer tema. */}
+            <div className="redes-colunas mt-3 grid grid-cols-2 gap-2.5">
               {profile.socials.map((soc) => {
                 // Rede desconhecida não tem ícone — renderizar sem conferir
                 // derrubava a página inteira. E o link só vira href se for
@@ -369,13 +376,13 @@ export function ProfileView({
                     onClick={clique(`rede:${soc.kind}`)}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className={`${tile} !py-3 text-sm font-medium`}
+                    className={`${tile} redes-item !py-3 text-sm font-medium`}
                   >
                     {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
                     <Icon
                       width={24}
                       height={24}
-                      className={`shrink-0 ${meta.color ? '' : 't-muted'}`}
+                      className={`redes-logo shrink-0 ${meta.color ? '' : 't-muted'}`}
                       style={meta.color ? { color: meta.color } : undefined}
                     />
                     {/* O rótulo era um nó de texto solto: sem `min-w-0` ele não
@@ -385,7 +392,7 @@ export function ProfileView({
                         estreita. Agora, se um dia faltar espaço, a palavra termina
                         em reticências em vez de ser decepada. */}
                     <span className="min-w-0 truncate">{meta.label}</span>
-                    <ArrowRight width={15} height={15} className="t-faint ml-auto shrink-0" />
+                    <ArrowRight width={15} height={15} className="redes-seta t-faint ml-auto shrink-0" />
                   </a>
                 )
               })}

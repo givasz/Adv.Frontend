@@ -163,7 +163,36 @@
   .redes-grade {
     container-type: inline-size;
   }
+  /* Contêiner estreito (o telefone da home tem 320px): as duas colunas FICAM, e
+     o ladrilho é que encolhe. Antes a grade caía para uma coluna só, e quatro
+     links viravam uma torre que empurrava o resto do perfil para fora da tela.
+
+     A seta sai primeiro porque é a peça mais dispensável: o ladrilho inteiro já
+     é o link, e ela ocupava 27px dos ~155px disponíveis — mais do que a metade
+     do que falta para o rótulo caber. */
   @container (max-width: 342px) {
+    .redes-grade > .redes-colunas {
+      gap: 0.5rem;
+    }
+    .redes-grade .redes-item {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+      gap: 0.5rem;
+    }
+    .redes-grade .redes-logo {
+      width: 20px;
+      height: 20px;
+    }
+    .redes-grade .redes-seta {
+      display: none;
+    }
+  }
+
+  /* Piso de segurança. Abaixo disto nem o ladrilho compacto cabe em dois — o
+     rótulo viraria "Inst…" nos quatro, que não identifica rede nenhuma. Não
+     acontece em nenhuma tela real hoje; existe para não quebrar num contexto
+     mais apertado que alguém invente depois. */
+  @container (max-width: 250px) {
     .redes-grade > .redes-colunas {
       grid-template-columns: 1fr;
     }

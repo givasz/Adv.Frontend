@@ -117,7 +117,11 @@ export const sampleProfile: Profile = {
     greeting: '',
   },
   plan: 'premium',
-  theme: 'papel',
+  // Névoa e não o Papel padrão: o exemplo é a primeira coisa que alguém vê do
+  // produto, e a grotesca fria do Névoa (Archivo nos títulos) mostra melhor que
+  // um perfil de advogado não precisa ter cara de papel timbrado. Continua um
+  // tema do plano FREE — o exemplo não pode exibir o que o Free não entrega.
+  theme: 'nevoa',
   // Vídeo de apresentação (perk do Max). Servido pelo PRÓPRIO site — o arquivo
   // está em `public/`, versionado e publicado no build, com a capa ao lado
   // (mesma raiz, extensão .jpg — ver a convenção em lib/video.ts).
