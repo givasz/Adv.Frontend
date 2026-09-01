@@ -71,6 +71,33 @@ describe('a foto vira uma URL que o robô consegue buscar', () => {
   it('sem foto, usa a imagem padrão da plataforma', () => {
     expect(ogImageUrl(perfil(), ORIGEM)).toBe(`${ORIGEM}/og-padrao.jpg`)
   })
+
+  /**
+   * Foto hospedada fora ("colar link"): o og:image aponta DIRETO para o host
+   * dela, e não para a nossa rota de avatar.
+   *
+   * Antes passava pela nossa rota, que respondia `302` para o endereço gravado
+   * no perfil — ou seja, um redirecionamento aberto no nosso domínio. Criar
+   * conta é grátis: bastava salvar a foto apontando para a página do golpe e
+   * `advoc.me/api/profiles/<slug>/avatar` virava um link nosso levando a
+   * qualquer lugar, que é justamente o que um filtro de e-mail e a própria
+   * pessoa conferem antes de clicar.
+   *
+   * A rota deixou de redirecionar (backend/src/profiles/profiles.service.ts);
+   * este teste é o outro lado da mesma decisão.
+   */
+  it('foto hospedada fora aponta para o host dela, não para a nossa origem', () => {
+    const p = perfil({ avatarUrl: 'https://cdn.exemplo/ana.jpg' })
+    expect(ogImageUrl(p, ORIGEM)).toBe('https://cdn.exemplo/ana.jpg')
+  })
+
+  it('esquema que não é https nem data cai na imagem padrão', () => {
+    // Segunda camada: `safeImageSrc` já recusa isto na gravação, mas esta função
+    // também roda sobre o que JÁ está no banco.
+    for (const ruim of ['javascript:alert(1)', 'http://sem-tls/x.jpg', '//outro.site/x.jpg']) {
+      expect(ogImageUrl(perfil({ avatarUrl: ruim }), ORIGEM)).toBe(`${ORIGEM}/og-padrao.jpg`)
+    }
+  })
 })
 
 describe('o HTML servido não pode ser sequestrado pelo texto do advogado', () => {

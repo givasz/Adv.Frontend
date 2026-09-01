@@ -101,9 +101,24 @@ export function seoDescription(p: PerfilCompartilhavel): string {
  * aparece como um retângulo cinza, que lê como link quebrado.
  */
 export function ogImageUrl(p: PerfilCompartilhavel, origem: string): string {
-  return p.avatarUrl
-    ? `${origem}/api/profiles/${encodeURIComponent(p.slug)}/avatar`
-    : `${origem}${OG_PADRAO}`
+  const foto = (p.avatarUrl ?? '').trim()
+  if (!foto) return `${origem}${OG_PADRAO}`
+  // Foto guardada por nós (o caso comum: o editor recorta no navegador e salva
+  // data URI). Quem serve os bytes é a nossa rota.
+  if (foto.startsWith('data:image/')) {
+    return `${origem}/api/profiles/${encodeURIComponent(p.slug)}/avatar`
+  }
+  // Foto hospedada fora ("colar link"): o og:image aponta DIRETO para o host
+  // dela. Passar por `/api/.../avatar` fazia a nossa rota responder 302 para um
+  // endereço que o dono do perfil escolhe — um redirecionamento aberto no nosso
+  // domínio, e o domínio é justamente o que quem recebe o link confere. A rota
+  // deixou de redirecionar (backend/src/profiles/profiles.service.ts); aqui é o
+  // outro lado da mesma decisão.
+  //
+  // Só https: `safeImageSrc` já recusa o resto na gravação, e esta é a segunda
+  // camada — vale também para o que já está no banco.
+  if (foto.startsWith('https://')) return foto
+  return `${origem}${OG_PADRAO}`
 }
 
 /** Imagem de prévia da própria plataforma (home e perfis sem foto). */
