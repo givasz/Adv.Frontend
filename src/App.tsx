@@ -1,26 +1,30 @@
-import { useEffect, type ReactElement } from 'react'
+import { lazy, Suspense, useEffect, type ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
-import Landing from './pages/Landing'
-import AuthPage from './pages/AuthPage'
-import Onboarding from './pages/Onboarding'
-import Painel from './pages/Painel'
-import Editor from './pages/Editor'
+// O perfil público é o produto — um minisite que abre por link compartilhado,
+// quase sempre num celular em rede ruim. Só ele entra no pacote inicial; todo
+// o resto (editor, painel, onboarding, admin…) chega sob demanda, para que o
+// visitante do minisite nunca pague pelo código do dono do perfil.
 import PublicProfile from './pages/PublicProfile'
-import Preview from './pages/Preview'
-import AdminPanel from './pages/AdminPanel'
-import Escritorio from './pages/Escritorio'
-import FirmEditor from './pages/FirmEditor'
-import LegalPage from './pages/LegalPage'
-import ReportPage from './pages/ReportPage'
-import SchedulePage from './pages/SchedulePage'
-import SharePage from './pages/SharePage'
-import SupportPage from './pages/SupportPage'
-import ContestarPage from './pages/ContestarPage'
-import DadosPage from './pages/DadosPage'
-import PlansPage from './pages/PlansPage'
-import CheckoutPage from './pages/CheckoutPage'
-import MudarPlanoPage from './pages/MudarPlanoPage'
+const Landing = lazy(() => import('./pages/Landing'))
+const AuthPage = lazy(() => import('./pages/AuthPage'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
+const Painel = lazy(() => import('./pages/Painel'))
+const Editor = lazy(() => import('./pages/Editor'))
+const Preview = lazy(() => import('./pages/Preview'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const Escritorio = lazy(() => import('./pages/Escritorio'))
+const FirmEditor = lazy(() => import('./pages/FirmEditor'))
+const LegalPage = lazy(() => import('./pages/LegalPage'))
+const ReportPage = lazy(() => import('./pages/ReportPage'))
+const SchedulePage = lazy(() => import('./pages/SchedulePage'))
+const SharePage = lazy(() => import('./pages/SharePage'))
+const SupportPage = lazy(() => import('./pages/SupportPage'))
+const ContestarPage = lazy(() => import('./pages/ContestarPage'))
+const DadosPage = lazy(() => import('./pages/DadosPage'))
+const PlansPage = lazy(() => import('./pages/PlansPage'))
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const MudarPlanoPage = lazy(() => import('./pages/MudarPlanoPage'))
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -72,6 +76,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      {/* O fallback é o mesmo spinner das trocas de sessão — a espera de um
+          pedaço lazy não deve piscar diferente da espera do /auth/me. */}
+      <Suspense fallback={<Carregando />}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/entrar" element={<AuthPage mode="login" />} />
@@ -103,6 +110,7 @@ export default function App() {
         <Route path="/:slug/compartilhar" element={<SharePage />} />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

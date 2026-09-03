@@ -6,6 +6,13 @@ interface AvatarProps {
   size?: number
   ring?: boolean
   frame?: Frame
+  /**
+   * A foto é o maior elemento acima da dobra (o LCP do minisite). Nos
+   * cabeçalhos de perfil isto liga fetchpriority="high" e desliga o
+   * loading="lazy" — adiar justamente a imagem que mede a velocidade da
+   * página é atirar no próprio pé. Nas listas (admin, editor) fica off.
+   */
+  priority?: boolean
 }
 
 const radiusFor: Record<Frame, string> = {
@@ -28,7 +35,14 @@ function ringShadow(frame: Frame): string | undefined {
   return '0 0 0 2px var(--c-bg, #f5f0e6), 0 0 0 3.5px var(--c-ring, rgba(176,141,87,0.4))'
 }
 
-export function Avatar({ src, name, size = 96, ring = true, frame = 'circle' }: AvatarProps) {
+export function Avatar({
+  src,
+  name,
+  size = 96,
+  ring = true,
+  frame = 'circle',
+  priority = false,
+}: AvatarProps) {
   const initials = name
     .split(' ')
     .filter(Boolean)
@@ -55,7 +69,11 @@ export function Avatar({ src, name, size = 96, ring = true, frame = 'circle' }: 
           src={src}
           alt={`Foto de ${name}`}
           className="h-full w-full object-cover"
-          loading="lazy"
+          loading={priority ? 'eager' : 'lazy'}
+          decoding={priority ? 'sync' : 'async'}
+          // minúsculo de propósito: o React 18 só repassa o atributo assim
+          // (fetchPriority camelCase é coisa do React 19)
+          {...(priority ? ({ fetchpriority: 'high' } as Record<string, string>) : null)}
         />
       ) : (
         <div

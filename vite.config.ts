@@ -9,6 +9,19 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // React + router num chunk próprio e ESTÁVEL: eles mudam só quando o
+        // package.json muda. Sem isso, qualquer deploy troca o hash do chunk
+        // principal inteiro e o visitante recorrente baixa React de novo junto
+        // com o app — separado, o navegador reaproveita ~45KB gz entre deploys.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

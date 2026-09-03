@@ -42,12 +42,20 @@ import { fileURLToPath } from 'node:url'
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ENTRADA = join(RAIZ, 'scripts', 'fonte', 'logo.jpg')
 const SAIDA = join(RAIZ, 'public', 'logo.png')
+const SAIDA_TELA = join(RAIZ, 'public', 'logo-144.png')
 
 /** Abaixo disto é fundo; acima daquilo é marca; no meio, a borda serrilhada. */
 const BAIXO = 8
 const ALTO = 64
-/** Altura final. O cabeçalho usa ~20px; 3x cobre telas de alta densidade. */
+/** Altura da MATRIZ (logo.png): é a fonte do gen-brand-assets, fica grande. */
 const ALTURA = 360
+/**
+ * Altura da versão DE TELA (logo-144.png), a que o componente Marca de fato
+ * carrega. O maior uso na interface é 46px (o 404 do perfil); 144 cobre 3x de
+ * densidade com folga. A matriz de 360 pesava 66KB e era desenhada a 20px de
+ * altura no rodapé de todo perfil free — puro peso sem um pixel a mais na tela.
+ */
+const ALTURA_TELA = 144
 
 const navegador = await chromium.launch()
 const pagina = await navegador.newPage()
@@ -55,7 +63,7 @@ const pagina = await navegador.newPage()
 const base64 = readFileSync(ENTRADA).toString('base64')
 
 const png = await pagina.evaluate(
-  async ({ dataUrl, BAIXO, ALTO, ALTURA }) => {
+  async ({ dataUrl, BAIXO, ALTO, ALTURA, ALTURA_TELA }) => {
     const img = new Image()
     img.src = dataUrl
     await img.decode()
@@ -114,12 +122,35 @@ const png = await pagina.evaluate(
 
     const blob = await new Promise((r) => fim.toBlob(r, 'image/png'))
     const buf = new Uint8Array(await blob.arrayBuffer())
-    return { bytes: Array.from(buf), largura: fim.width, altura: fim.height }
+
+    // Versão de tela: reduzida da MATRIZ já processada (mesmo recorte, mesmo
+    // alfa), só menor — é a que a interface carrega de verdade.
+    const tela = document.createElement('canvas')
+    tela.width = Math.round(fim.width * (ALTURA_TELA / fim.height))
+    tela.height = ALTURA_TELA
+    const tctx = tela.getContext('2d')
+    tctx.imageSmoothingQuality = 'high'
+    tctx.drawImage(fim, 0, 0, tela.width, tela.height)
+    const blobTela = await new Promise((r) => tela.toBlob(r, 'image/png'))
+    const bufTela = new Uint8Array(await blobTela.arrayBuffer())
+
+    return {
+      bytes: Array.from(buf),
+      largura: fim.width,
+      altura: fim.height,
+      bytesTela: Array.from(bufTela),
+      larguraTela: tela.width,
+      alturaTela: tela.height,
+    }
   },
-  { dataUrl: `data:image/jpeg;base64,${base64}`, BAIXO, ALTO, ALTURA },
+  { dataUrl: `data:image/jpeg;base64,${base64}`, BAIXO, ALTO, ALTURA, ALTURA_TELA },
 )
 
 await navegador.close()
 
 writeFileSync(SAIDA, Buffer.from(png.bytes))
 console.log(`${SAIDA}: ${png.largura}×${png.altura}, ${(png.bytes.length / 1024).toFixed(1)} KB`)
+writeFileSync(SAIDA_TELA, Buffer.from(png.bytesTela))
+console.log(
+  `${SAIDA_TELA}: ${png.larguraTela}×${png.alturaTela}, ${(png.bytesTela.length / 1024).toFixed(1)} KB`,
+)

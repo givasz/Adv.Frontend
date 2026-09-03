@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
-import { api } from '@/lib/api'
+import { getPublicProfile, isExampleSlug } from '@/lib/perfilPublico'
 import { useAuth } from '@/lib/auth'
-import { exampleProfiles } from '@/lib/mockData'
 import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { ShareBar } from '@/components/profile/ShareBar'
@@ -26,8 +25,10 @@ export default function PublicProfile() {
       return
     }
     let alive = true
-    api
-      .getDraft()
+    // lib/api.ts por import dinâmico: só o DONO logado paga por ele. O visitante
+    // anônimo (o caso que importa para a velocidade) nunca entra neste ramo.
+    import('@/lib/api')
+      .then(({ api }) => api.getDraft())
       .then((mine) => {
         if (alive) setIsOwner(!!mine.slug && mine.slug === slug)
       })
@@ -42,7 +43,7 @@ export default function PublicProfile() {
   useEffect(() => {
     let alive = true
     setState('loading')
-    api.getProfile(slug).then((p) => {
+    getPublicProfile(slug).then((p) => {
       if (!alive) return
       if (p) {
         setProfile(p)
@@ -73,7 +74,7 @@ export default function PublicProfile() {
   // Nos perfis de exemplo (fictícios) NÃO injetamos schema de advogado real.
   useEffect(() => {
     if (!profile) return
-    if (exampleProfiles.some((p) => p.slug === profile.slug)) return
+    if (isExampleSlug(profile.slug)) return
     return applyProfileSeo(profile)
   }, [profile])
 
@@ -102,10 +103,14 @@ export default function PublicProfile() {
 
   // Fixtures de demonstração (marina-sales, guilherme-sales23): rotulados como
   // exemplo para não serem lidos como advogado real (OAB fictícia).
-  const isExample = exampleProfiles.some((p) => p.slug === profile.slug)
+  const isExample = isExampleSlug(profile.slug)
 
   return (
-    <main className="relative flex min-h-dvh flex-col overflow-x-hidden">
+    // overflow-x-CLIP, não hidden: hidden faz o main virar contêiner de rolagem
+    // (overflow-y computa auto) e as barras sticky lá de dentro passam a grudar
+    // nele — que nunca rola, então nunca grudam. clip corta o estouro lateral
+    // sem criar scrollport, e o sticky volta a valer contra a janela.
+    <main className="relative flex min-h-dvh flex-col overflow-x-clip">
       {/* As barras do topo são grudentas e o botão "Compartilhar" é fixo. Medimos
           a altura real (a do dono QUEBRA em duas linhas no celular) para o botão
           descer o tanto certo em vez de ficar escondido atrás. */}

@@ -201,16 +201,11 @@ export function falaDoEnderecoPresencial(local: {
 }
 
 // ---- Identidade do assistente ----
+// Mora em assistantTitle.ts (módulo leve, pelo peso do pacote do minisite) e é
+// reexportada aqui para os consumidores do lado pesado não mudarem.
 
-export function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? ''
-}
-
-/** "Assistente virtual de Pedro" — sempre explícito de que não é a pessoa. */
-export function assistantTitle(profile: Pick<Profile, 'name'>): string {
-  const first = firstName(profile.name)
-  return first ? `Assistente virtual de ${first}` : 'Assistente virtual'
-}
+import { firstName } from './assistantTitle'
+export { assistantTitle, firstName } from './assistantTitle'
 
 // ---- Mensagem final (WhatsApp) ----
 

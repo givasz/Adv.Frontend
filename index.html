@@ -39,13 +39,27 @@
     <meta name="twitter:card" content="summary_large_image" />
     <!-- Uma família de display por tema (ver src/lib/themes.ts): trocar de tema
          muda a VOZ do perfil, não só a cor. É um pedido de CSS só; o navegador
-         baixa apenas os arquivos da fonte que o tema em uso realmente aplica. -->
+         baixa apenas os arquivos da fonte que o tema em uso realmente aplica.
+         Carregada sem bloquear a primeira pintura: media="print" faz o navegador
+         baixar em segundo plano e o main.tsx religa a folha (media='all') assim
+         que o app sobe — com display=swap o texto aparece na fonte do sistema e
+         troca quando a do tema chegar. O religamento NÃO pode ser um onload
+         inline aqui: o CSP de produção (netlify.toml, script-src 'self') bloqueia
+         handler de atributo, e a folha ficaria em "print" para sempre. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      data-fontes
       href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Cormorant+Garamond:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Hanken+Grotesk:wght@400;500;600;700&family=Lora:wght@400..700&family=Newsreader:opsz,wght@6..72,400..700&family=Playfair+Display:ital,wght@0,400..800;1,400..600&family=Syne:wght@400..800&display=swap"
       rel="stylesheet"
+      media="print"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Cormorant+Garamond:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Hanken+Grotesk:wght@400;500;600;700&family=Lora:wght@400..700&family=Newsreader:opsz,wght@6..72,400..700&family=Playfair+Display:ital,wght@0,400..800;1,400..600&family=Syne:wght@400..800&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

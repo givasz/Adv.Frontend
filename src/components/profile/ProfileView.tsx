@@ -1,6 +1,18 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
+// LazyMotion + `m` no lugar de `motion`: o perfil publico so usa variants,
+// animate e exit — o subconjunto domAnimation. O `motion` completo arrastaria
+// tambem o codigo de layout/drag para o pacote inicial do minisite. Os pedacos
+// que continuam com `motion` (ex.: AssistantChat) sao chunks lazy e pagam por
+// isso so quando abrem.
+import {
+  AnimatePresence,
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+  type Variants,
+} from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle, type RuleStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
@@ -8,9 +20,16 @@ import { canUseFaq, canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
-import { AssistantChat } from '@/components/profile/AssistantChat'
 import { BalaoDeConversa, balaoVisivel } from '@/components/profile/BalaoDeConversa'
-import { assistantTitle } from '@/lib/assistant'
+
+// A conversa completa (com toda a maquina de roteiro em lib/assistant e
+// components/assistant) so abre na DEMONSTRACAO da home — no perfil de verdade
+// agendar e uma pagina propria (/:slug/agendar). Lazy para que o minisite de
+// quem chega pelo link nao baixe uma conversa que nunca vai abrir aqui.
+const AssistantChat = lazy(() =>
+  import('@/components/profile/AssistantChat').then((mod) => ({ default: mod.AssistantChat })),
+)
+import { assistantTitle } from '@/lib/assistantTitle'
 import { CnaLink } from '@/components/ui/CnaLink'
 import {
   ArrowRight,
@@ -152,11 +171,12 @@ export function ProfileView({
   )
 
   return (
+    <LazyMotion features={domAnimation}>
     <div
       className={`themed w-full flex-1 surf-${s.surface}`}
       style={{ ...themeStyle(profile.theme), ...brandVars }}
     >
-      <motion.div
+      <m.div
         variants={container}
         initial="hidden"
         animate="show"
@@ -164,8 +184,8 @@ export function ProfileView({
       >
         {/* Cabeçalho — layout varia por tema */}
         {left ? (
-          <motion.header variants={item} className="flex items-center gap-4 text-left">
-            <Avatar src={profile.avatarUrl} name={profile.name} size={78} frame={s.avatar} />
+          <m.header variants={item} className="flex items-center gap-4 text-left">
+            <Avatar src={profile.avatarUrl} name={profile.name} size={78} frame={s.avatar} priority />
             <div className="min-w-0">
               <h1 className={nameCls} style={nameStyle}>{profile.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">{identity}</div>
@@ -179,12 +199,15 @@ export function ProfileView({
                 )
               )}
             </div>
-          </motion.header>
+          </m.header>
         ) : (
-          <motion.header variants={item} className="flex flex-col items-center text-center">
+          <m.header variants={item} className="flex flex-col items-center text-center">
             {s.header === 'letterhead' && <div className="t-rule mb-5 w-24" />}
-            <Avatar src={profile.avatarUrl} name={profile.name} size={104} frame={s.avatar} />
-            <h1 className={`mt-4 ${nameCls}`} style={nameStyle}>{profile.name}</h1>
+            <Avatar src={profile.avatarUrl} name={profile.name} size={104} frame={s.avatar} priority />
+            {/* max-w-full + break-words: um sobrenome muito longo (ou um nome
+                composto sem espaço) encolhe em vez de estourar a coluna de 480px
+                para o lado — a variante editorial já tinha o min-w-0 dela. */}
+            <h1 className={`mt-4 max-w-full break-words ${nameCls}`} style={nameStyle}>{profile.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               {identity}
             </div>
@@ -198,11 +221,11 @@ export function ProfileView({
               )
             )}
             {s.header === 'letterhead' && <div className="t-rule mt-4 w-16" />}
-          </motion.header>
+          </m.header>
         )}
 
         {/* Localização */}
-        <motion.div
+        <m.div
           variants={item}
           className={`t-faint mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] ${
             left ? 'justify-start' : 'justify-center'
@@ -217,14 +240,14 @@ export function ProfileView({
               .filter(Boolean)
               .join(' · ')}
           </span>
-        </motion.div>
+        </m.div>
         {profile.regionNote && (
-          <motion.p
+          <m.p
             variants={item}
             className={`t-faint mt-1 text-[13px] ${left ? 'text-left' : 'text-center'}`}
           >
             {profile.regionNote}
-          </motion.p>
+          </m.p>
         )}
 
         {/* Endereço do escritório — mais uma linha do bloco de localização, e
@@ -240,7 +263,7 @@ export function ProfileView({
             lib/endereco.ts): sem logradouro o mapa abriria no meio da cidade,
             fingindo apontar para o escritório. */}
         {enderecoVisivel(profile.address) && (
-          <motion.p
+          <m.p
             variants={item}
             className={`t-faint mt-1 text-[12px] leading-snug opacity-90 ${
               left ? 'text-left' : 'text-center'
@@ -260,7 +283,7 @@ export function ProfileView({
                 className="inline shrink-0 -translate-y-px opacity-70"
               />
             </a>
-          </motion.p>
+          </m.p>
         )}
 
         {/* CTAs principais — logo abaixo da localização, de propósito: falar com o
@@ -269,7 +292,7 @@ export function ProfileView({
             reconhece quem é, onde atua e como atende. */}
         <div className="mt-6 space-y-3">
           {whatsappHref && (
-            <motion.a
+            <m.a
               variants={item}
               href={whatsappHref}
               onClick={clique('whatsapp')}
@@ -279,10 +302,10 @@ export function ProfileView({
             >
               <WhatsappIcon width={24} height={24} />
               Conversar no WhatsApp
-            </motion.a>
+            </m.a>
           )}
           {schedulingMode === 'external' && safeHref(profile.contact.scheduling) && (
-            <motion.a
+            <m.a
               variants={item}
               href={safeHref(profile.contact.scheduling)}
               onClick={clique('agendamento')}
@@ -292,12 +315,12 @@ export function ProfileView({
             >
               <CalendarIcon width={19} height={19} className="t-accent" />
               Agendar uma consulta
-            </motion.a>
+            </m.a>
           )}
           {schedulingMode === 'assistant' && (
             // Assistente virtual: a conversa guiada é o caminho mais leve para marcar
             // um horário — e deixa explícito, já no botão, que quem atende é um robô.
-            <motion.div variants={item}>
+            <m.div variants={item}>
              <AcaoAgendar slug={profile.slug} demo={demoChat} onDemo={() => setSchedOpen(true)} inert={!canSchedule} className={`${tile} !py-3`}>
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -316,10 +339,10 @@ export function ProfileView({
               </span>
               <ArrowRight width={16} height={16} className="t-faint shrink-0" />
              </AcaoAgendar>
-            </motion.div>
+            </m.div>
           )}
           {schedulingMode === 'whatsapp' && (
-            <motion.div variants={item}>
+            <m.div variants={item}>
               <AcaoAgendar
                 slug={profile.slug}
                 demo={demoChat}
@@ -330,16 +353,16 @@ export function ProfileView({
                 <CalendarIcon width={19} height={19} className="t-accent" />
                 Agendar uma consulta
               </AcaoAgendar>
-            </motion.div>
+            </m.div>
           )}
         </div>
 
         {owner && profile.socials.length === 0 && (
-          <motion.div variants={item} className="mt-6 flex justify-center">
+          <m.div variants={item} className="mt-6 flex justify-center">
             <OwnerHint to="/editor?section=redes">
               Suas redes e site ainda não aparecem aqui
             </OwnerHint>
-          </motion.div>
+          </m.div>
         )}
 
         {/* Redes sociais — logo abaixo da identidade (foto/nome/OAB/localização).
@@ -353,7 +376,7 @@ export function ProfileView({
             curtos leem melhor do que uma coluna alta, e a seta era o elemento
             mais dispensável dos três: o ladrilho inteiro já é o link. */}
         {profile.socials.length > 0 && (
-          <motion.section variants={item} className="redes-grade mt-6">
+          <m.section variants={item} className="redes-grade mt-6">
             <SectionTitle rule={s.rule}>Redes e site</SectionTitle>
             {/* Duas colunas em TODOS os temas, inclusive no de ladrilho
                 'underline' — que antes ficava em coluna única. O caráter de
@@ -398,26 +421,26 @@ export function ProfileView({
                 )
               })}
             </div>
-          </motion.section>
+          </m.section>
         )}
 
-        <motion.div variants={item}>
+        <m.div variants={item}>
           <ThemeDivider type={s.rule} />
-        </motion.div>
+        </m.div>
 
         {/* Bio */}
         {profile.bio && (
-          <motion.p
+          <m.p
             variants={item}
             className={`t-muted text-[15.5px] leading-relaxed ${left ? 'text-left' : 'text-center'}`}
           >
             {profile.bio}
-          </motion.p>
+          </m.p>
         )}
 
         {/* Áreas de atuação */}
         {areas.length > 0 && (
-          <motion.section variants={item} className="mt-9">
+          <m.section variants={item} className="mt-9">
             <SectionTitle rule={s.rule}>Áreas de atuação</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {areas.map((a) => (
@@ -430,7 +453,7 @@ export function ProfileView({
                 />
               ))}
             </div>
-          </motion.section>
+          </m.section>
         )}
 
         {/* Perguntas frequentes — o advogado responde as dúvidas que mais ouve.
@@ -439,7 +462,7 @@ export function ProfileView({
             que mais responde ao que o visitante veio procurar, então vem antes
             do vídeo e depois do que explica QUEM é o advogado. */}
         {faqs.length > 0 && (
-          <motion.section variants={item} className="mt-9">
+          <m.section variants={item} className="mt-9">
             <SectionTitle rule={s.rule}>Perguntas frequentes</SectionTitle>
             <div className="mt-3 space-y-2.5">
               {faqs.map((f, i) => (
@@ -457,7 +480,7 @@ export function ProfileView({
             <p className="t-faint mt-3 text-[11px] leading-relaxed">
               Respostas de caráter informativo. Não substituem a análise do seu caso.
             </p>
-          </motion.section>
+          </m.section>
         )}
 
         {/* Vídeo de apresentação — fecha o perfil: quem chegou até aqui já leu
@@ -465,7 +488,7 @@ export function ProfileView({
             porque é o único bloco que fala com um servidor de terceiro, e só
             depois do clique (ver VideoPlayer). */}
         {video && (
-          <motion.section variants={item} className="mt-9">
+          <m.section variants={item} className="mt-9">
             <SectionTitle rule={s.rule}>Apresentação</SectionTitle>
             <div className="mt-3">
               <VideoPlayer
@@ -476,12 +499,12 @@ export function ProfileView({
                 inert={preview && !chatEnabled}
               />
             </div>
-          </motion.section>
+          </m.section>
         )}
 
         {/* E-mail */}
         {profile.contact.email && (
-          <motion.a
+          <m.a
             variants={item}
             href={`mailto:${profile.contact.email}`}
             onClick={clique('email')}
@@ -489,11 +512,11 @@ export function ProfileView({
           >
             <MailIcon width={18} height={18} className="t-muted" />
             {profile.contact.email}
-          </motion.a>
+          </m.a>
         )}
 
         {/* Marca d'água (plano gratuito) */}
-        <motion.footer variants={item} className="mt-12 flex flex-col items-center gap-1">
+        <m.footer variants={item} className="mt-12 flex flex-col items-center gap-1">
           {profile.plan === 'free' && !brand?.hideWatermark && (
             <a
               href="/"
@@ -515,8 +538,8 @@ export function ProfileView({
           <p className="t-faint text-[10.5px] leading-relaxed opacity-85">
             Perfil informativo · em conformidade com o Provimento 205/2021 da OAB
           </p>
-        </motion.footer>
-      </motion.div>
+        </m.footer>
+      </m.div>
 
       {/* Balão de conversa no canto — atalho para a MESMA conversa do corpo da
           página. Três condições, e todas precisam valer:
@@ -539,9 +562,14 @@ export function ProfileView({
       {/* Única sobreposição que sobrou no perfil, e só na DEMONSTRAÇÃO da home:
           ali a conversa precisa acontecer dentro do telefone, senão não é demo. */}
       <AnimatePresence>
-        {schedOpen && demoChat && <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />}
+        {schedOpen && demoChat && (
+          <Suspense fallback={null}>
+            <AssistantChat profile={profile} onClose={() => setSchedOpen(false)} />
+          </Suspense>
+        )}
       </AnimatePresence>
     </div>
+    </LazyMotion>
   )
 }
 
@@ -782,7 +810,7 @@ function FaqItem({
         />
       </span>
       {open && (
-        <motion.span
+        <m.span
           initial={reduced ? false : { opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduced ? 0 : 0.16, ease: 'easeOut' }}
@@ -802,7 +830,7 @@ function FaqItem({
               {answer}
             </span>
           </span>
-        </motion.span>
+        </m.span>
       )}
     </button>
   )
@@ -866,14 +894,14 @@ function AreaCard({
         />
       </span>
       {open && (
-        <motion.span
+        <m.span
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.16, ease: 'easeOut' }}
           className="t-muted mt-2.5 block text-left text-[13.5px] font-normal leading-relaxed"
         >
           {description}
-        </motion.span>
+        </m.span>
       )}
     </button>
   )

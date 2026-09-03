@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+// `m` no lugar de `motion` (LazyMotion): este componente so renderiza dentro do
+// ProfileView, que ja prove as features domAnimation — usar `motion` aqui
+// puxaria o framer-motion completo de volta para o pacote inicial do minisite.
+import { AnimatePresence, m } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { registrarEvento } from '@/lib/eventos'
 import { themeStyle } from '@/lib/themes'
 import { SparkIcon, XIcon } from '@/components/ui/icons'
-import { assistantTitle } from '@/lib/assistant'
+import { assistantTitle } from '@/lib/assistantTitle'
 
 // O balão de conversa — o atalho que segue a rolagem no canto do perfil.
 //
@@ -205,7 +208,7 @@ export function BalaoDeConversa({
   const balao = (
     <AnimatePresence>
       {visivel && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -255,7 +258,7 @@ export function BalaoDeConversa({
           >
             <XIcon width={13} height={13} />
           </button>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   )

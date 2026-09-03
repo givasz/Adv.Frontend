@@ -22,8 +22,14 @@
  *    inteiro pula no momento em que ela chega.
  */
 
-/** Proporção do arquivo em public/logo.png (ver scripts/gen-logo.mjs). */
-const PROPORCAO = 501 / 360
+/**
+ * Proporção do arquivo em public/logo-144.png (ver scripts/gen-logo.mjs).
+ * A interface carrega a versão DE TELA (144px de altura, ~16KB) e não a matriz
+ * logo.png (360px, ~65KB): o maior uso é 46px de altura, e 144 cobre densidade
+ * 3x com folga — os 49KB de diferença eram pagos por todo visitante de perfil
+ * free, para desenhar a marca a 20px no rodapé.
+ */
+const PROPORCAO = 200 / 144
 
 export function Marca({
   size = 20,
@@ -36,11 +42,12 @@ export function Marca({
   const largura = Math.round(size * PROPORCAO)
   return (
     <img
-      src="/logo.png"
+      src="/logo-144.png"
       alt=""
       aria-hidden
       width={largura}
       height={size}
+      decoding="async"
       draggable={false}
       className={`shrink-0 select-none ${className}`}
       style={{ height: size, width: largura }}

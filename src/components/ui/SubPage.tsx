@@ -87,7 +87,9 @@ export function SubPage({
   }, [backTo, navigate])
 
   return (
-    <div className="grain flex min-h-dvh flex-col overflow-x-hidden bg-paper-deep">
+    // overflow-x-CLIP (não hidden): hidden criava um scrollport aqui e o
+    // cabeçalho/rodapé sticky destas páginas nunca grudava de verdade.
+    <div className="grain flex min-h-dvh flex-col overflow-x-clip bg-paper-deep">
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className={`mx-auto flex w-full items-center gap-3 px-4 py-3 ${wide ? 'max-w-4xl' : 'max-w-2xl'}`}>
           {/* Alvo de 40px: é o botão mais clicado destas páginas no celular. */}
