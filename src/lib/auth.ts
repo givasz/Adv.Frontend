@@ -75,9 +75,38 @@ export interface EstadoSessao {
   conferindo: boolean
 }
 
+/**
+ * Há algum INDÍCIO de sessão neste navegador?
+ *
+ * O cookie da sessão é HttpOnly (invisível daqui), mas ele nunca anda sozinho: o
+ * servidor grava junto o cookie anti-CSRF (`advocme_csrf`), que é legível pelo
+ * JS de propósito — e os dois nascem no login, renovam juntos e morrem juntos no
+ * logout (backend/src/auth/session.service.ts). A presença dele, ou do retrato
+ * local, é o bastante para valer a pena perguntar ao servidor.
+ *
+ * Sem indício nenhum, NÃO perguntamos: o visitante anônimo de um minisite — o
+ * caso que mais importa para a velocidade — deixava um `/api/auth/me` competir
+ * em banda com o carregamento do próprio perfil, para ouvir um 401 que já se
+ * sabia. O custo do raro falso negativo (cookie CSRF apagado à mão com a sessão
+ * viva) é a pessoa entrar de novo — e aí os dois cookies renascem juntos.
+ */
+function temDicaDeSessao(session: Session | null): boolean {
+  if (session) return true
+  try {
+    // Com e sem o prefixo __Host- — o nome efetivo depende dos atributos com que
+    // o backend gravou (ver backend/src/auth/cookies.ts, cookieName).
+    return /(?:^|;\s*)(?:__Host-)?advocme_csrf=/.test(document.cookie)
+  } catch {
+    return false
+  }
+}
+
 // Um objeto só, trocado por inteiro a cada mudança: `useSyncExternalStore` compara
 // por identidade, e devolver um objeto novo a cada leitura entraria em laço.
-let estado: EstadoSessao = { session: lerRetrato(), conferindo: useReal }
+let estado: EstadoSessao = (() => {
+  const session = lerRetrato()
+  return { session, conferindo: useReal && temDicaDeSessao(session) }
+})()
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -269,8 +298,10 @@ export async function revalidarSessao(): Promise<Session | null> {
 }
 
 // A conferência começa junto com o app. Sem `await`: a interface abre com o
-// retrato guardado e se corrige em seguida, se for o caso.
-const conferenciaInicial: Promise<Session | null> = useReal
+// retrato guardado e se corrige em seguida, se for o caso. Sem indício de
+// sessão (`conferindo` já nasceu false), não há o que conferir — o visitante
+// anônimo não gasta uma ida ao servidor para ouvir que é anônimo.
+const conferenciaInicial: Promise<Session | null> = estado.conferindo
   ? revalidarSessao()
   : Promise.resolve(estado.session)
 

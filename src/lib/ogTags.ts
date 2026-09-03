@@ -103,8 +103,13 @@ export function seoDescription(p: PerfilCompartilhavel): string {
 export function ogImageUrl(p: PerfilCompartilhavel, origem: string): string {
   const foto = (p.avatarUrl ?? '').trim()
   if (!foto) return `${origem}${OG_PADRAO}`
-  // Foto guardada por nós (o caso comum: o editor recorta no navegador e salva
-  // data URI). Quem serve os bytes é a nossa rota.
+  // O formato NOVO do JSON público (desde 2026-09-03): a foto já chega como o
+  // caminho da nossa rota, com a versão (`/api/profiles/:slug/avatar?v=hash`).
+  // Só falta a origem absoluta — og:image relativa não vale para robô nenhum.
+  if (foto.startsWith('/api/')) return `${origem}${foto}`
+  // Foto guardada por nós no formato antigo (data URI dentro do JSON) — vale
+  // para o rascunho do dono e para um backend ainda não atualizado. Quem serve
+  // os bytes é a nossa rota.
   if (foto.startsWith('data:image/')) {
     return `${origem}/api/profiles/${encodeURIComponent(p.slug)}/avatar`
   }

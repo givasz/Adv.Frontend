@@ -72,6 +72,14 @@ describe('a foto vira uma URL que o robô consegue buscar', () => {
     expect(ogImageUrl(perfil(), ORIGEM)).toBe(`${ORIGEM}/og-padrao.jpg`)
   })
 
+  // Formato novo do JSON público (2026-09-03): o backend já manda o caminho da
+  // rota de avatar com a versão. Aqui só entra a origem absoluta na frente —
+  // og:image relativa não vale para robô nenhum.
+  it('caminho da nossa rota (formato novo, com versão) ganha a origem absoluta', () => {
+    const p = perfil({ avatarUrl: '/api/profiles/ana-ribeiro/avatar?v=0a1b2c3d' })
+    expect(ogImageUrl(p, ORIGEM)).toBe(`${ORIGEM}/api/profiles/ana-ribeiro/avatar?v=0a1b2c3d`)
+  })
+
   /**
    * Foto hospedada fora ("colar link"): o og:image aponta DIRETO para o host
    * dela, e não para a nossa rota de avatar.

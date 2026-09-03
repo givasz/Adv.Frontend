@@ -44,7 +44,11 @@ const retrato = {
 async function carregarModulos(fetchFalso: typeof fetch) {
   vi.resetModules()
   vi.stubGlobal('localStorage', new MemoriaLocal())
-  vi.stubGlobal('document', { cookie: '' })
+  // O cookie anti-CSRF presente = navegador que TEM uma sessão para conferir.
+  // É o cenário destes testes (eles simulam o /auth/me respondendo), e é também
+  // o que dispara a conferência: sem indício nenhum — nem retrato, nem este
+  // cookie — o auth.ts nem pergunta ao servidor (ver temDicaDeSessao).
+  vi.stubGlobal('document', { cookie: 'advocme_csrf=t' })
   vi.stubGlobal('fetch', fetchFalso)
   vi.stubEnv('VITE_USE_REAL_API', 'true')
   vi.stubEnv('VITE_API_URL', 'https://api.exemplo.com')
@@ -79,6 +83,50 @@ describe('conferência inicial da sessão', () => {
     await auth.aguardarSessao()
 
     expect(auth.sessaoConferida()).toBe(true)
+    expect(auth.isAuthenticated()).toBe(true)
+  })
+
+  it('sem indício nenhum de sessão, não pergunta ao servidor', async () => {
+    // O visitante anônimo de um minisite: sem retrato local e sem o cookie
+    // anti-CSRF (que nasce e morre junto com o de sessão). Perguntar custava um
+    // /api/auth/me competindo em banda com o carregamento do próprio perfil —
+    // para ouvir um 401 que já se sabia.
+    vi.resetModules()
+    vi.stubGlobal('localStorage', new MemoriaLocal())
+    vi.stubGlobal('document', { cookie: '' })
+    const chamadas: string[] = []
+    vi.stubGlobal('fetch', async (url: RequestInfo | URL) => {
+      chamadas.push(String(url))
+      return resposta(401)
+    })
+    vi.stubEnv('VITE_USE_REAL_API', 'true')
+    vi.stubEnv('VITE_API_URL', 'https://api.exemplo.com')
+
+    const auth = await import('./auth')
+    // Decidido na hora, sem rede: anônimo, e a interface não espera nada.
+    expect(auth.sessaoConferida()).toBe(true)
+    expect(auth.isAuthenticated()).toBe(false)
+    await auth.aguardarSessao()
+    expect(chamadas).toEqual([])
+  })
+
+  it('o cookie com prefixo __Host- também conta como indício', async () => {
+    vi.resetModules()
+    vi.stubGlobal('localStorage', new MemoriaLocal())
+    vi.stubGlobal('document', { cookie: '__Host-advocme_csrf=t' })
+    // Resposta SEGURADA (como no primeiro teste): com fetch instantâneo, a
+    // conferência terminaria antes do próprio import() resolver e o estado
+    // "conferindo" não daria para observar.
+    let liberar: (r: Response) => void = () => {}
+    const emEspera = new Promise<Response>((r) => (liberar = r))
+    vi.stubGlobal('fetch', () => emEspera)
+    vi.stubEnv('VITE_USE_REAL_API', 'true')
+    vi.stubEnv('VITE_API_URL', 'https://api.exemplo.com')
+
+    const auth = await import('./auth')
+    expect(auth.sessaoConferida()).toBe(false) // conferindo — indício presente
+    liberar(resposta(200, { user: retrato.user, csrfToken: 't' }))
+    await auth.aguardarSessao()
     expect(auth.isAuthenticated()).toBe(true)
   })
 
@@ -131,7 +179,9 @@ describe('getDraft com conta', () => {
       JSON.stringify({ slug: 'joao-antigo', name: 'João Antigo', bio: 'bio do João' }),
     )
     vi.stubGlobal('localStorage', memoria)
-    vi.stubGlobal('document', { cookie: '' })
+    // A Ana está logada NESTE navegador (cookie de sessão + CSRF); o resíduo é
+    // só o rascunho do João no localStorage.
+    vi.stubGlobal('document', { cookie: 'advocme_csrf=t' })
     vi.stubGlobal('fetch', async (url: RequestInfo | URL) =>
       String(url).endsWith('/api/auth/me')
         ? resposta(200, { user: retrato.user, csrfToken: 't' })
