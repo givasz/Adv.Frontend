@@ -60,7 +60,16 @@ export default async function handler(req: Request, ctx: ContextoNetlify): Promi
   let html = await resposta.text()
 
   // (2) og:image absoluto, em toda página.
-  html = html.replace(`content="${OG_PADRAO}"`, `content="${url.origin}${OG_PADRAO}"`)
+  //
+  // A SUBSTITUIÇÃO é uma FUNÇÃO, aqui e no </head> abaixo — nunca uma string.
+  // `String.replace` interpreta padrões `$` na string de troca ($&, $`, $'), e
+  // texto que passa por aqui carrega conteúdo que não controlamos: um `$'` no
+  // nome do advogado (que o escapeHtml transforma em `$&#39;`, criando um `$&`)
+  // injetava o casamento no meio do atributo, e um ``$` `` repetia TODO o
+  // prefixo do documento a cada ocorrência — ~4 KB por caractere, uma bomba de
+  // amplificação numa URL pública (auditoria de 03/09). Com função, `$` é só um
+  // cifrão.
+  html = html.replace(`content="${OG_PADRAO}"`, () => `content="${url.origin}${OG_PADRAO}"`)
 
   // (1) Página de perfil: as tags do advogado por cima das genéricas.
   const perfil = ehSlugDePerfil(url.pathname)
@@ -80,7 +89,10 @@ export default async function handler(req: Request, ctx: ContextoNetlify): Promi
       .replace(/<meta\s+name="description"[\s\S]*?\/>/i, '')
       .replace(/<meta\s+property="og:(?:type|title|description|image)"[\s\S]*?\/>/gi, '')
       .replace(/<meta\s+name="twitter:card"[\s\S]*?\/>/i, '')
-    html = html.includes('</head>') ? html.replace('</head>', `    ${head}\n  </head>`) : html
+    // Função, não string — ver o comentário do og:image acima: `head` carrega
+    // texto do advogado, e os padrões `$` do replace são a diferença entre
+    // inserir o head e detonar o documento.
+    html = html.includes('</head>') ? html.replace('</head>', () => `    ${head}\n  </head>`) : html
     // O HTML agora varia por perfil: sem isto, a borda poderia guardar a página
     // de um advogado e entregá-la no endereço de outro.
     headers.set('Cache-Control', 'public, max-age=0, must-revalidate')

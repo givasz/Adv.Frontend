@@ -244,6 +244,12 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Sessão do editor: guardamos o rascunho do seu perfil no armazenamento local do navegador para não perder o que você digita.',
           'Autenticação: um token de sessão é mantido para manter você conectado (inclusive no painel administrativo).',
           'Preferências de interface: pequenos indicadores, como a dispensa de avisos já vistos.',
+          // Declarado porque é verdade e o documento tem de bater com o que o
+          // HTML faz (auditoria de 03/09): as famílias tipográficas dos temas
+          // vêm do Google Fonts, e o pedido delas — como qualquer pedido HTTP —
+          // entrega endereço IP e identificação do navegador àquele serviço.
+          // Nenhum cookie é gravado por ele, e nada além da fonte volta.
+          'Fontes: as famílias tipográficas dos temas são servidas pelo Google Fonts. Ao carregar uma página, o navegador as busca diretamente daquele serviço, que recebe, como em qualquer acesso, o endereço IP e a identificação do navegador — sem cookies e sem qualquer outro dado da página. Trabalhamos para hospedá-las em nossos próprios servidores.',
         ],
       },
       {

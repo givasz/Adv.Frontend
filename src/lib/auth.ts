@@ -305,6 +305,20 @@ const conferenciaInicial: Promise<Session | null> = estado.conferindo
   ? revalidarSessao()
   : Promise.resolve(estado.session)
 
+// O ponto cego da dica: o cookie de sessão (HttpOnly, invisível daqui) pode
+// estar VIVO com a dica ilegível — limpeza de dados que levou o localStorage e
+// poupou cookies, ou o modo VITE_API_DIRECT, em que o cookie CSRF mora no
+// domínio da API e esta página nunca o lê. Nesses casos a pessoa apareceria
+// deslogada para sempre. A conferência TARDIA cobre isso sem devolver o custo
+// ao visitante anônimo: sai bem depois da primeira pintura, fora da disputa de
+// banda com o carregamento do perfil — e, se achar uma sessão, o retrato se
+// corrige sozinho (o /entrar, inclusive, volta para o destino ao vê-la surgir).
+if (useReal && !estado.conferindo && typeof window !== 'undefined') {
+  window.setTimeout(() => {
+    revalidarSessao().catch(() => undefined)
+  }, 2000)
+}
+
 /**
  * Espera a conferência inicial terminar.
  *

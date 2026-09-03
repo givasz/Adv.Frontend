@@ -9,7 +9,7 @@ import { API_BASE, apiFetch, TEM_BACKEND } from './http'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
-import { directorySeed, exampleProfiles, sampleProfile } from './mockData'
+import { exampleProfiles, sampleProfile } from './mockData'
 import {
   blankFirm,
   getFirm as getMockFirm,
@@ -23,7 +23,6 @@ import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { getTheme, isThemeUnlocked } from './themes'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import type {
-  DirectoryResult,
   GenerateRequest,
   GenerateResult,
   Plan,
@@ -309,7 +308,9 @@ export const api = {
 
     if (USE_REAL_API) {
       try {
-        const res = await fetch(`${API_BASE}/api/profiles/${slug}`)
+        // encodeURIComponent SEMPRE que um valor vira segmento de caminho — o
+        // slug chega decodificado do router, e `../` remontaria outra URL.
+        const res = await fetch(`${API_BASE}/api/profiles/${encodeURIComponent(slug)}`)
         return res.ok ? res.json() : null
       } catch {
         return null // rede fora: perfil real indisponível (o exemplo já saiu acima)
@@ -329,7 +330,7 @@ export const api = {
 
     if (USE_REAL_API) {
       try {
-        const res = await fetch(`${API_BASE}/api/firms/${slug}`)
+        const res = await fetch(`${API_BASE}/api/firms/${encodeURIComponent(slug)}`)
         return res.ok ? res.json() : null
       } catch {
         return null
@@ -674,7 +675,7 @@ export const api = {
     input: { reason: ReportReason; details: string; reporterEmail?: string },
   ): Promise<{ ok: boolean }> {
     if (USE_REAL_API) {
-      const res = await fetch(`${API_BASE}/api/profiles/${slug}/report`, {
+      const res = await fetch(`${API_BASE}/api/profiles/${encodeURIComponent(slug)}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -689,30 +690,9 @@ export const api = {
     return { ok: true }
   },
 
-  async searchDirectory(query: string, area: string | null): Promise<DirectoryResult[]> {
-    if (USE_REAL_API) {
-      const params = new URLSearchParams()
-      if (query) params.set('q', query)
-      if (area) params.set('area', area)
-      const res = await fetch(`${API_BASE}/api/directory?${params}`)
-      return res.json()
-    }
-    await wait(240)
-    const q = query.trim().toLowerCase()
-    return directorySeed
-      .filter((r) => {
-        const matchesArea = !area || r.areas.includes(area)
-        const matchesQuery =
-          !q ||
-          r.name.toLowerCase().includes(q) ||
-          r.city.toLowerCase().includes(q) ||
-          r.areas.some((a) => a.toLowerCase().includes(q))
-        return matchesArea && matchesQuery
-      })
-      // Critério objetivo e não-comercial (alfabético) — sem prioridade por plano.
-      // Prov. 205/2021 Art.5º §1º veda destaque pago em rankings. Ver REGRAS.md §3.
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  },
+  // `searchDirectory` saiu junto com GET /api/directory (03/09/2026): nenhuma
+  // tela jamais a chamou, e o backend removeu a rota (A02 — remover o que não se
+  // usa). Se a busca pública nascer um dia, os dois renascem juntos, do git.
 
   async generate(req: GenerateRequest): Promise<GenerateResult> {
     // Usa a IA do backend quando (a) estamos em modo real, ou (b) há um backend

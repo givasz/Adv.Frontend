@@ -103,11 +103,19 @@ function reportHtml(profile: Profile, issues: Issues, dateStr: string): string {
     OAB. A verificação é uma heurística de apoio; a responsabilidade pelo conteúdo publicado é do(a)
     advogado(a).
   </footer>
-  <script>window.onload = function(){ setTimeout(function(){ window.print() }, 300) }</script>
 </body></html>`
 }
 
-/** Abre o relatório em nova aba e dispara a impressão (o usuário salva como PDF). */
+/**
+ * Abre o relatório em nova aba e dispara a impressão (o usuário salva como PDF).
+ *
+ * O `print()` é chamado DAQUI, pela aba que abriu — nunca por um `<script>`
+ * inline dentro do documento: a aba `about:blank` herda a CSP da nossa origem, e
+ * `script-src 'self'` bloqueia script inline em silêncio. Com o script, em
+ * produção a aba abria e o diálogo de impressão simplesmente não vinha — o
+ * "seguro" documental de REGRAS.md §4 não era gerado, e o motivo só aparecia no
+ * console (auditoria de 03/09; mesma classe do frame-src que esvaziava o vídeo).
+ */
 export function openAuditReport(profile: Profile, issues: Issues): boolean {
   const dateStr = new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })
   const html = reportHtml(profile, issues, dateStr)
@@ -115,5 +123,15 @@ export function openAuditReport(profile: Profile, issues: Issues): boolean {
   if (!win) return false // bloqueado por popup
   win.document.write(html)
   win.document.close()
+  // O mesmo atraso que o script inline dava: tempo de o layout assentar antes
+  // do diálogo. Se a aba já foi fechada, não há o que imprimir — só silêncio.
+  window.setTimeout(() => {
+    try {
+      win.focus()
+      win.print()
+    } catch {
+      /* aba fechada antes da hora — nada a fazer */
+    }
+  }, 300)
   return true
 }

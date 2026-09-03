@@ -21,13 +21,20 @@ export function isExampleSlug(slug: string): boolean {
   return (EXAMPLE_SLUGS as readonly string[]).includes(slug)
 }
 
+// O alfabeto de um slug NOSSO (o slugify do backend só emite isto). O que vem em
+// `useParams` já chegou DECODIFICADO pelo router — um `/%2e%2e%2fx` vira `../x`
+// aqui dentro, e sem a recusa + o encode a barra remontava o caminho da chamada.
+const SLUG_RE = /^[a-z0-9-]{1,80}$/
+
 export async function getPublicProfile(slug: string): Promise<Profile | null> {
+  // O que não tem cara de slug não existe — decidido aqui, sem gastar rede.
+  if (!SLUG_RE.test(slug)) return null
   if (!TEM_BACKEND || isExampleSlug(slug)) {
     const { api } = await import('./api')
     return api.getProfile(slug)
   }
   try {
-    const res = await fetch(`${API_BASE}/api/profiles/${slug}`)
+    const res = await fetch(`${API_BASE}/api/profiles/${encodeURIComponent(slug)}`)
     return res.ok ? ((await res.json()) as Profile) : null
   } catch {
     return null // rede fora: o minisite mostra "não encontrado", não uma tela quebrada
