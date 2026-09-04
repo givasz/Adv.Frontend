@@ -249,7 +249,18 @@ async function painelDeModeracao() {
     // aparecer, é porque entrar deixou de funcionar.
     await pagina.getByRole('button', { name: 'Denúncias', exact: true }).waitFor({ timeout: ESPERA })
 
-    for (const aba of ['Contestações', 'Suporte', 'Advogados', 'Histórico', 'Equipe', 'Denúncias']) {
+    for (const aba of [
+      'Contestações',
+      'Suporte',
+      'Advogados',
+      'Histórico',
+      // Levantamentos DESENHA gráficos, e é a única aba onde geometria pode
+      // quebrar: divisão por zero num recorte vazio, rótulo colidindo, altura
+      // negativa. Nada disso aparece no tsc nem no vitest — só desenhando.
+      'Levantamentos',
+      'Equipe',
+      'Denúncias',
+    ]) {
       // Escopo no cabeçalho: as abas convivem com filtros de mesmo nome dentro
       // do conteúdo, e clicar no primeiro que aparecer testaria outra coisa.
       const botao = pagina.locator('header').getByRole('button', { name: aba, exact: true })

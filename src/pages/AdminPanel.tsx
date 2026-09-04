@@ -16,6 +16,7 @@ import {
 import EquipeTab from '@/components/admin/EquipeTab'
 import HistoricoTab from '@/components/admin/HistoricoTab'
 import ContestacoesTab from '@/components/admin/ContestacoesTab'
+import LevantamentosTab from '@/components/admin/LevantamentosTab'
 import SegundoFator from '@/components/admin/SegundoFator'
 import { Etiqueta } from '@/components/admin/pecas'
 import { Rodape } from '@/components/admin/Paginacao'
@@ -225,6 +226,11 @@ const ABAS = [
   { id: 'support', label: 'Suporte', permissao: 'suporte:ler' },
   { id: 'search', label: 'Advogados', permissao: 'contas:ler' },
   { id: 'historico', label: 'Histórico', permissao: 'auditoria:ler' },
+  // Depois das filas e das ferramentas, e antes da equipe: é o que se abre
+  // quando NÃO há ninguém esperando resposta. Uma aba de números no começo da
+  // barra empurraria para o painel um hábito que ele não deve ter — olhar
+  // gráfico antes de olhar quem está na fila.
+  { id: 'numeros', label: 'Levantamentos', permissao: 'metricas:ler' },
   { id: 'equipe', label: 'Equipe', permissao: 'admins:gerir' },
 ] as const
 
@@ -294,6 +300,7 @@ function Dashboard({
         {tab === 'support' && <SupportTab podeResponder={podeResponder} />}
         {tab === 'search' && <SearchTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
         {tab === 'historico' && <HistoricoTab />}
+        {tab === 'numeros' && <LevantamentosTab />}
         {tab === 'equipe' && <EquipeTab eu={me} />}
       </main>
     </div>

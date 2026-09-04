@@ -153,6 +153,7 @@ const ME_MOCK: AdminMe = {
     'suporte:ler',
     'suporte:responder',
     'auditoria:ler',
+    'metricas:ler',
     'admins:gerir',
   ],
   totpPendente: false,
@@ -399,6 +400,121 @@ export async function listarAcoes(
   for (const [k, v] of Object.entries(filtros)) if (v) q.set(k, String(v))
   const cauda = q.toString() ? `?${q}` : ''
   return json(await adminFetch(`/admin/actions${cauda}`))
+}
+
+// ---- Levantamentos ----
+
+export interface Levantamentos {
+  dias: number
+  agora: {
+    contas: number
+    perfis: number
+    publicados: number
+    rascunhos: number
+    escritorios: number
+    porPlano: Record<string, number>
+    porCobranca: Record<string, number>
+    porModeracao: Record<string, number>
+    emCortesia: number
+    aceitePendente: number
+    aceiteEmDia: number
+  }
+  serie: { dia: string; free: number; pro: number; premium: number; publicados: number }[]
+  novasContas: { semana: string; total: number }[]
+  eventosMes: { mes: string; eventos: Record<string, number> }[]
+  porUf: { uf: string; total: number }[]
+  cobertura: { desde: string | null; ate: string | null; dias: number; buracos: string[] }
+}
+
+/**
+ * Os números da plataforma. `dias` recorta a SÉRIE; o retrato de "agora" é
+ * sempre o de agora.
+ */
+export async function carregarLevantamentos(dias = 90): Promise<Levantamentos> {
+  if (MOCK_ADMIN) return levantamentosDeMentira(dias)
+  return json(await adminFetch(`/admin/levantamentos?dias=${dias}`))
+}
+
+/**
+ * Números inventados para o painel de desenvolvimento — e para o teste de fumaça.
+ *
+ * Sem isto a aba abriria vazia em dev, e o `npm run smoke` (que percorre o painel
+ * num navegador de verdade) nunca DESENHARIA um gráfico. É desenhando que se
+ * descobre eixo estourado, rótulo colidindo e divisão por zero — nada disso
+ * aparece no tsc nem no vitest.
+ *
+ * De propósito: a série tem um BURACO (o dia 12 não existe) e um mês com vários
+ * eventos, para os dois caminhos menos percorridos serem os que o smoke pisa.
+ */
+function levantamentosDeMentira(dias: number): Levantamentos {
+  const hoje = new Date()
+  const serie: Levantamentos['serie'] = []
+  for (let i = 21; i >= 0; i--) {
+    if (i === 9) continue // o buraco
+    const d = new Date(hoje)
+    d.setDate(d.getDate() - i)
+    const free = 12 + Math.round(Math.sin(i / 3) * 2) + Math.floor((21 - i) / 4)
+    const pro = 4 + Math.floor((21 - i) / 7)
+    const premium = 2 + Math.floor((21 - i) / 11)
+    serie.push({
+      dia: d.toISOString().slice(0, 10),
+      free,
+      pro,
+      premium,
+      publicados: free + pro + premium - 3,
+    })
+  }
+  const semanas: Levantamentos['novasContas'] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoje)
+    d.setDate(d.getDate() - i * 7 - ((d.getDay() + 6) % 7))
+    semanas.push({ semana: d.toISOString().slice(0, 10), total: 1 + ((i * 3) % 5) })
+  }
+  return {
+    dias,
+    agora: {
+      contas: 24,
+      perfis: 23,
+      publicados: 17,
+      rascunhos: 6,
+      escritorios: 2,
+      porPlano: { free: 16, pro: 5, premium: 2 },
+      porCobranca: { active: 6, past_due: 1 },
+      porModeracao: { active: 21, warned: 1, restricted: 1 },
+      emCortesia: 1,
+      aceitePendente: 3,
+      aceiteEmDia: 21,
+    },
+    serie,
+    novasContas: semanas,
+    eventosMes: [
+      { mes: mesDeMentira(hoje, 1), eventos: { view: 214, whatsapp: 63, scheduling: 18 } },
+      { mes: mesDeMentira(hoje, 0), eventos: { view: 168, whatsapp: 51, social: 22, email: 9 } },
+    ],
+    porUf: [
+      { uf: 'SP', total: 7 },
+      { uf: 'MG', total: 5 },
+      { uf: 'RJ', total: 3 },
+      { uf: 'BA', total: 2 },
+    ],
+    cobertura: {
+      desde: serie[0]?.dia ?? null,
+      ate: serie[serie.length - 1]?.dia ?? null,
+      dias: serie.length,
+      buracos: [buracoDeMentira(hoje)],
+    },
+  }
+}
+
+function mesDeMentira(hoje: Date, atras: number): string {
+  const d = new Date(hoje.getFullYear(), hoje.getMonth() - atras, 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function buracoDeMentira(hoje: Date): string {
+  const d = new Date(hoje)
+  d.setDate(d.getDate() - 9)
+  return d.toISOString().slice(0, 10)
 }
 
 // ---- Denúncias / moderação ----
