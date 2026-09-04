@@ -118,7 +118,8 @@ export const PLAN_OFFERS: PlanOffer[] = [
     pitch: 'Um perfil profissional, no ar em minutos.',
     items: [
       { text: 'Perfil público conferido antes de publicar' },
-      { text: `Até ${AREA_LIMIT.free} áreas de atuação` },
+      { text: 'Uma área de atuação — a principal' },
+      { text: `${FAQ_LIMIT.free} pergunta frequente respondida no perfil` },
       { text: `Bio de até ${CHAR_LIMITS.free.bio} caracteres` },
       { text: 'WhatsApp, e-mail e redes sociais' },
       { text: `${temaCount('free')} temas visuais` },
@@ -126,7 +127,8 @@ export const PLAN_OFFERS: PlanOffer[] = [
     ],
     falta: [
       'Sem agendamento pelo perfil',
-      'Sem perguntas frequentes',
+      `Uma área e uma pergunta só — no Pro são ${AREA_LIMIT.pro} e ${FAQ_LIMIT.pro}`,
+      'Campos mais curtos que nos planos pagos',
       'Endereço com número no fim e rodapé “criado com advoc.me”',
     ],
     ctaTo: '/comecar',
@@ -142,7 +144,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
     items: [
       { text: ASSISTENTE },
       { text: BALAO },
-      { text: `${FAQ_LIMIT.pro} perguntas frequentes respondidas no perfil` },
+      { text: `${FAQ_LIMIT.pro} perguntas frequentes (era ${FAQ_LIMIT.free} no Free)` },
       { text: ENDERECO },
       { text: 'Cartão digital: QR Code em alta e seu contato em vCard' },
       // Entrou quando o recurso passou a existir. Antes, esta promessa morava só
@@ -152,7 +154,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       // ficou de fora de propósito: saber de onde a pessoa veio exige guardar de
       // onde ela veio, e não guardamos dado de visitante.
       { text: 'Relatório do perfil: visitas, botões usados e horários de maior procura' },
-      { text: `Até ${AREA_LIMIT.pro} áreas e bio de ${CHAR_LIMITS.pro.bio} caracteres` },
+      { text: `Até ${AREA_LIMIT.pro} áreas de atuação e bio de ${CHAR_LIMITS.pro.bio} caracteres` },
       { text: `${temaCount('pro')} dos ${THEMES.length} temas visuais` },
       { text: 'A IA também escreve sua frase de apresentação e revisa seus textos' },
     ],

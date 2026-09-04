@@ -11,7 +11,7 @@ import { AREA_LIMIT, CHAR_LIMITS } from './plans'
 
 describe('upsell — contador de cota por plano', () => {
   it('áreas: rótulo "usado/limite — Plano" reflete o plano atual', () => {
-    expect(quotaLabel(areaQuota('free', 2))).toBe('2/2 — Free')
+    expect(quotaLabel(areaQuota('free', 1))).toBe('1/1 — Free')
     expect(quotaLabel(areaQuota('pro', 3))).toBe('3/6 — Pro')
     expect(quotaLabel(areaQuota('premium', 5))).toBe('5/20 — Max')
   })
@@ -25,15 +25,15 @@ describe('upsell — contador de cota por plano', () => {
 
   it('bio: contador de caracteres usa o texto atual vs limite do plano', () => {
     const q = charQuota('free', 'bio', 120)
-    expect(quotaLabel(q)).toBe('120/300 — Free')
-    expect(q.remaining).toBe(180)
+    expect(quotaLabel(q)).toBe(`120/${CHAR_LIMITS.free.bio} — Free`)
+    expect(q.remaining).toBe(CHAR_LIMITS.free.bio - 120)
     expect(q.atLimit).toBe(false)
   })
 })
 
 describe('upsell — slot fantasma ao atingir o limite', () => {
-  it('Free com 2 áreas está no limite e destrava no Pro (2 → 6)', () => {
-    const q = areaQuota('free', 2)
+  it('Free com 1 área está no limite e destrava no Pro (1 → 6)', () => {
+    const q = areaQuota('free', 1)
     expect(q.atLimit).toBe(true)
     expect(q.remaining).toBe(0)
     expect(q.unlockPlan).toBe('pro')
@@ -55,7 +55,8 @@ describe('upsell — slot fantasma ao atingir o limite', () => {
   })
 
   it('abaixo do limite não marca atLimit', () => {
-    expect(areaQuota('free', 1).atLimit).toBe(false)
+    expect(areaQuota('free', 0).atLimit).toBe(false)
+    expect(areaQuota('pro', 5).atLimit).toBe(false)
   })
 
   it('nextPlan sobe a escada e para no topo', () => {
@@ -80,7 +81,7 @@ describe('upsell — pontos do Índice de Confiança por recurso', () => {
   it('featureCompare traz os três planos, valores derivados e os pontos', () => {
     const areas = featureCompare('areas')
     expect(areas.rows.map((r) => r.plan)).toEqual(['free', 'pro', 'premium'])
-    expect(areas.rows.map((r) => r.value)).toEqual(['2 áreas', '6 áreas', '20 áreas'])
+    expect(areas.rows.map((r) => r.value)).toEqual(['1 área', '6 áreas', '20 áreas'])
     expect(areas.points).toBe(0)
 
     const agenda = featureCompare('agenda')

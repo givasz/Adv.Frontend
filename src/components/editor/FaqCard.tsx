@@ -1,5 +1,7 @@
 import type { Faq, Profile } from '@/lib/types'
 import { FAQ_ANSWER_MAX, FAQ_QUESTION_MAX } from '@/lib/plans'
+import { perguntaComMaisDeUma } from '@/lib/campoUnico'
+import { CampoUnico } from './CampoUnico'
 import { checkCompliance, OAB_GUIDANCE_BY_FIELD } from '@/lib/oab'
 import { faqQuota, type UpsellFeature } from '@/lib/upsell'
 import { faqIdeas } from '@/lib/faqIdeas'
@@ -11,7 +13,9 @@ import { AiButton } from './AiGenerator'
 import { SparkIcon, TrashIcon } from '@/components/ui/icons'
 
 // Perguntas frequentes do perfil — o advogado responde as dúvidas que mais ouve.
-// Recurso pago: 2 no Pro, 5 no Max (ver lib/plans.ts).
+// 1 no Free, 2 no Pro, 5 no Max (ver lib/plans.ts). Os TETOS DE TEXTO também são
+// do plano: no Free a pergunta cabe em 80 caracteres e a resposta em 160, porque
+// com cota de uma um campo largo vira convite a empilhar duas perguntas numa.
 //
 // Por que FAQ e não artigo: ninguém escreve artigo no meio da semana, mas todo
 // advogado já respondeu "quanto tempo demora um inventário?" cem vezes. A pergunta
@@ -42,6 +46,8 @@ export function FaqCard({
 }) {
   const list = profile.faqs ?? []
   const quota = faqQuota(profile.plan, list.length)
+  const perguntaMax = FAQ_QUESTION_MAX[profile.plan]
+  const respostaMax = FAQ_ANSWER_MAX[profile.plan]
   const areas = profile.areas.map((a) => a.label).filter(Boolean)
   // `seed` fixo pelo tamanho da lista: as sugestões trocam quando o FAQ cresce,
   // não a cada tecla digitada — sugestão que dança embaixo do dedo não é sugestão.
@@ -62,14 +68,17 @@ export function FaqCard({
 
       {list.map((f, i) => {
         const issues = checkCompliance(`${f.question} ${f.answer}`)
-        const long = f.answer.length > FAQ_ANSWER_MAX - 40
+        const long = f.answer.length > respostaMax - 40
+        // Duas interrogações são, literalmente, duas perguntas — e com cota de
+        // uma no Free é exatamente por aí que a cota seria furada.
+        const duplicada = perguntaComMaisDeUma(f.question)
         return (
           <div key={f.id} className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1 space-y-3">
                 <Field
                   label={`Pergunta ${i + 1}`}
-                  hint={`${f.question.length}/${FAQ_QUESTION_MAX}`}
+                  hint={`${f.question.length}/${perguntaMax}`}
                   info={
                     i === 0 ? (
                       <InfoTip
@@ -83,17 +92,27 @@ export function FaqCard({
                 >
                   <TextInput
                     value={f.question}
-                    maxLength={FAQ_QUESTION_MAX}
+                    maxLength={perguntaMax}
                     disabled={preview}
                     onChange={(e) => patch(f.id, { question: e.target.value })}
                     placeholder="Quanto tempo demora um inventário?"
                   />
+                  {/* Uma pergunta por campo. No Free a cota é uma, e empilhar duas
+                      aqui seria o caminho óbvio para furá-la — além de deixar quem
+                      visita procurando a dúvida dele no meio de um bloco. */}
+                  {!preview && (
+                    <CampoUnico
+                      problema={duplicada}
+                      onFix={(question) => patch(f.id, { question })}
+                      rotuloDoBotao="Ficar só com a primeira"
+                    />
+                  )}
                 </Field>
                 <Field
                   label="Sua resposta"
                   hint={
                     <span className={long ? 'font-semibold text-brass-deep' : undefined}>
-                      {f.answer.length}/{FAQ_ANSWER_MAX}
+                      {f.answer.length}/{respostaMax}
                     </span>
                   }
                   info={
@@ -110,7 +129,7 @@ export function FaqCard({
                   <TextArea
                     rows={3}
                     value={f.answer}
-                    maxLength={FAQ_ANSWER_MAX}
+                    maxLength={respostaMax}
                     disabled={preview}
                     onChange={(e) => patch(f.id, { answer: e.target.value })}
                     placeholder="Em duas ou três frases: como a lei trata isso e o que costuma acontecer na prática."

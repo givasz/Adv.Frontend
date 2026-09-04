@@ -84,11 +84,16 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     expect(novos.sort()).toEqual(['cartao', 'faq_max', 'marca', 'video'])
   })
 
-  it('o FAQ começa no Pro e ganha um degrau no Max', () => {
-    expect(FAQ_LIMIT.free).toBe(0)
+  it('o FAQ começa no Free com uma, e cada plano acrescenta um degrau', () => {
+    expect(FAQ_LIMIT.free).toBe(1)
     expect(FAQ_LIMIT.pro).toBe(2)
     expect(FAQ_LIMIT.premium).toBe(5)
-    // No Free não há checklist; no Pro o FAQ aparece; o degrau extra é só do Max.
+    // O item do Pro é a SEGUNDA pergunta: quem já respondeu a primeira no Free
+    // não pode encontrá-lo nascido como concluído.
+    expect(
+      featuresPending({ ...base, plan: 'pro', faqs: [{ id: 'f', question: 'q?', answer: 'a' }] })
+        .some((f) => f.key === 'faq'),
+    ).toBe(true)
     expect(featuresPending({ ...base, plan: 'pro' }).some((f) => f.key === 'faq')).toBe(true)
     expect(featuresPending({ ...base, plan: 'pro' }).some((f) => f.key === 'faq_max')).toBe(false)
     expect(featuresPending({ ...base, plan: 'premium' }).some((f) => f.key === 'faq_max')).toBe(true)

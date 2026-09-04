@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { login, signup, useAuth } from '@/lib/auth'
 import { passwordStrength } from '@/lib/passwordStrength'
-import { ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, SparkIcon } from '@/components/ui/icons'
+import { ArrowLeft, ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, SparkIcon } from '@/components/ui/icons'
 import { caminhoDeVolta } from '@/components/ui/SubPage'
 import { Marca } from '@/components/ui/Marca'
 
@@ -92,8 +92,12 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
           <Marca size={32} />
           advoc.me
         </Link>
-        <Link to="/" className="-my-2 inline-block py-2 text-[13px] font-medium text-ink-faint hover:text-ink">
-          ‹ Voltar ao site
+        <Link
+          to="/"
+          className="-my-2 inline-flex items-center gap-1.5 py-2 text-[13px] font-medium text-ink-faint hover:text-ink"
+        >
+          <ArrowLeft width={15} height={15} />
+          Voltar ao site
         </Link>
       </header>
 

@@ -33,7 +33,7 @@ describe('fitToLimit', () => {
 
   it('respeita os tetos reais dos campos do perfil', () => {
     const longo = 'Atuação em direito ambiental com foco em licenciamento. '.repeat(20)
-    for (const limite of [CHAR_LIMITS.premium.areaDesc, CHAR_LIMITS.free.bio, FAQ_ANSWER_MAX]) {
+    for (const limite of [CHAR_LIMITS.premium.areaDesc, CHAR_LIMITS.free.bio, FAQ_ANSWER_MAX.free]) {
       expect(fitToLimit(longo, limite).length).toBeLessThanOrEqual(limite)
     }
   })

@@ -22,7 +22,7 @@ import { TrustGauge } from '@/components/ui/TrustGauge'
 import { Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { CidadeUfCampos } from '@/components/editor/CidadeInput'
-import { SparkIcon, ArrowRight, CheckIcon } from '@/components/ui/icons'
+import { SparkIcon, ArrowLeft, ArrowRight, CheckIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
 let uid = 0
@@ -295,7 +295,7 @@ export default function Onboarding() {
                   <TextInput
                     value={area.label}
                     autoFocus
-                    maxLength={AREA_LABEL_MAX}
+                    maxLength={AREA_LABEL_MAX[profile.plan]}
                     onChange={(e) => setArea(e.target.value)}
                     placeholder="Direito de Família"
                   />
@@ -406,7 +406,8 @@ export default function Onboarding() {
               <div className="mt-8 flex items-center justify-between gap-3">
                 {step > WELCOME ? (
                   <button type="button" onClick={goBack} className="btn-ghost">
-                    ‹ Voltar
+                    <ArrowLeft width={16} height={16} />
+                    Voltar
                   </button>
                 ) : (
                   <span />
@@ -427,7 +428,8 @@ export default function Onboarding() {
                       Pular por enquanto
                     </button>
                     <button type="button" onClick={goNext} className="btn-primary">
-                      Continuar ›
+                      Continuar
+                      <ArrowRight width={16} height={16} />
                     </button>
                   </div>
                 ) : (
@@ -437,7 +439,8 @@ export default function Onboarding() {
                     disabled={!canContinue}
                     className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Continuar ›
+                    Continuar
+                    <ArrowRight width={16} height={16} />
                   </button>
                 )}
               </div>

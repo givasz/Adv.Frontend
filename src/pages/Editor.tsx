@@ -30,8 +30,9 @@ import {
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
 import { comVolta } from '@/components/ui/SubPage'
 import { fitToLimit } from '@/lib/textLimit'
+import { areaComMaisDeUma } from '@/lib/campoUnico'
 import { useSlugCheck } from '@/lib/useSlugCheck'
-import { hostLabel } from '@/lib/publicUrl'
+import { hostLabel, profileUrlLabel } from '@/lib/publicUrl'
 import { canUseAi } from '@/lib/aiFeatures'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
@@ -50,6 +51,7 @@ import { MetricasCard } from '@/components/editor/MetricasCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
+import { CampoUnico } from '@/components/editor/CampoUnico'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { DigitalCard } from '@/components/editor/DigitalCard'
 import { CARD_PREVIEW, CardStudio } from '@/components/editor/CardStudio'
@@ -58,7 +60,7 @@ import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upse
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { CidadeUfCampos } from '@/components/editor/CidadeInput'
 import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
-import { LockIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
+import { ArrowLeft, LockIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
 type AiTarget = {
@@ -116,7 +118,7 @@ const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
   redes: { title: 'Seus canais', subtitle: 'Por onde os clientes falam com você.' },
   agenda: { title: 'Sua agenda', subtitle: 'Deixe que marquem um horário direto no perfil.' },
   aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
-  marca: { title: 'Sua marca', subtitle: 'Domínio próprio e identidade sem a marca advoc.me.' },
+  marca: { title: 'Sua marca', subtitle: 'Sua cor, o seu nome no rodapé e sem a marca advoc.me.' },
   faq: {
     title: 'Perguntas frequentes',
     subtitle: 'As dúvidas que você mais ouve, respondidas por você no perfil.',
@@ -280,7 +282,7 @@ export default function Editor() {
   // Teto de caracteres do campo que vai receber o texto. É o mesmo número que o
   // servidor cobra no save — passa para a IA no pedido e corta na aplicação.
   function aiLimit(target: NonNullable<AiTarget>): number {
-    if (target.kind === 'faq') return FAQ_ANSWER_MAX
+    if (target.kind === 'faq') return FAQ_ANSWER_MAX[profile!.plan]
     if (target.kind === 'headline') return lim.headline
     if (target.kind === 'area') return lim.areaDesc
     return lim.bio // bio e improve
@@ -384,7 +386,8 @@ export default function Editor() {
             onClick={sairParaPainel}
             className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-ink-faint transition-colors hover:text-burgundy"
           >
-            ‹ Voltar ao painel
+            <ArrowLeft width={15} height={15} />
+            Voltar ao painel
           </button>
 
           <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
@@ -591,8 +594,11 @@ export default function Editor() {
                     }
                   />
                 ) : (
-                  // No Free a seção continua no lugar, com o card real borrado sob o
-                  // cadeado — o advogado vê exatamente o que teria.
+                  // Ramo de segurança: hoje TODO plano responde ao menos uma
+                  // pergunta (ver FAQ_LIMIT), então este cadeado não aparece para
+                  // ninguém. Fica porque o portão lê a tabela — se a cota do Free
+                  // voltar a zero algum dia, a tela se ajusta sozinha em vez de
+                  // sumir a seção.
                   <LockedFeature unlockPlan="pro" onOpen={() => abrirUpsell('faq')}>
                     <FaqCard
                       profile={{ ...profile, plan: 'pro', faqs: PREVIEW_FAQS }}
@@ -658,7 +664,8 @@ export default function Editor() {
 
           <div className="flex items-center justify-between gap-3 pt-1">
             <button type="button" onClick={sairParaPainel} className="btn-ghost">
-              ‹ Painel
+              <ArrowLeft width={16} height={16} />
+              Painel
             </button>
             <button type="button" onClick={sairParaPainel} className="btn-primary">
               Pronto
@@ -726,7 +733,16 @@ function IdentitySection({
           </Field>
           <Field label="Endereço do perfil" hint={profile.plan === 'free' ? 'gerado do nome' : 'personalizável'}>
             {profile.plan === 'free' ? (
-              <TextInput value={`advoc.me/${profile.slug}`} readOnly className="!bg-paper-deep text-ink-faint" />
+              // O HOST real, nunca "advoc.me/" fixo: a marca é advoc.me, o endereço
+              // é onde os perfis vivem de fato, e são coisas diferentes até o
+              // domínio existir. Este campo é de onde a pessoa COPIA o link para
+              // mandar ao primeiro cliente — com o texto errado ela compartilha um
+              // link morto. Ver lib/publicUrl.ts, que existe por causa disso.
+              <TextInput
+                value={profileUrlLabel(profile.slug)}
+                readOnly
+                className="!bg-paper-deep text-ink-faint"
+              />
             ) : (
               <SlugField profile={profile} set={set} />
             )}
@@ -825,6 +841,7 @@ function IdentitySection({
             key={area.id}
             area={area}
             descLimit={lim.areaDesc}
+            labelLimit={AREA_LABEL_MAX[profile.plan]}
             onChange={(patch) =>
               set({ areas: profile.areas.map((a) => (a.id === area.id ? { ...a, ...patch } : a)) })
             }
@@ -1046,12 +1063,15 @@ function OverLimit({
 function AreaEditor({
   area,
   descLimit,
+  labelLimit,
   onChange,
   onRemove,
   onAi,
 }: {
   area: PracticeArea
   descLimit: number
+  /** teto do RÓTULO no plano atual — 32 no Free, 40 nos pagos */
+  labelLimit: number
   onChange: (patch: Partial<PracticeArea>) => void
   onRemove: () => void
   onAi: () => void
@@ -1066,7 +1086,7 @@ function AreaEditor({
         <input
           list="area-suggestions"
           value={area.label}
-          maxLength={AREA_LABEL_MAX}
+          maxLength={labelLimit}
           placeholder="Direito de Família"
           aria-label="Nome da área de atuação"
           onChange={(e) => onChange({ label: e.target.value })}
@@ -1097,6 +1117,16 @@ function AreaEditor({
           onFix={(v) => onChange({ description: v })}
         />
       </div>
+      {/* Uma área por campo. Com cota de uma no Free, empilhar assuntos no rótulo
+          é o caminho óbvio para furar a cota — e o resultado é um tile que não diz
+          a quem visita o que este advogado faz. O aviso vem com o conserto junto:
+          bloquear sem oferecer saída faz a pessoa desistir do campo. */}
+      <CampoUnico
+        problema={areaComMaisDeUma(area.label)}
+        onFix={(label) => onChange({ label })}
+        rotuloDoBotao="Ficar só com a primeira"
+      />
+
       {/* Nome e descrição conferidos juntos: são um bloco só na leitura de quem
           visita, e separar daria dois avisos para o mesmo problema. */}
       <MarginNotes issues={checkCompliance(`${area.label} ${area.description}`)} />

@@ -153,7 +153,9 @@ const FEATURE_META: Record<
   areas: {
     title: 'Áreas de atuação',
     subtitle: 'Quantas áreas você pode listar no perfil.',
-    value: (p) => `${AREA_LIMIT[p]} áreas`,
+    // Concordância: com o Free em UMA área desde 04/09/2026, o modelo fixo
+    // imprimia "1 áreas" na tabela de comparação.
+    value: (p) => `${AREA_LIMIT[p]} ${AREA_LIMIT[p] === 1 ? 'área' : 'áreas'}`,
   },
   bio: {
     title: 'Tamanho da bio',

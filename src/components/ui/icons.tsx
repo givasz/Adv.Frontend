@@ -137,6 +137,23 @@ export const ArrowRight = (p: IconProps) => (
   </svg>
 )
 
+/**
+ * Voltar. Espelho exato do ArrowRight — mesma haste, mesma ponta, mesma
+ * espessura —, porque "avançar" e "voltar" precisam parecer o mesmo gesto em
+ * duas direções.
+ *
+ * Existe porque os botões de voltar usavam o caractere "‹" (guilhemete simples),
+ * que é TEXTO: ele herda a fonte, fica fino demais ao lado de um rótulo em peso
+ * médio, muda de desenho e de altura conforme a família tipográfica carregada, e
+ * some quando a fonte não tem o glifo. Um ícone vetorial não tem nenhum desses
+ * problemas e alinha com o resto do conjunto.
+ */
+export const ArrowLeft = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M19 12H5M11 18l-6-6 6-6" />
+  </svg>
+)
+
 export const ExternalLinkIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M14 4h6v6M20 4l-9 9M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" />

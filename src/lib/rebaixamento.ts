@@ -1,5 +1,5 @@
 import type { Plan, Profile } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, canUseFaq, canUseScheduling } from './plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, canUseScheduling } from './plans'
 import { canUsePrintCard, canUseVideo, canUseDigitalCard } from './plans'
 import { CARENCIA_ENDERECO_DIAS } from './assinatura'
 import { slugify } from './brFormat'
@@ -78,19 +78,26 @@ export function mudancasAoDescer(p: Profile, alvo: Plan): MudancaDePlano {
   // --- Áreas de atuação ------------------------------------------------------
   const areas = (p.areas ?? []).filter((a) => a.label.trim()).length
   if (areas > AREA_LIMIT[alvo]) {
+    const restam = AREA_LIMIT[alvo]
     perde.push(
       `Das suas ${contar(areas, 'área', 'áreas')} de atuação, ` +
-        `${AREA_LIMIT[alvo]} continuam aparecendo — as outras ficam guardadas`,
+        `${restam === 1 ? 'a principal continua aparecendo' : `${restam} continuam aparecendo`} — as outras ficam guardadas`,
     )
   }
 
   // --- Perguntas frequentes --------------------------------------------------
   const faqs = (p.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim()).length
   if (faqs > FAQ_LIMIT[alvo]) {
+    // O Free entrega UMA pergunta desde 04/09/2026 — antes eram zero, e por isso
+    // este texto tinha um ramo "saem do perfil" que hoje não acontece mais em
+    // plano nenhum. O que sobrou pede concordância: "1 continuam" é o tipo de
+    // frase que faz a tela inteira parecer descuidada.
+    const restam = FAQ_LIMIT[alvo]
     perde.push(
-      FAQ_LIMIT[alvo] === 0
+      restam === 0
         ? `Suas ${contar(faqs, 'pergunta frequente', 'perguntas frequentes')} saem do perfil — o texto fica guardado`
-        : `Das suas ${contar(faqs, 'pergunta', 'perguntas')} frequentes, ${FAQ_LIMIT[alvo]} continuam aparecendo`,
+        : `Das suas ${contar(faqs, 'pergunta', 'perguntas')} frequentes, ` +
+          `${restam === 1 ? 'uma continua aparecendo' : `${restam} continuam aparecendo`} — as outras ficam guardadas`,
     )
   }
 
@@ -139,12 +146,7 @@ export function mudancasAoDescer(p: Profile, alvo: Plan): MudancaDePlano {
   }
 
   mantem.push('Sua página segue publicada, com foto, contato, redes e áreas')
-  if (canUseFaq(alvo) === false && faqs > 0) {
-    // Já dito acima na lista do que sai; aqui reforça o destino do conteúdo.
-    mantem.push('Nada é apagado: tudo volta como estava se você assinar de novo')
-  } else {
-    mantem.push('Nada é apagado — o que sai da página fica guardado na sua conta')
-  }
+  mantem.push('Nada é apagado — o que sai da página fica guardado na sua conta')
 
   return { perde, mantem }
 }

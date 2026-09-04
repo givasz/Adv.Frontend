@@ -39,8 +39,12 @@ const textos = (id: Parameters<typeof offerOf>[0]) =>
 
 describe('os números anunciados são os do produto', () => {
   it('áreas, bio e perguntas frequentes batem com plans.ts', () => {
-    expect(textos('free')).toContain(`${AREA_LIMIT.free} áreas`)
+    // O Free entrega UMA área, e o cartão diz isso por extenso — "Até 1 áreas"
+    // seria o número certo com a frase errada.
+    expect(AREA_LIMIT.free).toBe(1)
+    expect(textos('free')).toMatch(/uma área de atuação/i)
     expect(textos('free')).toContain(`${CHAR_LIMITS.free.bio} caracteres`)
+    expect(textos('free')).toContain(`${FAQ_LIMIT.free} pergunta frequente`)
 
     expect(textos('pro')).toContain(`${AREA_LIMIT.pro} áreas`)
     expect(textos('pro')).toContain(`${CHAR_LIMITS.pro.bio} caracteres`)
@@ -92,10 +96,17 @@ describe('recurso anunciado é recurso que existe naquele plano', () => {
     expect(textos('pro')).toMatch(/QR Code/i)
   })
 
-  it('o Free não anuncia perguntas frequentes — ele tem zero', () => {
-    expect(FAQ_LIMIT.free).toBe(0)
+  it('o Free anuncia UMA pergunta, e diz na cara que o Pro tem mais', () => {
+    // Ele tinha zero até 04/09/2026, e o cartão listava a ausência. Agora anuncia
+    // o que entrega — e a lista do que falta passou a ser sobre a COTA, que é a
+    // diferença real entre os planos.
+    expect(FAQ_LIMIT.free).toBe(1)
+    expect(canUseFaq('free')).toBe(true)
+    expect(textos('free')).toMatch(/1 pergunta frequente/i)
     expect(textos('free')).not.toMatch(/perguntas frequentes/i)
-    expect(offerOf('free').falta?.join(' | ')).toMatch(/perguntas frequentes/i)
+    expect(offerOf('free').falta?.join(' | ')).toMatch(
+      new RegExp(`no Pro são ${AREA_LIMIT.pro} e ${FAQ_LIMIT.pro}`, 'i'),
+    )
   })
 })
 

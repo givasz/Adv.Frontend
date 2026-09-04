@@ -2,10 +2,20 @@ import type { Plan } from './types'
 
 // Limites de caracteres por campo, escalando com o plano ("Proposto").
 // ⚠️ MANTER EM SINCRONIA com backend/src/plans.ts (o backend é a fonte da verdade).
+//
+// O Free é APERTADO de propósito (revisão de 04/09/2026). Ele entrega UMA área e
+// UMA pergunta, e com campos curtos — porque um campo largo com cota de um vira
+// convite a empilhar: "Família, Sucessões e Inventários" num rótulo só, duas
+// perguntas dentro da mesma pergunta. Isso não é o advogado sendo esperto, é a
+// tela pedindo por isso. Cota pequena com campo grande é uma regra que se anula
+// sozinha; quem quer listar mais assunto assina o plano que vende mais assunto.
+//
+// Os planos pagos ficam folgados: lá a cota já dá o espaço, e apertar o texto
+// seria mesquinhez sem função.
 export type LimitedField = 'headline' | 'bio' | 'areaDesc'
 
 export const CHAR_LIMITS: Record<Plan, Record<LimitedField, number>> = {
-  free: { headline: 60, bio: 300, areaDesc: 160 },
+  free: { headline: 50, bio: 240, areaDesc: 110 },
   pro: { headline: 90, bio: 600, areaDesc: 280 },
   premium: { headline: 120, bio: 1000, areaDesc: 400 },
 }
@@ -15,23 +25,47 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 }
 
 // Número máximo de áreas de atuação por plano (usado no editor).
-export const AREA_LIMIT: Record<Plan, number> = { free: 2, pro: 6, premium: 20 }
+// Free = UMA: a área principal, aquela pela qual o advogado quer ser encontrado.
+export const AREA_LIMIT: Record<Plan, number> = { free: 1, pro: 6, premium: 20 }
 
-// Perguntas frequentes respondidas no perfil: nenhuma no Free, 2 no Pro, 5 no Max.
-export const FAQ_LIMIT: Record<Plan, number> = { free: 0, pro: 2, premium: 5 }
-// Tetos de texto CURTOS de propósito (iguais em todos os planos): FAQ é orientação
-// geral, não parecer. Resposta longa no celular vira parede de texto — e quanto mais
-// texto, mais chance de escorregar para fora do que o Prov. 205/2021 permite.
-export const FAQ_QUESTION_MAX = 100
+// Perguntas frequentes respondidas no perfil: 1 no Free, 2 no Pro, 5 no Max.
+// O Free tinha ZERO até 04/09/2026 — uma pergunta é o suficiente para o recurso
+// existir e ser entendido, e é o que dá sentido ao teto dos planos pagos.
+export const FAQ_LIMIT: Record<Plan, number> = { free: 1, pro: 2, premium: 5 }
+
+// ---- Tetos de TEXTO dos campos de cota ------------------------------------
+//
+// Estes três eram números fixos, iguais em todos os planos. Viraram tabela pelo
+// mesmo motivo do bloco lá em cima: no Free a cota é um, e um campo generoso
+// transforma o campo único numa lista disfarçada.
+//
+// O rótulo da área cabe em 32 no Free porque é o tamanho de um nome de área de
+// verdade — "Direito de Família e Sucessões" tem 30. O que não cabe em 32 quase
+// sempre é enumeração, e enumeração tem trava própria (ver lib/campoUnico.ts).
+export const AREA_LABEL_MAX: Record<Plan, number> = { free: 32, pro: 40, premium: 40 }
+
+// FAQ é orientação geral, não parecer. Resposta longa no celular vira parede de
+// texto — e quanto mais texto, mais chance de escorregar para fora do que o
+// Prov. 205/2021 permite.
+export const FAQ_QUESTION_MAX: Record<Plan, number> = { free: 80, pro: 100, premium: 100 }
+
 // 300 → 220 em 27/08/2026. A 300, a IA escrevia até encostar no teto e a resposta
 // saía com cinco linhas no celular — exatamente a parede de texto que o comentário
 // acima queria evitar. 220 cabe em duas ou três frases, que é o formato de uma
 // orientação geral. O número é passado à IA no pedido (ver Editor.aiLimit).
-export const FAQ_ANSWER_MAX = 220
+export const FAQ_ANSWER_MAX: Record<Plan, number> = { free: 160, pro: 220, premium: 220 }
 
-/** Responder perguntas frequentes no perfil — recurso dos planos pagos. */
+/**
+ * Responder perguntas frequentes no perfil.
+ *
+ * Deixou de ser "recurso dos planos pagos" em 04/09/2026 e passou a ser a
+ * pergunta que a tabela responde: este plano tem cota maior que zero? Assim o
+ * portão nunca discorda do número anunciado — foi lendo a tabela que o Free
+ * ganhou a primeira pergunta, sem precisar caçar `plan === 'pro'` por sete
+ * arquivos.
+ */
 export function canUseFaq(plan: Plan): boolean {
-  return plan === 'pro' || plan === 'premium'
+  return FAQ_LIMIT[plan] > 0
 }
 
 /**
@@ -61,7 +95,6 @@ export function canUseVideo(plan: Plan): boolean {
 // Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
 export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
 export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"
-export const AREA_LABEL_MAX = 40 // nome da área curto — mantém os tiles alinhados/centrados
 
 // Agendamento (qualquer forma: link externo OU agenda nativa) — recurso dos planos
 // pagos. No Free não há botão "Agendar". MANTER EM SINCRONIA com backend/src/plans.ts.

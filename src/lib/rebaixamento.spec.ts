@@ -84,16 +84,20 @@ describe('a lista fala do perfil real', () => {
   it('conta quantas áreas continuam aparecendo, não quantas somem', () => {
     const areas = Array.from({ length: 6 }, (_, i) => ({ id: `a${i}`, label: `Área ${i}`, description: '' }))
     const { perde } = mudancasAoDescer(perfil({ plan: 'premium', areas }), 'free')
-    expect(juntos(perde)).toMatch(/suas 6 áreas.*2 continuam aparecendo.*guardadas/i)
+    // O Free entrega UMA área desde 04/09/2026 — e a frase precisa concordar:
+    // "1 continuam aparecendo" faria a tela inteira parecer descuidada.
+    expect(juntos(perde)).toMatch(/suas 6 áreas.*a principal continua aparecendo.*guardadas/i)
   })
 
-  it('no Free, as perguntas frequentes saem inteiras — e o texto fica guardado', () => {
+  it('no Free sobra UMA pergunta — as outras ficam guardadas', () => {
+    // Antes o Free tinha zero e a frase era "saem do perfil". Agora sobra uma, e
+    // dizer o que RESTA é mais útil do que dizer o que sai.
     const faqs = [
       { id: 'f1', question: 'Quanto custa?', answer: 'Depende.' },
       { id: 'f2', question: 'Demora?', answer: 'Depende.' },
     ]
     const { perde } = mudancasAoDescer(perfil({ plan: 'pro', faqs }), 'free')
-    expect(juntos(perde)).toMatch(/2 perguntas frequentes saem do perfil.*guardado/i)
+    expect(juntos(perde)).toMatch(/das suas 2 perguntas.*uma continua aparecendo.*guardadas/i)
   })
 
   it('do Max para o Pro, diz quantas perguntas sobrevivem', () => {

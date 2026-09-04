@@ -61,11 +61,14 @@ export const PLAN_FEATURES: PlanFeature[] = [
   {
     key: 'faq',
     plan: 'pro',
-    title: `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
-    body: 'Responda as dúvidas que você mais ouve. Quem chega já sai com uma resposta — e com a impressão de que você explica bem.',
+    title: `Até ${FAQ_LIMIT.pro} perguntas frequentes`,
+    // O Free já responde UMA (mudou em 04/09/2026). O que o Pro acrescenta é a
+    // segunda — e o `done` conta a partir da cota do Free, senão o item nasceria
+    // concluído para quem já tinha respondido a primeira de graça.
+    body: `Você tinha ${FAQ_LIMIT.free} no Free. Cada dúvida a mais respondida é uma pessoa que encontra a própria pergunta no seu perfil.`,
     to: '/editor?section=faq',
-    cta: 'Responder a primeira',
-    done: (p) => (p.faqs ?? []).length > 0,
+    cta: 'Responder mais uma',
+    done: (p) => (p.faqs ?? []).length > FAQ_LIMIT.free,
   },
   {
     key: 'metricas',
@@ -93,7 +96,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
     key: 'areas',
     plan: 'pro',
     title: `Até ${AREA_LIMIT.pro} áreas de atuação`,
-    body: `Você tinha ${AREA_LIMIT.free} no Free. Cada área a mais é uma porta a mais para quem procura por assunto.`,
+    body: `Você tinha ${AREA_LIMIT.free} no Free — a principal. Cada área a mais é uma porta a mais para quem procura por assunto.`,
     to: '/editor?section=identidade',
     cta: 'Adicionar áreas',
     done: (p) => filledAreas(p) > AREA_LIMIT.free,
