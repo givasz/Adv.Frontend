@@ -11,6 +11,7 @@
 // conformidade das demais peças (ver lib/oab.ts).
 
 import { MONTHS_SHORT, WEEKDAYS_FULL, WEEKDAYS_SHORT } from './booking'
+import { whatsappHref } from './whatsapp'
 import type { AssistantConfig, AssistantDay, Profile } from './types'
 import { enderecoEmLinha, enderecoVisivel, type Endereco } from './endereco'
 
@@ -260,11 +261,10 @@ export function assistantWhatsappHref(
   answers: AssistantAnswers,
   durationMin?: number,
 ): string | undefined {
-  const wa = profile.contact?.whatsapp
-  if (!wa) return undefined
-  return `https://wa.me/${wa}?text=${encodeURIComponent(
-    buildAssistantMessage(profile, answers, durationMin),
-  )}`
+  // O número passa por `whatsappHref`, que é quem sabe o formato que o wa.me
+  // exige (só dígitos, com DDI). Montar a URL à mão aqui era o que deixava um
+  // "+55 (11) …" gravado pela API virar link morto — ver lib/whatsapp.ts.
+  return whatsappHref(profile.contact?.whatsapp, buildAssistantMessage(profile, answers, durationMin))
 }
 
 // ---- Assistente do ESCRITÓRIO ---------------------------------------------
@@ -387,9 +387,12 @@ export function firmAssistantWhatsappHref(
   },
   answers: FirmAssistantAnswers,
 ): string | undefined {
-  const wa = firmAssistantWhatsapp(firm, answers)
-  if (!wa) return undefined
-  return `https://wa.me/${wa}?text=${encodeURIComponent(buildFirmAssistantMessage(firm.name, answers))}`
+  // `firmAssistantWhatsapp` é quem escolhe o DESTINATÁRIO (o advogado da área, ou
+  // a sociedade). Só o formato do número é assunto de `whatsappHref`.
+  return whatsappHref(
+    firmAssistantWhatsapp(firm, answers),
+    buildFirmAssistantMessage(firm.name, answers),
+  )
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

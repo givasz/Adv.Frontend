@@ -94,7 +94,10 @@ export const sampleProfile: Profile = {
     { kind: 'instagram', url: 'https://instagram.com/marinasales.adv' },
     { kind: 'linkedin', url: 'https://linkedin.com/in/marinasales' },
     { kind: 'youtube', url: 'https://youtube.com/@marinasales' },
-    { kind: 'website', url: 'https://marinasales.adv.br' },
+    // Era um "site" em marinasales.adv.br — um endereço que não existe, no
+    // perfil que serve de vitrine do produto. Quatro redes de verdade dizem mais
+    // sobre o que o perfil reúne do que um link para lugar nenhum.
+    { kind: 'facebook', url: 'https://facebook.com/marinasales.adv' },
   ],
   contact: {
     whatsapp: '5511998877665',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { lawyersInNeutralOrder, type Firm } from '@/lib/escritorio'
+import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import {
   FIRM_ANY_LAWYER,
   FIRM_PERIODS,
@@ -289,8 +290,7 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
               <div className="space-y-2">
                 <a
                   href={href}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  {...comoAbrirWhatsapp()}
                   className="t-btn w-full !py-3.5 text-[15px]"
                 >
                   <WhatsappIcon width={20} height={20} />

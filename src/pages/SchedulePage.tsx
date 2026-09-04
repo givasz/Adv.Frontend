@@ -4,6 +4,7 @@ import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
+import { comoAbrirWhatsapp, whatsappHref } from '@/lib/whatsapp'
 import { AssistantChat } from '@/components/profile/AssistantChat'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, WhatsappIcon } from '@/components/ui/icons'
@@ -82,8 +83,13 @@ export default function SchedulePage() {
   ]
     .filter(Boolean)
     .join('\n')
-  const ready = !!wa && subject.trim().length > 0
-  const href = wa ? `https://wa.me/${wa}?text=${encodeURIComponent(message)}` : undefined
+  // O número passa por whatsappHref, que sabe o formato do wa.me (só dígitos,
+  // com DDI) — montar a URL à mão aqui deixava um "+55 (11) …" gravado pela API
+  // virar link morto, e a mensagem não chega a lugar nenhum sem deixar rastro.
+  const href = whatsappHref(wa, message)
+  // `href`, e não `wa`: número gravado que não forma link não pode habilitar o
+  // botão. Melhor não oferecer do que oferecer e não funcionar.
+  const ready = !!href && subject.trim().length > 0
 
   const inputCls =
     'w-full rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-2.5 text-[14px] text-ink ' +
@@ -153,8 +159,7 @@ export default function SchedulePage() {
 
         <a
           href={ready ? href : undefined}
-          target="_blank"
-          rel="noreferrer noopener"
+          {...comoAbrirWhatsapp()}
           aria-disabled={!ready}
           onClick={(e) => {
             if (!ready) e.preventDefault()

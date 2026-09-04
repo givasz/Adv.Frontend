@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
+import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import { Avatar } from '@/components/ui/Avatar'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
@@ -427,8 +428,7 @@ export function AssistantChat({
               <div className="space-y-2">
                 <a
                   href={href}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  {...comoAbrirWhatsapp()}
                   className="t-btn w-full !py-3.5 text-[15px]"
                 >
                   <WhatsappIcon width={20} height={20} />

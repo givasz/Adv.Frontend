@@ -43,6 +43,7 @@ import {
   socialMeta,
 } from '@/components/ui/icons'
 import { safeHref } from '@/lib/safeUrl'
+import { comoAbrirWhatsapp, whatsappHref } from '@/lib/whatsapp'
 import { cliqueDoPerfil, registrarEvento } from '@/lib/eventos'
 import { enderecoCurto, enderecoVisivel, linkDoMapa } from '@/lib/endereco'
 import { Marca } from '@/components/ui/Marca'
@@ -144,11 +145,13 @@ export function ProfileView({
         show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
       }
 
-  const whatsappHref = profile.contact.whatsapp
-    ? `https://wa.me/${profile.contact.whatsapp}?text=${encodeURIComponent(
-        `Olá, ${profile.name.split(' ')[0]}! Vim pelo seu perfil no advoc.me e gostaria de tirar uma dúvida.`,
-      )}`
-    : undefined
+  const waHref = whatsappHref(
+    profile.contact.whatsapp,
+    `Olá, ${profile.name.split(' ')[0]}! Vim pelo seu perfil no advoc.me e gostaria de tirar uma dúvida.`,
+  )
+  // Como a âncora abre: mesma aba no celular (o navegador embutido do Instagram
+  // descarta `_blank` em silêncio), aba nova no computador. Ver lib/whatsapp.ts.
+  const waAlvo = comoAbrirWhatsapp()
 
   // Para os links que não são ação de contato (a marca d'água do rodapé): na
   // prévia do editor eles não navegam, e não há nada a medir neles.
@@ -291,13 +294,12 @@ export function ProfileView({
             tudo que ela ainda ia ler; agora o caminho está aberto assim que ela
             reconhece quem é, onde atua e como atende. */}
         <div className="mt-6 space-y-3">
-          {whatsappHref && (
+          {waHref && (
             <m.a
               variants={item}
-              href={whatsappHref}
+              href={waHref}
               onClick={clique('whatsapp')}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...waAlvo}
               className="t-btn w-full text-[15px]"
             >
               <WhatsappIcon width={24} height={24} />
