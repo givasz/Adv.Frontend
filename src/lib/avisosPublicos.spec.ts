@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { OPERADOR, TERMS_VERSION } from './legalIdentity'
+import { CONTACT_EMAIL, OPERADOR, TERMS_VERSION } from './legalIdentity'
 
 const SRC = join(__dirname, '..')
 const ler = (...partes: string[]) => readFileSync(join(SRC, ...partes), 'utf8')
@@ -96,6 +96,37 @@ describe('identificação do fornecedor', () => {
     expect(OPERADOR.cnpj).toMatch(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/)
     expect(OPERADOR.municipio).toBeTruthy()
     expect(OPERADOR.uf).toHaveLength(2)
+  })
+})
+
+describe('os canais que os documentos prometem existem de verdade', () => {
+  const legal = ler('lib', 'legalContent.ts')
+  const visivel = textoVisivel(legal)
+
+  it('não promete um e-mail enquanto não houver caixa que alguém leia', () => {
+    // Até 04/09/2026 os sete documentos apontavam contato@advoc.me como canal do
+    // encarregado (LGPD, art. 41), com resposta em 15 dias. O domínio não é
+    // nosso e o backend não recebe e-mail: a caixa não podia existir. Um canal
+    // inventado é pior do que canal nenhum — quem escreve para lá não fica sem
+    // resposta por acaso, fica porque a política mentiu.
+    //
+    // Quando a caixa existir e for LIDA, preencha CONTACT_EMAIL em
+    // legalIdentity.ts; este teste se ajusta sozinho.
+    if (CONTACT_EMAIL) return
+    const emails = visivel.match(/[\w.+-]+@[\w-]+\.[\w.]+/g) ?? []
+    expect(emails, `endereço de e-mail no texto legal: ${emails.join(', ')}`).toEqual([])
+  })
+
+  it('oferece o canal de quem TEM conta', () => {
+    expect(visivel).toMatch(/Suporte/)
+  })
+
+  it('oferece um caminho para quem NÃO tem conta', () => {
+    // Sem e-mail, sobram dois: a denúncia (pública, sem cadastro) e a sede da
+    // empresa. Juízo não precisa de e-mail para citar — precisa de pessoa
+    // jurídica determinada e endereço.
+    expect(visivel).toMatch(/Denunciar este perfil/)
+    expect(visivel).toMatch(/sede de \$\{OPERADOR\.razaoSocial\}|CANAL_SEDE/)
   })
 })
 

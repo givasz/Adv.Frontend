@@ -22,7 +22,6 @@
 //   • backups                → backend/docs/recuperacao-de-desastre.md
 
 import {
-  CONTACT_EMAIL,
   operadorEndereco,
   operadorIdentificacao,
   OPERADOR,
@@ -53,7 +52,9 @@ export interface LegalDocContent {
 // aceite gravado em cada conta e da trava de paridade com o backend. Um
 // documento que muda sem a versão mudar é um documento que ninguém aceitou.
 const UPDATED = TERMS_UPDATED
-const CONTACT = CONTACT_EMAIL
+// Os canais que EXISTEM. Ver a nota em legalIdentity.ts sobre o e-mail que saiu.
+const CANAL_CONTA = 'um chamado em "Suporte", dentro da plataforma'
+const CANAL_SEDE = `correspondência à sede de ${OPERADOR.razaoSocial} (CNPJ ${OPERADOR.cnpj}), em ${operadorEndereco()}`
 const IDENTIFICACAO = operadorIdentificacao()
 const PRAZO_ACESSO = '180 dias'
 
@@ -156,7 +157,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'baixa uma cópia de tudo o que guardamos sobre você, em formato aberto (JSON) — a portabilidade;',
           'troca a senha e encerra a sessão em todos os aparelhos;',
           `exclui a conta: apaga a conta, o perfil, as perguntas frequentes, a trilha de auditoria, os acontecimentos, os chamados e as sessões. O endereço público deixa de existir. Não há como desfazer, e por isso pedimos a senha. Duas coisas sobrevivem, e dizemos quais: o registro de acesso, até completar ${PRAZO_ACESSO} (obrigação legal — LGPD, art. 16, I), e o registro de eventuais decisões de moderação.`,
-          `O que não couber ali — corrigir um dado que o editor não deixa mudar, contestar um tratamento, pedir informação sobre um compartilhamento — vai para ${CONTACT}. Respondemos em até ${PRAZO_RESPOSTA_TITULAR}. Alguns dados podem ser mantidos quando houver obrigação legal ou exercício regular de direitos (por exemplo, o registro de uma decisão de moderação), e diremos quais.`,
+          `O que não couber ali — corrigir um dado que o editor não deixa mudar, contestar um tratamento, pedir informação sobre um compartilhamento — vai por ${CANAL_CONTA}. Respondemos em até ${PRAZO_RESPOSTA_TITULAR}. Alguns dados podem ser mantidos quando houver obrigação legal ou exercício regular de direitos (por exemplo, o registro de uma decisão de moderação), e diremos quais.`,
+          `Se você não tem conta aqui e quer exercer um direito sobre dados seus, o caminho é ${CANAL_SEDE}. Não publicamos endereço de e-mail porque ainda não temos uma caixa que alguém leia todos os dias, e um canal que não é lido é pior do que canal nenhum.`,
           'Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).',
         ],
       },
@@ -184,7 +186,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '10. Mudanças e encarregado',
         paragraphs: [
           `Podemos atualizar esta Política; a data no topo diz quando foi a última vez. Mudanças relevantes não ficam esperando que você repare: quem tem conta recebe um aviso ao entrar, com o resumo do que mudou, e o aceite da versão nova fica registrado.`,
-          `O encarregado pelo tratamento de dados pessoais atende em ${CONTACT}. Se você tem conta, o caminho mais rápido é abrir um chamado em "Suporte", dentro da plataforma: ele entra numa fila com prazo e fica registrado dos dois lados.`,
+          `O encarregado pelo tratamento de dados pessoais atende por ${CANAL_CONTA} — a fila tem prazo e o pedido fica registrado dos dois lados. Quem não tem conta usa ${CANAL_SEDE}.`,
         ],
       },
     ],
@@ -324,8 +326,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '14. Lei aplicável, foro e contato',
         paragraphs: [
           `Estes Termos seguem a lei brasileira. Para qualquer disputa, fica eleito o foro do seu domicílio, como prevê o Código de Defesa do Consumidor.`,
-          `Contratante: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}. Dúvidas sobre estes Termos: ${CONTACT}. Quem tem conta pode abrir um chamado em "Suporte", dentro da plataforma, que entra numa fila com prazo e registro.`,
-          `Notificações extrajudiciais e ordens judiciais devem ser dirigidas a ${CONTACT}, identificando a página (endereço completo) e o conteúdo em questão.`,
+          `Contratante: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}, com sede em ${operadorEndereco()}. Dúvidas sobre estes Termos: ${CANAL_CONTA}, que entra numa fila com prazo e registro.`,
+          `Notificações extrajudiciais e ordens judiciais devem ser dirigidas à sede acima, identificando a página (endereço completo) e o conteúdo em questão. Quem quer reclamar do conteúdo de um perfil não precisa de nada disso nem de conta: o link "Denunciar este perfil" está no rodapé de toda página pública.`,
         ],
       },
     ],
@@ -391,7 +393,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '6. Direitos do titular',
         paragraphs: [
-          `Confirmação de tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos e revogação de consentimento. Acesso, portabilidade, encerramento de sessões e eliminação estão na tela "Seus dados" da sua conta; o resto, e qualquer dúvida, em ${CONTACT} ou por um chamado em "Suporte", com resposta em até ${PRAZO_RESPOSTA_TITULAR}. Você também pode recorrer à ANPD.`,
+          `Confirmação de tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos e revogação de consentimento. Acesso, portabilidade, encerramento de sessões e eliminação estão na tela "Seus dados" da sua conta; o resto, e qualquer dúvida, por ${CANAL_CONTA}, com resposta em até ${PRAZO_RESPOSTA_TITULAR} — ou, sem conta, por ${CANAL_SEDE}. Você também pode recorrer à ANPD.`,
           `Limite honesto do direito de eliminação: o registro de acesso do art. 15 do Marco Civil e o registro de decisões de moderação não são apagados a pedido, porque a LGPD (art. 16, I e II) ressalva a guarda necessária ao cumprimento de obrigação legal e ao exercício regular de direitos. Tudo o mais é. E o registro de acesso, mesmo não sendo apagável, é VISÍVEL para você: sai na cópia dos seus dados.`,
         ],
       },
@@ -404,8 +406,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '8. Encarregado (DPO)',
         paragraphs: [
-          `Contato do encarregado pelo tratamento de dados pessoais: ${CONTACT}, mantido por ${OPERADOR.razaoSocial} (CNPJ ${OPERADOR.cnpj}), com sede em ${operadorEndereco()}.`,
-          `Quem tem conta pode usar também o canal de "Suporte" dentro da plataforma, que registra o pedido, a data e a resposta dos dois lados — e não depende de o e-mail chegar.`,
+          `Encarregado pelo tratamento de dados pessoais, mantido por ${OPERADOR.razaoSocial} (CNPJ ${OPERADOR.cnpj}), com sede em ${operadorEndereco()}.`,
+          `Atende por ${CANAL_CONTA}, que registra o pedido, a data e a resposta dos dois lados — e não depende de um e-mail chegar. Sem conta, por ${CANAL_SEDE}.`,
         ],
       },
     ],
@@ -527,14 +529,14 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Temos 10 dias para responder. Se não respondermos no prazo, a medida cai.',
           'Sempre que houver mais de um responsável pela moderação, quem analisa a contestação não é quem decidiu.',
           'A reversão é registrada como qualquer outra decisão, com motivo.',
-          `A contestação é feita na própria plataforma, na página "Contestar" — que funciona mesmo com a conta suspensa, bastando e-mail e senha para provar quem você é. Se preferir, ${CONTACT} atende com os mesmos prazos.`,
+          `A contestação é feita na própria plataforma, na página "Contestar" — que funciona mesmo com a conta suspensa, bastando e-mail e senha para provar quem você é. É de propósito que não dependa de nós responder a nada: a medida cai sozinha se ficarmos calados no prazo.`,
         ],
       },
       {
         heading: '7. Ordem judicial e notificação de terceiro',
         paragraphs: [
           'Cumprimos ordens judiciais no prazo delas e registramos o recebimento. Avisamos você de que houve ordem e do que foi cumprido, salvo quando a própria ordem determinar sigilo. Ordem judicial não é contestável conosco — o caminho é o processo.',
-          `Ordens judiciais e notificações extrajudiciais devem ser dirigidas a ${CONTACT}, com o endereço completo da página e a identificação do conteúdo, como exige o art. 19, § 1º, do Marco Civil da Internet. Nas hipóteses do art. 21 da mesma lei — divulgação de cena de nudez ou de ato sexual de caráter privado, sem autorização —, agimos com a simples notificação da pessoa retratada ou de seu representante, sem esperar ordem.`,
+          `Ordens judiciais e notificações extrajudiciais devem ser dirigidas a ${CANAL_SEDE}, com o endereço completo da página e a identificação do conteúdo, como exige o art. 19, § 1º, do Marco Civil da Internet. Nas hipóteses do art. 21 da mesma lei — divulgação de cena de nudez ou de ato sexual de caráter privado, sem autorização —, agimos com a simples notificação da pessoa retratada ou de seu representante, sem esperar ordem.`,
           'Fora dessas hipóteses, quem se sentir prejudicado por um perfil pode usar a Denúncia, que analisamos segundo esta Política. A denúncia não substitui a via judicial: não somos o juiz da causa entre você e o advogado, e não temos como decidir sobre fatos que só as partes conhecem.',
         ],
       },

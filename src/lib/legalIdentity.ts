@@ -67,5 +67,34 @@ export const TERMS_VERSION = '2026-09-04'
 /** A mesma data por extenso, para exibição no topo de cada documento. */
 export const TERMS_UPDATED = '4 de setembro de 2026'
 
-/** E-mail único de contato — jurídico, dados pessoais e ordem judicial. */
-export const CONTACT_EMAIL = 'contato@advoc.me'
+/**
+ * POR QUE NÃO HÁ E-MAIL DE CONTATO AQUI.
+ *
+ * Até 04/09/2026 os sete documentos apontavam `contato@advoc.me` como canal do
+ * encarregado (LGPD, art. 41), de dúvidas sobre os Termos e de recebimento de
+ * ordem judicial — prometendo resposta em 15 dias. O domínio `advoc.me` não é
+ * nosso ainda (o site vive em advocme.netlify.app), então essa caixa não podia
+ * existir. E o backend não envia nem recebe e-mail: a Fase 2 do painel (correio)
+ * segue pendente.
+ *
+ * Um canal inventado é pior do que canal nenhum. Quem escreve para um endereço
+ * que ninguém lê não fica sem resposta por acaso: fica sem resposta porque a
+ * política mentiu, e o descumprimento passa a ser da própria política.
+ *
+ * O QUE FICOU NO LUGAR — três caminhos, todos existentes:
+ *
+ *   • titular COM conta → chamado em "Suporte", que tem fila, prazo e registro
+ *     dos dois lados (model SupportTicket);
+ *   • terceiro que se sente lesado por um perfil → a Denúncia, pública e SEM
+ *     conta, no rodapé de todo perfil (`/:slug/denunciar`);
+ *   • notificação extrajudicial, ordem judicial e pedido de quem não tem conta
+ *     → a SEDE da empresa, identificada acima. Juízo não precisa de e-mail para
+ *     citar: precisa de pessoa jurídica determinada e endereço, que é
+ *     exatamente o que `OPERADOR` passou a publicar.
+ *
+ * QUANDO O DOMÍNIO EXISTIR: crie a caixa, confirme que alguém a lê, preencha a
+ * constante abaixo e volte a citá-la nos documentos. Enquanto for `null`, o
+ * teste em `avisosPublicos.spec.ts` impede que um endereço de e-mail volte a
+ * aparecer no texto legal.
+ */
+export const CONTACT_EMAIL: string | null = null

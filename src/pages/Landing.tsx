@@ -16,7 +16,7 @@ import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
-import { CONTACT_EMAIL, OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
+import { OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
 import {
   ArrowRight,
   CheckIcon,
@@ -563,8 +563,8 @@ export default function Landing() {
           Dúvidas sobre os seus dados: veja a{' '}
           <Link to="/legal/privacidade" className="underline underline-offset-2 hover:text-ink">
             Política de Privacidade
-          </Link>{' '}
-          ou escreva para {CONTACT_EMAIL}.
+          </Link>
+          , que diz por onde falar conosco.
         </p>
       </footer>
     </div>
