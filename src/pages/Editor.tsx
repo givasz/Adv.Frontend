@@ -534,15 +534,14 @@ export default function Editor() {
                   {profile.plan !== 'premium' && (
                     <UpsellCard
                       plan="premium"
-                      title="Sua marca, seu domínio"
-                      body={`Hoje seu endereço é advoc.me/${profile.slug}. No Max ele pode ser o seu próprio: ${slugify(profile.name) || 'seunome'}.adv.br — sem a marca advoc.me.`}
-                      bullets={['Domínio próprio (.adv.br)', 'Cor de destaque personalizada', 'Sem marca d’água advoc.me']}
+                      title="Sua marca, sem a nossa"
+                      body="No Max o rodapé “criado com advoc.me” some, a cor de destaque é a sua e o nome do escritório aparece no lugar."
+                      bullets={['Cor de destaque personalizada', 'Nome do escritório no rodapé', 'Sem marca d’água advoc.me']}
                     />
                   )}
                   <BrandingCard
                     plan={profile.plan}
                     branding={profile.branding}
-                    slug={profile.slug}
                     onChange={(patch) => set({ branding: { ...profile.branding, ...patch } })}
                   />
                 </>

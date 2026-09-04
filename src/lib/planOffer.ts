@@ -180,7 +180,6 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: 'Comprovante de conformidade em PDF, quando precisar mostrar' },
       { text: `Até ${AREA_LIMIT.premium} áreas e bio de ${CHAR_LIMITS.premium.bio} caracteres` },
       { text: `Os ${THEMES.length} temas visuais` },
-      { text: 'Domínio próprio (.adv.br)', emPreparo: true },
     ],
     ctaTo: '/comecar?plan=premium',
     ctaLabel: 'Assinar Max',
@@ -307,11 +306,6 @@ export const PLAN_COMPARE: CompareGroup[] = [
       {
         label: 'Rodapé “criado com advoc.me”',
         values: { free: 'aparece', pro: 'aparece', premium: 'você tira' },
-      },
-      {
-        label: 'Domínio próprio (.adv.br)',
-        values: { free: false, pro: false, premium: 'em preparo' },
-        emPreparo: true,
       },
     ],
   },

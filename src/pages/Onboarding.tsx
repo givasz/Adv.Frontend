@@ -569,7 +569,6 @@ const FACTOR_DEST: Record<string, string> = {
   area2: '/editor?section=identidade',
   faq: '/editor?section=faq',
   agenda: '/editor?section=agenda',
-  dominio: '/editor?section=marca',
   marca: '/editor?section=marca',
 }
 

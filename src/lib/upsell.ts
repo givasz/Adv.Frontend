@@ -122,7 +122,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   themes: [],
   ai: [],
   agenda: ['agenda'],
-  branding: ['dominio', 'marca'],
+  branding: ['marca'],
 }
 
 /** Pontos do Índice de Confiança que o upgrade daquele recurso destravaria. */

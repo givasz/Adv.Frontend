@@ -68,7 +68,7 @@ describe('upsell — slot fantasma ao atingir o limite', () => {
 describe('upsell — pontos do Índice de Confiança por recurso', () => {
   it('recursos gated por plano expõem os pontos de trustScore', () => {
     expect(featurePoints('agenda')).toBe(8)
-    expect(featurePoints('branding')).toBe(10) // dominio (5) + marca (5)
+    expect(featurePoints('branding')).toBe(10) // marca (10) — não há fator de domínio
   })
 
   it('recursos sem fator gated rendem 0 (chip não aparece)', () => {

@@ -112,14 +112,18 @@ describe('promessas que já quebraram, e não podem voltar', () => {
     expect(tudo).not.toMatch(/advoc\.me\/seu-nome/i)
   })
 
-  it('recurso indisponível vai marcado, nunca como recurso pronto', () => {
-    const dominio = offerOf('premium').items.find((i) => /\.adv\.br/i.test(i.text))
-    expect(dominio).toBeDefined()
-    expect(dominio!.emPreparo).toBe(true)
-    // E nada que esteja "em preparo" pode passar por incluído.
+  it('não anuncia domínio próprio — o recurso não existe e saiu da oferta em 04/09', () => {
+    // Ficou um tempo como "em preparo" com relógio; a decisão foi tirar de vez:
+    // recurso que não existe não ocupa linha na oferta, nem marcado.
+    expect(tudo).not.toMatch(/\.adv\.br|domínio próprio/i)
+    const tabela = PLAN_COMPARE.flatMap((g) => g.rows.map((r) => r.label)).join(' | ')
+    expect(tabela).not.toMatch(/\.adv\.br|domínio/i)
+  })
+
+  it('recurso indisponível, se um dia entrar, vai marcado — nunca como pronto', () => {
     for (const oferta of PLAN_OFFERS) {
       for (const item of oferta.items) {
-        if (/em breve/i.test(item.text)) expect(item.emPreparo).toBe(true)
+        if (/em breve|em preparo/i.test(item.text)) expect(item.emPreparo).toBe(true)
       }
     }
   })
@@ -209,7 +213,6 @@ describe('a tabela comparativa é calculada, não digitada', () => {
       if (!r.emPreparo) continue
       for (const v of Object.values(r.values)) expect(v).not.toBe(true)
     }
-    expect(linha(/adv\.br/).emPreparo).toBe(true)
   })
 
   it('a tabela não vende captação nem urgência', () => {

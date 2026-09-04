@@ -35,7 +35,7 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     items: [
       'Até 5 perguntas frequentes no perfil',
       'Vídeo de apresentação',
-      'Domínio próprio (.adv.br) — em breve',
+      'Cartão de visita pronto para a gráfica',
       'Sem a marca advoc.me',
       'Cor de destaque própria',
       'Até 20 áreas e bio de 1000 caracteres',
