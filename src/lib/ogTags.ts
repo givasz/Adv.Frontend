@@ -159,6 +159,20 @@ function attorneyJsonLd(p: PerfilCompartilhavel, url: string, imagem: string) {
     '@type': 'Attorney',
     name: p.name,
     description: seoDescription(p),
+    // A ressalva também no dado ESTRUTURADO, não só no que a pessoa lê.
+    //
+    // Este bloco afirma a buscadores que aquela pessoa é advogada, a partir de
+    // dados que ninguém conferiu. Sozinho, é o tipo de coisa que, somada a um
+    // rodapé mal escrito, sustenta a tese de que "a plataforma atestou". O
+    // rodapé foi corrigido (ver ProfileView); esta linha fecha o outro lado.
+    //
+    // `disambiguatingDescription` é o campo do schema.org (herdado de Thing)
+    // para exatamente isto: a ressalva que distingue o que o dado afirma do que
+    // ele prova.
+    disambiguatingDescription:
+      'Informações declaradas pelo próprio profissional e publicadas por ele. ' +
+      'O advoc.me hospeda a página e não confere, não valida e não endossa a ' +
+      'inscrição na OAB nem os demais dados.',
     url,
     image: imagem,
     areaServed: [p.city, p.state].filter(Boolean).join(', ') || undefined,

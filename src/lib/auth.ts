@@ -18,6 +18,7 @@
 import { useSyncExternalStore } from 'react'
 import { apiFetch, setCsrfToken, TEM_BACKEND } from './http'
 import { passwordProblem } from './passwordStrength'
+import { TERMS_VERSION } from './legalIdentity'
 
 export interface AuthUser {
   id: string
@@ -25,6 +26,17 @@ export interface AuthUser {
   name?: string
   /** plano do perfil vinculado (informativo) */
   plan?: string
+  /**
+   * Os Termos mudaram desde o aceite desta conta — ou nunca houve aceite.
+   *
+   * Quem responde é o servidor, em /login, /signup e /me. A tela NÃO calcula
+   * isto comparando versões: a versão vigente é decisão de quem grava, e um
+   * front desatualizado (aba aberta desde ontem, cache de service worker) diria
+   * "está tudo em dia" sobre um documento que já mudou.
+   */
+  termsPending?: boolean
+  /** Versão dos Termos aceita por esta conta — vazia quando nunca houve aceite. */
+  termsVersion?: string
 }
 
 export interface Session {
@@ -365,21 +377,31 @@ function validate(email: string, password: string) {
   if (problema) throw new Error(problema)
 }
 
+/**
+ * @param aceitouTermos  A caixa marcada na tela de cadastro. Viaja como campo
+ *   próprio, e não como "se chegou aqui é porque aceitou": o servidor recusa o
+ *   cadastro sem ela (ver backend AuthService.signup), e é essa recusa — não a
+ *   caixa — que sustenta a afirmação de que toda conta aceitou os Termos.
+ */
 export async function signup(
   emailRaw: string,
   password: string,
   name?: string,
   remember = true,
+  aceitouTermos = false,
 ): Promise<Session> {
   const email = emailRaw.trim().toLowerCase()
   validate(email, password)
+  if (!aceitouTermos) {
+    throw new Error('Aceite os Termos de Uso e a Política de Privacidade para criar a conta.')
+  }
   const cleanName = name?.trim() || undefined
 
   if (useReal) {
     const res = await apiFetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name: cleanName, remember }),
+      body: JSON.stringify({ email, password, name: cleanName, remember, aceitouTermos: true }),
     })
     if (!res.ok) throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível criar a conta.'))
     const sessao = aplicar((await res.json()) as RespostaSessao)
@@ -391,7 +413,16 @@ export async function signup(
   if (accounts.some((a) => a.email === email)) {
     throw new Error('Já existe uma conta com este e-mail. Faça login.')
   }
-  const user: AuthUser = { id: `u-${Date.now()}-${Math.floor(Math.random() * 1e4)}`, email, name: cleanName }
+  const user: AuthUser = {
+    id: `u-${Date.now()}-${Math.floor(Math.random() * 1e4)}`,
+    email,
+    name: cleanName,
+    // No modo mock não há servidor para carimbar nada — mas o aceite acabou de
+    // ser dado nesta tela, então a sessão nasce em dia. Deixar `termsPending`
+    // ligado aqui faria o desenvolvimento local pedir reaceite a cada cadastro.
+    termsVersion: TERMS_VERSION,
+    termsPending: false,
+  }
   saveAccounts([...accounts, { ...user, password }])
   const session = mockSession(user, remember)
   setSession(session)
@@ -435,6 +466,34 @@ export async function login(
  * A limpeza local acontece de qualquer jeito: se a rede falhar, a pessoa continua
  * saindo daqui.
  */
+/**
+ * Registra o aceite da versão nova dos Termos para quem já tem conta.
+ *
+ * Não manda a versão: quem carimba é o servidor. Ao voltar, atualiza o retrato
+ * local — senão a faixa de reaceite continuaria na tela até a próxima visita ao
+ * /auth/me, e a pessoa clicaria de novo achando que não funcionou.
+ */
+export async function aceitarTermos(): Promise<void> {
+  if (!useReal) {
+    marcarAceiteLocal()
+    return
+  }
+  const res = await apiFetch('/api/auth/aceitar-termos', { method: 'POST' })
+  if (!res.ok) {
+    throw new Error(
+      mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível registrar o aceite.'),
+    )
+  }
+  const { termsVersion } = (await res.json()) as { termsVersion?: string }
+  marcarAceiteLocal(termsVersion)
+}
+
+function marcarAceiteLocal(versao = TERMS_VERSION) {
+  const atual = estado.session
+  if (!atual) return
+  setSession({ ...atual, user: { ...atual.user, termsVersion: versao, termsPending: false } })
+}
+
 export async function logout(): Promise<void> {
   const eraReal = useReal && !!estado.session
   // Sair apaga também o rascunho guardado neste navegador (só no modo real, em
@@ -496,5 +555,12 @@ export function useAuth() {
     login,
     logout,
     logoutEverywhere,
+    /**
+     * Os Termos mudaram e esta conta ainda não aceitou a versão nova.
+     *
+     * `false` enquanto a conferência está em curso: mostrar o pedido de aceite
+     * antes de /auth/me responder faria a faixa piscar em toda navegação.
+     */
+    termsPending: !conferindo && !!session?.user?.termsPending,
   }
 }

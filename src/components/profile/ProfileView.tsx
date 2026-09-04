@@ -168,8 +168,16 @@ export function ProfileView({
     <>
       <span className="t-accent text-sm font-medium">{profile.oabNumber}</span>
       {/* Ponteiro para a consulta pública do CNA — vale para QUALQUER perfil com
-          número informado, sem distinção de plano. Ver components/ui/CnaLink. */}
-      {profile.oabNumber.trim() && <CnaLink name={profile.name} compact interactive={!preview} />}
+          número informado, sem distinção de plano. Ver components/ui/CnaLink.
+
+          `aviso` liga a linha VISÍVEL de "informado pelo próprio advogado". Ela
+          existia só no atributo `title` do link, ou seja: não existia no celular,
+          que é onde quase todo mundo abre estes perfis. Um aviso que só aparece
+          ao passar o mouse não é ostensivo, e não é oponível a quem confiou no
+          número. */}
+      {profile.oabNumber.trim() && (
+        <CnaLink name={profile.name} compact aviso interactive={!preview} />
+      )}
     </>
   )
 
@@ -537,8 +545,28 @@ export function ProfileView({
               Parte do conteúdo deste perfil foi ocultada por moderação de conformidade.
             </p>
           )}
+          {/* O AVISO QUE ESTAVA INVERTIDO.
+              ----------------------------------------------------------------
+              Até 04/09/2026 esta linha dizia "Perfil informativo · em
+              conformidade com o Provimento 205/2021 da OAB". Parecia inofensiva
+              e era o pior texto do produto inteiro: quem afirmava a conformidade
+              daquele perfil, para o visitante, era a PLATAFORMA — exatamente o
+              contrário do que os Termos dizem nos itens 4 e 12 ("a checagem é
+              apoio, não garantia") e a mesma lógica do selo "verificada" que foi
+              removido em julho. E "da OAB" logo em seguida flertava com aval
+              institucional, que o Prov. 205/2021 (art. 5º, § 2º) veda.
+
+              Numa ação por perfil falso ou por publicidade irregular, era a
+              frase que a inicial citaria: a plataforma atestou.
+
+              O que ficou no lugar diz três coisas verdadeiras — quem escreveu,
+              quem responde, e que nós não conferimos — e não certifica nada. */}
           <p className="t-faint text-[10.5px] leading-relaxed opacity-85">
-            Perfil informativo · em conformidade com o Provimento 205/2021 da OAB
+            Conteúdo publicado pelo próprio profissional, único responsável pelas informações.
+          </p>
+          <p className="t-faint text-[10.5px] leading-relaxed opacity-70">
+            O advoc.me hospeda esta página e não confere, não valida e não endossa os dados
+            publicados. Não é filiado à OAB.
           </p>
         </m.footer>
       </m.div>

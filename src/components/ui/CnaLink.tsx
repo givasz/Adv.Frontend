@@ -34,18 +34,32 @@ export function CnaLink({
   name,
   compact = false,
   interactive = true,
+  aviso = false,
 }: {
   /** nome do advogado/sociedade — preenche a busca do CNA */
   name?: string
   compact?: boolean
   /** false dentro da prévia do editor: desabilita a navegação real */
   interactive?: boolean
+  /**
+   * Mostra a linha VISÍVEL de "informado pelo próprio advogado, não conferido".
+   *
+   * Ligado no perfil público, onde está o visitante que pode confiar no número e
+   * se prejudicar. Desligado onde o texto seria ruído (listagens internas), mas
+   * nunca desligado por plano: o aviso não é um recurso, é um dever.
+   *
+   * Por que uma linha e não só o `title` abaixo: `title` é tooltip de mouse. No
+   * celular ele simplesmente não existe, e é no celular que estes perfis são
+   * abertos. Um aviso que a maioria dos visitantes não tem como ver não protege
+   * ninguém — nem eles, nem nós.
+   */
+  aviso?: boolean
 }) {
   const cls = `inline-flex items-center gap-1 rounded-full font-medium transition-opacity hover:opacity-70 ${
     compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[11.5px]'
   }`
 
-  return (
+  const link = (
     <a
       href={cnaSearchUrl(name)}
       title={TOOLTIP}
@@ -59,5 +73,19 @@ export function CnaLink({
       conferir no CNA
       <ExternalLinkIcon width={compact ? 10 : 11} height={compact ? 10 : 11} strokeWidth={1.8} />
     </a>
+  )
+
+  if (!aviso) return link
+
+  return (
+    <span className="inline-flex flex-col items-center gap-0.5">
+      {link}
+      <span
+        className="text-[10px] leading-tight opacity-75"
+        style={{ color: 'var(--c-faint, #8d857a)' }}
+      >
+        Número informado pelo próprio profissional — não conferido pelo advoc.me.
+      </span>
+    </span>
   )
 }

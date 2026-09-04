@@ -8,6 +8,9 @@ import { ProfileView } from '@/components/profile/ProfileView'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { OwnerBar } from '@/components/profile/OwnerBar'
 import { FlagIcon } from '@/components/ui/icons'
+// Módulo de constantes puro (sem dependências) — não pesa no caminho crítico do
+// perfil público. Ver lib/legalIdentity.ts.
+import { OPERADOR } from '@/lib/legalIdentity'
 import { Marca } from '@/components/ui/Marca'
 
 export default function PublicProfile() {
@@ -126,10 +129,21 @@ export default function PublicProfile() {
       <ShareBar slug={profile.slug} name={profile.name} topOffset={barsHeight} />
       <ProfileView profile={profile} owner={isOwner} />
 
-      {/* Rodapé da PLATAFORMA (não do advogado): denúncia e privacidade. Discretos
-          de propósito — mas presentes, porque quem chega aqui pode escrever para o
-          advogado sem nunca ter visto uma linha nossa sobre dados. */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-10 pt-2">
+      {/* Rodapé da PLATAFORMA (não do advogado). Discreto de propósito — mas
+          presente, porque quem chega aqui pode escrever para o advogado sem
+          nunca ter visto uma linha nossa.
+
+          Os TERMOS passaram a estar aqui (04/09/2026). Antes só havia denúncia e
+          privacidade, e o resultado era torto: o documento em que a plataforma
+          limita a própria responsabilidade só era alcançável por quem tinha
+          conta — ou seja, por todo mundo menos a parte que eventualmente
+          processa. Uma limitação de responsabilidade que o terceiro prejudicado
+          nunca teve como ler é uma limitação que não se opõe a ele.
+
+          A identificação do operador vem junto pelo mesmo motivo: quem se sentir
+          lesado tem direito de saber a quem se dirigir (CDC, arts. 6º, III e
+          31), e um site sem dono é um site que vira réu por omissão. */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2">
         <Link
           to={`/${profile.slug}/denunciar`}
           className="group inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink-faint/70 transition-colors hover:text-burgundy"
@@ -141,12 +155,26 @@ export default function PublicProfile() {
           <span className="underline-offset-2 group-hover:underline">Denunciar este perfil</span>
         </Link>
         <Link
+          to="/legal/termos"
+          className="text-[11.5px] font-medium text-ink-faint/70 underline-offset-2 transition-colors hover:text-burgundy hover:underline"
+        >
+          Termos de Uso
+        </Link>
+        <Link
           to="/legal/privacidade"
           className="text-[11.5px] font-medium text-ink-faint/70 underline-offset-2 transition-colors hover:text-burgundy hover:underline"
         >
           Privacidade
         </Link>
       </div>
+      {/* `pb-28` e não `pb-10`: o balão de conversa é FIXO no canto inferior e,
+          num celular estreito, cobria justamente a linha da identificação — um
+          aviso legal escondido atrás de um botão não é um aviso legal. O espaço
+          extra fica no fim de uma página já rolada, onde ninguém o percebe. */}
+      <p className="mx-auto max-w-md px-5 pb-28 pt-2 text-center text-[10.5px] leading-relaxed text-ink-faint/60">
+        Página hospedada pelo advoc.me, operado por {OPERADOR.razaoSocial}, CNPJ {OPERADOR.cnpj}.
+        O conteúdo é de responsabilidade do profissional que o publicou.
+      </p>
 
     </main>
   )

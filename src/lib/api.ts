@@ -543,7 +543,14 @@ export const api = {
     return loadDraft()
   },
 
-  async saveDraft(profile: Profile): Promise<Profile> {
+  /**
+   * @param truthDeclared  A declaração de veracidade marcada pela pessoa no
+   *   momento de publicar. Só é exigida pelo servidor na ESTREIA (rascunho →
+   *   público); nos saves seguintes o campo é ignorado, porque repetir a mesma
+   *   confirmação a cada debounce do editor transformaria uma declaração num
+   *   reflexo — e uma declaração que ninguém lê não prova nada.
+   */
+  async saveDraft(profile: Profile, truthDeclared = false): Promise<Profile> {
     // Modo real SEM sessão: recusa em vez de gravar no navegador. O silêncio era
     // pior que o erro — o editor dizia "Tudo salvo", nada chegava à conta, e o
     // trabalho sumia no próximo aparelho (ou na próxima limpeza do navegador).
@@ -554,7 +561,7 @@ export const api = {
       const res = await escrever('/api/profiles/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({ ...profile, truthDeclared }),
       })
       // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
       // caracteres, sessão expirada) virava um objeto de erro tratado como perfil

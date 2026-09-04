@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
+import { AvisoDeTermos } from '@/components/ui/AvisoDeTermos'
 // O perfil público é o produto — um minisite que abre por link compartilhado,
 // quase sempre num celular em rede ruim. Só ele entra no pacote inicial; todo
 // o resto (editor, painel, onboarding, admin…) chega sob demanda, para que o
@@ -76,6 +77,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      {/* Fora do <Suspense> de propósito: o aviso de Termos não pode ficar
+          esperando um pedaço lazy carregar — a faixa é justamente o que precisa
+          aparecer ANTES de a pessoa continuar usando. Ela mesma decide em quais
+          telas se mostra (ver AvisoDeTermos). */}
+      <AvisoDeTermos />
       {/* O fallback é o mesmo spinner das trocas de sessão — a espera de um
           pedaço lazy não deve piscar diferente da espera do /auth/me. */}
       <Suspense fallback={<Carregando />}>

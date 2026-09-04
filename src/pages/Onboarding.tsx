@@ -24,6 +24,7 @@ import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
 import { CidadeUfCampos } from '@/components/editor/CidadeInput'
 import { SparkIcon, ArrowLeft, ArrowRight, CheckIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
+import { DeclaracaoDeVeracidade } from '@/components/ui/DeclaracaoDeVeracidade'
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
@@ -70,6 +71,20 @@ export default function Onboarding() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [erroAoSalvar, setErroAoSalvar] = useState<string | null>(null)
+  /**
+   * A declaração de veracidade da estreia. Começa desmarcada e trava o botão de
+   * publicar: o servidor recusa a publicação sem ela (backend
+   * ProfilesService.update), e deixar o botão ativo aqui só entregaria um erro
+   * do outro lado.
+   *
+   * Fica AQUI, junto dos outros estados, e não lá embaixo perto do `canPublish`
+   * onde é usada. Não é preferência de arrumação: abaixo há dois `return`
+   * antecipados (erro ao carregar, rascunho ainda chegando), e um hook depois
+   * deles roda em número diferente a cada render — "Rendered more hooks than
+   * during the previous render", tela branca. tsc e vitest passam; quem pegou
+   * foi o navegador (`npm run smoke`).
+   */
+  const [declarou, setDeclarou] = useState(false)
   const [publicando, setPublicando] = useState(false)
   const [step, setStep] = useState(WELCOME)
   const [aiOpen, setAiOpen] = useState(false)
@@ -162,8 +177,9 @@ export default function Onboarding() {
     [REVIEW]: true,
   }
   const canContinue = stepReady[step]
+
   const canPublish =
-    stepReady[WHO] && stepReady[HOW] && stepReady[CONTACT] && !blockedBio
+    stepReady[WHO] && stepReady[HOW] && stepReady[CONTACT] && !blockedBio && declarou
 
   const goNext = () => setStep((s) => Math.min(LAST, s + 1))
   const goBack = () => setStep((s) => Math.max(WELCOME, s - 1))
@@ -185,7 +201,7 @@ export default function Onboarding() {
     const paraPublicar: Profile = { ...profile!, published: true }
     setProfile(paraPublicar)
     try {
-      const saved = await api.saveDraft(paraPublicar)
+      const saved = await api.saveDraft(paraPublicar, true)
       if (!saved?.published) throw new Error('O servidor não confirmou a publicação.')
       setProfile(saved)
       setPublished(true)
@@ -277,6 +293,14 @@ export default function Onboarding() {
                       set({ oabNumber, state: profile.state || p.uf })
                     }}
                   />
+                  {/* Dito no ponto de entrada, não só num documento. Quem digita
+                      o número precisa saber, ali, que ninguém vai conferir por
+                      ele — é o que separa "a plataforma deixou passar" de "eu
+                      declarei". */}
+                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
+                    Não conferimos inscrições: o número vai para a página como você informar, e
+                    aparece com um link para a consulta pública do CNA, da OAB.
+                  </p>
                 </Field>
                 {/* A UF já vem preenchida pela seccional da OAB acima, então o
                     campo de cidade abre com a busca restrita ao estado certo —
@@ -382,6 +406,10 @@ export default function Onboarding() {
                 </div>
                 {/* Desktop: a prévia já está na coluna ao lado — aqui vai o resumo. */}
                 <ReviewSummary profile={profile} area={area} />
+                {/* Fica ANTES do upsell de propósito: a última coisa que a pessoa
+                    lê antes de publicar tem de ser o que ela está declarando, não
+                    o que ela poderia comprar. */}
+                <DeclaracaoDeVeracidade checked={declarou} onChange={setDeclarou} />
                 {/* Instiga sem travar: mostra o que dá para somar ao perfil. A
                     assinatura em si acontece depois de publicar (o plano é do
                     servidor — ver api.setPlan), na tela de conclusão. */}

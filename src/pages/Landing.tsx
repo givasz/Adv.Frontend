@@ -16,6 +16,7 @@ import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
+import { CONTACT_EMAIL, OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
 import {
   ArrowRight,
   CheckIcon,
@@ -544,13 +545,26 @@ export default function Landing() {
             Todos os documentos
           </Link>
         </nav>
-        <p>advoc.me · perfis em conformidade com o Provimento 205/2021 do CFOAB</p>
-        <p className="mt-1">Não constitui aconselhamento jurídico. Não filiado à OAB.</p>
+        <p>advoc.me · uma ferramenta para perfis segundo o Provimento 205/2021 do CFOAB</p>
+        <p className="mt-1">
+          Não constitui aconselhamento jurídico. Não filiado à OAB. O conteúdo de cada perfil é de
+          responsabilidade do advogado que o publica.
+        </p>
+        {/* IDENTIFICAÇÃO DO FORNECEDOR — CDC, arts. 6º, III e 31.
+            Um site que limita a própria responsabilidade e não diz de quem é a
+            responsabilidade limitada dá ao juiz o primeiro motivo para
+            relativizar a cláusula. Aqui, no rodapé de toda a landing, e também
+            no rodapé de cada perfil público (ver PublicProfile). */}
         <p className="mt-3 text-[12px] text-ink-faint/80">
-          © {new Date().getFullYear()} advoc.me · Dúvidas sobre os seus dados: veja a{' '}
+          © {new Date().getFullYear()} advoc.me · {OPERADOR.razaoSocial} · CNPJ {OPERADOR.cnpj} ·{' '}
+          {operadorEndereco()}
+        </p>
+        <p className="mt-1 text-[12px] text-ink-faint/80">
+          Dúvidas sobre os seus dados: veja a{' '}
           <Link to="/legal/privacidade" className="underline underline-offset-2 hover:text-ink">
             Política de Privacidade
-          </Link>
+          </Link>{' '}
+          ou escreva para {CONTACT_EMAIL}.
         </p>
       </footer>
     </div>

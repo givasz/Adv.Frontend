@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { ShieldIcon, DocIcon, LockIcon, TrashIcon, CheckIcon } from '@/components/ui/icons'
 import { baixarComoArquivo, excluirConta, exportarDados, trocarSenha } from '@/lib/account'
@@ -179,6 +179,25 @@ export default function DadosPage() {
                 Apaga a conta, o perfil publicado, as perguntas frequentes, a trilha de auditoria e
                 os chamados de suporte. O endereço do seu perfil deixa de existir e fica livre para
                 outra pessoa. <strong className="font-semibold text-ink">Não há como desfazer.</strong>
+              </p>
+              {/* A RESSALVA HONESTA.
+                  Dizer "apaga tudo" e guardar alguma coisa é pior do que guardar
+                  e avisar: quem descobre depois não descobre um detalhe técnico,
+                  descobre que foi enganado. O registro de acesso é obrigação
+                  legal (Marco Civil, art. 15) e a LGPD (art. 16, I) ressalva
+                  exatamente essa guarda — mas a ressalva tem de estar AQUI, na
+                  tela do botão, não só no documento. */}
+              <p className="mt-2 text-[12.5px] leading-relaxed text-ink-faint">
+                Duas coisas continuam, e por obrigação legal: o registro de entrada na conta e de
+                publicação do perfil (data, hora e IP), até completar 180 dias, e o registro de
+                eventuais decisões de moderação. Nada disso volta a aparecer em nenhuma página.{' '}
+                <Link
+                  to="/legal/privacidade"
+                  className="font-medium text-burgundy underline underline-offset-2"
+                >
+                  Por quê
+                </Link>
+                .
               </p>
 
               {!abrindoExclusao ? (

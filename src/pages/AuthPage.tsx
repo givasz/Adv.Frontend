@@ -6,6 +6,7 @@ import { passwordStrength } from '@/lib/passwordStrength'
 import { ArrowLeft, ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, SparkIcon } from '@/components/ui/icons'
 import { caminhoDeVolta } from '@/components/ui/SubPage'
 import { Marca } from '@/components/ui/Marca'
+import { OPERADOR } from '@/lib/legalIdentity'
 
 type Mode = 'login' | 'signup'
 
@@ -30,6 +31,13 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [remember, setRemember] = useState(true)
+  // Começa DESMARCADA, e é isso que a torna um aceite.
+  //
+  // Uma caixa pré-marcada não coleta consentimento: o CDC (art. 46) pede
+  // oportunidade de conhecer, e a LGPD (art. 8º, § 4º) pede manifestação
+  // inequívoca. As duas descrevem um gesto da pessoa, não um padrão nosso que
+  // ela deixou de desfazer.
+  const [aceitou, setAceitou] = useState(false)
   const [showPw, setShowPw] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [touchedPw, setTouchedPw] = useState(false)
@@ -52,7 +60,7 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     !busy &&
     email.trim().length > 0 &&
     password.length > 0 &&
-    (!isSignup || (strength.acceptable && confirm === password))
+    (!isSignup || (strength.acceptable && confirm === password && aceitou))
 
   useEffect(() => {
     document.title = `${isSignup ? 'Criar conta' : 'Entrar'} · advoc.me`
@@ -67,6 +75,10 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     setError(null)
     setConfirm('')
     setTouchedPw(false)
+    // O aceite volta ao zero na troca de modo: quem marcou, foi para "Entrar" e
+    // voltou não declarou nada sobre o texto — e um aceite herdado de uma tela
+    // que a pessoa abandonou não é aceite.
+    setAceitou(false)
     setMode(isSignup ? 'login' : 'signup')
   }
 
@@ -76,7 +88,7 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     setBusy(true)
     setError(null)
     try {
-      if (isSignup) await signup(email, password, name, remember)
+      if (isSignup) await signup(email, password, name, remember, aceitou)
       else await login(email, password, remember)
       navigate(next, { replace: true })
     } catch (err) {
@@ -234,6 +246,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
 
               <RememberMe checked={remember} onChange={setRemember} />
 
+              {isSignup && <AceiteDosTermos checked={aceitou} onChange={setAceitou} />}
+
               {error && (
                 <p
                   role="alert"
@@ -264,17 +278,90 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
               </button>
             </p>
 
+            {/* No LOGIN não há aceite a coletar — quem entra já aceitou quando se
+                cadastrou, e o reaceite de uma versão nova acontece depois, na
+                faixa do painel (ver AvisoDeTermos). O que fica aqui é só a
+                identificação de com quem a pessoa está contratando: Termos sem
+                parte identificada é o primeiro argumento para relativizá-los
+                (CDC, arts. 6º, III e 31). */}
             <p className="mt-5 border-t border-ink/10 pt-4 text-center text-[11.5px] leading-relaxed text-ink-faint">
-              Ao continuar você concorda com os{' '}
-              <Link to="/legal" className="underline underline-offset-2 hover:text-ink">
-                termos e a política de privacidade
-              </Link>
-              .
+              {!isSignup && (
+                <>
+                  Ao entrar você segue vinculado aos{' '}
+                  <Link to="/legal" className="underline underline-offset-2 hover:text-ink">
+                    termos e à política de privacidade
+                  </Link>
+                  .{' '}
+                </>
+              )}
+              advoc.me é operado por {OPERADOR.razaoSocial}, CNPJ {OPERADOR.cnpj}.
             </p>
           </motion.div>
         </div>
       </main>
     </div>
+  )
+}
+
+/**
+ * A caixa dos Termos — o registro que faltava.
+ *
+ * Até 04/09/2026 esta tela trazia uma frase passiva ("ao continuar você
+ * concorda") e mais nada: nenhuma caixa, nenhum registro, nenhuma versão. O
+ * texto dos documentos era bom e não valia como contrato, porque o ônus de
+ * provar que o consumidor teve oportunidade de conhecer a cláusula é de quem a
+ * redigiu (CDC, art. 46) — e não havia com o que provar.
+ *
+ * Três decisões, e todas contam:
+ *
+ *   • DESMARCADA. Um padrão que a pessoa não desfez não é manifestação dela.
+ *   • BLOQUEIA O BOTÃO. Se o cadastro seguisse sem ela, a caixa seria enfeite;
+ *     e o servidor recusa de qualquer jeito (backend AuthService.signup), então
+ *     deixar passar aqui só entregaria um erro incompreensível do outro lado.
+ *   • LINKS QUE ABREM EM OUTRA ABA. Ler os Termos não pode custar o formulário
+ *     preenchido — quem perde o que digitou aprende a nunca mais clicar, que é
+ *     o oposto de "oportunidade de conhecer".
+ */
+function AceiteDosTermos({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-ink/10 bg-paper-soft/60 px-3 py-2.5">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-ink/25 text-burgundy accent-burgundy focus:ring-2 focus:ring-burgundy/20"
+      />
+      <span className="text-[12.5px] leading-relaxed text-ink-soft">
+        Li e aceito os{' '}
+        <Link
+          to="/legal/termos"
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium text-burgundy underline underline-offset-2"
+        >
+          Termos de Uso
+        </Link>{' '}
+        e a{' '}
+        <Link
+          to="/legal/privacidade"
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium text-burgundy underline underline-offset-2"
+        >
+          Política de Privacidade
+        </Link>
+        . Declaro ser advogado(a) regularmente inscrito(a) na OAB e responder pelo conteúdo que
+        publicar.
+      </span>
+    </label>
   )
 }
 

@@ -21,6 +21,15 @@
 //   • provedores de IA       → backend/src/ai/provedores.ts
 //   • backups                → backend/docs/recuperacao-de-desastre.md
 
+import {
+  CONTACT_EMAIL,
+  operadorEndereco,
+  operadorIdentificacao,
+  OPERADOR,
+  TERMS_UPDATED,
+  TERMS_VERSION,
+} from './legalIdentity'
+
 export interface LegalSection {
   heading?: string
   paragraphs?: string[]
@@ -40,8 +49,13 @@ export interface LegalDocContent {
   sections: LegalSection[]
 }
 
-const UPDATED = '4 de setembro de 2026'
-const CONTACT = 'contato@advoc.me'
+// A data e a identificação vêm de legalIdentity.ts, que é a MESMA fonte do
+// aceite gravado em cada conta e da trava de paridade com o backend. Um
+// documento que muda sem a versão mudar é um documento que ninguém aceitou.
+const UPDATED = TERMS_UPDATED
+const CONTACT = CONTACT_EMAIL
+const IDENTIFICACAO = operadorIdentificacao()
+const PRAZO_ACESSO = '180 dias'
 
 // Prazos que aparecem em mais de um documento. Se um deles mudar no código, muda
 // aqui uma vez só — e os três documentos que o citam continuam concordando.
@@ -63,6 +77,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
     sections: [
       {
         paragraphs: [
+          `${IDENTIFICACAO} É ela a controladora dos dados tratados na plataforma, e é a ela que se dirigem os pedidos desta Política.`,
           'Esta Política explica como a plataforma advoc.me ("advoc.me", "nós") trata dados pessoais. Ela vale para quatro pessoas diferentes: o advogado que cria uma conta, as pessoas que ele cita no próprio perfil ou convida para um escritório, quem visita um perfil e quem denuncia um perfil. O tratamento observa a Lei nº 13.709/2018 (LGPD).',
           'Se você é VISITANTE de um perfil, a parte mais importante cabe numa frase: o advoc.me não recebe nem guarda o que você escreve para falar com o advogado. O assistente de agendamento e o formulário de contato apenas montam a mensagem, que sai do seu próprio aparelho direto para o WhatsApp dele. A partir daí, quem trata os seus dados é o advogado, como controlador, sob a política dele — e o item 8 desta Política é seu.',
         ],
@@ -70,7 +85,9 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '1. O que guardamos, e de quem',
         bullets: [
-          'Sua conta: e-mail, data de criação e a senha — guardada apenas como hash (scrypt, com sal aleatório), do qual ela não pode ser recuperada. Guardamos também as sessões abertas (quando começaram e até quando valem), sem endereço IP.',
+          'Sua conta: e-mail, data de criação e a senha — guardada apenas como hash (scrypt, com sal aleatório), do qual ela não pode ser recuperada. Guardamos também as sessões abertas (quando começaram e até quando valem), sem endereço IP na própria sessão.',
+          'O seu aceite dos Termos: a data, a versão do documento aceita e o endereço IP de onde partiu. É o registro de que o contrato entre nós existe — e é a prova que serve tanto a você quanto a nós.',
+          `Registro de acesso: cada entrada na sua conta e cada publicação de perfil ficam registradas com data, hora, endereço IP e identificação do navegador, por ${PRAZO_ACESSO}. É o que o art. 15 do Marco Civil da Internet exige de quem opera uma aplicação como esta, e é também o que permite dizer quem publicou um conteúdo quando alguém questiona. Fica sob sigilo, sem tela pública, e só é entregue mediante ordem de autoridade competente.`,
           'Seu perfil: tudo o que você escreve e publica nele — nome, número de inscrição na OAB, foto, cidade/UF, endereço do escritório (se optar por mostrá-lo), áreas de atuação e suas descrições, apresentação, frase de apresentação, perguntas frequentes, links de contato e redes, vídeo, grade de horários do assistente, cor e nome de marca. Perfil publicado é público por natureza.',
           'Uso do seu perfil: contamos acontecimentos, nunca pessoas — quantas vezes o perfil foi aberto, qual botão foi tocado e em que dia e hora. Não guardamos endereço IP, identificação do aparelho nem cookie de quem visita; por isso não existe "visitantes únicos".',
           'Sua assinatura: o plano contratado, a situação da cobrança, as datas do período pago e da carência, os identificadores da assinatura no provedor de pagamento e o registro de cada evento de cobrança. Nunca o número do cartão — ele fica com o provedor de pagamento.',
@@ -85,7 +102,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Para prestar o serviço que você contratou (execução de contrato): publicar o perfil, aplicar a checagem de conformidade, gerar a trilha de auditoria, operar a assinatura, responder ao suporte.',
           'Para cumprir obrigações legais e regulatórias e atender a ordens de autoridades, inclusive a guarda dos registros que a lei exige.',
-          'Por legítimo interesse, sempre de forma proporcional: segurança da plataforma (limitar tentativas de acesso, detectar abuso), moderação de conteúdo e melhoria do serviço a partir de números agregados. O endereço IP é usado na hora, para limitar tentativas, e não é gravado.',
+          `Para cumprir o art. 15 do Marco Civil da Internet: o registro de acesso descrito no item 1, guardado por ${PRAZO_ACESSO}. A base é o cumprimento de obrigação legal, e por isso esse registro não é apagado a pedido antes do prazo — nem quando a conta é excluída.`,
+          'Por legítimo interesse, sempre de forma proporcional: segurança da plataforma (limitar tentativas de acesso, detectar abuso), moderação de conteúdo e melhoria do serviço a partir de números agregados. Fora do registro de acesso acima, o endereço IP é usado na hora, para limitar tentativas, e não é gravado.',
           'Com o seu consentimento, onde ele é a base: o e-mail opcional que quem denuncia informa para receber retorno, e a opção "continuar conectado neste aparelho".',
           'Não vendemos dados pessoais, não montamos perfil de comportamento e não usamos os seus dados para publicidade.',
         ],
@@ -112,6 +130,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           `Trilha de auditoria (retrato da apresentação, resultado da checagem e versão da política a cada publicação): ${PRAZO_AUDITORIA}.`,
           `Eventos de cobrança: ${PRAZO_COBRANCA} — é a prova de quem pagou o quê e quando, pelo tempo de contestação de qualquer cobrança.`,
           `Moderação: o conteúdo retirado do ar fica guardado por ${PRAZO_CONTEUDO_REMOVIDO}, como prova em eventual contestação; o registro da decisão (quem, quando, por quê) fica por ${PRAZO_REGISTRO_MODERACAO}.`,
+          `Registro de acesso (entrada na conta e publicação de perfil): ${PRAZO_ACESSO}, apagados automaticamente depois disso. O prazo é teto, não piso: passados os seis meses que a lei exige, guardar mais seria tratar dado sem finalidade.`,
+          'Aceite dos Termos: enquanto a conta existir, e depois pelo tempo em que possa ser necessário à defesa de direitos — é a prova de que o contrato foi celebrado.',
           'Sessões: até você sair, trocar a senha ou o prazo vencer — o prazo depende da opção "continuar conectado" e tem um limite máximo absoluto.',
           `Cópias de segurança: o banco é copiado diariamente, de forma cifrada, para um servidor separado. As cópias são mantidas por ${PRAZO_BACKUP} e depois substituídas; um dado apagado do banco some das cópias ao fim desse ciclo.`,
         ],
@@ -121,7 +141,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Senhas só como hash (scrypt); a sessão vive num cookie que a página não consegue ler (HttpOnly), com proteção contra requisições forjadas em toda escrita.',
           'O painel administrativo exige senha e segundo fator (TOTP), e cada ação de moderação fica registrada com quem fez, quando e por quê.',
-          'Limites de tentativas por endereço e por conta, para conter força bruta e abuso — o endereço IP é usado na hora e não é gravado.',
+          'Limites de tentativas por endereço e por conta, para conter força bruta e abuso. Fora do registro de acesso legal, o endereço IP é usado na hora e não é gravado.',
+          'O registro de acesso fica em base separada do conteúdo, sem tela de consulta na plataforma, e só é acessado para responder a ordem de autoridade competente.',
           'Cópias de segurança cifradas com chave pública; a chave privada que as abre fica fora de qualquer servidor. A restauração é testada.',
           'Auditorias de segurança periódicas sobre o código, com as correções registradas.',
         ],
@@ -134,7 +155,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'baixa uma cópia de tudo o que guardamos sobre você, em formato aberto (JSON) — a portabilidade;',
           'troca a senha e encerra a sessão em todos os aparelhos;',
-          'exclui a conta: apaga a conta, o perfil, as perguntas frequentes, a trilha de auditoria, os acontecimentos, os chamados e as sessões. O endereço público deixa de existir. Não há como desfazer, e por isso pedimos a senha.',
+          `exclui a conta: apaga a conta, o perfil, as perguntas frequentes, a trilha de auditoria, os acontecimentos, os chamados e as sessões. O endereço público deixa de existir. Não há como desfazer, e por isso pedimos a senha. Duas coisas sobrevivem, e dizemos quais: o registro de acesso, até completar ${PRAZO_ACESSO} (obrigação legal — LGPD, art. 16, I), e o registro de eventuais decisões de moderação.`,
           `O que não couber ali — corrigir um dado que o editor não deixa mudar, contestar um tratamento, pedir informação sobre um compartilhamento — vai para ${CONTACT}. Respondemos em até ${PRAZO_RESPOSTA_TITULAR}. Alguns dados podem ser mantidos quando houver obrigação legal ou exercício regular de direitos (por exemplo, o registro de uma decisão de moderação), e diremos quais.`,
           'Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).',
         ],
@@ -162,7 +183,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '10. Mudanças e encarregado',
         paragraphs: [
-          `Podemos atualizar esta Política; a data no topo diz quando foi a última vez, e mudanças relevantes são avisadas na plataforma. O encarregado pelo tratamento de dados pessoais atende em ${CONTACT}.`,
+          `Podemos atualizar esta Política; a data no topo diz quando foi a última vez. Mudanças relevantes não ficam esperando que você repare: quem tem conta recebe um aviso ao entrar, com o resumo do que mudou, e o aceite da versão nova fica registrado.`,
+          `O encarregado pelo tratamento de dados pessoais atende em ${CONTACT}. Se você tem conta, o caminho mais rápido é abrir um chamado em "Suporte", dentro da plataforma: ele entra numa fila com prazo e fica registrado dos dois lados.`,
         ],
       },
     ],
@@ -176,13 +198,16 @@ export const LEGAL_DOCS: LegalDocContent[] = [
     sections: [
       {
         paragraphs: [
-          'Estes Termos regem o uso da plataforma advoc.me. Ao criar uma conta, publicar um perfil ou assinar um plano, você concorda com eles e com a Política de Privacidade, a Política de Moderação e a Política de Inteligência Artificial, que fazem parte deste documento.',
+          `${IDENTIFICACAO}`,
+          `Estes Termos regem o uso da plataforma advoc.me. Ao criar a conta você marca uma caixa aceitando esta versão (${TERMS_VERSION}), e esse aceite fica registrado com data e endereço. Quando o texto muda, pedimos um aceite novo antes de você publicar — não presumimos concordância com o que você não teve como ler.`,
+          'A Política de Privacidade, a Política de Moderação e a Política de Inteligência Artificial fazem parte deste documento.',
         ],
       },
       {
         heading: '1. O que o advoc.me é',
         paragraphs: [
-          'Uma ferramenta para advogados montarem uma página de perfil profissional em conformidade com o Provimento 205/2021 do CFOAB. O advoc.me não é filiado à OAB, não presta serviços jurídicos e não intermedeia a contratação de advogados: os contatos vão do visitante diretamente ao profissional.',
+          'Uma ferramenta para advogados montarem uma página de perfil profissional segundo o Provimento 205/2021 do CFOAB. O advoc.me não é filiado à OAB, não presta serviços jurídicos e não intermedeia a contratação de advogados: os contatos vão do visitante diretamente ao profissional.',
+          'Juridicamente, o advoc.me é provedor de aplicação de internet (Marco Civil da Internet, Lei nº 12.965/2014, art. 5º, VII). O conteúdo dos perfis é gerado por terceiros — os próprios advogados —, e é essa a natureza da nossa responsabilidade: hospedamos e damos ferramentas, não escrevemos, não conferimos e não endossamos. Nos termos do art. 19 da mesma lei, respondemos por conteúdo de terceiro apenas se, após ordem judicial específica, deixarmos de torná-lo indisponível.',
         ],
       },
       {
@@ -190,6 +215,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'A conta é pessoal e exige e-mail e senha. Você é responsável por manter a senha em sigilo e por tudo o que for feito com ela; se desconfiar de acesso indevido, troque a senha em "Seus dados" — isso encerra as sessões nos outros aparelhos.',
           'É preciso ter 18 anos ou mais e ser advogado regularmente inscrito na OAB.',
+          'O aceite destes Termos é condição da conta, e fica registrado: guardamos a data, a versão aceita e o endereço IP de onde partiu. Você vê esse registro na cópia dos seus dados, em "Seus dados".',
           'Você pode excluir a conta a qualquer momento, em "Seus dados". A exclusão apaga o perfil e libera o endereço público para outra pessoa, e não pode ser desfeita.',
         ],
       },
@@ -198,6 +224,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         paragraphs: [
           'O serviço destina-se a advogados regularmente inscritos na OAB. Você declara que as informações do perfil (inclusive nome e número de inscrição) são verdadeiras e de sua titularidade. É vedado usar dados de terceiros ou se passar por outro profissional.',
           'A prestação de dados falsos, a declaração inverídica de inscrição na OAB e a apresentação de documento falso ou adulterado à plataforma são de sua exclusiva responsabilidade e podem configurar ilícito civil e crime — entre outros, os previstos no art. 297 (falsificação de documento público) e no art. 304 (uso de documento falso), bem como no art. 299 (falsidade ideológica), do Código Penal. O advoc.me não atesta a autenticidade de documentos nem responde por informações inverídicas que você fornecer.',
+          'Ao publicar o perfil pela primeira vez, você marca uma declaração específica de que é o titular da inscrição informada e de que as informações são verdadeiras. Essa declaração é registrada com data e endereço, junto do registro de acesso descrito na Política de Privacidade. Se um terceiro se disser prejudicado por informação falsa publicada aqui, é esse registro que identifica quem a publicou.',
         ],
       },
       {
@@ -284,6 +311,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'por sanções disciplinares, administrativas, cíveis ou penais decorrentes do uso que você faz da plataforma ou do conteúdo que publica;',
           'pelo que acontece nos canais externos para os quais o perfil leva (WhatsApp, redes sociais, vídeo hospedado em terceiros);',
           'por indisponibilidades temporárias do serviço. Trabalhamos para mantê-lo no ar e com cópias de segurança diárias, mas não garantimos disponibilidade ininterrupta.',
+          'pela relação entre você e quem o procura pelo perfil — a plataforma não é parte na contratação, não recebe honorários, não avalia causas e não guarda o que o visitante escreve para você.',
         ],
       },
       {
@@ -295,7 +323,9 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '14. Lei aplicável, foro e contato',
         paragraphs: [
-          `Estes Termos seguem a lei brasileira. Para qualquer disputa, fica eleito o foro do seu domicílio, como prevê o Código de Defesa do Consumidor. Dúvidas sobre estes Termos: ${CONTACT}.`,
+          `Estes Termos seguem a lei brasileira. Para qualquer disputa, fica eleito o foro do seu domicílio, como prevê o Código de Defesa do Consumidor.`,
+          `Contratante: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}. Dúvidas sobre estes Termos: ${CONTACT}. Quem tem conta pode abrir um chamado em "Suporte", dentro da plataforma, que entra numa fila com prazo e registro.`,
+          `Notificações extrajudiciais e ordens judiciais devem ser dirigidas a ${CONTACT}, identificando a página (endereço completo) e o conteúdo em questão.`,
         ],
       },
     ],
@@ -315,6 +345,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '1. Papéis',
         paragraphs: [
+          `Controlador: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}, que opera o advoc.me.`,
           'O advoc.me é controlador dos dados necessários para operar a plataforma: conta, perfil, assinatura, suporte e moderação. Os provedores de hospedagem, de geração de texto por IA e, quando ativo, de pagamento são operadores, que tratam dados só sob nossas instruções.',
           'Os contatos que cada advogado recebe pelos canais dele não passam por nós: a mensagem vai do aparelho do visitante para o WhatsApp do advogado, que é o único controlador desses dados. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
         ],
@@ -336,6 +367,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Conta, perfil, escritório e chamados: enquanto a conta existir.',
           `Acontecimentos do perfil: ${PRAZO_EVENTOS}. Trilha de auditoria: ${PRAZO_AUDITORIA}. Eventos de cobrança: ${PRAZO_COBRANCA}. O expurgo roda automaticamente todos os dias.`,
           `Conteúdo removido pela moderação: ${PRAZO_CONTEUDO_REMOVIDO}. Registro da decisão: ${PRAZO_REGISTRO_MODERACAO}.`,
+          `Registro de acesso (Marco Civil, art. 15): ${PRAZO_ACESSO}. É o único prazo aqui que não é escolha nossa — é o que a lei manda guardar, e por isso não é reduzido a pedido do titular. Também não é ampliado: passado o prazo, é apagado.`,
           `Cópias de segurança cifradas: ${PRAZO_BACKUP}.`,
         ],
       },
@@ -345,7 +377,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Senhas apenas como hash (scrypt, com sal aleatório e parâmetros guardados junto, para poderem ser reforçados sem invalidar as existentes).',
           'A sessão é um cookie HttpOnly — a página não consegue lê-lo, e por isso um script injetado não consegue levá-lo embora. Toda escrita exige um segundo valor que só a página legítima tem (proteção CSRF). Sair de verdade revoga a sessão no servidor.',
           'Painel administrativo com contas individuais, papéis, senha e segundo fator (TOTP); cada ação fica registrada com autor, alvo, motivo, antes e depois.',
-          'Limites de tentativas por endereço e por conta; o endereço IP é usado apenas no momento e não é gravado.',
+          'Limites de tentativas por endereço e por conta. Fora do registro de acesso exigido pelo art. 15 do Marco Civil, o endereço IP é usado apenas no momento e não é gravado.',
           'Fronteira de segurança única no servidor para tudo o que entra (tamanho, formato, endereços, HTML), com auditorias periódicas registradas.',
           'Cópias de segurança diárias, cifradas com chave pública antes de sair do servidor; a chave privada fica fora de qualquer servidor e a restauração é testada.',
         ],
@@ -359,7 +391,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '6. Direitos do titular',
         paragraphs: [
-          `Confirmação de tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos e revogação de consentimento. Acesso, portabilidade, encerramento de sessões e eliminação estão na tela "Seus dados" da sua conta; o resto, e qualquer dúvida, em ${CONTACT}, com resposta em até ${PRAZO_RESPOSTA_TITULAR}. Você também pode recorrer à ANPD.`,
+          `Confirmação de tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos e revogação de consentimento. Acesso, portabilidade, encerramento de sessões e eliminação estão na tela "Seus dados" da sua conta; o resto, e qualquer dúvida, em ${CONTACT} ou por um chamado em "Suporte", com resposta em até ${PRAZO_RESPOSTA_TITULAR}. Você também pode recorrer à ANPD.`,
+          `Limite honesto do direito de eliminação: o registro de acesso do art. 15 do Marco Civil e o registro de decisões de moderação não são apagados a pedido, porque a LGPD (art. 16, I e II) ressalva a guarda necessária ao cumprimento de obrigação legal e ao exercício regular de direitos. Tudo o mais é. E o registro de acesso, mesmo não sendo apagável, é VISÍVEL para você: sai na cópia dos seus dados.`,
         ],
       },
       {
@@ -370,7 +403,10 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       },
       {
         heading: '8. Encarregado (DPO)',
-        paragraphs: [`Contato do encarregado pelo tratamento de dados: ${CONTACT}.`],
+        paragraphs: [
+          `Contato do encarregado pelo tratamento de dados pessoais: ${CONTACT}, mantido por ${OPERADOR.razaoSocial} (CNPJ ${OPERADOR.cnpj}), com sede em ${operadorEndereco()}.`,
+          `Quem tem conta pode usar também o canal de "Suporte" dentro da plataforma, que registra o pedido, a data e a resposta dos dois lados — e não depende de o e-mail chegar.`,
+        ],
       },
     ],
   },
@@ -495,9 +531,11 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         ],
       },
       {
-        heading: '7. Ordem judicial',
+        heading: '7. Ordem judicial e notificação de terceiro',
         paragraphs: [
           'Cumprimos ordens judiciais no prazo delas e registramos o recebimento. Avisamos você de que houve ordem e do que foi cumprido, salvo quando a própria ordem determinar sigilo. Ordem judicial não é contestável conosco — o caminho é o processo.',
+          `Ordens judiciais e notificações extrajudiciais devem ser dirigidas a ${CONTACT}, com o endereço completo da página e a identificação do conteúdo, como exige o art. 19, § 1º, do Marco Civil da Internet. Nas hipóteses do art. 21 da mesma lei — divulgação de cena de nudez ou de ato sexual de caráter privado, sem autorização —, agimos com a simples notificação da pessoa retratada ou de seu representante, sem esperar ordem.`,
+          'Fora dessas hipóteses, quem se sentir prejudicado por um perfil pode usar a Denúncia, que analisamos segundo esta Política. A denúncia não substitui a via judicial: não somos o juiz da causa entre você e o advogado, e não temos como decidir sobre fatos que só as partes conhecem.',
         ],
       },
       {
@@ -546,6 +584,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '2. Como funciona',
         paragraphs: [
           'A denúncia é anônima por padrão; você pode informar um e-mail apenas se quiser retorno — ele nunca é mostrado ao advogado denunciado. Descreva o que e onde viola, para agilizar a análise. Há um limite de denúncias por endereço, para conter abuso.',
+          'Não é preciso ter conta: o link "Denunciar este perfil" está no rodapé de todo perfil público, e qualquer pessoa pode usá-lo. Foi feito assim de propósito — um canal de reclamação que exige cadastro é um canal que só o próprio setor usa, e quem costuma ser prejudicado por um perfil irregular é justamente quem nunca entrou aqui.',
         ],
       },
       {
