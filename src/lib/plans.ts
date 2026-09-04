@@ -26,7 +26,12 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 
 // Número máximo de áreas de atuação por plano (usado no editor).
 // Free = UMA: a área principal, aquela pela qual o advogado quer ser encontrado.
-export const AREA_LIMIT: Record<Plan, number> = { free: 1, pro: 6, premium: 20 }
+//
+// Pro 6 → 4 e Max 20 → 12 em 04/09/2026. Vinte áreas nunca foi generosidade: um
+// perfil que lista vinte assuntos não diz a quem chega o que aquele advogado faz,
+// diz que ele faz tudo — e "faz tudo" é o que se lê como "não é de nada". A
+// escada continua clara (1 → 4 → 12) e cada degrau ainda vale o que cobra.
+export const AREA_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 12 }
 
 // Perguntas frequentes respondidas no perfil: 1 no Free, 2 no Pro, 5 no Max.
 // O Free tinha ZERO até 04/09/2026 — uma pergunta é o suficiente para o recurso

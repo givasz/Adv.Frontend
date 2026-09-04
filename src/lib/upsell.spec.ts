@@ -11,9 +11,11 @@ import { AREA_LIMIT, CHAR_LIMITS } from './plans'
 
 describe('upsell — contador de cota por plano', () => {
   it('áreas: rótulo "usado/limite — Plano" reflete o plano atual', () => {
-    expect(quotaLabel(areaQuota('free', 1))).toBe('1/1 — Free')
-    expect(quotaLabel(areaQuota('pro', 3))).toBe('3/6 — Pro')
-    expect(quotaLabel(areaQuota('premium', 5))).toBe('5/20 — Max')
+    // Lidos da tabela, nunca digitados: estes números já mudaram duas vezes num
+    // dia (Free 2→1, Pro 6→4, Max 20→12) e o teste quebrava por estar certo.
+    expect(quotaLabel(areaQuota('free', 1))).toBe(`1/${AREA_LIMIT.free} — Free`)
+    expect(quotaLabel(areaQuota('pro', 3))).toBe(`3/${AREA_LIMIT.pro} — Pro`)
+    expect(quotaLabel(areaQuota('premium', 5))).toBe(`5/${AREA_LIMIT.premium} — Max`)
   })
 
   it('o limite vem de plans.ts (sem duplicar regra)', () => {
@@ -32,23 +34,26 @@ describe('upsell — contador de cota por plano', () => {
 })
 
 describe('upsell — slot fantasma ao atingir o limite', () => {
-  it('Free com 1 área está no limite e destrava no Pro (1 → 6)', () => {
-    const q = areaQuota('free', 1)
-    expect(q.atLimit).toBe(true)
-    expect(q.remaining).toBe(0)
-    expect(q.unlockPlan).toBe('pro')
-    expect(q.unlockLimit).toBe(6)
-  })
+  it('a escada de áreas sobe, e cada degrau aponta o seguinte', () => {
+    const free = areaQuota('free', AREA_LIMIT.free)
+    expect(free.atLimit).toBe(true)
+    expect(free.remaining).toBe(0)
+    expect(free.unlockPlan).toBe('pro')
+    expect(free.unlockLimit).toBe(AREA_LIMIT.pro)
 
-  it('Pro no limite (6) destrava no Max (6 → 20)', () => {
-    const q = areaQuota('pro', 6)
-    expect(q.atLimit).toBe(true)
-    expect(q.unlockPlan).toBe('premium')
-    expect(q.unlockLimit).toBe(20)
+    const pro = areaQuota('pro', AREA_LIMIT.pro)
+    expect(pro.atLimit).toBe(true)
+    expect(pro.unlockPlan).toBe('premium')
+    expect(pro.unlockLimit).toBe(AREA_LIMIT.premium)
+
+    // A escada precisa SUBIR de verdade: com dois planos empatados, o slot
+    // fantasma apontaria um upgrade que não entrega área nenhuma a mais.
+    expect(AREA_LIMIT.free).toBeLessThan(AREA_LIMIT.pro)
+    expect(AREA_LIMIT.pro).toBeLessThan(AREA_LIMIT.premium)
   })
 
   it('Max não tem plano acima para destravar', () => {
-    const q = areaQuota('premium', 20)
+    const q = areaQuota('premium', AREA_LIMIT.premium)
     expect(q.atLimit).toBe(true)
     expect(q.unlockPlan).toBeNull()
     expect(q.unlockLimit).toBeNull()
@@ -56,7 +61,7 @@ describe('upsell — slot fantasma ao atingir o limite', () => {
 
   it('abaixo do limite não marca atLimit', () => {
     expect(areaQuota('free', 0).atLimit).toBe(false)
-    expect(areaQuota('pro', 5).atLimit).toBe(false)
+    expect(areaQuota('pro', AREA_LIMIT.pro - 1).atLimit).toBe(false)
   })
 
   it('nextPlan sobe a escada e para no topo', () => {
@@ -81,7 +86,11 @@ describe('upsell — pontos do Índice de Confiança por recurso', () => {
   it('featureCompare traz os três planos, valores derivados e os pontos', () => {
     const areas = featureCompare('areas')
     expect(areas.rows.map((r) => r.plan)).toEqual(['free', 'pro', 'premium'])
-    expect(areas.rows.map((r) => r.value)).toEqual(['1 área', '6 áreas', '20 áreas'])
+    expect(areas.rows.map((r) => r.value)).toEqual([
+      `${AREA_LIMIT.free} área`,
+      `${AREA_LIMIT.pro} áreas`,
+      `${AREA_LIMIT.premium} áreas`,
+    ])
     expect(areas.points).toBe(0)
 
     const agenda = featureCompare('agenda')
