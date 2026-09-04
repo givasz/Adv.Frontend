@@ -8,6 +8,7 @@ import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
 import { parseOab } from '@/lib/brFormat'
 import { computeTrust } from '@/lib/trustScore'
+import { profileUrlLabel } from '@/lib/publicUrl'
 import { AREA_LABEL_MAX, CHAR_LIMITS } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -573,8 +574,8 @@ const FACTOR_DEST: Record<string, string> = {
 }
 
 // Tela final — o momento de orgulho vira o momento de upsell. Mostra o perfil no
-// ar (rápido), o quão completo está + como melhorar, e a vitrine de planos (todos
-// ativáveis grátis em teste). Mobile-first, sóbrio, mas puxando o "levante" do perfil.
+// ar (rápido), o quão completo está + como melhorar, e a vitrine de planos.
+// Mobile-first, sóbrio, mas puxando o "levante" do perfil.
 function DoneScreen({
   profile,
   intent = null,
@@ -617,7 +618,10 @@ function DoneScreen({
               <p className="truncate text-[12.5px] text-ink-soft">
                 {profile.headline || firstArea || 'Advogado(a)'}
               </p>
-              <p className="mt-0.5 truncate text-[11.5px] text-ink-faint">advoc.me/{profile.slug}</p>
+              {/* O endereço REAL (lib/publicUrl.ts) — "advoc.me/…" era um link que
+                  não abria, e é daqui que a pessoa copia para mandar ao primeiro
+                  cliente. */}
+              <p className="mt-0.5 truncate text-[11.5px] text-ink-faint">{profileUrlLabel(profile.slug)}</p>
             </div>
           </div>
           <Link
@@ -669,20 +673,20 @@ function DoneScreen({
           </div>
         </div>
 
-        {/* Vitrine de planos — todos liberados em teste */}
+        {/* Vitrine de planos — cada tópico mostra a prova do que muda */}
         <div className="mt-8">
           <div className="flex items-center justify-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11.5px] font-semibold text-brass-deep">
               <SparkIcon width={13} height={13} />
-              Em teste · todos os planos liberados
+              Planos Pro e Max
             </span>
           </div>
           <h2 className="mt-3 text-center font-display text-[21px] font-semibold text-ink">
             Desbloqueie mais no seu perfil
           </h2>
           <p className="mx-auto mt-1.5 max-w-sm text-center text-[13.5px] leading-relaxed text-ink-soft">
-            Cada tópico é uma melhoria concreta — seu nome sem número, seu domínio e mais. Ative agora,
-            sem pagar.
+            Cada tópico é uma melhoria concreta — seu nome sem número no endereço, agendamento
+            pelo perfil e mais. Cobrança mensal, sem fidelidade.
           </p>
           <div className="mt-5">
             <UpgradeTopics profile={profile} initial={intent} />

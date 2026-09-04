@@ -11,17 +11,25 @@
 // libera. Copy que mente para de compilar verde.
 
 import { describe, expect, it } from 'vitest'
-import { PLAN_OFFERS, offerOf, avisoDeCobranca, COBRANCA_ATIVA } from './planOffer'
+import {
+  PLAN_COMPARE,
+  PLAN_OFFERS,
+  REGRAS_DE_COBRANCA,
+  offerOf,
+  type CompareRow,
+} from './planOffer'
 import {
   AREA_LIMIT,
   CHAR_LIMITS,
   FAQ_LIMIT,
   FIRM_PRICING,
   canUseDigitalCard,
+  canUseFaq,
   canUsePrintCard,
   canUseScheduling,
   canUseVideo,
 } from './plans'
+import { canUseAi } from './aiFeatures'
 import { THEMES, isThemeUnlocked } from './themes'
 
 const textos = (id: Parameters<typeof offerOf>[0]) =>
@@ -132,13 +140,83 @@ describe('linguagem: vendemos o perfil, não captação de clientes', () => {
   })
 })
 
-describe('o preço mostrado bate com o que o checkout cobra', () => {
-  it('enquanto a cobrança está desligada, a home avisa', () => {
-    // O checkout já dizia "Total hoje: R$ 0,00"; a home anunciava R$ 19 e ficava
-    // calada. Duas telas discordando sobre dinheiro é o pior lugar para haver
-    // surpresa — e a verdade, aqui, é a oferta mais forte que existe.
-    expect(COBRANCA_ATIVA).toBe(false)
-    expect(avisoDeCobranca()).toMatch(/sem cobrança/i)
+describe('a oferta não fala em "grátis nos testes"', () => {
+  // Existiu um selo "R$ 0 hoje — sem cobrança nos testes" ao lado do preço. Saiu
+  // porque o provedor de pagamento está a caminho: a oferta que a pessoa lê hoje
+  // tem de ser a mesma que ela vai pagar amanhã. O único lugar que fala do
+  // pagamento ainda não estar ligado é o checkout — e só enquanto for verdade.
+  const tudo = [
+    ...PLAN_OFFERS.flatMap((o) => [o.pitch, o.period, ...o.items.map((i) => i.text), ...(o.falta ?? [])]),
+    ...REGRAS_DE_COBRANCA,
+    ...PLAN_COMPARE.flatMap((g) => g.rows.flatMap((r) => [r.label, r.hint ?? '', ...Object.values(r.values).map(String)])),
+  ].join(' | ')
+
+  it('nem os cartões, nem a tabela, nem as regras de cobrança', () => {
+    expect(tudo).not.toMatch(/em teste|nos testes|sem cobrança|R\$ 0 hoje|sem pagar/i)
+  })
+
+  it('o Free continua sendo o único de graça, e diz isso pelo período', () => {
+    expect(offerOf('free').price).toBe('R$ 0')
+    expect(offerOf('free').period).toMatch(/para sempre/i)
+    expect(offerOf('pro').period).toBe('/mês')
+    expect(offerOf('premium').period).toBe('/mês')
+  })
+})
+
+describe('a tabela comparativa é calculada, não digitada', () => {
+  const linha = (re: RegExp): CompareRow => {
+    const r = PLAN_COMPARE.flatMap((g) => g.rows).find((r) => re.test(r.label))
+    if (!r) throw new Error(`linha não encontrada: ${re}`)
+    return r
+  }
+
+  it('limites numéricos batem com plans.ts', () => {
+    expect(linha(/^Áreas/).values).toEqual({
+      free: `${AREA_LIMIT.free}`,
+      pro: `${AREA_LIMIT.pro}`,
+      premium: `${AREA_LIMIT.premium}`,
+    })
+    expect(linha(/bio/i).values).toEqual({
+      free: `${CHAR_LIMITS.free.bio}`,
+      pro: `${CHAR_LIMITS.pro.bio}`,
+      premium: `${CHAR_LIMITS.premium.bio}`,
+    })
+    const faq = linha(/perguntas frequentes/i).values
+    expect(faq.free).toBe(canUseFaq('free') ? `${FAQ_LIMIT.free}` : false)
+    expect(faq.pro).toBe(`${FAQ_LIMIT.pro}`)
+    expect(faq.premium).toBe(`${FAQ_LIMIT.premium}`)
+  })
+
+  it('cada ✓ corresponde a um portão de plano que abre', () => {
+    const casos: [RegExp, (p: 'free' | 'pro' | 'premium') => boolean][] = [
+      [/agendamento/i, canUseScheduling],
+      [/QR Code/i, canUseDigitalCard],
+      [/gráfica/i, canUsePrintCard],
+      [/^Vídeo/i, canUseVideo],
+      [/frase de apresentação e revisa/i, (p) => canUseAi('headline', p)],
+      [/IA escreve a bio/i, (p) => canUseAi('bio', p)],
+    ]
+    for (const [re, portao] of casos) {
+      const r = linha(re)
+      for (const p of ['free', 'pro', 'premium'] as const) {
+        expect(r.values[p], `${r.label} · ${p}`).toBe(portao(p))
+      }
+    }
+  })
+
+  it('recurso em preparo nunca aparece como ✓', () => {
+    for (const r of PLAN_COMPARE.flatMap((g) => g.rows)) {
+      if (!r.emPreparo) continue
+      for (const v of Object.values(r.values)) expect(v).not.toBe(true)
+    }
+    expect(linha(/adv\.br/).emPreparo).toBe(true)
+  })
+
+  it('a tabela não vende captação nem urgência', () => {
+    const tudo = PLAN_COMPARE.flatMap((g) => g.rows.map((r) => `${r.label} ${r.hint ?? ''}`)).join(' | ')
+    // "cor de destaque" é a cor de realce do tema, não posição comprada — a
+    // vedação é a "apareça em destaque" / "topo da busca" do REGRAS.md.
+    expect(tudo).not.toMatch(/mais clientes|capt(e|ar|ação)|conquiste|em destaque|topo da busca|ranking|só hoje/i)
   })
 })
 

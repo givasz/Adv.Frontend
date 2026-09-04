@@ -631,9 +631,8 @@ export default function Editor() {
                   <Card title="Planos">
                     <PlanShowcase plan={profile.plan} voltar={aqui} tema={tryTheme} />
                     <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                      Plataforma em teste: a assinatura é ativada na hora e nenhuma cobrança é
-                      feita. Você pode mudar de plano quando quiser — nada do que você escreveu é
-                      apagado, e seu endereço continua o mesmo.
+                      Cobrança mensal, sem fidelidade. Você muda de plano quando quiser — nada do
+                      que você escreveu é apagado, e seu endereço continua o mesmo.
                     </p>
                   </Card>
                 </>

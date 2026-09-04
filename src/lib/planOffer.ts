@@ -21,22 +21,22 @@
 // uma fiscalização citaria, contra ele e contra a plataforma. Ver REGRAS.md.
 
 import type { Plan } from './types'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, FIRM_PRICING, precoDoPlano } from './plans'
+import { AI_MIN_PLAN } from './aiFeatures'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, FIRM_PRICING, PLAN_PRICE, precoDoPlano } from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
 
 /**
- * A cobrança está ligada?
+ * O pagamento on-line já está ligado?
  *
- * Hoje NÃO: o checkout ativa o plano e mostra "Total hoje: R$ 0,00" (ver
- * CheckoutPage). A home mostrava "R$ 19/mês" sem dizer nada disso — quem chegava
- * ao checkout descobria sozinho, e a diferença entre as duas telas é exatamente o
- * tipo de coisa que faz alguém desconfiar do resto.
+ * Hoje NÃO: o provedor de pagamento ainda está sendo integrado. Enquanto isso, o
+ * checkout ativa o plano e diz isso com todas as letras — é a ÚNICA tela que fala
+ * nesse assunto. A home, a vitrine do editor e o painel mostram os planos como
+ * eles são (preço de tabela, cobrança mensal), sem "grátis nos testes": a oferta
+ * que a pessoa lê hoje é a mesma que ela vai pagar amanhã.
  *
- * Dizer a verdade aqui também é a oferta mais forte que existe hoje, e a única
- * honesta: o plano está aberto durante os testes. Quando o pagamento entrar,
- * troque para `false` e todas as telas se ajustam sozinhas.
+ * Quando o provedor entrar, troque para `true` e o checkout deixa de avisar.
  */
-export const COBRANCA_ATIVA = false
+export const PAGAMENTO_ONLINE_DISPONIVEL = false
 
 const temaCount = (p: Plan) => THEMES.filter((t) => isThemeUnlocked(t, p)).length
 
@@ -53,7 +53,7 @@ export interface OfferItem {
 export interface PlanOffer {
   id: Plan | 'firm'
   name: string
-  /** preço de tabela (o que será cobrado quando a cobrança entrar) */
+  /** preço de tabela — o que é cobrado por mês */
   price: string
   period: string
   /** o que este plano acrescenta ao perfil, em uma linha */
@@ -122,6 +122,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: `Bio de até ${CHAR_LIMITS.free.bio} caracteres` },
       { text: 'WhatsApp, e-mail e redes sociais' },
       { text: `${temaCount('free')} temas visuais` },
+      { text: 'A IA escreve a bio e a descrição das áreas' },
     ],
     falta: [
       'Sem agendamento pelo perfil',
@@ -129,7 +130,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       'Endereço com número no fim e rodapé “criado com advoc.me”',
     ],
     ctaTo: '/comecar',
-    ctaLabel: 'Criar meu perfil grátis',
+    ctaLabel: 'Começar no Free',
   },
   {
     id: 'pro',
@@ -154,6 +155,10 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: `Até ${AREA_LIMIT.pro} áreas e bio de ${CHAR_LIMITS.pro.bio} caracteres` },
       { text: `${temaCount('pro')} dos ${THEMES.length} temas visuais` },
       { text: 'A IA também escreve sua frase de apresentação e revisa seus textos' },
+    ],
+    falta: [
+      'Sem vídeo, cartão para a gráfica e cor própria',
+      'Rodapé “criado com advoc.me” continua',
     ],
     ctaTo: '/comecar?plan=pro',
     ctaLabel: 'Assinar Pro',
@@ -208,19 +213,158 @@ export function offerOf(id: PlanOffer['id']): PlanOffer {
   return o
 }
 
-/**
- * A linha que explica o preço enquanto a cobrança não existe.
- *
- * Não é um truque de urgência: é o que o checkout já diz há semanas ("Total hoje:
- * R$ 0,00"). A home é que estava calada — e uma home que anuncia R$ 19 levando a
- * um checkout de R$ 0 não parece generosa, parece descuidada.
- */
-export function avisoDeCobranca(): string | null {
-  if (COBRANCA_ATIVA) return null
-  return 'Plataforma em teste: os planos estão abertos sem cobrança. Você ativa agora e volta ao Free quando quiser.'
+// ---- A tabela comparativa ---------------------------------------------------
+//
+// Os cartões vendem; a tabela responde. Quem está decidindo entre Pro e Max quer
+// saber "e vídeo, tem no Pro?" sem ler nove linhas de cada cartão — e a resposta
+// tem de ser a mesma que o editor vai dar depois. Por isso cada célula é
+// calculada a partir de plans.ts, themes.ts e aiFeatures.ts, e nunca digitada.
+//
+// `true` = incluído (✓), `false` = não incluído (—), texto = o valor daquele
+// plano ("6 áreas", "com número no fim").
+
+export type CompareValue = string | boolean
+
+export interface CompareRow {
+  label: string
+  /** uma linha a mais, quando o rótulo sozinho não explica */
+  hint?: string
+  values: Record<Plan, CompareValue>
+  /** recurso ainda não disponível em nenhum plano */
+  emPreparo?: boolean
 }
 
-/** Selo curto do mesmo aviso, para caber dentro do cartão do plano. */
-export function seloDeCobranca(): string | null {
-  return COBRANCA_ATIVA ? null : 'sem cobrança nos testes'
+export interface CompareGroup {
+  title: string
+  rows: CompareRow[]
+}
+
+const PLANS: Plan[] = ['free', 'pro', 'premium']
+const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
+
+/** Uma linha de "incluído a partir do plano X". */
+function aPartirDe(minimo: Plan): Record<Plan, boolean> {
+  return Object.fromEntries(PLANS.map((p) => [p, RANK[p] >= RANK[minimo]])) as Record<Plan, boolean>
+}
+
+/** Uma linha com um valor por plano, calculada. */
+function porPlano(f: (p: Plan) => CompareValue): Record<Plan, CompareValue> {
+  return Object.fromEntries(PLANS.map((p) => [p, f(p)])) as Record<Plan, CompareValue>
+}
+
+const ia = (recurso: keyof typeof AI_MIN_PLAN) => aPartirDe(AI_MIN_PLAN[recurso])
+
+export const PLAN_COMPARE: CompareGroup[] = [
+  {
+    title: 'Conteúdo do perfil',
+    rows: [
+      { label: 'Áreas de atuação', values: porPlano((p) => `${AREA_LIMIT[p]}`) },
+      {
+        label: 'Apresentação (bio)',
+        hint: 'tamanho máximo, em caracteres',
+        values: porPlano((p) => `${CHAR_LIMITS[p].bio}`),
+      },
+      {
+        label: 'Frase de apresentação',
+        hint: 'caracteres',
+        values: porPlano((p) => `${CHAR_LIMITS[p].headline}`),
+      },
+      {
+        label: 'Descrição de cada área',
+        hint: 'caracteres',
+        values: porPlano((p) => `${CHAR_LIMITS[p].areaDesc}`),
+      },
+      {
+        label: 'Perguntas frequentes respondidas',
+        values: porPlano((p) => (FAQ_LIMIT[p] > 0 ? `${FAQ_LIMIT[p]}` : false)),
+      },
+      { label: 'Vídeo de apresentação', values: aPartirDe('premium') },
+    ],
+  },
+  {
+    title: 'Contato e atendimento',
+    rows: [
+      { label: 'WhatsApp, e-mail e redes sociais', values: aPartirDe('free') },
+      {
+        label: 'Assistente de agendamento',
+        hint: 'o pedido chega pronto no seu WhatsApp',
+        values: aPartirDe('pro'),
+      },
+      { label: 'Atalho de conversa no canto do perfil', values: aPartirDe('pro') },
+      { label: 'Cartão digital (QR Code e vCard)', values: aPartirDe('pro') },
+      { label: 'Cartão de visita para a gráfica (PDF)', values: aPartirDe('premium') },
+    ],
+  },
+  {
+    title: 'Endereço e identidade visual',
+    rows: [
+      {
+        label: 'Endereço do perfil',
+        values: { free: 'com número no fim', pro: 'só o seu nome', premium: 'só o seu nome' },
+      },
+      { label: 'Temas visuais', values: porPlano((p) => `${temaCount(p)} de ${THEMES.length}`) },
+      { label: 'Cor de destaque e nome do escritório', values: aPartirDe('premium') },
+      {
+        label: 'Rodapé “criado com advoc.me”',
+        values: { free: 'aparece', pro: 'aparece', premium: 'você tira' },
+      },
+      {
+        label: 'Domínio próprio (.adv.br)',
+        values: { free: false, pro: false, premium: 'em preparo' },
+        emPreparo: true,
+      },
+    ],
+  },
+  {
+    title: 'Conformidade e apoio',
+    rows: [
+      { label: 'Checagem de conformidade antes de publicar', values: aPartirDe('free') },
+      { label: 'Link para a consulta pública do CNA', values: aPartirDe('free') },
+      { label: 'IA escreve a bio e a descrição das áreas', values: ia('bio') },
+      { label: 'IA escreve a frase de apresentação e revisa textos', values: ia('headline') },
+      {
+        label: 'IA com cidade e áreas no texto',
+        hint: 'apresentação mais completa',
+        values: aPartirDe('premium'),
+      },
+      {
+        label: 'Relatório do perfil',
+        hint: 'visitas, botões usados e horários',
+        values: aPartirDe('pro'),
+      },
+      { label: 'Comprovante de conformidade em PDF', values: aPartirDe('premium') },
+    ],
+  },
+  {
+    title: 'Sua conta',
+    rows: [
+      { label: 'Trocar de plano quando quiser', values: aPartirDe('free') },
+      { label: 'Baixar e excluir seus dados', values: aPartirDe('free') },
+      { label: 'Cartão de crédito para começar', values: { free: 'não pede', pro: true, premium: true } },
+    ],
+  },
+]
+
+// ---- Como a cobrança funciona ----------------------------------------------
+//
+// Uma lista só, lida pela home e pelo checkout — os dois lugares onde alguém
+// decide gastar dinheiro. São compromissos, não copy: cada linha tem um
+// mecanismo por trás (lib/assinatura.ts, lib/rebaixamento.ts, docs/cobranca.md)
+// e reaparece nos Termos de Uso com o mesmo sentido.
+
+export const REGRAS_DE_COBRANCA: string[] = [
+  'Cobrança mensal, sem fidelidade. Cancele quando quiser — o mês já pago vale até o fim.',
+  'Descer de plano ou voltar ao Free não apaga nada: o que exceder o novo plano fica guardado e volta se você voltar.',
+  'O endereço público do seu perfil nunca muda ao trocar de plano.',
+  'Arrependeu-se? Em até 7 dias da primeira contratação, devolvemos o valor integral.',
+  'Se a cobrança falhar, você é avisado no painel com a data — o perfil segue no ar e nada é apagado.',
+  'Os dados do cartão ficam com o provedor de pagamento, nunca conosco.',
+]
+
+/** Uma linha só, para o lugar onde não cabe a lista. */
+export const RESUMO_DA_COBRANCA = 'Cobrado por mês · cancele quando quiser'
+
+/** O preço do plano em uma frase completa, para leitores de tela e resumos. */
+export function precoMensal(plan: Exclude<Plan, 'free'>): string {
+  return `R$ ${PLAN_PRICE[plan]} por mês`
 }

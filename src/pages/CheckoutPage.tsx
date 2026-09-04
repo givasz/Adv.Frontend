@@ -5,31 +5,32 @@ import type { Plan } from '@/lib/types'
 import { api } from '@/lib/api'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { precoDoPlano } from '@/lib/plans'
+import { PAGAMENTO_ONLINE_DISPONIVEL, REGRAS_DE_COBRANCA, offerOf } from '@/lib/planOffer'
 import { getTheme, isThemeUnlocked, type ThemeId } from '@/lib/themes'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { PlanFeaturePeek } from '@/components/editor/PlanChecklist'
-import { CheckIcon, ScaleIcon } from '@/components/ui/icons'
+import { CheckIcon, ClockIcon, ScaleIcon } from '@/components/ui/icons'
 
-// Assinatura (checkout SIMULADO) — /assinar/:plano.
+// Assinatura — /assinar/:plano.
 //
 // Era um modal por cima de outro modal (o de upsell): duas camadas de sobreposição
 // numa decisão de compra, no celular, com o teclado do sistema por perto. Agora é
-// uma página: dá para voltar, dá para recarregar sem perder, e o "processando →
-// confirmado" acontece sem a tela por baixo brigando pela atenção.
+// uma página: dá para voltar, dá para recarregar sem perder, e o "ativando →
+// ativado" acontece sem a tela por baixo brigando pela atenção.
 //
-// Continua SEM cobrança (plataforma em teste). Quem grava o plano é o servidor
-// (POST /profiles/me/plan) — ver lib/api.ts.
+// Quem grava o plano é o servidor (POST /profiles/me/plan) — ver lib/api.ts.
+//
+// Sobre o pagamento: enquanto o provedor não está ligado
+// (PAGAMENTO_ONLINE_DISPONIVEL = false), ESTA é a única tela que diz isso. A home
+// e a vitrine mostram o preço de tabela e ponto; a pessoa só precisa saber que a
+// cobrança ainda não começou no momento em que está prestes a confirmar — e
+// precisa saber aqui, com todas as letras, porque é aqui que ela decide.
 
 // De plans.ts, a fonte única. O checkout é o ÚLTIMO lugar onde um preço pode
 // divergir da vitrine: quem descobre a diferença aqui descobre no pior momento.
 const PRICE: Record<Exclude<Plan, 'free'>, string> = {
   pro: precoDoPlano('pro'),
   premium: precoDoPlano('premium'),
-}
-const PROMISE: Record<Exclude<Plan, 'free'>, string> = {
-  pro: 'Assistente de agendamento, perguntas frequentes, cartão com QR e endereço sem número.',
-  premium:
-    'Tudo do Pro + vídeo no perfil, mais perguntas frequentes, domínio próprio e a sua marca no lugar da nossa.',
 }
 
 type Phase = 'checkout' | 'processing' | 'done'
@@ -51,8 +52,8 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (phase !== 'processing' || !plan) return
     let alive = true
-    // A "espera do pagamento" acontece junto com a ativação de verdade no
-    // servidor — o tempo da tela é o tempo do trabalho, não teatro puro.
+    // A espera acontece junto com a ativação de verdade no servidor — o tempo da
+    // tela é o tempo do trabalho, não teatro.
     const started = Date.now()
     api
       .setPlan(plan)
@@ -60,7 +61,7 @@ export default function CheckoutPage() {
         if (tema && isThemeUnlocked(getTheme(tema), plan) && saved.theme !== tema) {
           await api.saveDraft({ ...saved, theme: tema }).catch(() => {})
         }
-        const restante = Math.max(0, 1200 - (Date.now() - started))
+        const restante = Math.max(0, 900 - (Date.now() - started))
         setTimeout(() => alive && setPhase('done'), restante)
       })
       .catch((e) => {
@@ -76,6 +77,7 @@ export default function CheckoutPage() {
   if (!plan) return <Navigate to="/painel" replace />
 
   const label = PLAN_LABEL[plan]
+  const oferta = offerOf(plan)
   // A volta leva a notícia junto: quem recebe (o painel) comemora o que abriu.
   // É o estado da compra viajando pela URL — o que o modal fazia com useState e
   // perdia a cada recarregamento.
@@ -83,11 +85,11 @@ export default function CheckoutPage() {
 
   if (phase === 'processing') {
     return (
-      <SubPage title="Confirmando…" backTo={voltar} backLabel="Voltar" documentTitle={`Assinar ${label}`}>
+      <SubPage title="Ativando…" backTo={voltar} backLabel="Voltar" documentTitle={`Assinar ${label}`}>
         <div className="flex flex-col items-center gap-4 rounded-xl2 border border-ink/10 bg-paper px-6 py-16 text-center shadow-card">
           <div className="h-9 w-9 animate-spin rounded-full border-2 border-ink/15 border-t-burgundy" />
-          <p className="text-[14px] font-medium text-ink">Processando pagamento…</p>
-          <p className="text-[12px] text-ink-faint">Confirmando sua assinatura {label} com segurança.</p>
+          <p className="text-[14px] font-medium text-ink">Ativando seu plano {label}…</p>
+          <p className="text-[12px] text-ink-faint">Abrindo os recursos no seu perfil.</p>
         </div>
       </SubPage>
     )
@@ -95,12 +97,7 @@ export default function CheckoutPage() {
 
   if (phase === 'done') {
     return (
-      <SubPage
-        title="Assinatura confirmada!"
-        backTo={voltar}
-        backLabel="Voltar"
-        documentTitle={`${label} ativo`}
-      >
+      <SubPage title="Plano ativado" backTo={voltar} backLabel="Voltar" documentTitle={`${label} ativo`}>
         <div className="flex flex-col items-center gap-2 rounded-xl2 border border-ink/10 bg-paper px-6 py-10 text-center shadow-card">
           <motion.span
             initial={{ scale: 0.6, opacity: 0 }}
@@ -134,7 +131,7 @@ export default function CheckoutPage() {
   return (
     <SubPage
       title={`Assinar ${label}`}
-      subtitle={PROMISE[plan]}
+      subtitle={oferta.pitch}
       icon={<ScaleIcon width={18} height={18} />}
       backTo={voltar}
       backLabel="Voltar"
@@ -143,24 +140,49 @@ export default function CheckoutPage() {
       <div className="rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
         <div className="flex items-baseline justify-between gap-3 border-b border-ink/10 pb-3">
           <span className="text-[13px] font-semibold uppercase tracking-wide text-ink-faint">
-            Resumo do pedido
+            Resumo da assinatura
           </span>
-          <span className="font-display text-[22px] font-semibold text-ink">{PRICE[plan]}</span>
+          <span className="font-display text-[22px] font-semibold text-ink">
+            {PRICE[plan]}
+            <span className="ml-0.5 font-sans text-[13px] font-medium text-ink-faint">/mês</span>
+          </span>
         </div>
         <div className="flex items-center justify-between gap-3 py-3 text-[13.5px]">
-          <span className="text-ink-soft">Plano {label} · mensal</span>
-          <span className="tabular-nums text-ink">{PRICE[plan]}</span>
+          <span className="text-ink-soft">Plano {label} · renovação mensal</span>
+          <span className="tabular-nums text-ink">{PRICE[plan]},00</span>
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-ink/10 py-3 text-[14px] font-semibold">
-          <span className="text-ink">Total hoje</span>
-          <span className="tabular-nums text-brass-deep">R$ 0,00</span>
+          <span className="text-ink">Total por mês</span>
+          <span className="tabular-nums text-ink">{PRICE[plan]},00</span>
         </div>
 
-        <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink-faint">
-          <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-brass-deep/70" />
-          Plataforma em teste — nenhuma cobrança real é feita. Você ativa o plano na hora e pode
-          voltar ao Free quando quiser.
-        </p>
+        {!PAGAMENTO_ONLINE_DISPONIVEL && (
+          // A única frase do produto sobre o pagamento ainda não estar ligado.
+          // Diz o que acontece (ativa agora), quando a cobrança começa (quando o
+          // meio de pagamento existir) e como a pessoa fica sabendo (no painel,
+          // antes). Nada de "grátis": é uma assinatura cuja primeira cobrança
+          // tem data a definir, e a pessoa merece saber exatamente isso.
+          <p className="flex items-start gap-2 rounded-lg border border-brass/40 bg-brass/[0.08] px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-soft">
+            <ClockIcon width={15} height={15} className="mt-[2px] shrink-0 text-brass-deep" />
+            <span>
+              <span className="font-semibold text-ink">O pagamento on-line ainda está sendo integrado.</span>{' '}
+              Ao confirmar, o plano é ativado agora. A primeira cobrança só acontece quando o meio
+              de pagamento estiver disponível — e você é avisado no painel antes dela, com a data.
+            </span>
+          </p>
+        )}
+
+        {/* As regras da assinatura, as mesmas da home e dos Termos de Uso. Quem
+            está prestes a assinar lê aqui o que acontece se cancelar, se descer
+            de plano, se se arrepender — sem precisar procurar. */}
+        <ul className="mt-4 space-y-1.5 border-t border-ink/10 pt-3.5">
+          {REGRAS_DE_COBRANCA.map((r) => (
+            <li key={r} className="flex items-start gap-2 text-[12px] leading-relaxed text-ink-faint">
+              <CheckIcon width={13} height={13} strokeWidth={2.4} className="mt-[3px] shrink-0 text-brass-deep" />
+              {r}
+            </li>
+          ))}
+        </ul>
 
         {error && (
           <p
@@ -185,6 +207,13 @@ export default function CheckoutPage() {
         >
           Agora não
         </button>
+        <p className="mt-3 text-center text-[11.5px] leading-relaxed text-ink-faint">
+          Ao confirmar você aceita os{' '}
+          <a href="/legal/termos" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            Termos de Uso
+          </a>
+          , inclusive as condições de cobrança e cancelamento.
+        </p>
       </div>
     </SubPage>
   )

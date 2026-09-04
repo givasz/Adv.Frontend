@@ -2,7 +2,15 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
-import { PLAN_OFFERS, avisoDeCobranca, seloDeCobranca, type PlanOffer } from '@/lib/planOffer'
+import {
+  PLAN_COMPARE,
+  PLAN_OFFERS,
+  REGRAS_DE_COBRANCA,
+  RESUMO_DA_COBRANCA,
+  type CompareValue,
+  type PlanOffer,
+} from '@/lib/planOffer'
+import { PLAN_LABEL } from '@/lib/upsell'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -18,6 +26,7 @@ import {
   LockIcon,
   MessageIcon,
   ScaleIcon,
+  ShieldIcon,
   SparkIcon,
   WhatsappIcon,
 } from '@/components/ui/icons'
@@ -140,10 +149,7 @@ export default function Landing() {
               {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
               className="btn-primary"
             >
-              {/* "grátis" só faz sentido para quem ainda não tem conta. */}
-              {meu.to === '/comecar' && meu.label === 'Criar meu perfil'
-                ? 'Criar meu perfil grátis'
-                : meu.label}
+              {meu.label}
               <ArrowRight width={18} height={18} />
             </Link>
             <Link to={`/${sampleProfile.slug}`} className="btn-ghost">
@@ -158,8 +164,8 @@ export default function Landing() {
             animate="show"
             className="mt-4 text-[13.5px] text-ink-faint"
           >
-            <span className="font-semibold text-ink">Pronto em minutos</span> · grátis · sem cartão ·
-            não é aconselhamento jurídico
+            <span className="font-semibold text-ink">Pronto em minutos</span> · comece no Free, sem
+            cartão · não é aconselhamento jurídico
           </motion.p>
         </div>
 
@@ -252,16 +258,16 @@ export default function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
           <div>
             <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
-              Assistente virtual
+              Assistente virtual · planos Pro e Max
             </p>
             <h2 className="mt-2 max-w-lg font-display text-3xl font-semibold leading-tight sm:text-4xl">
-              Um assistente marca a conversa
+              Um assistente organiza a conversa
               <span className="italic text-burgundy"> enquanto você atua.</span>
             </h2>
             <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
               Quem chega ao seu perfil conversa com o seu assistente virtual: ele oferece{' '}
               <span className="font-medium text-ink">apenas os dias e horários que você marcou</span>,
-              pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Você só confirma.
+              pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Quem confirma é você.
             </p>
 
             <ul className="mt-7 grid gap-4 sm:grid-cols-2">
@@ -279,7 +285,7 @@ export default function Landing() {
                 {
                   icon: <WhatsappIcon width={18} height={18} />,
                   title: 'Cai no seu WhatsApp',
-                  body: 'Dia, horário, formato e assunto chegam organizados em uma única mensagem.',
+                  body: 'Dia, horário, formato e assunto chegam organizados em uma única mensagem — direto do aparelho de quem pediu, sem passar por nós.',
                 },
                 {
                   icon: <ScaleIcon width={18} height={18} />,
@@ -380,7 +386,7 @@ export default function Landing() {
               <LockIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
               <p className="text-[14px] leading-relaxed text-ink-soft">
                 <span className="font-semibold text-ink">Trilha de auditoria.</span> Cada versão
-                registra a data e a política vigente — exportável em PDF como comprovante de
+                registra a data e a política vigente — no Max, exportável em PDF como comprovante de
                 conformidade.
               </p>
             </div>
@@ -401,26 +407,101 @@ export default function Landing() {
       </Section>
 
       {/* Planos */}
-      <section id="planos" className="mx-auto max-w-6xl px-5 py-12">
-        <h2 className="text-center font-display text-3xl font-semibold sm:text-4xl">
-          Planos que crescem com você
+      <section id="planos" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-12">
+        <p className="text-center text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
+          Planos
+        </p>
+        <h2 className="mx-auto mt-2 max-w-2xl text-center font-display text-3xl font-semibold leading-tight sm:text-4xl">
+          Planos claros, sem letra miúda.
         </h2>
-        {/* O aviso de cobrança vem ANTES dos preços, não depois.
-            Abaixo dos cartões ele seria uma letra miúda que a pessoa lê quando já
-            decidiu não assinar; acima, ele é o motivo de continuar lendo. E é a
-            mesma frase que o checkout já mostrava — a home é que estava calada. */}
-        {avisoDeCobranca() && (
-          <p className="mx-auto mt-4 max-w-xl text-center text-[14px] leading-relaxed text-ink-soft">
-            <span className="font-semibold text-brass-deep">Em testes:</span>{' '}
-            {avisoDeCobranca()!.replace('Plataforma em teste: os', 'Os')}
-          </p>
-        )}
+        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-ink-soft">
+          O que cada plano inclui — e o que não inclui — está escrito abaixo, e é o mesmo que você
+          encontra no editor depois. Preço por mês, sem fidelidade.
+        </p>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {PLAN_OFFERS.map((oferta) => (
             <PlanCard key={oferta.id} oferta={oferta} />
           ))}
         </div>
+
+        {/* A tabela responde o que os cartões não cabem: "vídeo tem no Pro?",
+            "quantos caracteres a bio aceita no Free?". Cada célula vem de
+            lib/planOffer.ts, calculada dos mesmos limites que o editor aplica. */}
+        <div className="mx-auto mt-14 max-w-4xl">
+          <h3 className="text-center font-display text-2xl font-semibold text-ink sm:text-3xl">
+            Compare em detalhe
+          </h3>
+          <p className="mx-auto mt-2 max-w-lg text-center text-[14px] leading-relaxed text-ink-soft">
+            Os números são os mesmos limites que o editor aplica. O plano Escritório inclui o Pro
+            completo para cada advogado da equipe.
+          </p>
+          <div className="mt-6">
+            <CompareTable />
+          </div>
+        </div>
+
+        {/* Como a cobrança funciona — ANTES de a pessoa clicar em assinar, não
+            depois. As linhas são as mesmas do checkout e dos Termos de Uso. */}
+        <div className="mx-auto mt-10 max-w-4xl rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6 sm:p-7">
+          <div className="flex items-start gap-3">
+            <ShieldIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
+            <div>
+              <h3 className="font-display text-xl font-semibold text-ink">Como funciona a cobrança</h3>
+              <p className="mt-1 text-[13.5px] text-ink-soft">
+                O que vale para os planos pagos, escrito antes de você assinar.
+              </p>
+            </div>
+          </div>
+          <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+            {REGRAS_DE_COBRANCA.map((r) => (
+              <li key={r} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-ink-soft">
+                <CheckIcon width={15} height={15} strokeWidth={2.4} className="mt-[3px] shrink-0 text-brass-deep" />
+                {r}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-[12.5px] text-ink-faint">
+            As condições completas estão nos{' '}
+            <Link to="/legal/termos" className="font-medium underline underline-offset-2 hover:text-ink">
+              Termos de Uso
+            </Link>
+            .
+          </p>
+        </div>
       </section>
+
+      {/* O que não fazemos — transparência como argumento, não como rodapé */}
+      <Section eyebrow="Transparência" title="O que o advoc.me não faz.">
+        <p className="mx-auto mb-8 max-w-2xl text-center text-[15px] leading-relaxed text-ink-soft">
+          Numa profissão em que a divulgação tem regra, o que a plataforma se recusa a fazer diz tanto
+          quanto o que ela faz.
+        </p>
+        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
+          {[
+            {
+              title: 'Não vendemos destaque',
+              body: 'Não há ranking, busca paga, selo ou posição comprada. Plano nenhum coloca um advogado na frente de outro.',
+            },
+            {
+              title: 'Não guardamos dado de visitante',
+              body: 'Quem escreve para você pelo perfil manda a mensagem do próprio aparelho para o seu WhatsApp. Ela não passa por nós, e não sabemos quem foi.',
+            },
+            {
+              title: 'Não fingimos verificar',
+              body: 'Nenhum selo de “verificado”. Todo perfil, de qualquer plano, leva à consulta pública do CNA — quem quiser confere na fonte.',
+            },
+            {
+              title: 'Não vendemos dados nem rastreamos',
+              body: 'Sem cookies de publicidade, sem perfil de comportamento, sem venda de dados. Você baixa e exclui o que guardamos, quando quiser.',
+            },
+          ].map((c) => (
+            <Panel key={c.title}>
+              <h3 className="font-display text-lg font-semibold text-ink">{c.title}</h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{c.body}</p>
+            </Panel>
+          ))}
+        </div>
+      </Section>
 
       {/* FAQ */}
       <Section eyebrow="Dúvidas frequentes" title="Perguntas frequentes">
@@ -440,7 +521,7 @@ export default function Landing() {
           <span className="italic text-burgundy">que respeita a profissão.</span>
         </h2>
         <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
-          Comece grátis. Um perfil sóbrio, claro e conferido antes de ir ao ar.
+          Comece no Free. Um perfil sóbrio, claro e conferido antes de ir ao ar.
         </p>
         <Link
           to={meu.to}
@@ -459,9 +540,18 @@ export default function Landing() {
               {d.navLabel}
             </Link>
           ))}
+          <Link to="/legal" className="hover:text-ink">
+            Todos os documentos
+          </Link>
         </nav>
         <p>advoc.me · perfis em conformidade com o Provimento 205/2021 do CFOAB</p>
         <p className="mt-1">Não constitui aconselhamento jurídico. Não filiado à OAB.</p>
+        <p className="mt-3 text-[12px] text-ink-faint/80">
+          © {new Date().getFullYear()} advoc.me · Dúvidas sobre os seus dados: veja a{' '}
+          <Link to="/legal/privacidade" className="underline underline-offset-2 hover:text-ink">
+            Política de Privacidade
+          </Link>
+        </p>
       </footer>
     </div>
   )
@@ -542,8 +632,20 @@ const FAQ: { q: string; a: string }[] = [
     a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, pergunta o assunto e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua.',
   },
   {
-    q: 'Posso usar de graça?',
-    a: 'Sim. O plano Free publica um perfil completo e em conformidade, sem cartão e para sempre. Os planos pagos acrescentam agendamento pelo perfil, perguntas frequentes, identidade visual própria e a contagem de visitas — e você troca de plano ou volta ao Free quando quiser.',
+    q: 'O plano Free é grátis mesmo?',
+    a: 'Sim, e para sempre: publica um perfil completo e em conformidade, sem cartão. O que ele não tem está escrito no próprio cartão do plano — agendamento pelo perfil, perguntas frequentes e o endereço sem número são dos planos pagos.',
+  },
+  {
+    q: 'Como funciona a cobrança dos planos pagos?',
+    a: 'Cobrança mensal, sem fidelidade, no valor que está na tabela. Você cancela quando quiser e o mês já pago vale até o fim. Em até 7 dias da primeira contratação, o valor é devolvido integralmente se você se arrepender.',
+  },
+  {
+    q: 'O que acontece com meus textos se eu descer de plano ou cancelar?',
+    a: 'Nada é apagado. O que exceder o novo plano — áreas, perguntas, vídeo, marca — sai da página mas fica guardado, e volta se você voltar. O endereço público do perfil nunca muda.',
+  },
+  {
+    q: 'Vocês guardam dados de quem visita o meu perfil?',
+    a: 'Não. A mensagem de contato ou o pedido de horário sai do aparelho do visitante direto para o seu WhatsApp; não passa por nós. Contamos apenas quantas vezes o perfil foi aberto e quais botões foram usados — acontecimentos, nunca pessoas.',
   },
   {
     q: 'O que acontece se eu escrever algo fora das normas?',
@@ -558,8 +660,7 @@ const FAQ: { q: string; a: string }[] = [
  */
 function PlanCard({ oferta }: { oferta: PlanOffer }) {
   const { name, price, period, pitch, items, falta, featured, ctaTo, ctaLabel } = oferta
-  const selo = seloDeCobranca()
-  const pago = oferta.id === 'pro' || oferta.id === 'premium'
+  const pago = oferta.id !== 'free'
 
   return (
     <div
@@ -571,7 +672,7 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
     >
       {featured && (
         <span className="absolute -top-3 left-6 rounded-full bg-brass px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ink">
-          Mais popular
+          Mais escolhido
         </span>
       )}
       <h3 className="font-display text-2xl font-semibold">{name}</h3>
@@ -581,15 +682,10 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
           {period}
         </span>
       </p>
-      {/* O preço de tabela fica, e ao lado dele a verdade de hoje. Riscar o valor
-          seria teatro de desconto; dizer o que se paga agora é informação. */}
-      {pago && selo && (
-        <p
-          className={`mt-1.5 text-[12px] font-semibold ${
-            featured ? 'text-brass-light' : 'text-brass-deep'
-          }`}
-        >
-          R$ 0 hoje — {selo}
+      {/* Ao lado do preço, como a cobrança funciona — em uma linha. */}
+      {pago && (
+        <p className={`mt-1.5 text-[12px] font-medium ${featured ? 'text-paper/75' : 'text-ink-faint'}`}>
+          {RESUMO_DA_COBRANCA}
         </p>
       )}
       <p
@@ -648,12 +744,19 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
       {/* O que o plano NÃO tem. Quem escolhe o Free precisa descobrir aqui que
           não há agendamento — e não meia hora depois, procurando no editor. */}
       {falta && falta.length > 0 && (
-        <ul className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-[13px] leading-snug">
+        <ul
+          className={`mt-4 space-y-2 border-t pt-4 text-[13px] leading-snug ${
+            featured ? 'border-paper/15' : 'border-ink/10'
+          }`}
+        >
           {falta.map((f) => (
-            <li key={f} className="flex items-start gap-2.5 text-ink-faint">
+            <li
+              key={f}
+              className={`flex items-start gap-2.5 ${featured ? 'text-paper/65' : 'text-ink-faint'}`}
+            >
               <span
                 aria-hidden
-                className="mt-[7px] h-px w-3 shrink-0 bg-ink/25"
+                className={`mt-[7px] h-px w-3 shrink-0 ${featured ? 'bg-paper/40' : 'bg-ink/25'}`}
               />
               {f}
             </li>
@@ -684,7 +787,7 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
           </Link>
         )}
         {/* Tirar o medo de errar a escolha é o que destrava a decisão: trocar de
-            plano não custa nada e não apaga o que já foi escrito. */}
+            plano não apaga o que já foi escrito. */}
         {pago && (
           <p
             className={`mt-3 text-center text-[11.5px] leading-relaxed ${
@@ -697,4 +800,109 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
       </div>
     </div>
   )
+}
+
+const COMPARE_PLANS = ['free', 'pro', 'premium'] as const
+
+/**
+ * A tabela comparativa. No celular ela rola na horizontal dentro da própria
+ * moldura (a página nunca rola de lado), com a coluna do recurso presa à
+ * esquerda para a pessoa não perder de vista o que está comparando.
+ */
+function CompareTable() {
+  return (
+    <>
+      {/* No celular só a primeira coluna de plano cabe na tela; sem esta linha
+          a pessoa não sabe que Pro e Max estão logo à direita. Some a partir de
+          sm, onde a tabela inteira cabe. */}
+      <p className="mb-2 text-center text-[12px] text-ink-faint sm:hidden">
+        Deslize a tabela para o lado para ver Pro e Max
+      </p>
+      <div className="overflow-x-auto rounded-xl2 border border-ink/10 bg-paper-soft/60">
+      <table className="w-full min-w-[520px] border-collapse text-left text-[13.5px]">
+        <thead>
+          <tr className="border-b border-ink/10">
+            <th
+              scope="col"
+              className="sticky left-0 z-10 bg-paper-soft px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-ink-faint"
+            >
+              Recurso
+            </th>
+            {COMPARE_PLANS.map((p) => (
+              <th
+                key={p}
+                scope="col"
+                className={`px-3 py-3 text-center font-display text-[16px] font-semibold ${
+                  p === 'pro' ? 'bg-burgundy/[0.05] text-burgundy' : 'text-ink'
+                }`}
+              >
+                {PLAN_LABEL[p]}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {PLAN_COMPARE.map((g) => (
+          <tbody key={g.title}>
+            <tr>
+              <th
+                scope="colgroup"
+                colSpan={1 + COMPARE_PLANS.length}
+                className="sticky left-0 bg-paper-soft px-4 pb-1.5 pt-4 text-left text-[11.5px] font-semibold uppercase tracking-[0.12em] text-brass-deep"
+              >
+                {g.title}
+              </th>
+            </tr>
+            {g.rows.map((r) => (
+              <tr key={r.label} className="border-t border-ink/[0.07]">
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 bg-paper-soft px-4 py-2.5 text-left font-normal text-ink"
+                >
+                  {r.label}
+                  {r.hint && <span className="block text-[11.5px] text-ink-faint">{r.hint}</span>}
+                </th>
+                {COMPARE_PLANS.map((p) => (
+                  <td
+                    key={p}
+                    className={`px-3 py-2.5 text-center tabular-nums ${
+                      p === 'pro' ? 'bg-burgundy/[0.05]' : ''
+                    }`}
+                  >
+                    <CompareCell value={r.values[p]} emPreparo={r.emPreparo} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+      </div>
+    </>
+  )
+}
+
+function CompareCell({ value, emPreparo }: { value: CompareValue; emPreparo?: boolean }) {
+  if (value === true) {
+    return (
+      <span className="inline-flex items-center justify-center text-brass-deep" aria-label="incluído">
+        <CheckIcon width={17} height={17} strokeWidth={2.6} />
+      </span>
+    )
+  }
+  if (value === false) {
+    return (
+      <span className="text-ink-faint/70" aria-label="não incluído">
+        —
+      </span>
+    )
+  }
+  if (emPreparo) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint">
+        <ClockIcon width={13} height={13} />
+        {value}
+      </span>
+    )
+  }
+  return <span className="text-ink-soft">{value}</span>
 }

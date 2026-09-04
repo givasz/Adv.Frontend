@@ -1,12 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import { PLAN_LABEL } from '@/lib/upsell'
-import { offerOf, seloDeCobranca } from '@/lib/planOffer'
+import { offerOf, RESUMO_DA_COBRANCA } from '@/lib/planOffer'
 import { CheckIcon, ClockIcon } from '@/components/ui/icons'
 
-// Vitrine de planos. O CTA leva à PÁGINA de assinatura (/assinar/:plano), um
-// checkout de mentira que parece de verdade — sem cobrança, e sem modal.
-// Durante os testes todos os planos ficam liberados.
+// Vitrine de planos. O CTA leva à PÁGINA de assinatura (/assinar/:plano), sem
+// modal. É o checkout quem diz em que pé está o pagamento — aqui só a oferta.
 //
 // Preço, pitch e benefícios vêm de lib/planOffer.ts — a MESMA fonte da home.
 // Enquanto esta tela mantinha a própria lista, ela e a home discordavam sobre o
@@ -136,7 +135,7 @@ export function PlanShowcase({
                       </Link>
                     )}
                     {p !== 'free' && RANK[p] > RANK[plan] && (
-                      <p className="mt-1.5 text-center text-[11px] text-ink-faint">{seloDeCobranca() ?? 'cobrança mensal'}</p>
+                      <p className="mt-1.5 text-center text-[11px] text-ink-faint">{RESUMO_DA_COBRANCA}</p>
                     )}
                   </>
                 )}

@@ -232,18 +232,19 @@ export default function Painel() {
           </>
         )}
 
-        {/* Planos — vitrine atraente com ativação simulada (em teste, sem cobrança) */}
+        {/* Planos — cada tópico mostra a prova do que muda; o checkout faz o resto */}
         {profile.plan !== 'premium' && (
           <section className="mt-10 rounded-xl2 border border-brass/25 bg-gradient-to-b from-brass/[0.06] to-transparent p-5 sm:p-6">
             <div className="text-center">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11.5px] font-semibold text-brass-deep">
-                Em teste · todos os planos liberados
+                Planos Pro e Max
               </span>
               <h2 className="mt-3 font-display text-[22px] font-semibold text-ink">
                 Leve seu perfil além
               </h2>
               <p className="mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed text-ink-soft">
-                Cada tópico é uma melhoria concreta no seu perfil. Ative agora, sem pagar.
+                Cada tópico é uma melhoria concreta no seu perfil. Cobrança mensal, troque ou
+                cancele quando quiser.
               </p>
             </div>
             <div className="mt-5">
