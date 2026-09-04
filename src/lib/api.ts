@@ -694,29 +694,51 @@ export const api = {
   // tela jamais a chamou, e o backend removeu a rota (A02 — remover o que não se
   // usa). Se a busca pública nascer um dia, os dois renascem juntos, do git.
 
-  async generate(req: GenerateRequest): Promise<GenerateResult> {
-    // Usa a IA do backend quando (a) estamos em modo real, ou (b) há um backend
-    // configurado (VITE_API_URL) — assim o front no Netlify usa o Claude via Render
-    // mesmo com os perfis em localStorage. Sem backend (dev), cai no Ollama/template.
+  /**
+   * Pede um texto à IA.
+   *
+   * O que acontece quando dá errado (04/09/2026) — antes, TUDO virava template
+   * em silêncio, inclusive a mensagem do limite de gerações que o backend
+   * escreve para a pessoa ler:
+   *
+   *   • o backend respondeu e disse NÃO (4xx: limite de gerações, plano sem o
+   *     recurso, pedido inválido) → a mensagem dele sobe como erro, e o painel
+   *     mostra. Não há texto a inventar aqui: a pessoa precisa saber o motivo;
+   *   • o backend caiu ou o proxy cortou (5xx, rede) → template local com
+   *     `usedFallback`, e o painel avisa que a IA não respondeu;
+   *   • o backend respondeu com template (`usedFallback` dele) → idem, avisa;
+   *   • a pessoa cancelou (`signal`) → o AbortError sobe e o painel só volta.
+   */
+  async generate(req: GenerateRequest, signal?: AbortSignal): Promise<GenerateResult> {
     if (USE_REAL_API) {
+      let res: Response
       try {
-        const res = await apiFetch('/api/ai/generate', {
+        res = await apiFetch('/api/ai/generate', {
           method: 'POST',
           // A sessão (cookie) vai junto porque é ela que prova o plano: o backend
           // decide o que cada plano gera a partir da assinatura no banco, nunca do
           // `plan` que vier no corpo (ver backend/src/ai/ai.controller.ts).
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(req),
+          signal,
         })
-        if (res.ok) {
-          // O teto é reaplicado aqui: o backend já corta, mas o texto que chega ao
-          // editor NUNCA pode estourar o limite do campo — é isso que trava o save.
-          const data = (await res.json()) as GenerateResult
-          return { ...data, text: fitToLimit(data.text, req.maxChars ?? 0) }
-        }
-      } catch {
-        /* backend indisponível → cai para Ollama/template abaixo */
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') throw err
+        // Rede caída: nem chegou ao servidor. Template local, com aviso.
+        return templateLocal(req)
       }
+      if (res.ok) {
+        // O teto é reaplicado aqui: o backend já corta, mas o texto que chega ao
+        // editor NUNCA pode estourar o limite do campo — é isso que trava o save.
+        const data = (await res.json()) as GenerateResult
+        return { ...data, text: fitToLimit(data.text, req.maxChars ?? 0) }
+      }
+      if (res.status >= 400 && res.status < 500) {
+        const msg = (await res.text().catch(() => '')).trim()
+        throw new Error(mensagemDoServidor(msg) || 'A IA não pôde atender este pedido agora.')
+      }
+      // 5xx — inclusive o 502/504 do proxy quando o backend demora demais.
+      return templateLocal(req)
     }
     // ---- IA local (Ollama) com fallback para o gerador por template ----
     let text: string
@@ -744,6 +766,32 @@ export const api = {
       policyVersion: POLICY_VERSION,
     }
   },
+}
+
+/** O template montado no navegador quando a IA não respondeu — com a bandeira ligada. */
+function templateLocal(req: GenerateRequest): GenerateResult {
+  const text = fitToLimit(draftText(req), req.maxChars ?? 0)
+  return {
+    text,
+    complianceNotes: checkCompliance(text).map((i) => i.reason),
+    usedFallback: true,
+    policyVersion: POLICY_VERSION,
+  }
+}
+
+/**
+ * A frase que o backend escreveu para a pessoa, tirada do envelope do Nest
+ * (`{"statusCode":429,"message":"..."}`) — ou o corpo cru, se não for JSON.
+ */
+function mensagemDoServidor(corpo: string): string {
+  if (!corpo) return ''
+  try {
+    const j = JSON.parse(corpo) as { message?: string | string[] }
+    const m = Array.isArray(j.message) ? j.message[0] : j.message
+    return typeof m === 'string' ? m : ''
+  } catch {
+    return corpo.length <= 200 ? corpo : ''
+  }
 }
 
 // Composição de rascunho OAB-safe a partir de palavras-chave.

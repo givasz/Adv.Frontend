@@ -27,6 +27,9 @@ interface AiGeneratorProps {
   onClose: () => void
 }
 
+/** Quando a espera passa a merecer um aviso e um botão de parar. */
+const AVISO_DEMORA_MS = 8_000
+
 const TITLES: Record<GenerateKind, string> = {
   bio: 'Gerar bio',
   area: 'Descrição da área',
@@ -66,6 +69,16 @@ export function AiGenerator({
   const [draft, setDraft] = useState('')
   const [typed, setTyped] = useState('') // efeito "IA digitando" (revela o texto aos poucos)
   const [typing, setTyping] = useState(false)
+  // O que a pessoa precisa saber quando NÃO deu certo (04/09/2026). Antes, toda
+  // falha virava um texto genérico digitado letra por letra como se fosse a IA —
+  // e ninguém tinha por que tentar de novo.
+  //   erro       — o servidor disse não (limite de gerações, plano): a frase dele.
+  //   fallback   — a IA não respondeu e o texto abaixo é um modelo-base.
+  //   demorando  — passou do tempo normal; dá para parar.
+  const [erro, setErro] = useState('')
+  const [fallback, setFallback] = useState(false)
+  const [demorando, setDemorando] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
   // Painel EM LINHA, não modal. O gerador é a ferramenta mais usada de quem está
   // montando o perfil; abrir uma janela por cima escondia justamente o campo que
   // ia receber o texto, prendia o foco e, no celular, brigava com o teclado.
@@ -112,27 +125,61 @@ export function AiGenerator({
       .map((k) => k.trim())
       .filter(Boolean)
     if (needsKeywords && !list.length) return
+    abortRef.current?.abort()
+    const abortar = new AbortController()
+    abortRef.current = abortar
     setLoading(true)
+    setDemorando(false)
+    setErro('')
+    setFallback(false)
     setTyping(false)
     setTyped('')
     setDraft('')
+    // O backend responde em 1–4 s no caso normal. Aos 8 s a espera deixou de ser
+    // normal, e a pessoa merece saber que está sendo tentado outro caminho — e
+    // que pode parar. O teto de verdade (22 s + proxy) continua no backend.
+    const relogio = setTimeout(() => setDemorando(true), AVISO_DEMORA_MS)
     try {
-      const res = await api.generate({
-        kind,
-        keywords: list,
-        areaLabel,
-        name,
-        plan,
-        city,
-        areas,
-        currentText,
-        maxChars: limit,
-      })
+      const res = await api.generate(
+        {
+          kind,
+          keywords: list,
+          areaLabel,
+          name,
+          plan,
+          city,
+          areas,
+          currentText,
+          maxChars: limit,
+        },
+        abortar.signal,
+      )
+      if (abortar.signal.aborted) return
+      setFallback(!!res.usedFallback)
       startReveal(res.text)
+    } catch (err) {
+      if (abortar.signal.aborted || (err as Error)?.name === 'AbortError') return
+      setErro((err as Error)?.message || 'A IA não respondeu. Tente de novo em instantes.')
     } finally {
-      setLoading(false)
+      clearTimeout(relogio)
+      if (abortRef.current === abortar) {
+        abortRef.current = null
+        setLoading(false)
+        setDemorando(false)
+      }
     }
   }
+
+  /** "Parar": aborta a chamada em curso e devolve o painel ao estado de antes. */
+  function parar() {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
+    setDemorando(false)
+  }
+
+  // Fechar o painel no meio de uma geração não deixa a chamada pendurada.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const title = kind === 'area' && areaLabel ? `Descrição — ${areaLabel}` : TITLES[kind]
 
@@ -208,6 +255,35 @@ export function AiGenerator({
           </div>
         )}
 
+        {/* O servidor disse não (limite de gerações, plano). A frase é dele. */}
+        {!loading && erro && (
+          <div
+            role="alert"
+            className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-burgundy/30 bg-burgundy/5 p-3 text-[12.5px] text-burgundy-deep"
+          >
+            <span>{erro}</span>
+            <button type="button" onClick={run} className="btn-ghost !px-3 !py-1 text-[12.5px]">
+              Tentar de novo
+            </button>
+          </div>
+        )}
+
+        {/* A IA não respondeu: o texto abaixo é um modelo-base, e a pessoa sabe. */}
+        {!loading && fallback && draft && (
+          <div
+            role="status"
+            className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brass/40 bg-brass/10 p-3 text-[12.5px] text-brass-deep"
+          >
+            <span>
+              A IA não conseguiu redigir agora. Este é um texto-base, dentro das normas — edite à
+              vontade ou tente de novo em instantes.
+            </span>
+            <button type="button" onClick={run} className="btn-ghost !px-3 !py-1 text-[12.5px]">
+              Tentar de novo
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div
@@ -217,8 +293,12 @@ export function AiGenerator({
               exit={{ opacity: 0 }}
               className="mt-4 space-y-2.5"
             >
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-brass-deep">
-                A IA está redigindo
+              <p
+                className="flex items-center gap-1.5 text-[13px] font-medium text-brass-deep"
+                role="status"
+                aria-live="polite"
+              >
+                {demorando ? 'Está demorando mais que o normal' : 'A IA está redigindo'}
                 <span className="inline-flex gap-0.5">
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brass-deep [animation-delay:-0.25s]" />
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brass-deep [animation-delay:-0.12s]" />
@@ -228,6 +308,14 @@ export function AiGenerator({
               {[100, 92, 78].map((w) => (
                 <div key={w} className="h-3.5 animate-pulse rounded bg-ink/10" style={{ width: `${w}%` }} />
               ))}
+              {demorando && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12.5px] text-ink-faint">
+                  <span>Estamos tentando outro caminho. Você pode esperar ou parar.</span>
+                  <button type="button" onClick={parar} className="btn-ghost !px-3 !py-1 text-[12.5px]">
+                    Parar
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 
