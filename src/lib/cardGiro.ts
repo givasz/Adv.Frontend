@@ -26,6 +26,12 @@ export const TOQUE_MAX_PX = 5
  * Um puxão rápido e curto ainda vira o cartão; um arrasto lento e curto volta.
  */
 export const INERCIA_MS = 140
+/**
+ * Teto do que a inércia acrescenta, em graus. Fica ABAIXO de 90 de propósito: se
+ * o cartão foi solto logo depois de passar de uma face, a inércia pode levá-lo
+ * até ela, nunca pular por cima dela. Um puxão rápido vira uma face, não duas.
+ */
+export const INERCIA_MAX_GRAUS = 70
 
 /** Qual face está voltada para quem olha, dado o giro. */
 export function ladoDoGiro(yaw: number): CardSide {
@@ -44,8 +50,8 @@ export function limitarInclinacao(pitch: number): number {
  * para onde o movimento estava indo, contando a velocidade.
  */
 export function encaixarGiro(yaw: number, velocidade = 0): number {
-  const projetado = yaw + velocidade * INERCIA_MS
-  return Math.round(projetado / 180) * 180
+  const inercia = Math.max(-INERCIA_MAX_GRAUS, Math.min(INERCIA_MAX_GRAUS, velocidade * INERCIA_MS))
+  return Math.round((yaw + inercia) / 180) * 180
 }
 
 /**

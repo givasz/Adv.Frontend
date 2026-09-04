@@ -44,6 +44,14 @@ describe('encaixarGiro', () => {
   it('um arrasto lento e curto volta para onde estava', () => {
     expect(encaixarGiro(40, 0.05)).toBe(0)
   })
+
+  it('por mais rápido que solte, a inércia nunca pula uma face inteira', () => {
+    // 190°: acabou de passar do verso. Um puxão violento para em 180, não em 360.
+    expect(encaixarGiro(190, 5)).toBe(180)
+    expect(encaixarGiro(-190, -5)).toBe(-180)
+    // e do repouso, o mesmo puxão vira UMA face
+    expect(encaixarGiro(20, 5)).toBe(180)
+  })
 })
 
 describe('giroParaLado', () => {
