@@ -349,7 +349,11 @@ export const PLAN_COMPARE: CompareGroup[] = [
 export const REGRAS_DE_COBRANCA: string[] = [
   'Cobrança mensal, sem fidelidade. Cancele quando quiser — o mês já pago vale até o fim.',
   'Descer de plano ou voltar ao Free não apaga nada: o que exceder o novo plano fica guardado e volta se você voltar.',
-  'O endereço público do seu perfil nunca muda ao trocar de plano.',
+  // Esta linha já disse "o endereço nunca muda", e deixou de ser verdade quando o
+  // endereço limpo passou a ser um perk que volta ao padrão do Free. Uma promessa
+  // dessas quebrada é pior que a própria mudança — o QR impresso não abre e a
+  // pessoa lembra de ter lido o contrário aqui.
+  'Entre planos pagos o endereço do perfil não muda. Voltando ao Free, ele ganha um número no fim depois de 7 dias — avisados no painel, com a data.',
   'Arrependeu-se? Em até 7 dias da primeira contratação, devolvemos o valor integral.',
   'Se a cobrança falhar, você é avisado no painel com a data — o perfil segue no ar e nada é apagado.',
   'Os dados do cartão ficam com o provedor de pagamento, nunca conosco.',

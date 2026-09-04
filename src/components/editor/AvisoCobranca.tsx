@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
-import { avisoDeCobranca, type TomDoAviso } from '@/lib/assinatura'
+import { avisoDeCobranca, avisoDeEndereco, type AvisoDeCobranca, type TomDoAviso } from '@/lib/assinatura'
+import { profileUrlLabel } from '@/lib/publicUrl'
 import { ClockIcon } from '@/components/ui/icons'
 
 // A tarja que conta a verdade sobre a cobrança — no painel e no editor.
@@ -24,8 +25,28 @@ const ESTILO: Record<TomDoAviso, { caixa: string; icone: string }> = {
 }
 
 export function AvisoCobranca({ profile, className = '' }: { profile: Profile; className?: string }) {
-  const aviso = avisoDeCobranca(profile.subscription)
-  if (!aviso) return null
+  // Dois assuntos diferentes, e por isso duas tarjas em vez de uma que muda de
+  // texto: a cobrança fala do PLANO (o que está desligado, até quando), e o
+  // endereço fala de algo que quebra FORA daqui (o QR impresso, o link no
+  // Google). Na prática só uma aparece por vez — o prazo do endereço só começa
+  // quando o plano já caiu, e aí o aviso de cobrança já se calou.
+  const avisos = [
+    avisoDeCobranca(profile.subscription),
+    avisoDeEndereco(profile.subscription, profileUrlLabel(profile.slug)),
+  ].filter((a): a is AvisoDeCobranca => a !== null)
+
+  if (avisos.length === 0) return null
+
+  return (
+    <div className={`flex flex-col gap-3 ${className}`}>
+      {avisos.map((aviso) => (
+        <Tarja key={aviso.titulo} aviso={aviso} />
+      ))}
+    </div>
+  )
+}
+
+function Tarja({ aviso }: { aviso: AvisoDeCobranca }) {
   const estilo = ESTILO[aviso.tom]
 
   return (
@@ -33,7 +54,7 @@ export function AvisoCobranca({ profile, className = '' }: { profile: Profile; c
       // `role="status"` e não `alert`: o leitor de tela anuncia sem interromper o
       // que a pessoa está fazendo. Cobrança é importante, não é emergência.
       role="status"
-      className={`flex flex-col gap-3 rounded-xl2 border px-4 py-3.5 sm:flex-row sm:items-center ${estilo.caixa} ${className}`}
+      className={`flex flex-col gap-3 rounded-xl2 border px-4 py-3.5 sm:flex-row sm:items-center ${estilo.caixa}`}
     >
       <ClockIcon width={18} height={18} className={`shrink-0 ${estilo.icone}`} />
       <div className="min-w-0 flex-1">

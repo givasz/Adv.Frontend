@@ -641,7 +641,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'O que acontece com meus textos se eu descer de plano ou cancelar?',
-    a: 'Nada é apagado. O que exceder o novo plano — áreas, perguntas, vídeo, marca — sai da página mas fica guardado, e volta se você voltar. O endereço público do perfil nunca muda.',
+    a: 'Nada é apagado. O que exceder o novo plano — áreas, perguntas, vídeo, marca — sai da página mas fica guardado, e volta se você voltar.',
+  },
+  {
+    q: 'E o endereço do meu perfil, se eu voltar ao Free?',
+    a: 'O endereço sem número é dos planos pagos, então ele volta a ter um número no fim — mas só 7 dias depois, com a data avisada no painel desde o primeiro dia. É tempo para atualizar cartão, QR e links. Passado o prazo, o endereço anterior deixa de abrir. Trocar entre Pro e Max não muda nada nele.',
   },
   {
     q: 'Vocês guardam dados de quem visita o meu perfil?',

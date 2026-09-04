@@ -30,7 +30,20 @@ export interface Subscription {
   graceUntil: string | null
   /** rebaixamento pedido, esperando o fim do período pago */
   planScheduled: Plan | null
+  /**
+   * Até quando o ENDEREÇO limpo ainda é desta pessoa depois de o plano cair para
+   * o Free. `null` = não há nada correndo, que é o caso de quase todo mundo.
+   *
+   * Ver backend/src/assinatura.ts (CARENCIA_ENDERECO_DIAS). O campo existe para
+   * uma coisa só: dar à tela a DATA em que o endereço vai mudar, com uma semana de
+   * antecedência. Sem ela, a troca seria uma emboscada — o endereço está impresso
+   * no cartão de visita e indexado no Google.
+   */
+  slugGraceUntil?: string | null
 }
+
+/** Espelha CARENCIA_ENDERECO_DIAS do backend — o prazo do endereço no Free. */
+export const CARENCIA_ENDERECO_DIAS = 7
 
 /** Quantos dias inteiros faltam para a data (0 = hoje/já passou). */
 export function diasAte(iso: string | null, agora: Date = new Date()): number {
@@ -141,4 +154,46 @@ export function avisoDeCobranca(
   }
 
   return null
+}
+
+/**
+ * O AVISO DO ENDEREÇO — a tarja que aparece na semana entre perder o plano e
+ * perder o endereço limpo.
+ *
+ * Existe porque devolver o endereço ao padrão do Free é a única consequência do
+ * rebaixamento que quebra alguma coisa FORA da plataforma: o QR impresso no
+ * cartão de visita, o link na assinatura de e-mail, o resultado do Google. Todo o
+ * resto some da página e volta inteiro; o endereço, não — ele fica livre para
+ * outra pessoa.
+ *
+ * Por isso ele é o único item do rebaixamento que ganha prazo, e o prazo só vale
+ * alguma coisa se a pessoa souber a data. Uma semana, escrita, desde o primeiro
+ * dia. É também o que faz a perda do plano ter peso — e essa é a intenção: quem
+ * lê esta tarja está entendendo, em uma frase, o que o Pro comprava.
+ *
+ * Regras de redação, as mesmas do aviso de cobrança: dizer O QUE ACONTECE e
+ * QUANDO, dizer que nada é apagado, e nada de linguagem de cobrança agressiva.
+ */
+export function avisoDeEndereco(
+  s: Subscription | undefined,
+  /** o endereço como ele aparece hoje, já formatado (ver lib/publicUrl.ts) */
+  endereco: string,
+  agora: Date = new Date(),
+): AvisoDeCobranca | null {
+  if (!s?.slugGraceUntil) return null
+  const quando = new Date(s.slugGraceUntil)
+  if (Number.isNaN(quando.getTime()) || quando.getTime() <= agora.getTime()) return null
+
+  const faltam = diasAte(s.slugGraceUntil, agora)
+  return {
+    tom: faltam <= 2 ? 'urgente' : 'atencao',
+    titulo: `Seu endereço muda em ${dataCurta(s.slugGraceUntil)}`,
+    texto:
+      `No Free o endereço do perfil leva um número no fim. Até lá o seu continua ${endereco} — ` +
+      'quem tem o link ou o QR do seu cartão chega normalmente. Depois dessa data o endereço ' +
+      'antigo deixa de abrir, e ele fica livre para outra pessoa. Nada do seu conteúdo é apagado, ' +
+      'e assinando de novo o endereço continua seu.',
+    acao: 'Manter meu endereço',
+    destino: '/planos',
+  }
 }

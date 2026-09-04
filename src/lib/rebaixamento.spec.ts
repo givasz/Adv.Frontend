@@ -35,11 +35,35 @@ function perfil(p: Partial<Profile> = {}): Profile {
 const juntos = (l: string[]) => l.join(' | ')
 
 describe('o endereço público', () => {
-  it('a PRIMEIRA garantia é que o endereço não muda', () => {
-    // É o que está impresso no cartão de visita, colado no QR e indexado no
-    // Google. Se a tela não disser isso, a pessoa presume o contrário.
-    const { mantem } = mudancasAoDescer(perfil(), 'free')
-    expect(mantem[0]).toContain('advoc.me/marina-sales')
+  // Foi a primeira GARANTIA da lista enquanto o endereço não mudava nunca. Virou
+  // a primeira PERDA quando o endereço limpo passou a ser um recurso pago que
+  // volta ao padrão do Free — e é a única perda do rebaixamento que quebra algo
+  // fora da plataforma: o QR impresso, o link na assinatura de e-mail, o Google.
+  //
+  // O que a tela não pode fazer é calar sobre isso, nem anunciar como imediato o
+  // que tem uma semana de prazo. As duas metades da frase importam.
+
+  it('ao voltar ao Free é a PRIMEIRA perda da lista, com o prazo junto', () => {
+    const { perde, mantem } = mudancasAoDescer(perfil(), 'free')
+    expect(perde[0]).toContain('marina-sales')
+    expect(perde[0]).toMatch(/número no fim/i)
+    expect(perde[0]).toMatch(/7 dias/)
+    expect(perde[0]).toMatch(/avisada no painel/i)
+    // E não pode aparecer, na mesma tela, prometendo que continua o mesmo.
+    expect(juntos(mantem)).not.toMatch(/endereço.*continua o mesmo/i)
+  })
+
+  it('quem já está numerado não perde endereço nenhum — a garantia volta', () => {
+    const { perde, mantem } = mudancasAoDescer(perfil({ slug: 'marina-sales-4827' }), 'free')
+    expect(juntos(perde)).not.toMatch(/número no fim/i)
+    expect(mantem[0]).toContain('marina-sales-4827')
+    expect(mantem[0]).toMatch(/continua o mesmo/i)
+  })
+
+  it('descer de Max para Pro não mexe no endereço: o Pro também tem nome limpo', () => {
+    const { perde, mantem } = mudancasAoDescer(perfil({ plan: 'premium' }), 'pro')
+    expect(juntos(perde)).not.toMatch(/endereço/i)
+    expect(mantem[0]).toContain('marina-sales')
   })
 })
 

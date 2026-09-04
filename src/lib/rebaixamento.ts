@@ -1,6 +1,9 @@
 import type { Plan, Profile } from './types'
 import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, canUseFaq, canUseScheduling } from './plans'
 import { canUsePrintCard, canUseVideo, canUseDigitalCard } from './plans'
+import { CARENCIA_ENDERECO_DIAS } from './assinatura'
+import { slugify } from './brFormat'
+import { profileUrlLabel } from './publicUrl'
 import { getTheme, isThemeUnlocked } from './themes'
 import { PLAN_LABEL } from './upsell'
 
@@ -29,14 +32,48 @@ export interface MudancaDePlano {
 
 const contar = (n: number, um: string, muitos: string) => `${n} ${n === 1 ? um : muitos}`
 
+/**
+ * O endereço parece o "nome-1234" que a plataforma impõe no Free?
+ *
+ * Espelha `pareceAutoNumerado` do backend (profiles.service.ts) e responde à
+ * mesma pergunta: esta pessoa tem um endereço limpo A PERDER? Quem já está
+ * numerado não perde nada, e a tela não pode avisar de uma perda que não vem.
+ *
+ * Erra sempre para o lado de "não muda": um "joao-silva-2020" escolhido à mão
+ * casa o padrão e é lido como automático. Dos dois erros possíveis, prometer que
+ * o endereço fica e ele ficar é o barato.
+ */
+function pareceAutoNumerado(slug: string, name: string): boolean {
+  const base = slugify(name ?? '')
+  if (!base) return false
+  return new RegExp(`^${base}-\\d+$`).test(slug ?? '')
+}
+
 export function mudancasAoDescer(p: Profile, alvo: Plan): MudancaDePlano {
   const atual = p.plan
   const perde: string[] = []
   const mantem: string[] = []
 
-  // --- Endereço público: a garantia mais importante, e a primeira da lista ----
-  // É o que está impresso no cartão de visita, colado no QR e indexado no Google.
-  mantem.push(`Seu endereço advoc.me/${p.slug} continua o mesmo`)
+  // --- Endereço público: a linha mais importante, e a primeira da lista -------
+  //
+  // É o que está impresso no cartão de visita, colado no QR e indexado no Google
+  // — e é a ÚNICA coisa do rebaixamento que quebra algo fora da plataforma. Todo
+  // o resto some da página e volta inteiro; o endereço fica livre para outra
+  // pessoa.
+  //
+  // No Free ele volta ao padrão "nome-1234", mas não hoje: são sete dias, com a
+  // data no painel (ver avisoDeEndereco). Quem já está numerado não tem o que
+  // perder, e nesse caso a linha volta a ser a garantia que sempre foi.
+  const endereco = profileUrlLabel(p.slug)
+  if (alvo === 'free' && !pareceAutoNumerado(p.slug, p.name)) {
+    perde.push(
+      `Seu endereço ${endereco} passa a ter um número no fim — ` +
+        `mas só daqui a ${CARENCIA_ENDERECO_DIAS} dias, e com a data avisada no painel. ` +
+        'Até lá o link e o QR do seu cartão continuam funcionando',
+    )
+  } else {
+    mantem.push(`Seu endereço ${endereco} continua o mesmo`)
+  }
 
   // --- Áreas de atuação ------------------------------------------------------
   const areas = (p.areas ?? []).filter((a) => a.label.trim()).length

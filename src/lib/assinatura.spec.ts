@@ -6,7 +6,7 @@
 // — a pessoa presume que o produto quebrou e vai embora sem ter decidido ir.
 
 import { describe, expect, it } from 'vitest'
-import { avisoDeCobranca, diasAte, type Subscription } from './assinatura'
+import { avisoDeCobranca, avisoDeEndereco, dataCurta, diasAte, type Subscription } from './assinatura'
 
 const HOJE = new Date('2026-08-28T12:00:00.000Z')
 const dias = (n: number) => new Date(HOJE.getTime() + n * 24 * 60 * 60 * 1000).toISOString()
@@ -114,5 +114,55 @@ describe('diasAte', () => {
     expect(diasAte(dias(-5), HOJE)).toBe(0)
     expect(diasAte(null, HOJE)).toBe(0)
     expect(diasAte('data-quebrada', HOJE)).toBe(0)
+  })
+})
+
+describe('o aviso do endereço', () => {
+  // A semana entre perder o plano e perder o endereço limpo. É o único aviso do
+  // produto sobre algo que quebra FORA da plataforma — o QR impresso no cartão,
+  // o link indexado no Google — e por isso ele tem de trazer a DATA.
+  const base: Subscription = {
+    plan: 'free',
+    status: 'canceled',
+    cortesia: false,
+    rebaixado: false,
+    validoAte: null,
+    currentPeriodEnd: null,
+    graceUntil: null,
+    planScheduled: null,
+  }
+  const ENDERECO = 'advocme.netlify.app/marina-sales'
+
+  it('sem prazo correndo, não há aviso — é o caso de quase todo mundo', () => {
+    expect(avisoDeEndereco(base, ENDERECO, HOJE)).toBeNull()
+    expect(avisoDeEndereco(undefined, ENDERECO, HOJE)).toBeNull()
+  })
+
+  it('traz a data, o endereço de hoje e a promessa de que nada é apagado', () => {
+    const a = avisoDeEndereco({ ...base, slugGraceUntil: dias(6) }, ENDERECO, HOJE)!
+    expect(a.titulo).toContain(dataCurta(dias(6)))
+    expect(a.texto).toContain(ENDERECO)
+    expect(a.texto).toMatch(/nada do seu conteúdo é apagado/i)
+    expect(a.destino).toBe('/planos')
+  })
+
+  it('aperta o tom na reta final, e nunca antes', () => {
+    expect(avisoDeEndereco({ ...base, slugGraceUntil: dias(6) }, ENDERECO, HOJE)!.tom).toBe(
+      'atencao',
+    )
+    expect(avisoDeEndereco({ ...base, slugGraceUntil: dias(1) }, ENDERECO, HOJE)!.tom).toBe(
+      'urgente',
+    )
+  })
+
+  it('some depois que o endereço já mudou: aviso de coisa consumada é ruído', () => {
+    expect(avisoDeEndereco({ ...base, slugGraceUntil: dias(-1) }, ENDERECO, HOJE)).toBeNull()
+  })
+
+  it('não fala em captação, urgência artificial nem cobrança agressiva', () => {
+    const a = avisoDeEndereco({ ...base, slugGraceUntil: dias(1) }, ENDERECO, HOJE)!
+    expect(`${a.titulo} ${a.texto} ${a.acao}`).not.toMatch(
+      /última chance|não perca|corra|agora ou nunca|clientes|pague|débito/i,
+    )
   })
 })

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Profile } from '@/lib/types'
 import {
-  CARD_MM,
   CARD_TAGLINE_MAX,
   CARD_TEMPLATES,
   DEFAULT_CARD,
@@ -14,6 +13,7 @@ import {
 import { baixarPng, baixarSvg, imprimirFolha } from '@/lib/cardExport'
 import { checkCompliance } from '@/lib/oab'
 import { Card, Field, TextInput, Toggle } from './fields'
+import { CardStage } from './CardStage'
 import { MarginNotes } from './MarginNotes'
 
 // Cartão de visita: o advogado vê o cartão dele em tamanho real, mexe no que
@@ -21,6 +21,8 @@ import { MarginNotes } from './MarginNotes'
 //
 // A prévia é o MESMO SVG que vai para o papel (lib/cardArt.ts) — não é uma
 // imitação em HTML. O que ele vê é literalmente o arquivo que será impresso.
+// Ela fica em CardStage.tsx: um cartão que gira na mão, com frente e verso de
+// costas um para o outro, guias de corte e tamanho real.
 //
 // Sobre a conformidade: o cartão não ganha regra nova. A linha livre entra em
 // publicTexts() e é conferida igual ao resto do perfil; um apontamento de
@@ -39,11 +41,9 @@ export function CardStudio({
   preview?: boolean
 }) {
   const card = useMemo(() => resolveCard(profile.card), [profile.card])
+  // A face que está de frente no palco — é ela que o PNG e o SVG levam.
   const [side, setSide] = useState<CardSide>('frente')
   const [estado, setEstado] = useState<Estado>({ tipo: 'ocioso' })
-
-  // Sem sangria: a prévia mostra o cartão como ele sai da guilhotina.
-  const svg = useMemo(() => renderCard(profile, card, side, { sangria: false }), [profile, card, side])
 
   const apontamentos = useMemo(() => checkCompliance(card.tagline), [card.tagline])
   const bloqueado = apontamentos.some((i) => i.severity === 'block')
@@ -74,43 +74,11 @@ export function CardStudio({
     <div className="space-y-5">
       <Card title="Seu cartão">
         <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
-          O cartão usa o mesmo visual do seu perfil. Escolha o modelo, confira frente e verso e leve
-          o arquivo para a gráfica de sua preferência.
+          O cartão usa o mesmo visual do seu perfil. Gire para conferir frente e verso, escolha o
+          modelo e leve o arquivo para a gráfica de sua preferência.
         </p>
 
-        {/* Prévia — o SVG escala com a largura disponível e mantém a proporção do
-            papel (90 × 50 mm). Nada de largura fixa: no celular ele encolhe. */}
-        <div className="rounded-lg border border-ink/10 bg-paper-soft/60 p-4">
-          <div className="mx-auto w-full max-w-[420px]">
-            <div
-              className="w-full overflow-hidden rounded-[4px] shadow-card [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-              style={{ aspectRatio: `${CARD_MM.trimW} / ${CARD_MM.trimH}` }}
-              // O SVG vem do nosso gerador e TODO texto de usuário passa por esc()
-              // em lib/cardArt.ts — é lá que essa garantia mora (e é testada).
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
-          </div>
-
-          <div className="mt-3 flex justify-center gap-1.5" role="group" aria-label="Lado do cartão">
-            {(['frente', 'verso'] as CardSide[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSide(s)}
-                aria-pressed={side === s}
-                className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold capitalize transition-colors ${
-                  side === s ? 'bg-ink text-paper' : 'bg-ink/[0.06] text-ink-soft hover:bg-ink/10'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-
-          <p className="mt-2 text-center text-[11px] text-ink-faint">
-            {CARD_MM.trimW} × {CARD_MM.trimH} mm · sangria de {CARD_MM.bleed} mm já incluída
-          </p>
-        </div>
+        <CardStage profile={profile} card={card} onSide={setSide} />
       </Card>
 
       <Card title="Modelo">
