@@ -78,10 +78,10 @@ const ROTAS = [
   ['/editor?section=redes', 'editor · redes'],
   // Monta o VideoPlayer dentro do editor (prévia inerte) e o seletor de formato.
   ['/editor?section=video', 'editor · vídeo'],
-  // A grade do assistente e a conversa do advogado com ele (ver agendaDoAdvogado).
+  // A grade do assistente. A conversa em si tem página própria (ver /agenda).
   ['/editor?section=agenda', 'editor · agenda'],
-  // Atalho do painel: cai no editor com a conversa JÁ aberta.
-  ['/editor?section=agenda&marcar=1', 'editor · agenda (conversa aberta)'],
+  // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
+  ['/agenda', 'sua agenda (conversa do advogado)'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
@@ -331,19 +331,18 @@ async function balaoNoCelular() {
 }
 
 /**
- * A conversa do ADVOGADO com o assistente: marcar um horário que já foi ocupado.
+ * A conversa do ADVOGADO com o próprio assistente, em /agenda: dizer quais
+ * horários já foram marcados por fora.
  *
- * É o mesmo motor de fala das conversas do visitante, mas dentro do editor — com
- * o estado vindo do rascunho e voltando para ele a cada marcação. Um roteiro que
- * lê a grade DEPOIS de alterá-la é exatamente o tipo de laço que só quebra no
- * navegador.
+ * É o mesmo motor de fala das conversas do visitante, mas com o estado vindo do
+ * rascunho e voltando para ele a cada marcação — e a conversa RELÊ a grade
+ * depois de alterá-la, que é o tipo de laço que só quebra no navegador. Vai até
+ * o fim de propósito: o comprovante do último passo é montado a partir do que
+ * foi fechado, e só existe ali.
  */
 async function agendaDoAdvogado() {
-  const { contexto, pagina, erros } = await abrir('/editor?section=agenda')
+  const { contexto, pagina, erros } = await abrir('/agenda')
   try {
-    await clicar(pagina, 'Marcar um horário')
-    // Escopo na conversa: a grade do editor é feita das MESMAS fichas de horário,
-    // e sem isto o teste percorreria a grade achando que conversa.
     const conversa = pagina.locator('[data-agenda-chat]')
     await conversa.waitFor({ timeout: ESPERA })
     const dia = conversa
@@ -355,14 +354,32 @@ async function agendaDoAdvogado() {
     const hora = conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
     await hora.waitFor({ timeout: ESPERA })
     await hora.click()
-    // O horário marcado tem de virar uma ficha reversível na hora.
-    const ficha = pagina.locator('[aria-label^="Liberar "]').first()
-    await ficha.waitFor({ timeout: ESPERA })
-    // E o roteiro continua andando depois de mexer na própria fonte de dados.
+    // O roteiro continua andando depois de mexer na própria fonte de dados.
     await clicar(pagina, 'Outro dia')
-    await pagina
-      .getByLabel('Data do horário ocupado')
-      .waitFor({ timeout: ESPERA })
+    await pagina.getByLabel('Data do horário marcado').waitFor({ timeout: ESPERA })
+    // Liberar tem de estar ao alcance de quem acabou de fechar um horário.
+    await clicar(pagina, 'Liberar um horário')
+    await clicar(pagina, 'Nenhum')
+    // Fecha um segundo horário e termina, para o comprovante ser desenhado.
+    await conversa
+      .locator('button')
+      .filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i })
+      .first()
+      .click()
+    await conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first().click()
+    await clicar(pagina, 'Não, é só isso')
+    const comprovante = pagina.getByText('Horários fechados', { exact: true }).first()
+    await comprovante.waitFor({ timeout: ESPERA })
+    // E o que foi fechado tem de ter chegado ao rascunho — não basta ter falado.
+    const guardados = await pagina.evaluate(() => {
+      try {
+        return JSON.parse(localStorage.getItem('advocme:profile:draft') ?? '{}')?.assistant?.busy
+          ?.length
+      } catch {
+        return 0
+      }
+    })
+    if (!guardados) erros.push('a conversa marcou horário mas nada foi guardado no rascunho')
   } catch (e) {
     erros.push(String(e).split('\n')[0])
   }

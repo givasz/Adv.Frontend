@@ -24,12 +24,15 @@ export function SchedulingCard({
   profile,
   set,
   preview = false,
+  irPara,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
   /** modo espectro: ignora a trava de plano e mostra os controles (dentro do
       LockedFeature, inertes e borrados). */
   preview?: boolean
+  /** sai do editor gravando o que estiver em voo (ver Editor.irPara) */
+  irPara?: (destino: string) => void
 }) {
   const schedulingLocked = !canUseScheduling(profile.plan)
   const mode: SchedulingMode = preview
@@ -84,7 +87,7 @@ export function SchedulingCard({
 
       {mode === 'assistant' && (
         <div className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">
-          <AssistantCard profile={profile} set={set} preview={preview} />
+          <AssistantCard profile={profile} set={set} preview={preview} irPara={irPara} />
         </div>
       )}
 

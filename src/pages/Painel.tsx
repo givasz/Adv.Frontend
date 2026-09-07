@@ -15,7 +15,6 @@ import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
 import {
   ArrowRight,
-  CalendarIcon,
   CardIcon,
   DocIcon,
   EyeIcon,
@@ -25,6 +24,7 @@ import {
   ShieldIcon,
 } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
+import { AgendaCard } from '@/components/painel/AgendaCard'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
 import { Marca } from '@/components/ui/Marca'
 
@@ -193,6 +193,10 @@ export default function Painel() {
             dizer (ver lib/assinatura.ts). */}
         <AvisoCobranca profile={profile} className="mt-6" />
 
+        {/* A agenda vem antes do índice: é a única tarefa recorrente do painel, e
+            quem abre o painel no meio da semana quase sempre vem por ela. */}
+        <AgendaCard profile={profile} />
+
         {/* Índice de Confiança — roda que esverdeia conforme melhora */}
         <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-6 shadow-card">
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:gap-6 sm:text-left">
@@ -300,17 +304,6 @@ export default function Painel() {
         {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}
         <PanelHeading>Descubra mais</PanelHeading>
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-          {/* A agenda vem primeiro por ser a única tarefa RECORRENTE do painel: as
-              outras se fazem uma vez, esta se refaz toda semana. Ela vivia só na
-              lista "Evolua seu perfil" — que some quando o passo é cumprido, e
-              justamente quem já ativou o assistente ficava sem porta para marcar
-              um horário ocupado. O `marcar=1` abre a conversa já aberta. */}
-          <DiscoverCard
-            to="/editor?section=agenda&marcar=1"
-            title="Sua agenda"
-            desc="Marcou um horário por fora? Diga ao assistente e ele para de oferecer."
-            icon={CalendarIcon}
-          />
           <DiscoverCard
             to="/editor?section=analytics"
             title="Quem visita você"

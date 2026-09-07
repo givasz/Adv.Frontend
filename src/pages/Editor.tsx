@@ -475,7 +475,14 @@ export default function Editor() {
               {section === 'agenda' && (
                 <Card title="Agendamento">
                   {canUseScheduling(profile.plan) ? (
-                    <SchedulingCard profile={profile} set={set} />
+                    <SchedulingCard
+                      profile={profile}
+                      set={set}
+                      // A conversa da agenda é outra PÁGINA: sair sem descarregar
+                      // o que está em voo perderia a última alteração da grade —
+                      // é o mesmo motivo do `flush` no botão "Pronto".
+                      irPara={irPara}
+                    />
                   ) : (
                     // Free: a seção continua no lugar, com o espectro real da agenda
                     // borrado sob o cadeado — o advogado vê o que teria.

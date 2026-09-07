@@ -11,9 +11,10 @@ import {
   weeklySlotCount,
 } from '@/lib/assistant'
 import { checkCompliance } from '@/lib/oab'
-import { AgendaChat } from './AgendaChat'
+import { AgendaOcupados } from './AgendaOcupados'
 import { Field, TextArea, Toggle } from './fields'
 import { InfoTip } from './InfoTip'
+import { comVolta } from '@/components/ui/SubPage'
 import { MarginNotes } from './MarginNotes'
 import { CalendarIcon, CheckIcon, WhatsappIcon } from '@/components/ui/icons'
 
@@ -39,11 +40,14 @@ export function AssistantCard({
   profile,
   set,
   preview = false,
+  irPara,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
   /** modo espectro (dentro do cadeado): controles inertes, só para o advogado ver */
   preview?: boolean
+  /** sai do editor gravando o que estiver em voo (ver Editor.irPara) */
+  irPara?: (destino: string) => void
 }) {
   const config = useMemo(
     () => resolveAssistantConfig(profile.assistant ?? DEFAULT_ASSISTANT_CONFIG),
@@ -235,11 +239,12 @@ export function AssistantCard({
             </label>
           </div>
 
-          {/* 3 — o que já foi ocupado (conversa com o assistente) */}
-          <AgendaChat
+          {/* 3 — o que já foi ocupado (a conversa em si mora em /agenda) */}
+          <AgendaOcupados
             config={config}
             onChange={(busy) => patch({ busy })}
-            disabled={preview}
+            onAbrir={() => irPara?.(comVolta('/agenda', '/editor?section=agenda'))}
+            disabled={preview || !irPara}
           />
 
           {/* 4 — regras da conversa */}

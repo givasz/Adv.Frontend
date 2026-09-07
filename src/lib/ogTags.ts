@@ -346,6 +346,11 @@ export const ROTAS_RESERVADAS = new Set([
   // dele passaria a disputar o caminho com a tela de mudança de assinatura.
   'plano',
   'legal',
+  // /agenda — a conversa do advogado com o próprio assistente sobre os horários
+  // já ocupados. Reservada como as demais rotas do app: um perfil em
+  // advoc.me/agenda passaria a disputar o caminho com ela, e a prévia de link
+  // dessa página iria buscar um perfil que não existe.
+  'agenda',
   'escritorio',
   '__preview',
   'api',

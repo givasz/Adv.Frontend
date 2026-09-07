@@ -12,6 +12,7 @@ const AuthPage = lazy(() => import('./pages/AuthPage'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Painel = lazy(() => import('./pages/Painel'))
 const Editor = lazy(() => import('./pages/Editor'))
+const AgendaPage = lazy(() => import('./pages/AgendaPage'))
 const Preview = lazy(() => import('./pages/Preview'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const Escritorio = lazy(() => import('./pages/Escritorio'))
@@ -93,6 +94,11 @@ export default function App() {
         <Route path="/comecar" element={<RequireAuth to="/criar-conta"><Onboarding /></RequireAuth>} />
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />
         <Route path="/editor" element={<RequireAuth><Editor /></RequireAuth>} />
+        {/* A conversa do advogado com o próprio assistente: dizer quais horários
+            já foram marcados por fora. Página própria, e não uma seção do editor,
+            porque é a única tarefa que se REPETE — e porque é a mesma conversa
+            que o cliente vê, do outro lado. */}
+        <Route path="/agenda" element={<RequireAuth><AgendaPage /></RequireAuth>} />
         <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
         {/* Sem RequireAuth de propósito: quem foi suspenso não consegue entrar,
             e é justamente essa pessoa que mais precisa desta página. */}
