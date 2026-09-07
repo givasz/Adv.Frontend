@@ -15,6 +15,7 @@ import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
 import {
   ArrowRight,
+  CalendarIcon,
   CardIcon,
   DocIcon,
   EyeIcon,
@@ -299,6 +300,17 @@ export default function Painel() {
         {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}
         <PanelHeading>Descubra mais</PanelHeading>
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          {/* A agenda vem primeiro por ser a única tarefa RECORRENTE do painel: as
+              outras se fazem uma vez, esta se refaz toda semana. Ela vivia só na
+              lista "Evolua seu perfil" — que some quando o passo é cumprido, e
+              justamente quem já ativou o assistente ficava sem porta para marcar
+              um horário ocupado. O `marcar=1` abre a conversa já aberta. */}
+          <DiscoverCard
+            to="/editor?section=agenda&marcar=1"
+            title="Sua agenda"
+            desc="Marcou um horário por fora? Diga ao assistente e ele para de oferecer."
+            icon={CalendarIcon}
+          />
           <DiscoverCard
             to="/editor?section=analytics"
             title="Quem visita você"

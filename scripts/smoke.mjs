@@ -80,6 +80,8 @@ const ROTAS = [
   ['/editor?section=video', 'editor · vídeo'],
   // A grade do assistente e a conversa do advogado com ele (ver agendaDoAdvogado).
   ['/editor?section=agenda', 'editor · agenda'],
+  // Atalho do painel: cai no editor com a conversa JÁ aberta.
+  ['/editor?section=agenda&marcar=1', 'editor · agenda (conversa aberta)'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.

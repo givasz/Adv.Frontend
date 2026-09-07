@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { AssistantConfig } from '@/lib/types'
 import {
@@ -61,7 +62,12 @@ export function AgendaChat({
   /** modo espectro do editor: mostra, não deixa mexer */
   disabled?: boolean
 }) {
-  const [aberta, setAberta] = useState(false)
+  // `?marcar=1` abre a conversa já aberta — é o atalho do painel, que existe para
+  // quem só entrou no editor para dizer que um horário foi ocupado. Ler a URL
+  // aqui evita empurrar a mesma prop por três componentes que não têm nada a ver
+  // com o assunto.
+  const [params] = useSearchParams()
+  const [aberta, setAberta] = useState(params.get('marcar') === '1')
   const busy = useMemo(() => resolveAssistantConfig(config).busy ?? [], [config])
 
   return (
