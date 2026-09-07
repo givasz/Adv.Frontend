@@ -11,6 +11,7 @@ import {
   weeklySlotCount,
 } from '@/lib/assistant'
 import { checkCompliance } from '@/lib/oab'
+import { AgendaChat } from './AgendaChat'
 import { Field, TextArea, Toggle } from './fields'
 import { InfoTip } from './InfoTip'
 import { MarginNotes } from './MarginNotes'
@@ -234,7 +235,14 @@ export function AssistantCard({
             </label>
           </div>
 
-          {/* 3 — regras da conversa */}
+          {/* 3 — o que já foi ocupado (conversa com o assistente) */}
+          <AgendaChat
+            config={config}
+            onChange={(busy) => patch({ busy })}
+            disabled={preview}
+          />
+
+          {/* 4 — regras da conversa */}
           <div className="grid gap-3 sm:grid-cols-3">
             <Choice
               label="Duração"
@@ -256,7 +264,7 @@ export function AssistantCard({
             />
           </div>
 
-          {/* 4 — abertura da conversa */}
+          {/* 5 — abertura da conversa */}
           <Field
             label="Primeira frase do assistente"
             hint="opcional"
@@ -283,7 +291,7 @@ export function AssistantCard({
           </Field>
           <MarginNotes issues={greetingIssues} />
 
-          {/* 5 — balão no canto da página */}
+          {/* 6 — balão no canto da página */}
           <div className="rounded-lg border border-ink/10 bg-paper-deep/60 p-3">
             <Toggle
               checked={config.floating === true}

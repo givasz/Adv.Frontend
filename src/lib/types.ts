@@ -120,6 +120,16 @@ export interface AssistantConfig {
   /** frase de abertura personalizada (opcional) — passa pela checagem de conformidade */
   greeting?: string
   /**
+   * Horários que o próprio advogado marcou como OCUPADOS, em "AAAA-MM-DDTHH:MM"
+   * (hora local, como o resto da grade). Um horário aqui simplesmente não é
+   * oferecido naquele dia — é a agenda de fora (o cliente que ligou, a audiência)
+   * entrando no assistente.
+   *
+   * Guarda só data e hora: nunca de quem é o compromisso, nunca por quê. O que
+   * não se pergunta não se guarda, e aqui não há nada a perguntar.
+   */
+  busy?: string[]
+  /**
    * Balão no canto da página pública, que segue a rolagem e abre a conversa.
    *
    * Desligado por padrão, e é o advogado quem liga. Um elemento que persegue o

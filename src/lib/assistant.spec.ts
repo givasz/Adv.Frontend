@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assistantDayAt,
   assistantTitle,
   buildAssistantDays,
   buildAssistantMessage,
+  busyKey,
   falaDoEnderecoPresencial,
+  formatBusyLong,
+  formatBusyShort,
+  normalizeBusy,
   normalizeTimes,
+  parseBrDate,
   resolveAssistantConfig,
   weeklySlotCount,
 } from './assistant'
@@ -156,5 +162,104 @@ describe('falaDoEnderecoPresencial', () => {
 
   it('não tem nada de captação — é fala operacional', () => {
     expect(falaDoEnderecoPresencial(local)).not.toMatch(/venha|garant|melhor|atendimento exclusivo/i)
+  })
+})
+
+// ---- Horários ocupados ------------------------------------------------------
+//
+// O advogado marcou por fora um horário que a grade continua oferecendo. Estes
+// testes cobrem as duas pontas: o que entra na lista e o que some da conversa.
+
+describe('normalizeBusy', () => {
+  it('descarta formato inválido, data que não existe e horário impossível', () => {
+    expect(
+      normalizeBusy(
+        ['2026-08-20T14:00', '2026-02-31T10:00', '20/08/2026', '2026-08-20T25:00', 42, null],
+        QUARTA_10H,
+      ),
+    ).toEqual(['2026-08-20T14:00'])
+  })
+
+  it('joga o passado fora — a lista encolhe sozinha, sem faxina agendada', () => {
+    const lista = ['2026-08-18T09:00', '2026-08-19T09:00', '2026-08-20T09:00']
+    // 19/08 é HOJE na conversa: o dia de hoje fica, o de ontem sai.
+    expect(normalizeBusy(lista, QUARTA_10H)).toEqual(['2026-08-19T09:00', '2026-08-20T09:00'])
+  })
+
+  it('ordena e deduplica', () => {
+    expect(
+      normalizeBusy(['2026-08-26T14:00', '2026-08-19T09:00', '2026-08-26T14:00'], QUARTA_10H),
+    ).toEqual(['2026-08-19T09:00', '2026-08-26T14:00'])
+  })
+})
+
+describe('buildAssistantDays com horários ocupados', () => {
+  it('esconde só o horário marcado, e só naquela data', () => {
+    const cfg = config({ horizonDays: 14, busy: [busyKey('2026-08-26', '09:00')] })
+    const dias = buildAssistantDays(cfg, QUARTA_10H)
+    expect(dias.map((d) => [d.key, d.times])).toEqual([
+      // hoje: 09:00 já não respeita a antecedência mínima
+      ['2026-08-19', ['14:00']],
+      // a quarta marcada perde só o horário marcado
+      ['2026-08-26', ['14:00']],
+      // e a quarta seguinte volta inteira: o que se marca é uma DATA, não um
+      // dia da semana — a grade nunca é alterada.
+      ['2026-09-02', ['09:00', '14:00']],
+    ])
+  })
+
+  it('some com o dia inteiro quando não sobra horário livre', () => {
+    const cfg = config({
+      horizonDays: 7,
+      busy: [busyKey('2026-08-26', '09:00'), busyKey('2026-08-26', '14:00')],
+    })
+    const dias = buildAssistantDays(cfg, QUARTA_10H)
+    expect(dias.map((d) => d.key)).toEqual(['2026-08-19'])
+  })
+})
+
+describe('assistantDayAt', () => {
+  it('devolve os horários livres de uma data além do horizonte oferecido', () => {
+    // horizonDays 0: a conversa pública só oferece hoje. O advogado ainda assim
+    // marca um compromisso da quarta seguinte.
+    const dia = assistantDayAt(config(), '2026-08-26', QUARTA_10H)
+    expect(dia?.times).toEqual(['09:00', '14:00'])
+  })
+
+  it('não devolve dia que ele não atende, data passada nem data inexistente', () => {
+    expect(assistantDayAt(config(), '2026-08-20', QUARTA_10H)).toBeNull() // quinta
+    expect(assistantDayAt(config(), '2026-08-12', QUARTA_10H)).toBeNull() // quarta passada
+    expect(assistantDayAt(config(), '2026-02-31', QUARTA_10H)).toBeNull()
+  })
+
+  it('não devolve dia cujos horários já foram todos marcados', () => {
+    const cfg = config({ busy: [busyKey('2026-08-26', '09:00'), busyKey('2026-08-26', '14:00')] })
+    expect(assistantDayAt(cfg, '2026-08-26', QUARTA_10H)).toBeNull()
+  })
+})
+
+describe('parseBrDate', () => {
+  it('lê o que o advogado digita', () => {
+    expect(parseBrDate('25/11', QUARTA_10H)).toBe('2026-11-25')
+    expect(parseBrDate('5.9.2027', QUARTA_10H)).toBe('2027-09-05')
+    expect(parseBrDate('25-11-27', QUARTA_10H)).toBe('2027-11-25')
+  })
+
+  it('sem ano, nunca marca para trás — pula para o ano seguinte', () => {
+    // 10/08 já passou em 19/08/2026: quem escreve isso quer 2027.
+    expect(parseBrDate('10/08', QUARTA_10H)).toBe('2027-08-10')
+  })
+
+  it('recusa o que não é data', () => {
+    expect(parseBrDate('31/02', QUARTA_10H)).toBeNull()
+    expect(parseBrDate('amanhã', QUARTA_10H)).toBeNull()
+    expect(parseBrDate('25/13', QUARTA_10H)).toBeNull()
+  })
+})
+
+describe('rótulos de um horário ocupado', () => {
+  it('escreve por extenso e curto', () => {
+    expect(formatBusyLong('2026-11-25T14:00')).toBe('quarta-feira, 25 de novembro às 14:00')
+    expect(formatBusyShort('2026-11-25T14:00')).toBe('25 nov · 14:00')
   })
 })

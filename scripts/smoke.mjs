@@ -49,7 +49,7 @@ try {
     faqs: [{ id: 'f1', question: 'Quanto tempo demora?', answer: 'Depende do caso.' }],
     socials: [],
     contact: { whatsapp: '5531999999999' },
-    schedulingMode: 'off',
+    schedulingMode: 'assistant',
     plan: 'premium',
     theme: 'papel',
     views: 3,
@@ -78,6 +78,8 @@ const ROTAS = [
   ['/editor?section=redes', 'editor · redes'],
   // Monta o VideoPlayer dentro do editor (prévia inerte) e o seletor de formato.
   ['/editor?section=video', 'editor · vídeo'],
+  // A grade do assistente e a conversa do advogado com ele (ver agendaDoAdvogado).
+  ['/editor?section=agenda', 'editor · agenda'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
@@ -326,8 +328,49 @@ async function balaoNoCelular() {
   return erros
 }
 
+/**
+ * A conversa do ADVOGADO com o assistente: marcar um horário que já foi ocupado.
+ *
+ * É o mesmo motor de fala das conversas do visitante, mas dentro do editor — com
+ * o estado vindo do rascunho e voltando para ele a cada marcação. Um roteiro que
+ * lê a grade DEPOIS de alterá-la é exatamente o tipo de laço que só quebra no
+ * navegador.
+ */
+async function agendaDoAdvogado() {
+  const { contexto, pagina, erros } = await abrir('/editor?section=agenda')
+  try {
+    await clicar(pagina, 'Marcar um horário')
+    // Escopo na conversa: a grade do editor é feita das MESMAS fichas de horário,
+    // e sem isto o teste percorreria a grade achando que conversa.
+    const conversa = pagina.locator('[data-agenda-chat]')
+    await conversa.waitFor({ timeout: ESPERA })
+    const dia = conversa
+      .locator('button')
+      .filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i })
+      .first()
+    await dia.waitFor({ timeout: ESPERA })
+    await dia.click()
+    const hora = conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
+    await hora.waitFor({ timeout: ESPERA })
+    await hora.click()
+    // O horário marcado tem de virar uma ficha reversível na hora.
+    const ficha = pagina.locator('[aria-label^="Liberar "]').first()
+    await ficha.waitFor({ timeout: ESPERA })
+    // E o roteiro continua andando depois de mexer na própria fonte de dados.
+    await clicar(pagina, 'Outro dia')
+    await pagina
+      .getByLabel('Data do horário ocupado')
+      .waitFor({ timeout: ESPERA })
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
   ['balão de conversa no celular da home', balaoNoCelular],
+  ['agenda do advogado (editor)', agendaDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],
   ['assistente do escritório', conversaDoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],

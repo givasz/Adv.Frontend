@@ -62,7 +62,10 @@ export function normalizeTimes(times: string[]): string[] {
 }
 
 /** Config sempre utilizável: preenche o que faltar e sanea dias/horários. */
-export function resolveAssistantConfig(config?: AssistantConfig | null): AssistantConfig {
+export function resolveAssistantConfig(
+  config?: AssistantConfig | null,
+  now: Date = new Date(),
+): AssistantConfig {
   const base = config ?? DEFAULT_ASSISTANT_CONFIG
   const byWeekday = new Map<number, string[]>()
   for (const d of base.days ?? []) {
@@ -80,6 +83,7 @@ export function resolveAssistantConfig(config?: AssistantConfig | null): Assista
     leadHours: clamp(base.leadHours, 0, 168, DEFAULT_ASSISTANT_CONFIG.leadHours),
     horizonDays: clamp(base.horizonDays, 1, 90, DEFAULT_ASSISTANT_CONFIG.horizonDays),
     greeting: base.greeting ?? '',
+    busy: normalizeBusy(base.busy, now),
   }
 }
 
@@ -118,19 +122,42 @@ export function weekdayLong(weekday: number): string {
   return `${name.toLowerCase()}${util ? '-feira' : ''}`
 }
 
+/** Chave estável de um dia, na hora local: 25/11/2026 → "2026-11-25". */
+export function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+/** Um dia concreto com os horários informados, já com os rótulos da conversa. */
+function describeDay(day: Date, times: string[], now: Date): AssistantDayOption {
+  const wd = day.getDay()
+  const hoje = new Date(now)
+  hoje.setHours(0, 0, 0, 0)
+  const dias = Math.round((day.getTime() - hoje.getTime()) / 86_400_000)
+  return {
+    key: dayKey(day),
+    date: day,
+    weekday: wd,
+    label: `${WEEKDAYS_SHORT[wd]}, ${day.getDate()} ${MONTHS_SHORT[day.getMonth()]}`,
+    longLabel: `${weekdayLong(wd)}, ${day.getDate()} de ${MONTHS_FULL[day.getMonth()]}`,
+    relative: dias === 0 ? 'hoje' : dias === 1 ? 'amanhã' : '',
+    times,
+  }
+}
+
 /**
  * Datas concretas que o assistente pode oferecer: percorre os próximos
  * `horizonDays` dias, mantém só os dias da semana configurados e, dentro deles, só
- * os horários que ainda respeitam a antecedência mínima. Dias sem horário livre
- * simplesmente não aparecem.
+ * os horários que ainda respeitam a antecedência mínima e que o advogado não
+ * marcou como ocupados. Dias sem horário livre simplesmente não aparecem.
  */
 export function buildAssistantDays(
   config: AssistantConfig,
   now: Date = new Date(),
 ): AssistantDayOption[] {
-  const cfg = resolveAssistantConfig(config)
+  const cfg = resolveAssistantConfig(config, now)
   const byWeekday = new Map(cfg.days.map((d) => [d.weekday, d.times]))
   const minTime = now.getTime() + cfg.leadHours * 3600_000
+  const ocupados = new Set(cfg.busy ?? [])
   const out: AssistantDayOption[] = []
 
   for (let i = 0; i <= cfg.horizonDays; i++) {
@@ -140,25 +167,135 @@ export function buildAssistantDays(
     const times = byWeekday.get(day.getDay())
     if (!times?.length) continue
 
+    const key = dayKey(day)
     const free = times.filter((t) => {
+      if (ocupados.has(busyKey(key, t))) return false
       const slot = new Date(day)
       slot.setMinutes(timeToMin(t))
       return slot.getTime() >= minTime
     })
     if (!free.length) continue
 
-    const wd = day.getDay()
-    out.push({
-      key: `${day.getFullYear()}-${pad2(day.getMonth() + 1)}-${pad2(day.getDate())}`,
-      date: day,
-      weekday: wd,
-      label: `${WEEKDAYS_SHORT[wd]}, ${day.getDate()} ${MONTHS_SHORT[day.getMonth()]}`,
-      longLabel: `${weekdayLong(wd)}, ${day.getDate()} de ${MONTHS_FULL[day.getMonth()]}`,
-      relative: i === 0 ? 'hoje' : i === 1 ? 'amanhã' : '',
-      times: free,
-    })
+    out.push(describeDay(day, free, now))
   }
   return out
+}
+
+// ---- Horários ocupados (marcados pelo próprio advogado) --------------------
+//
+// O assistente oferece uma GRADE semanal, que se repete. A vida não se repete: o
+// cliente que ligou direto, a audiência, o horário combinado por fora. Sem um
+// jeito de dizer "esse já foi", a conversa segue oferecendo um horário que não
+// existe mais — e quem descobre isso é o visitante, depois de mandar o pedido.
+//
+// A marcação é só data + hora. Nunca de quem é o compromisso, nunca o motivo: o
+// assistente não guarda dado de ninguém, e continua não guardando.
+
+/** Formato de um horário ocupado: "2026-11-25T14:00" (hora local, sem fuso). */
+const BUSY_RE = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/
+
+/** Teto de horários guardados — a lista se limpa sozinha, mas nunca cresce sem fim. */
+export const MAX_BUSY = 400
+
+/** "2026-11-25" + "14:00" → "2026-11-25T14:00". */
+export function busyKey(day: string, time: string): string {
+  return `${day}T${time}`
+}
+
+/** Existe mesmo? Barra 31/02 e afins, que o formato sozinho deixaria passar. */
+function dataReal(ano: number, mes: number, dia: number): boolean {
+  const d = new Date(ano, mes - 1, dia)
+  return d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia
+}
+
+/**
+ * Descarta o que não é horário, o que já passou e o que se repete; ordena e limita.
+ *
+ * Jogar o passado fora na própria normalização é o que impede a lista de virar
+ * arquivo morto: ela encolhe sozinha a cada leitura e a cada gravação, sem faxina
+ * agendada, sem tarefa noturna, sem uma linha de infraestrutura a mais.
+ */
+export function normalizeBusy(list: unknown, now: Date = new Date()): string[] {
+  const hoje = dayKey(now)
+  const valid = (Array.isArray(list) ? list : []).filter((v): v is string => {
+    if (typeof v !== 'string') return false
+    const m = BUSY_RE.exec(v)
+    return !!m && v.slice(0, 10) >= hoje && dataReal(Number(m[1]), Number(m[2]), Number(m[3]))
+  })
+  return [...new Set(valid)].sort().slice(0, MAX_BUSY)
+}
+
+/**
+ * Os horários de UMA data específica que ainda estão livres — inclusive de uma
+ * data além do horizonte que a conversa pública alcança hoje. É o que o advogado
+ * usa para marcar: ele sabe de um compromisso que o assistente ainda nem começou
+ * a oferecer, e adiantar isso não custa nada.
+ *
+ * Devolve `null` quando a data não existe, já passou, cai num dia que ele não
+ * atende ou não sobrou horário — os casos em que não há o que marcar.
+ */
+export function assistantDayAt(
+  config: AssistantConfig,
+  key: string,
+  now: Date = new Date(),
+): AssistantDayOption | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+  if (!m) return null
+  const ano = Number(m[1])
+  const mes = Number(m[2])
+  const dia = Number(m[3])
+  if (!dataReal(ano, mes, dia)) return null
+  if (key < dayKey(now)) return null
+
+  const day = new Date(ano, mes - 1, dia)
+  const cfg = resolveAssistantConfig(config, now)
+  const times = cfg.days.find((d) => d.weekday === day.getDay())?.times ?? []
+  const ocupados = new Set(cfg.busy ?? [])
+  const livres = times.filter((t) => !ocupados.has(busyKey(key, t)))
+  if (!livres.length) return null
+  return describeDay(day, livres, now)
+}
+
+/**
+ * O que o advogado digitou, virando data: "25/11", "25/11/26", "25-11-2026".
+ * Sem o ano, vale a PRÓXIMA ocorrência (hoje inclusive) — quem escreve "25/11"
+ * em dezembro está falando do ano que vem, e ninguém marca para trás.
+ */
+export function parseBrDate(text: string, now: Date = new Date()): string | null {
+  const m = /^(\d{1,2})\s*[/.-]\s*(\d{1,2})(?:\s*[/.-]\s*(\d{2}|\d{4}))?$/.exec(text.trim())
+  if (!m) return null
+  const dia = Number(m[1])
+  const mes = Number(m[2])
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null
+
+  if (m[3]) {
+    const bruto = Number(m[3])
+    const ano = bruto < 100 ? 2000 + bruto : bruto
+    return dataReal(ano, mes, dia) ? `${ano}-${pad2(mes)}-${pad2(dia)}` : null
+  }
+  const hoje = dayKey(now)
+  for (const ano of [now.getFullYear(), now.getFullYear() + 1]) {
+    if (!dataReal(ano, mes, dia)) continue
+    const key = `${ano}-${pad2(mes)}-${pad2(dia)}`
+    if (key >= hoje) return key
+  }
+  return null
+}
+
+/** "2026-11-25T14:00" → "quarta-feira, 25 de novembro às 14:00". */
+export function formatBusyLong(key: string): string {
+  const m = BUSY_RE.exec(key)
+  if (!m) return ''
+  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return `${weekdayLong(day.getDay())}, ${day.getDate()} de ${MONTHS_FULL[day.getMonth()]} às ${key.slice(11)}`
+}
+
+/** "25 nov · 14:00" — rótulo curto, para as fichas do editor. */
+export function formatBusyShort(key: string): string {
+  const m = BUSY_RE.exec(key)
+  if (!m) return ''
+  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return `${day.getDate()} ${MONTHS_SHORT[day.getMonth()]} · ${key.slice(11)}`
 }
 
 const MONTHS_FULL = [
