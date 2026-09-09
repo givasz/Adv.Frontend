@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
 import { resolveSchedulingMode } from '@/lib/booking'
+import { enderecoEmLinha, enderecoVisivel } from '@/lib/endereco'
+import { baixarIcs, linkGoogleAgenda, type Compromisso } from '@/lib/ics'
 import { getTheme, themeStyle } from '@/lib/themes'
 import {
   assistantDayAt,
@@ -49,7 +51,7 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 // O que fica guardado: data e hora. Nunca de quem é o compromisso, nunca o motivo
 // — não há dado de terceiro nenhum atravessando esta tela.
 
-type Step = 'boot' | 'dia' | 'hora' | 'mais' | 'liberar' | 'fim'
+type Step = 'boot' | 'dia' | 'hora' | 'mais' | 'liberar' | 'nome' | 'fim'
 
 const ORDEM: Step[] = ['dia', 'hora', 'mais', 'fim']
 
@@ -128,6 +130,13 @@ function Conversa({
   // inteira de ocupados pode ter meses; o que ele quer conferir antes de sair é o
   // que acabou de fazer.
   const [nesta, setNesta] = useState<string[]>([])
+  // O que a ÚLTIMA ação fechou (um horário, ou o dia inteiro). É o que a oferta
+  // de pôr na agenda do telefone leva — e some assim que ele muda de assunto,
+  // para o botão nunca oferecer um compromisso que não é o que está na tela.
+  const [ultimas, setUltimas] = useState<string[]>([])
+  // O que já foi para a agenda, guardado só para o plano B do Google aparecer
+  // logo depois — o navegador embutido engole download sem dizer nada.
+  const [agendado, setAgendado] = useState<Compromisso | null>(null)
   const [gravando, setGravando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -142,6 +151,15 @@ function Conversa({
   )
   const restantes = emFoco?.times ?? []
   const primeiro = firstName(profile.name)
+  // Endereço no evento só quando ele atende presencialmente E publicou um: o
+  // interruptor de endereço não-público vale aqui como vale no perfil.
+  const localDoAtendimento = useMemo(
+    () =>
+      profile.serviceMode.inPerson && enderecoVisivel(profile.address)
+        ? enderecoEmLinha(profile.address, profile.city, profile.state)
+        : undefined,
+    [profile.serviceMode.inPerson, profile.address, profile.city, profile.state],
+  )
 
   const say = useCallback(
     (lines: string[], next?: Step) => falar(lines, next ? () => setStep(next) : undefined),
@@ -189,6 +207,8 @@ function Conversa({
     setVerTodos(false)
     setDraft('')
     setNesta([])
+    setUltimas([])
+    setAgendado(null)
     void say(
       dias.length
         ? [
@@ -223,6 +243,8 @@ function Conversa({
     push('user', digitada ? opt.label : `${opt.label}${opt.relative ? ` (${opt.relative})` : ''}`)
     setDia(opt)
     setDraft('')
+    setUltimas([])
+    setAgendado(null)
     // Data além do horizonte: dá para fechar, mas ele merece saber que ela ainda
     // nem está sendo oferecida — senão parece que a marcação não fez nada.
     const longe = distancia(opt.key) > cfg.horizonDays
@@ -263,6 +285,8 @@ function Conversa({
     const chave = busyKey(emFoco.key, time)
     gravar([...busy, chave].sort())
     setNesta((n) => [...n, chave])
+    setUltimas([chave])
+    setAgendado(null)
     const sobraram = restantes.filter((t) => t !== time)
     void say(
       [
@@ -281,6 +305,8 @@ function Conversa({
     const chaves = restantes.map((t) => busyKey(emFoco.key, t))
     gravar([...busy, ...chaves].sort())
     setNesta((n) => [...n, ...chaves])
+    setUltimas(chaves)
+    setAgendado(null)
     void say(
       [
         `Fechei ${emFoco.longLabel} inteiro: ${chaves.length} ${chaves.length === 1 ? 'horário sai' : 'horários saem'} da conversa.`,
@@ -294,8 +320,53 @@ function Conversa({
     push('user', formatBusyShort(chave))
     gravar(busy.filter((b) => b !== chave))
     setNesta((n) => n.filter((b) => b !== chave))
+    setUltimas([])
+    setAgendado(null)
     void say(
       [`Liberado: ${formatBusyLong(chave)} volta a ser oferecido.`, 'Quer mexer em mais algum?'],
+      'mais',
+    )
+  }
+
+  // ---- Levar o compromisso para a agenda do telefone ------------------------
+  //
+  // O arquivo (.ics) é montado e baixado NO APARELHO DELE. O nome que ele digita
+  // não passa pela API, não vai para o banco e não fica em log — a coluna do
+  // perfil continua guardando só data e hora. Ver lib/ics.ts.
+  function irParaAgenda() {
+    push('user', ultimas.length > 1 ? `Pôr os ${ultimas.length} na minha agenda` : 'Pôr na minha agenda')
+    setDraft('')
+    void say(
+      [
+        ultimas.length > 1
+          ? 'Como quer chamar esses compromissos na sua agenda?'
+          : 'Como quer chamar esse compromisso na sua agenda?',
+        'O nome fica só no seu aparelho — não guardo isso aqui.',
+      ],
+      'nome',
+    )
+  }
+
+  function porNaAgenda(nome: string) {
+    const titulo = nome.trim() || 'Atendimento'
+    push('user', nome.trim() || 'Sem nome')
+    setDraft('')
+    const compromissos: Compromisso[] = ultimas.map((chave) => ({
+      inicio: chave,
+      duracaoMin: cfg.durationMin,
+      titulo,
+      local: localDoAtendimento,
+      descricao: 'Anotado pela sua agenda no advoc.me.',
+    }))
+    baixarIcs(compromissos, profile.slug)
+    setAgendado(compromissos[0] ?? null)
+    void say(
+      [
+        compromissos.length > 1
+          ? `Prontos, ${compromissos.length} compromissos no arquivo. Seu telefone vai perguntar em qual agenda salvar.`
+          : 'Pronto. Seu telefone vai perguntar em qual agenda salvar — Google, iPhone, Outlook, a que você usa.',
+        'Marcou mais algum?',
+      ],
       'mais',
     )
   }
@@ -304,6 +375,8 @@ function Conversa({
     push('user', 'Outro dia')
     setDia(null)
     setVerTodos(false)
+    setUltimas([])
+    setAgendado(null)
     void say(['Claro. Que dia?'], 'dia')
   }
 
@@ -325,7 +398,11 @@ function Conversa({
   }
 
   const chips = verTodos ? dias : dias.slice(0, MAX_DAY_CHIPS)
-  const andados = ORDEM.indexOf(step)
+  // 'liberar' e 'nome' são desvios a partir de 'mais', e não etapas próprias:
+  // sem esta linha o fio de progresso ZERAVA no meio da conversa e voltava —
+  // parecia que ela tinha recomeçado sozinha.
+  const referencia = ORDEM.includes(step) ? step : 'mais'
+  const andados = ORDEM.indexOf(referencia)
   const progresso = step === 'boot' ? 0 : Math.min(1, (andados + 1) / ORDEM.length)
   const tema = getTheme(profile.theme)
 
@@ -490,8 +567,27 @@ function Conversa({
                     Nenhum
                   </Chip>
                 </ChipRow>
+              ) : step === 'nome' ? (
+                <Composer
+                  value={draft}
+                  onChange={setDraft}
+                  onSend={() => porNaAgenda(draft)}
+                  placeholder="Ex.: Reunião — João Silva"
+                  label="Nome do compromisso na sua agenda"
+                  skipLabel="Sem nome"
+                  onSkip={() => porNaAgenda('')}
+                  canSend={draft.trim().length > 1}
+                />
               ) : step === 'mais' ? (
                 <ChipRow label="E então">
+                  {ultimas.length > 0 && (
+                    <Chip onClick={irParaAgenda}>
+                      <CalendarIcon width={13} height={13} className="t-accent" />
+                      {ultimas.length > 1
+                        ? `Pôr os ${ultimas.length} na minha agenda`
+                        : 'Pôr na minha agenda'}
+                    </Chip>
+                  )}
                   {restantes.length > 0 && (
                     <Chip onClick={() => setStep('hora')}>Outro horário nesse dia</Chip>
                   )}
@@ -526,6 +622,21 @@ function Conversa({
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* Plano B, e só enquanto ele acabou de baixar: navegador embutido (o do
+              Instagram, o do WhatsApp) engole download de arquivo sem erro nenhum
+              — a mesma armadilha de lib/whatsapp.ts. Link é navegação comum, e
+              navegação eles deixam passar. */}
+          {agendado && step === 'mais' && (
+            <a
+              href={linkGoogleAgenda(agendado)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="t-faint mt-2.5 block text-center text-[12px] font-medium underline-offset-4 hover:underline"
+            >
+              Não abriu nada? Abrir no Google Agenda
+            </a>
+          )}
 
           <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
             Isto é só entre você e o assistente. Nada aqui aparece no seu perfil — o horário

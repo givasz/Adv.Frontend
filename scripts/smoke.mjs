@@ -12,6 +12,7 @@
 // Uso:  node scripts/smoke.mjs [http://localhost:5173]
 // Sobe o dev server antes (npm run dev). Sai com código 1 se algo quebrar.
 
+import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 
 const BASE = process.argv[2] ?? 'http://localhost:5173'
@@ -354,9 +355,35 @@ async function agendaDoAdvogado() {
     const hora = conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
     await hora.waitFor({ timeout: ESPERA })
     await hora.click()
-    // O roteiro continua andando depois de mexer na própria fonte de dados.
+    // O compromisso indo para a agenda do telefone: o .ics tem de SAIR de
+    // verdade. O balão dizer "pronto" não prova nada — o download é o produto.
+    await clicar(pagina, 'Pôr na minha agenda')
+    const campoNome = pagina.getByLabel('Nome do compromisso na sua agenda')
+    await campoNome.waitFor({ timeout: ESPERA })
+    await campoNome.fill('Reunião — João')
+    const [arquivo] = await Promise.all([
+      pagina.waitForEvent('download', { timeout: ESPERA }),
+      clicar(pagina, 'Enviar resposta'),
+    ])
+    if (!arquivo.suggestedFilename().endsWith('.ics')) {
+      erros.push(`o arquivo da agenda saiu como "${arquivo.suggestedFilename()}"`)
+    }
+    const caminho = await arquivo.path()
+    const ics = caminho ? await readFile(caminho, 'utf8') : ''
+    // Hora LOCAL flutuante e o nome escapado: é o que a agenda do aparelho lê.
+    for (const trecho of ['BEGIN:VCALENDAR', 'DTSTART:', 'SUMMARY:Reunião — João', 'END:VCALENDAR']) {
+      if (!ics.includes(trecho)) erros.push(`o .ics saiu sem "${trecho}"`)
+    }
+    if (/DTSTART:\d{8}T\d{6}Z/.test(ics)) erros.push('o .ics saiu com hora em UTC (Z) em vez de local')
+
+    // O roteiro continua andando depois de mexer na própria fonte de dados. E
+    // "Outro dia" LIMPA a oferta da agenda de propósito — o botão não pode
+    // oferecer um compromisso que já não é o que está na tela.
     await clicar(pagina, 'Outro dia')
     await pagina.getByLabel('Data do horário marcado').waitFor({ timeout: ESPERA })
+    if (await pagina.getByRole('button', { name: 'Pôr na minha agenda', exact: true }).count()) {
+      erros.push('a oferta de pôr na agenda sobreviveu à troca de dia')
+    }
     // Liberar tem de estar ao alcance de quem acabou de fechar um horário.
     await clicar(pagina, 'Liberar um horário')
     await clicar(pagina, 'Nenhum')
