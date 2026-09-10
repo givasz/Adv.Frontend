@@ -32,7 +32,7 @@
 # da resposta da API.
 [[redirects]]
   from = "/api/*"
-  to = "https://advocme.74.208.118.111.nip.io/api/:splat"
+  to = "https://advocme.51.255.41.163.nip.io/api/:splat"
   status = 200
   force = true
 
