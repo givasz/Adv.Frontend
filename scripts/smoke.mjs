@@ -360,15 +360,31 @@ async function agendaDoAdvogado() {
     const hora = conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
     await hora.waitFor({ timeout: ESPERA })
     await hora.click()
-    // O compromisso indo para a agenda do telefone: o .ics tem de SAIR de
-    // verdade. O balão dizer "pronto" não prova nada — o download é o produto.
+    // O compromisso indo para a agenda dele: nome → qual agenda → a agenda abre
+    // preenchida. Google e Outlook são LINKS — confere que levam o nome e a hora.
     await clicar(pagina, 'Pôr na minha agenda')
     const campoNome = pagina.getByLabel('Nome do compromisso na sua agenda')
     await campoNome.waitFor({ timeout: ESPERA })
     await campoNome.fill('Reunião — João')
+    await clicar(pagina, 'Enviar resposta')
+    const google = pagina.getByRole('link', { name: 'Google Agenda', exact: true })
+    await google.waitFor({ timeout: ESPERA })
+    const urlGoogle = new URL((await google.getAttribute('href')) ?? 'about:blank')
+    if (urlGoogle.hostname !== 'calendar.google.com') erros.push(`o link do Google foi para "${urlGoogle.hostname}"`)
+    if (urlGoogle.searchParams.get('text') !== 'Reunião — João') erros.push('o link do Google saiu sem o nome')
+    if (!/^\d{8}T\d{6}\/\d{8}T\d{6}$/.test(urlGoogle.searchParams.get('dates') ?? '')) {
+      erros.push('o link do Google saiu sem dia e hora')
+    }
+    const outlook = pagina.getByRole('link', { name: 'Outlook', exact: true })
+    const urlOutlook = new URL((await outlook.getAttribute('href')) ?? 'about:blank')
+    if (urlOutlook.searchParams.get('subject') !== 'Reunião — João' || !urlOutlook.searchParams.get('startdt')) {
+      erros.push('o link do Outlook saiu sem nome ou hora')
+    }
+    // "Outra agenda" é o .ics, e ele tem de SAIR de verdade. O balão dizer
+    // "pronto" não prova nada — o download é o produto.
     const [arquivo] = await Promise.all([
       pagina.waitForEvent('download', { timeout: ESPERA }),
-      clicar(pagina, 'Enviar resposta'),
+      clicar(pagina, 'Outra agenda'),
     ])
     if (!arquivo.suggestedFilename().endsWith('.ics')) {
       erros.push(`o arquivo da agenda saiu como "${arquivo.suggestedFilename()}"`)

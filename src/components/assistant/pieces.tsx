@@ -122,22 +122,40 @@ export function Chip({
   children,
   onClick,
   subtle = false,
+  href,
 }: {
   children: React.ReactNode
   onClick: () => void
   subtle?: boolean
+  /** Vira link (nova aba) em vez de botão: navegação passa onde `window.open` não passa. */
+  href?: string
 }) {
+  const className =
+    'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 hover:-translate-y-px active:translate-y-0'
+  const style = {
+    borderColor: subtle ? 'var(--c-border)' : 'var(--c-ring)',
+    background: subtle ? 'transparent' : 'var(--c-accent-soft)',
+    color: subtle ? 'var(--c-faint)' : 'var(--c-text)',
+  }
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        // O que o clique muda na conversa vai para DEPOIS da navegação: trocar de
+        // etapa no mesmo gesto desmonta o link antes de o navegador segui-lo, e
+        // link fora do documento não navega.
+        onClick={() => setTimeout(onClick, 0)}
+        className={className}
+        style={style}
+      >
+        {children}
+      </a>
+    )
+  }
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 hover:-translate-y-px active:translate-y-0"
-      style={{
-        borderColor: subtle ? 'var(--c-border)' : 'var(--c-ring)',
-        background: subtle ? 'transparent' : 'var(--c-accent-soft)',
-        color: subtle ? 'var(--c-faint)' : 'var(--c-text)',
-      }}
-    >
+    <button type="button" onClick={onClick} className={className} style={style}>
       {children}
     </button>
   )

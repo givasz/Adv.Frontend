@@ -5,7 +5,16 @@ import type { Profile } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { enderecoEmLinha, enderecoVisivel } from '@/lib/endereco'
-import { baixarIcs, linkGoogleAgenda, type Compromisso } from '@/lib/ics'
+import {
+  abrirNoCalendarioDaApple,
+  baixarIcs,
+  ehApple,
+  ehIos,
+  emUmBloco,
+  linkGoogleAgenda,
+  linkOutlook,
+  type Compromisso,
+} from '@/lib/ics'
 import { getTheme, themeStyle } from '@/lib/themes'
 import {
   assistantDayAt,
@@ -51,7 +60,10 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 // O que fica guardado: data e hora. Nunca de quem é o compromisso, nunca o motivo
 // — não há dado de terceiro nenhum atravessando esta tela.
 
-type Step = 'boot' | 'dia' | 'hora' | 'mais' | 'liberar' | 'nome' | 'fim'
+type Step = 'boot' | 'dia' | 'hora' | 'mais' | 'liberar' | 'nome' | 'qual' | 'fim'
+
+/** Para onde o compromisso vai. Google e Outlook são link; Apple e "outra", arquivo. */
+type Destino = 'google' | 'outlook' | 'outlook365' | 'apple' | 'arquivo'
 
 const ORDEM: Step[] = ['dia', 'hora', 'mais', 'fim']
 
@@ -134,9 +146,10 @@ function Conversa({
   // de pôr na agenda do telefone leva — e some assim que ele muda de assunto,
   // para o botão nunca oferecer um compromisso que não é o que está na tela.
   const [ultimas, setUltimas] = useState<string[]>([])
-  // O que já foi para a agenda, guardado só para o plano B do Google aparecer
-  // logo depois — o navegador embutido engole download sem dizer nada.
+  // O compromisso montado (nome + horário), à espera de ele escolher a agenda — e
+  // guardado depois, para "Não abriu? Escolher outra agenda" não pedir tudo de novo.
   const [agendado, setAgendado] = useState<Compromisso | null>(null)
+  const naApple = useMemo(ehApple, [])
   const [gravando, setGravando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -328,11 +341,12 @@ function Conversa({
     )
   }
 
-  // ---- Levar o compromisso para a agenda do telefone ------------------------
+  // ---- Levar o compromisso para a agenda dele -------------------------------
   //
-  // O arquivo (.ics) é montado e baixado NO APARELHO DELE. O nome que ele digita
-  // não passa pela API, não vai para o banco e não fica em log — a coluna do
-  // perfil continua guardando só data e hora. Ver lib/ics.ts.
+  // Nome → em qual agenda → a agenda abre com o evento preenchido, e ele só
+  // confirma. Tudo é montado NO APARELHO DELE e vai direto para a agenda que ele
+  // escolheu: o nome não passa pela API, não vai para o banco e não fica em log —
+  // a coluna do perfil continua guardando só data e hora. Ver lib/ics.ts.
   function irParaAgenda() {
     push('user', ultimas.length > 1 ? `Pôr os ${ultimas.length} na minha agenda` : 'Pôr na minha agenda')
     setDraft('')
@@ -348,27 +362,55 @@ function Conversa({
   }
 
   function porNaAgenda(nome: string) {
-    const titulo = nome.trim() || 'Atendimento'
     push('user', nome.trim() || 'Sem nome')
     setDraft('')
-    const compromissos: Compromisso[] = ultimas.map((chave) => ({
-      inicio: chave,
-      duracaoMin: cfg.durationMin,
-      titulo,
+    const compromisso = emUmBloco(ultimas, cfg.durationMin, {
+      titulo: nome.trim() || 'Atendimento',
       local: localDoAtendimento,
       descricao: 'Anotado pela sua agenda no advoc.me.',
-    }))
-    baixarIcs(compromissos, profile.slug)
-    setAgendado(compromissos[0] ?? null)
+    })
+    if (!compromisso) return
+    setAgendado(compromisso)
     void say(
       [
-        compromissos.length > 1
-          ? `Prontos, ${compromissos.length} compromissos no arquivo. Seu telefone vai perguntar em qual agenda salvar.`
-          : 'Pronto. Seu telefone vai perguntar em qual agenda salvar — Google, iPhone, Outlook, a que você usa.',
-        'Marcou mais algum?',
+        ultimas.length > 1
+          ? `Os ${ultimas.length} horários vão juntos, como um compromisso só. Qual agenda você usa?`
+          : 'Qual agenda você usa?',
+        'Eu abro o compromisso nela já com dia, hora e nome — lá é só confirmar.',
       ],
-      'mais',
+      'qual',
     )
+  }
+
+  function escolherAgenda(destino: Destino) {
+    if (!agendado) return
+    const rotulo: Record<Destino, string> = {
+      google: 'Google Agenda',
+      outlook: 'Outlook',
+      outlook365: 'Outlook do trabalho',
+      apple: 'Calendário da Apple',
+      arquivo: 'Outra agenda',
+    }
+    push('user', rotulo[destino])
+    // Google e Outlook já abriram pelo próprio link (ver o Chip com `href`);
+    // Apple e "outra" saem daqui, ainda dentro do gesto do toque.
+    if (destino === 'apple') abrirNoCalendarioDaApple([agendado], profile.slug)
+    if (destino === 'arquivo') baixarIcs([agendado], profile.slug)
+    const comoConfirmar: Record<Destino, string> = {
+      google: 'Abri o Google Agenda com tudo preenchido. Confira e toque em Salvar.',
+      outlook: 'Abri o Outlook com tudo preenchido. Confira e toque em Salvar.',
+      outlook365: 'Abri o Outlook com tudo preenchido. Confira e toque em Salvar.',
+      apple: ehIos()
+        ? 'Abri o compromisso no calendário. Toque em Adicionar.'
+        : 'Baixei o compromisso — abra o arquivo e o Calendário adiciona.',
+      arquivo: 'Baixei o arquivo do compromisso. Abra-o e o telefone pergunta em qual agenda salvar.',
+    }
+    void say([comoConfirmar[destino], 'Marcou mais algum?'], 'mais')
+  }
+
+  function outraAgenda() {
+    push('user', 'Escolher outra agenda')
+    void say(['Sem problema. Qual?'], 'qual')
   }
 
   function outroDia() {
@@ -398,7 +440,7 @@ function Conversa({
   }
 
   const chips = verTodos ? dias : dias.slice(0, MAX_DAY_CHIPS)
-  // 'liberar' e 'nome' são desvios a partir de 'mais', e não etapas próprias:
+  // 'liberar', 'nome' e 'qual' são desvios a partir de 'mais', e não etapas próprias:
   // sem esta linha o fio de progresso ZERAVA no meio da conversa e voltava —
   // parecia que ela tinha recomeçado sozinha.
   const referencia = ORDEM.includes(step) ? step : 'mais'
@@ -578,6 +620,30 @@ function Conversa({
                   onSkip={() => porNaAgenda('')}
                   canSend={draft.trim().length > 1}
                 />
+              ) : step === 'qual' && agendado ? (
+                <ChipRow label="Qual agenda você usa">
+                  {naApple && ehIos() && (
+                    <Chip onClick={() => escolherAgenda('apple')}>Calendário da Apple</Chip>
+                  )}
+                  <Chip href={linkGoogleAgenda(agendado)} onClick={() => escolherAgenda('google')}>
+                    Google Agenda
+                  </Chip>
+                  <Chip href={linkOutlook(agendado, 'pessoal')} onClick={() => escolherAgenda('outlook')}>
+                    Outlook
+                  </Chip>
+                  <Chip
+                    href={linkOutlook(agendado, 'trabalho')}
+                    onClick={() => escolherAgenda('outlook365')}
+                  >
+                    Outlook do trabalho
+                  </Chip>
+                  {naApple && !ehIos() && (
+                    <Chip onClick={() => escolherAgenda('apple')}>Calendário da Apple</Chip>
+                  )}
+                  <Chip subtle onClick={() => escolherAgenda('arquivo')}>
+                    Outra agenda
+                  </Chip>
+                </ChipRow>
               ) : step === 'mais' ? (
                 <ChipRow label="E então">
                   {ultimas.length > 0 && (
@@ -623,19 +689,18 @@ function Conversa({
             </motion.div>
           </AnimatePresence>
 
-          {/* Plano B, e só enquanto ele acabou de baixar: navegador embutido (o do
-              Instagram, o do WhatsApp) engole download de arquivo sem erro nenhum
-              — a mesma armadilha de lib/whatsapp.ts. Link é navegação comum, e
-              navegação eles deixam passar. */}
-          {agendado && step === 'mais' && (
-            <a
-              href={linkGoogleAgenda(agendado)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="t-faint mt-2.5 block text-center text-[12px] font-medium underline-offset-4 hover:underline"
+          {/* Plano B, e só logo depois de escolher: navegador embutido (o do
+              Instagram, o do WhatsApp) engole aba nova e download sem erro nenhum
+              — a mesma armadilha de lib/whatsapp.ts. Voltar à escolha não pede o
+              nome de novo. */}
+          {agendado && step === 'mais' && !typing && (
+            <button
+              type="button"
+              onClick={outraAgenda}
+              className="t-faint mt-2.5 block w-full text-center text-[12px] font-medium underline-offset-4 hover:underline"
             >
-              Não abriu nada? Abrir no Google Agenda
-            </a>
+              Não abriu? Escolher outra agenda
+            </button>
           )}
 
           <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">

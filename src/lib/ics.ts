@@ -1,13 +1,18 @@
-// O compromisso saindo daqui para a agenda do telefone — em iCalendar (.ics).
+// O compromisso saindo daqui para a agenda do advogado.
 //
-// POR QUE .ics, E NÃO "integrar com o Google"
+// ELE ESCOLHE A AGENDA, E A AGENDA ABRE PREENCHIDA
 //
-// Integrar com uma agenda específica é escolher por quem usa: pede conta,
-// permissão de escrita no calendário alheio, chave de API, renovação de token —
-// e ainda deixa de fora quem usa iPhone, Outlook ou Samsung. O .ics inverte a
-// pergunta: a gente entrega um ARQUIVO no formato que todas elas leem (RFC 5545)
-// e é o próprio aparelho que decide qual agenda abre. Zero conta, zero permissão,
-// zero servidor no meio — é o mesmo raciocínio do vCard do cartão digital.
+// Baixar um arquivo e deixar o aparelho decidir parecia neutro, mas na prática é
+// um download: o arquivo cai na pasta, ninguém sabe o que fazer com ele, e o
+// compromisso não entra. Então a conversa pergunta EM QUAL agenda, e cada uma
+// abre na própria tela de "novo evento" com dia, hora e nome já escritos — o
+// advogado só confere e toca em Salvar.
+//
+// Nada disso é integração: Google e Outlook aceitam o evento inteiro num LINK
+// (é navegação comum, sem conta nossa, sem permissão, sem token). O Calendário
+// da Apple não tem link — lá vai o .ics (RFC 5545), que o iPhone abre direto na
+// tela de adicionar. E o mesmo .ics fica como "outra agenda" para quem usa
+// Samsung, Thunderbird e afins — o raciocínio do vCard do cartão digital.
 //
 // HORA LOCAL FLUTUANTE, DE PROPÓSITO
 //
@@ -18,10 +23,10 @@
 //
 // O QUE NÃO ATRAVESSA
 //
-// O título que o advogado digita ("Reunião — João") é montado e baixado NO
-// APARELHO DELE. Não passa pela nossa API, não vai para o banco, não fica em
-// log. A coluna do perfil continua guardando só data e hora — ver
-// lib/assistant.ts, "Horários ocupados".
+// O título que o advogado digita ("Reunião — João") é montado NO APARELHO DELE
+// e vai direto para a agenda que ELE escolheu. Não passa pela nossa API, não vai
+// para o banco, não fica em log. A coluna do perfil continua guardando só data e
+// hora — ver lib/assistant.ts, "Horários ocupados".
 
 import { downloadFile } from './vcard'
 
@@ -84,13 +89,18 @@ function dobrar(linha: string): string {
   return partes.join('\r\n ')
 }
 
-/** "2026-11-25T14:00" + 45 min → "20261125T144500" (hora local, flutuante). */
-function somarMinutos(inicio: string, minutos: number): string {
+/** "2026-11-25T14:00" + minutos → Date no relógio do aparelho. */
+function dataLocal(inicio: string, minutos = 0): Date {
   const [data, hora] = inicio.split('T')
   const [ano, mes, dia] = data.split('-').map(Number)
   const [h, m] = hora.split(':').map(Number)
   // Aritmética por Date: 23:30 + 45 min tem de virar o dia, e o mês, e o ano.
-  const fim = new Date(ano, mes - 1, dia, h, m + minutos)
+  return new Date(ano, mes - 1, dia, h, m + minutos)
+}
+
+/** "2026-11-25T14:00" + 45 min → "20261125T144500" (hora local, flutuante). */
+function somarMinutos(inicio: string, minutos: number): string {
+  const fim = dataLocal(inicio, minutos)
   return (
     `${fim.getFullYear()}${pad2(fim.getMonth() + 1)}${pad2(fim.getDate())}` +
     `T${pad2(fim.getHours())}${pad2(fim.getMinutes())}00`
@@ -165,18 +175,70 @@ export function nomeDoArquivo(compromissos: Compromisso[]): string {
   return `compromissos-${compromissos.length}.ics`
 }
 
+/**
+ * Vários horários fechados de uma vez (o "dia todo") viram UM compromisso, do
+ * primeiro início ao fim do último. Link de Google e Outlook só carrega um evento,
+ * e oito eventos com o mesmo nome empilhados no dia não diriam nada que um bloco
+ * só não diga melhor.
+ */
+export function emUmBloco(
+  inicios: string[],
+  duracaoMin: number,
+  dados: Pick<Compromisso, 'titulo' | 'local' | 'descricao'>,
+): Compromisso | null {
+  if (!inicios.length) return null
+  const ordem = [...inicios].sort()
+  const primeiro = ordem[0]
+  const ultimo = ordem[ordem.length - 1]
+  const entre = Math.round((dataLocal(ultimo).getTime() - dataLocal(primeiro).getTime()) / 60_000)
+  return { ...dados, inicio: primeiro, duracaoMin: entre + duracaoMin }
+}
+
 /** Baixa o .ics — o aparelho abre e pergunta em qual agenda salvar. */
 export function baixarIcs(compromissos: Compromisso[], dono: string) {
   downloadFile(buildIcs(compromissos, dono), nomeDoArquivo(compromissos), 'text/calendar')
 }
 
+/** iPhone, iPad (que se apresenta como Mac, mas tem toque) ou iPod. */
+export function ehIos(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+}
+
+/** Qualquer aparelho da Apple — onde o Calendário da Apple faz sentido oferecer. */
+export function ehApple(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return ehIos() || /Macintosh/.test(navigator.userAgent)
+}
+
 /**
- * Plano B: o mesmo compromisso como link do Google Agenda.
- *
- * Existe por causa do navegador embutido (o do Instagram, o do WhatsApp), que
- * engole download de arquivo sem erro nenhum — a mesma armadilha documentada em
- * lib/whatsapp.ts. Este caminho é NAVEGAÇÃO comum, e navegação eles deixam
- * passar. Um evento só: o formato de link do Google não carrega vários.
+ * O Calendário da Apple não aceita evento por link, só por arquivo. No iPhone,
+ * baixar o arquivo é justamente o que não queremos (vai para "Arquivos" e para
+ * ali); ABRIR o mesmo conteúdo como endereço `data:` numa aba faz o Safari
+ * mostrar a tela do evento com "Adicionar". No Mac, o download abre o
+ * Calendário direto.
+ */
+export function abrirNoCalendarioDaApple(compromissos: Compromisso[], dono: string) {
+  if (!ehIos()) {
+    baixarIcs(compromissos, dono)
+    return
+  }
+  const a = document.createElement('a')
+  a.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(buildIcs(compromissos, dono))}`
+  a.target = '_blank'
+  a.rel = 'noopener'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => a.remove(), 1000)
+}
+
+/**
+ * O compromisso como link do Google Agenda — abre a tela de novo evento já
+ * preenchida. É NAVEGAÇÃO comum, e por isso passa até pelo navegador embutido (o
+ * do Instagram, o do WhatsApp), que engole download sem erro nenhum — a mesma
+ * armadilha de lib/whatsapp.ts.
  *
  * `ctz` sai do fuso do próprio aparelho, e não de uma constante: sem ele o
  * Google lê a data como UTC e o compromisso das 14h chega às 11h. Fixar
@@ -193,4 +255,33 @@ export function linkGoogleAgenda(c: Compromisso): string {
   if (c.descricao) params.set('details', c.descricao)
   if (c.local) params.set('location', c.local)
   return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+/** Conta pessoal (Hotmail, Outlook.com) ou do trabalho (Microsoft 365). */
+export type ContaMicrosoft = 'pessoal' | 'trabalho'
+
+/**
+ * O compromisso como link do Outlook — a tela de novo evento, preenchida.
+ *
+ * Conta pessoal e conta do trabalho moram em endereços diferentes, e um não
+ * redireciona para o outro levando o evento: por isso são duas opções.
+ *
+ * O Outlook não tem parâmetro de fuso: a hora vai como INSTANTE em UTC (com `Z`),
+ * calculada no relógio do aparelho — o mesmo em que o advogado disse "14h".
+ * E o espaço vai como `%20`, não `+`: o Outlook mostra o `+` literal no título.
+ */
+export function linkOutlook(c: Compromisso, conta: ContaMicrosoft = 'pessoal'): string {
+  const host = conta === 'trabalho' ? 'outlook.office.com' : 'outlook.live.com'
+  const utc = (minutos: number) => `${dataLocal(c.inicio, minutos).toISOString().slice(0, 19)}Z`
+  const params = new URLSearchParams({
+    rru: 'addevent',
+    subject: c.titulo,
+    startdt: utc(0),
+    enddt: utc(c.duracaoMin),
+    allday: 'false',
+  })
+  if (c.descricao) params.set('body', c.descricao)
+  if (c.local) params.set('location', c.local)
+  // URLSearchParams já codificou todo `+` do texto como %2B; o `+` que sobra é espaço.
+  return `https://${host}/calendar/0/action/compose?${params.toString().replace(/\+/g, '%20')}`
 }
