@@ -159,6 +159,19 @@ export const PLAN_FEATURES: PlanFeature[] = [
     done: (p) => !!parseVideoUrl(p.videoUrl),
   },
   {
+    key: 'contratos',
+    plan: 'premium',
+    title: 'Contratos e procurações',
+    body: 'Monte a minuta a partir de um modelo, revise cada cláusula e baixe o PDF com a impressão digital registrada — para conferir depois que o arquivo não mudou.',
+    to: '/contratos',
+    cta: 'Montar um documento',
+    // Não mora no perfil: quem sabe se já foi usado é o aparelho (os rascunhos
+    // ficam nele) e o servidor. O item aparece como incluído, nunca como tarefa
+    // que se conclui — e o painel tem a porta de entrada própria.
+    automatic: true,
+    done: () => true,
+  },
+  {
     key: 'marca',
     plan: 'premium',
     title: 'Sua marca, sem a nossa',

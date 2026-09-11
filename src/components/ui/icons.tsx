@@ -317,6 +317,28 @@ export const DocIcon = (p: IconProps) => (
   </svg>
 )
 
+// Pena sobre a linha de assinatura — contratos e procurações. Traço, nunca selo:
+// o ícone diz "documento para assinar", não "documento aprovado".
+export const PenIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14.5 4.5 19.5 9.5 9 20H4v-5z" />
+    <path d="m12.5 6.5 5 5" />
+    <path d="M13 20h7" />
+  </svg>
+)
+
+// Impressão digital — o SHA-256 de um arquivo. Linhas concêntricas abertas.
+export const FingerprintIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6.2 7.4A7.5 7.5 0 0 1 19.5 12v1.5" />
+    <path d="M4.5 12a7.5 7.5 0 0 1 .6-3" />
+    <path d="M8 12a4 4 0 0 1 8 0v2.5c0 2 .5 3.8 1.4 5.5" />
+    <path d="M12 12v3c0 2.4.8 4.6 2.2 6.3" />
+    <path d="M8 15.5c0 2 .6 3.8 1.6 5.3" />
+    <path d="M4.5 15.5c.3 1.6.9 3 1.8 4.3" />
+  </svg>
+)
+
 // Bandeira — símbolo universal de "denunciar". Traço fino e sem preenchimento:
 // o canal de denúncia é discreto de propósito (fica no rodapé do perfil), então o
 // ícone tem de sinalizar sem virar alarme na página de outra pessoa.

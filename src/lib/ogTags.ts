@@ -351,6 +351,9 @@ export const ROTAS_RESERVADAS = new Set([
   // advoc.me/agenda passaria a disputar o caminho com ela, e a prévia de link
   // dessa página iria buscar um perfil que não existe.
   'agenda',
+  // /contratos (e /contratos/conferir, /contratos/rascunho/:id) — os documentos
+  // do advogado e a conferência pública de um PDF registrado.
+  'contratos',
   'escritorio',
   '__preview',
   'api',

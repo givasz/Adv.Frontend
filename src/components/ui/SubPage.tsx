@@ -78,9 +78,16 @@ export function SubPage({
   }, [documentTitle, title])
 
   // Esc continua fechando, como no modal: o gesto já estava no dedo de quem usa.
+  //
+  // Menos quando o foco está num campo: ali o Esc é da pessoa que digita (fechar
+  // o teclado, desistir de um autocompletar), e sair da página no meio de uma
+  // cláusula ou de um chamado de suporte é o gesto errado na hora errada.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') navigate(backTo)
+      if (e.key !== 'Escape') return
+      const alvo = e.target as HTMLElement | null
+      if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return
+      navigate(backTo)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -130,8 +137,10 @@ export function SubPage({
         // Barra de ação colada embaixo: no celular o botão principal fica sempre
         // ao alcance, sem depender de rolar até o fim do formulário.
         <div className="sticky bottom-0 z-10 border-t border-ink/10 bg-paper/90 backdrop-blur">
+          {/* Área segura embaixo: no iPhone sem botão, a barra do sistema ficava
+              por cima do botão principal. */}
           <div
-            className={`mx-auto flex w-full items-center justify-end gap-2 px-5 py-3 ${
+            className={`mx-auto flex w-full items-center justify-end gap-2 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
               wide ? 'max-w-4xl' : 'max-w-2xl'
             }`}
           >

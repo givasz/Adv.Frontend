@@ -19,6 +19,7 @@ import {
   DocIcon,
   EyeIcon,
   LockIcon,
+  PenIcon,
   PlayIcon,
   QrIcon,
   ShieldIcon,
@@ -333,6 +334,12 @@ export default function Painel() {
             title="Seu vídeo"
             desc="Cole um link do YouTube ou Vimeo — tem um passo a passo lá dentro."
             icon={PlayIcon}
+          />
+          <DiscoverCard
+            to={comVolta('/contratos', '/painel')}
+            title="Contratos e procurações"
+            desc="Monte a minuta a partir de um modelo, revise e registre a impressão digital do PDF."
+            icon={PenIcon}
           />
           <DiscoverCard
             to="/editor?section=conteudo"

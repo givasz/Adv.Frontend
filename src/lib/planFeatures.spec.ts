@@ -73,6 +73,14 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     expect(depois.some((f) => f.key === 'agenda')).toBe(false)
   })
 
+  it('contratos entram no Max como incluídos, nunca como tarefa pendente', () => {
+    // O uso não mora no perfil (o rascunho fica no aparelho), então o item não
+    // tem como "se concluir" — se fosse tarefa, ficaria pendente para sempre.
+    expect(featuresAddedBy('premium').map((f) => f.key)).toContain('contratos')
+    expect(featuresPending({ ...base, plan: 'premium' }).some((f) => f.key === 'contratos')).toBe(false)
+    expect(featuresIncluded('pro').some((f) => f.key === 'contratos')).toBe(false)
+  })
+
   it('subir de Pro para Max acrescenta apenas os itens do Max', () => {
     const pro = { ...base, plan: 'pro' as const }
     const max = { ...base, plan: 'premium' as const }

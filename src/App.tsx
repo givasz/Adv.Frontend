@@ -27,6 +27,9 @@ const DadosPage = lazy(() => import('./pages/DadosPage'))
 const PlansPage = lazy(() => import('./pages/PlansPage'))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const MudarPlanoPage = lazy(() => import('./pages/MudarPlanoPage'))
+const ContratosPage = lazy(() => import('./pages/ContratosPage'))
+const ContratoPage = lazy(() => import('./pages/ContratoPage'))
+const ConferirDocumentoPage = lazy(() => import('./pages/ConferirDocumentoPage'))
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -99,6 +102,14 @@ export default function App() {
             porque é a única tarefa que se REPETE — e porque é a mesma conversa
             que o cliente vê, do outro lado. */}
         <Route path="/agenda" element={<RequireAuth><AgendaPage /></RequireAuth>} />
+        {/* Contratos e procurações: minuta por modelo, revisão e registro da
+            impressão digital do PDF. O texto fica no aparelho; o servidor guarda
+            só o hash (ver lib/contratos/rascunhos.ts). */}
+        <Route path="/contratos" element={<RequireAuth><ContratosPage /></RequireAuth>} />
+        <Route path="/contratos/rascunho/:id" element={<RequireAuth><ContratoPage /></RequireAuth>} />
+        {/* Sem RequireAuth de propósito: quem confere um contrato é o cliente, a
+            outra parte ou um juiz — gente sem conta. */}
+        <Route path="/contratos/conferir" element={<ConferirDocumentoPage />} />
         <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
         {/* Sem RequireAuth de propósito: quem foi suspenso não consegue entrar,
             e é justamente essa pessoa que mais precisa desta página. */}

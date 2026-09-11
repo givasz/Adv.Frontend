@@ -40,6 +40,10 @@ Disallow: /assinar/
 Disallow: /suporte
 Disallow: /contestar
 Disallow: /escritorio/editar
+Disallow: /contratos
+
+# /contratos/conferir é pública, mas não é página de busca: sem um arquivo na
+# mão ela não responde nada a quem chega por um buscador.
 
 # Prévia interna de temas — a mesma página em oito roupas seria lida como
 # conteúdo duplicado do perfil de verdade.

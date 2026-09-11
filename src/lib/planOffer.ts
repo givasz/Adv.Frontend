@@ -159,7 +159,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: 'A IA também escreve sua frase de apresentação e revisa seus textos' },
     ],
     falta: [
-      'Sem vídeo, cartão para a gráfica e cor própria',
+      'Sem vídeo, cartão para a gráfica, cor própria e contratos',
       'Rodapé “criado com advoc.me” continua',
     ],
     ctaTo: '/comecar?plan=pro',
@@ -177,6 +177,11 @@ export const PLAN_OFFERS: PlanOffer[] = [
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
       { text: 'Cartão de visita pronto para a gráfica, em PDF' },
+      // Entrou com o recurso no ar (10/09/2026). "Registrada" é a palavra exata:
+      // guardamos a impressão digital do arquivo — não assinamos, não validamos e
+      // não guardamos o contrato. Enviar para assinatura daqui ainda não existe e
+      // por isso não está na frase.
+      { text: 'Contratos e procurações a partir de modelos, com a impressão digital do PDF registrada' },
       { text: `Até ${FAQ_LIMIT.premium} perguntas frequentes (eram ${FAQ_LIMIT.pro})` },
       { text: 'Sua cor e sua marca — o rodapé advoc.me some' },
       { text: 'Comprovante de conformidade em PDF, quando precisar mostrar' },
@@ -329,6 +334,25 @@ export const PLAN_COMPARE: CompareGroup[] = [
         values: aPartirDe('pro'),
       },
       { label: 'Comprovante de conformidade em PDF', values: aPartirDe('premium') },
+    ],
+  },
+  {
+    title: 'Documentos do escritório',
+    rows: [
+      {
+        label: 'Contratos de honorários, procurações e declarações',
+        hint: 'a partir de modelos, revisados por você',
+        values: aPartirDe('premium'),
+      },
+      {
+        label: 'Impressão digital do PDF registrada',
+        hint: 'qualquer pessoa confere se o arquivo mudou',
+        values: aPartirDe('premium'),
+      },
+      // Enviar para assinatura eletrônica DAQUI (Clicksign, D4Sign…) não existe, e
+      // não ganha linha nem marcada "em preparo" — mesma decisão do domínio
+      // próprio em 04/09. A tela de contratos ensina a assinar com o gov.br ou com
+      // certificado, que é o que funciona hoje.
     ],
   },
   {

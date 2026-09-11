@@ -92,6 +92,18 @@ export function canUsePrintCard(plan: Plan): boolean {
   return plan === 'premium'
 }
 
+/**
+ * Contratos e procurações: minuta por modelo, revisão e registro da impressão
+ * digital do PDF — exclusivo do Max. MANTER EM SINCRONIA com backend/src/plans.ts.
+ *
+ * Vale para REGISTRAR documento novo. O histórico, a versão assinada do que já
+ * foi registrado e a conferência pública seguem abertos depois de descer de
+ * plano: prova que some quando a assinatura vence não é prova.
+ */
+export function canUseContratos(plan: Plan): boolean {
+  return plan === 'premium'
+}
+
 /** Vídeo de apresentação no perfil — também exclusivo do Max. */
 export function canUseVideo(plan: Plan): boolean {
   return plan === 'premium'

@@ -83,6 +83,10 @@ const ROTAS = [
   ['/editor?section=agenda', 'editor · agenda'],
   // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
   ['/agenda', 'sua agenda (conversa do advogado)'],
+  // Contratos: a mesa de documentos e a conferência PÚBLICA — o documento em
+  // si é percorrido de ponta a ponta em contratoDoAdvogado.
+  ['/contratos', 'contratos e procurações'],
+  ['/contratos/conferir', 'conferir um documento (pública)'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
@@ -115,7 +119,8 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
-const EXIGEM_CONTA = /^\/(painel|editor|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar)/
+const EXIGEM_CONTA =
+  /^\/(painel|editor|agenda|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar|contratos(?!\/conferir))/
 
 const navegador = await chromium.launch()
 const falhas = []
@@ -414,9 +419,68 @@ async function agendaDoAdvogado() {
   return erros
 }
 
+/**
+ * Um documento de ponta a ponta: modelo → dados → revisão → declaração →
+ * registro → PDF baixado → conferência pública do MESMO arquivo.
+ *
+ * Nada disto aparece em tsc nem em vitest: o PDF sai de um import dinâmico, o
+ * download depende de gesto do usuário, e a conferência lê o arquivo pelo
+ * <input type="file"> — três pontos que só quebram no navegador. O fim do
+ * percurso é o que prova o produto: o arquivo baixado, reenviado, é reconhecido.
+ */
+async function contratoDoAdvogado() {
+  const { contexto, pagina, erros } = await abrir('/contratos')
+  try {
+    await pagina.getByRole('button', { name: /Procuração ad judicia/ }).click()
+    await pagina.waitForURL(/\/contratos\/rascunho\//, { timeout: ESPERA })
+
+    await pagina.locator('label', { hasText: /^Advogada$/ }).first().click()
+    await pagina.getByLabel(/^Endereço profissional/).fill('Av. Afonso Pena, 1500, Belo Horizonte/MG')
+    await pagina.getByLabel(/^Nome completo/).fill('João da Silva')
+    await pagina.getByLabel(/^Nacionalidade/).fill('brasileiro')
+    await pagina.getByLabel(/^Estado civil/).fill('solteiro')
+    await pagina.getByLabel(/^Profissão/).fill('engenheiro')
+    await pagina.getByLabel(/^CPF/).fill('52998224725')
+    await pagina.getByLabel(/^Endereço completo/).fill('Rua das Flores, 120, Belo Horizonte/MG')
+    await clicar(pagina, 'Montar a minuta')
+
+    await pagina.getByText('sem inteligência artificial').waitFor({ timeout: ESPERA })
+    const folha = pagina.locator('article[aria-label^="Documento:"]')
+    if (!(await folha.innerText()).includes('PROCURAÇÃO') && !(await folha.textContent())?.includes('Procuração')) {
+      erros.push('a folha da revisão não mostrou o documento')
+    }
+    await clicar(pagina, 'Revisei, seguir')
+
+    await pagina.getByLabel(/^Li o documento inteiro/).check()
+    await pagina.getByLabel(/^O conteúdo é de minha responsabilidade/).check()
+    await clicar(pagina, 'Registrar e gerar o PDF')
+
+    const baixar = pagina.getByRole('button', { name: /^Baixar o PDF/ })
+    await baixar.waitFor({ timeout: ESPERA })
+    const [arquivo] = await Promise.all([pagina.waitForEvent('download', { timeout: ESPERA }), baixar.click()])
+    const nome = arquivo.suggestedFilename()
+    if (!/^procuracao-ad-judicia-et-extra-AVM-[0-9A-Z]{4}-[0-9A-Z]{4}\.pdf$/.test(nome)) {
+      erros.push(`o PDF saiu como "${nome}"`)
+    }
+    const caminho = await arquivo.path()
+    const bytes = caminho ? await readFile(caminho) : Buffer.alloc(0)
+    if (bytes.subarray(0, 5).toString('latin1') !== '%PDF-') erros.push('o arquivo baixado não é um PDF')
+
+    // A conferência pública, com o arquivo que acabou de sair.
+    await pagina.goto(BASE + '/contratos/conferir', { waitUntil: 'networkidle', timeout: ESPERA })
+    await pagina.locator('input[type="file"]').setInputFiles(caminho)
+    await pagina.getByText('Idêntico ao documento registrado').waitFor({ timeout: ESPERA })
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
   ['balão de conversa no celular da home', balaoNoCelular],
   ['agenda do advogado (editor)', agendaDoAdvogado],
+  ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],
   ['assistente do escritório', conversaDoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],

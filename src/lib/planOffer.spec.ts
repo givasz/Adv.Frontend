@@ -28,6 +28,7 @@ import {
   canUsePrintCard,
   canUseScheduling,
   canUseVideo,
+  canUseContratos,
 } from './plans'
 import { canUseAi } from './aiFeatures'
 import { THEMES, isThemeUnlocked } from './themes'
@@ -208,6 +209,8 @@ describe('a tabela comparativa é calculada, não digitada', () => {
       [/QR Code/i, canUseDigitalCard],
       [/gráfica/i, canUsePrintCard],
       [/^Vídeo/i, canUseVideo],
+      [/^Contratos de honorários/i, canUseContratos],
+      [/^Impressão digital do PDF/i, canUseContratos],
       [/frase de apresentação e revisa/i, (p) => canUseAi('headline', p)],
       [/IA escreve a bio/i, (p) => canUseAi('bio', p)],
     ]

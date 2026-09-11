@@ -8,6 +8,7 @@ import {
   AREA_LIMIT,
   FAQ_LIMIT,
   CHAR_LIMITS,
+  canUseContratos,
   canUseFaq,
   canUseDigitalCard,
   canUsePrintCard,
@@ -108,6 +109,7 @@ export type UpsellFeature =
   | 'themes'
   | 'branding'
   | 'ai'
+  | 'contratos'
 
 // Recurso do editor → fatores do Índice que um upgrade destravaria. Só os
 // fatores gated por plano em trustScore.ts pontuam; recursos sem fator gated
@@ -121,6 +123,7 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   cartao: [],
   themes: [],
   ai: [],
+  contratos: [],
   agenda: ['agenda'],
   branding: ['marca'],
 }
@@ -197,6 +200,12 @@ const FEATURE_META: Record<
     title: 'Sua marca no perfil',
     subtitle: 'Nome do escritório no rodapé, cor de destaque própria e sem a marca advoc.me.',
     value: (p) => (p === 'premium' ? 'Incluído' : '—'),
+  },
+  contratos: {
+    title: 'Contratos e procurações',
+    subtitle:
+      'Minuta a partir de modelo, revisão cláusula por cláusula e o PDF com impressão digital registrada.',
+    value: (p) => (canUseContratos(p) ? 'Incluído' : '—'),
   },
   ai: {
     title: 'Assistente de IA',

@@ -103,6 +103,11 @@ export default function DadosPage() {
               <strong className="font-semibold text-ink">Seus chamados</strong> de suporte e as
               respostas que você recebeu.
             </li>
+            <li>
+              <strong className="font-semibold text-ink">Seus documentos registrados:</strong> só a
+              impressão digital de cada PDF, o código, a data e o endereço de onde você confirmou a
+              revisão. O texto e os dados dos seus clientes ficam no seu aparelho, não aqui.
+            </li>
           </ul>
           <p className="mt-3 border-t border-ink/[0.07] pt-3 text-[12.5px] leading-relaxed text-ink-faint">
             Não guardamos dado de quem visita o seu perfil: o contato vai do aparelho do visitante
@@ -176,8 +181,9 @@ export default function DadosPage() {
             <div className="min-w-0 flex-1">
               <h2 className="font-display text-[17px] font-semibold text-ink">Excluir minha conta</h2>
               <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
-                Apaga a conta, o perfil publicado, as perguntas frequentes, a trilha de auditoria e
-                os chamados de suporte. O endereço do seu perfil deixa de existir e fica livre para
+                Apaga a conta, o perfil publicado, as perguntas frequentes, a trilha de auditoria,
+                os chamados de suporte e os registros de documentos — a conferência de um PDF seu
+                deixa de encontrá-lo. O endereço do seu perfil deixa de existir e fica livre para
                 outra pessoa. <strong className="font-semibold text-ink">Não há como desfazer.</strong>
               </p>
               {/* A RESSALVA HONESTA.
