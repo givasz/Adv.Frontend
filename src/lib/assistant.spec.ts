@@ -5,7 +5,11 @@ import {
   buildAssistantDays,
   buildAssistantMessage,
   busyKey,
+  diaDasFaixas,
+  faixasDoDia,
   falaDoEnderecoPresencial,
+  horariosDasFaixas,
+  horariosQueBatem,
   formatBusyLong,
   formatBusyShort,
   normalizeBusy,
@@ -77,6 +81,95 @@ describe('buildAssistantDays', () => {
     )
     expect(days.map((d) => d.weekday)).toEqual([1, 1])
     expect(days[0].label).toBe('seg, 24 ago')
+  })
+})
+
+describe('faixas de atendimento', () => {
+  const MANHA_E_TARDE = [
+    { inicio: '07:00', fim: '11:00' },
+    { inicio: '13:00', fim: '17:00' },
+  ]
+
+  it('"das 7 às 11" com uma hora dá 07, 08, 09 e 10 — o atendimento termina até o fim', () => {
+    expect(horariosDasFaixas(MANHA_E_TARDE, 60)).toEqual([
+      '07:00', '08:00', '09:00', '10:00', '13:00', '14:00', '15:00', '16:00',
+    ])
+  })
+
+  it('anda no passo da duração', () => {
+    expect(horariosDasFaixas([{ inicio: '07:00', fim: '11:00' }], 45)).toEqual([
+      '07:00', '07:45', '08:30', '09:15', '10:00',
+    ])
+  })
+
+  it('faixa mais curta que um atendimento ainda oferece o início', () => {
+    expect(horariosDasFaixas([{ inicio: '18:00', fim: '18:30' }], 60)).toEqual(['18:00'])
+  })
+
+  it('reabre o editor com as faixas gravadas quando elas batem com os horários', () => {
+    const day = { weekday: 1, times: horariosDasFaixas(MANHA_E_TARDE, 60), faixas: MANHA_E_TARDE }
+    expect(faixasDoDia(day, 60)).toEqual(MANHA_E_TARDE)
+  })
+
+  it('grade antiga, só com horários, vira faixas sem mudar o que é oferecido', () => {
+    const day = { weekday: 1, times: ['09:00', '10:00', '14:00', '15:00', '16:00'] }
+    const faixas = faixasDoDia(day, 60)
+    expect(faixas).toEqual([
+      { inicio: '09:00', fim: '11:00' },
+      { inicio: '14:00', fim: '17:00' },
+    ])
+    expect(horariosDasFaixas(faixas, 60)).toEqual(day.times)
+  })
+
+  it('faixa gravada que não gera mais os horários do dia é refeita a partir deles', () => {
+    const day = { weekday: 1, times: ['09:00'], faixas: MANHA_E_TARDE }
+    expect(faixasDoDia(day, 60)).toEqual([{ inicio: '09:00', fim: '10:00' }])
+  })
+
+  it('a configuração guarda as faixas válidas e descarta as invertidas', () => {
+    const cfg = resolveAssistantConfig(
+      config({
+        days: [
+          {
+            weekday: 1,
+            times: ['07:00'],
+            faixas: [
+              { inicio: '7:00', fim: '08:00' },
+              { inicio: '12:00', fim: '11:00' },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(cfg.days[0].faixas).toEqual([{ inicio: '07:00', fim: '08:00' }])
+  })
+
+  it('diaDasFaixas tira os horários das faixas', () => {
+    expect(diaDasFaixas(2, [{ inicio: '08:00', fim: '10:00' }], 60)).toEqual({
+      weekday: 2,
+      faixas: [{ inicio: '08:00', fim: '10:00' }],
+      times: ['08:00', '09:00'],
+    })
+  })
+})
+
+describe('horariosQueBatem', () => {
+  it('um compromisso de duas horas fecha os horários que ficariam em cima dele', () => {
+    expect(horariosQueBatem(['09:00', '10:00', '11:00', '14:00'], '10:00', 120, 60)).toEqual([
+      '10:00',
+      '11:00',
+    ])
+  })
+
+  it('pega também o horário anterior que invadiria o começo', () => {
+    expect(horariosQueBatem(['09:00', '10:00', '11:00'], '09:30', 60, 45)).toEqual([
+      '09:00',
+      '10:00',
+    ])
+  })
+
+  it('encostar não é bater: termina às 11:00, o das 11:00 continua livre', () => {
+    expect(horariosQueBatem(['10:00', '11:00'], '10:00', 60, 60)).toEqual(['10:00'])
   })
 })
 

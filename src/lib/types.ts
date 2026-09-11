@@ -94,12 +94,23 @@ export interface ContactChannels {
 // termina no WhatsApp do advogado. Ver lib/assistant.ts.
 export type SchedulingMode = 'off' | 'external' | 'whatsapp' | 'assistant'
 
+/** Uma faixa de atendimento do dia: "das 07:00 às 11:00". */
+export interface FaixaDeAtendimento {
+  inicio: string
+  fim: string
+}
+
 /** Um dia da semana atendido pelo assistente virtual, com os horários oferecidos. */
 export interface AssistantDay {
   /** 0=domingo … 6=sábado */
   weekday: number
   /** horários oferecidos nesse dia, em "HH:MM" (ordenados, sem repetição) */
   times: string[]
+  /**
+   * As faixas que o advogado digitou e das quais `times` saiu. Só o editor lê:
+   * a conversa oferece `times`. Grade antiga não tem — ver `faixasDoDia`.
+   */
+  faixas?: FaixaDeAtendimento[]
 }
 
 /**

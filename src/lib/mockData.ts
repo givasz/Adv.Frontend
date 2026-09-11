@@ -114,7 +114,7 @@ export const sampleProfile: Profile = {
       { weekday: 4, times: ['14:00', '15:00', '16:00', '17:00'] },
       { weekday: 5, times: ['09:00', '10:00', '11:00'] },
     ],
-    durationMin: 45,
+    durationMin: 60,
     leadHours: 2,
     horizonDays: 14,
     greeting: '',

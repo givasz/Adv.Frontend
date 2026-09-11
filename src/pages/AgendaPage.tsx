@@ -24,9 +24,12 @@ import {
   firstName,
   formatBusyLong,
   formatBusyShort,
+  horariosQueBatem,
   MAX_DAY_CHIPS,
+  minToTime,
   parseBrDate,
   resolveAssistantConfig,
+  timeToMin,
   type AssistantDayOption,
 } from '@/lib/assistant'
 import { Avatar } from '@/components/ui/Avatar'
@@ -60,12 +63,31 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 // O que fica guardado: data e hora. Nunca de quem é o compromisso, nunca o motivo
 // — não há dado de terceiro nenhum atravessando esta tela.
 
-type Step = 'boot' | 'dia' | 'hora' | 'mais' | 'liberar' | 'nome' | 'qual' | 'fim'
+type Step = 'boot' | 'dia' | 'hora' | 'duracao' | 'mais' | 'liberar' | 'nome' | 'qual' | 'fim'
 
 /** Para onde o compromisso vai. Google e Outlook são link; Apple e "outra", arquivo. */
 type Destino = 'google' | 'outlook' | 'outlook365' | 'apple' | 'arquivo'
 
-const ORDEM: Step[] = ['dia', 'hora', 'mais', 'fim']
+const ORDEM: Step[] = ['dia', 'hora', 'duracao', 'mais', 'fim']
+
+/** Quanto o compromisso pode durar. A duração do atendimento entra se não estiver aqui. */
+const DURACOES = [30, 45, 60, 90, 120, 180]
+
+/** 30 → "30 min", 60 → "1 hora", 90 → "1h30", 120 → "2 horas". */
+function rotuloDuracao(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (!h) return `${m} min`
+  if (!m) return h === 1 ? '1 hora' : `${h} horas`
+  return `${h}h${String(m).padStart(2, '0')}`
+}
+
+/** ["09:00", "10:00", "11:00"] → "09:00, 10:00 e 11:00". */
+function juntar(lista: string[]): string {
+  return lista.length > 1
+    ? `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`
+    : (lista[0] ?? '')
+}
 
 export default function AgendaPage() {
   const navigate = useNavigate()
@@ -142,10 +164,13 @@ function Conversa({
   // inteira de ocupados pode ter meses; o que ele quer conferir antes de sair é o
   // que acabou de fazer.
   const [nesta, setNesta] = useState<string[]>([])
-  // O que a ÚLTIMA ação fechou (um horário, ou o dia inteiro). É o que a oferta
-  // de pôr na agenda do telefone leva — e some assim que ele muda de assunto,
-  // para o botão nunca oferecer um compromisso que não é o que está na tela.
-  const [ultimas, setUltimas] = useState<string[]>([])
+  // O horário que ele tocou, à espera de quanto tempo o compromisso vai durar.
+  const [inicio, setInicio] = useState<string | null>(null)
+  // O compromisso que a ÚLTIMA ação fechou: início e duração (de um horário, ou
+  // do dia inteiro). É o que a oferta de pôr na agenda leva — e some assim que
+  // ele muda de assunto, para o botão nunca oferecer um compromisso que não é o
+  // que está na tela.
+  const [bloco, setBloco] = useState<{ inicio: string; duracaoMin: number } | null>(null)
   // O compromisso montado (nome + horário), à espera de ele escolher a agenda — e
   // guardado depois, para "Não abriu? Escolher outra agenda" não pedir tudo de novo.
   const [agendado, setAgendado] = useState<Compromisso | null>(null)
@@ -220,7 +245,7 @@ function Conversa({
     setVerTodos(false)
     setDraft('')
     setNesta([])
-    setUltimas([])
+    setBloco(null)
     setAgendado(null)
     void say(
       dias.length
@@ -256,7 +281,7 @@ function Conversa({
     push('user', digitada ? opt.label : `${opt.label}${opt.relative ? ` (${opt.relative})` : ''}`)
     setDia(opt)
     setDraft('')
-    setUltimas([])
+    setBloco(null)
     setAgendado(null)
     // Data além do horizonte: dá para fechar, mas ele merece saber que ela ainda
     // nem está sendo oferecida — senão parece que a marcação não fez nada.
@@ -295,18 +320,36 @@ function Conversa({
   function fecharHorario(time: string) {
     if (!emFoco) return
     push('user', time)
-    const chave = busyKey(emFoco.key, time)
-    gravar([...busy, chave].sort())
-    setNesta((n) => [...n, chave])
-    setUltimas([chave])
+    setInicio(time)
+    setBloco(null)
     setAgendado(null)
-    const sobraram = restantes.filter((t) => t !== time)
+    void say(['Quanto tempo vai durar?'], 'duracao')
+  }
+
+  // A duração fecha, além do horário tocado, os que ficariam EM CIMA do
+  // compromisso — uma reunião de duas horas às 14:00 tira também o das 15:00 da
+  // conversa. E é o mesmo tempo que vai para a agenda dele depois.
+  function fecharComDuracao(minutos: number) {
+    if (!emFoco || !inicio) return
+    push('user', rotuloDuracao(minutos))
+    const saem = horariosQueBatem(restantes, inicio, minutos, cfg.durationMin)
+    const chaves = saem.map((t) => busyKey(emFoco.key, t))
+    gravar([...busy, ...chaves].sort())
+    setNesta((n) => [...n, ...chaves])
+    setBloco({ inicio: busyKey(emFoco.key, inicio), duracaoMin: minutos })
+    const fim = timeToMin(inicio) + minutos
+    const outros = saem.filter((t) => t !== inicio)
     void say(
       [
-        `Anotado. ${cap(formatBusyLong(chave))} não vai mais aparecer para quem visita.`,
-        sobraram.length
+        `Anotado: ${emFoco.longLabel}, das ${inicio} ${fim < 24 * 60 ? `às ${minToTime(fim)}` : 'até o fim do dia'}.`,
+        outros.length === 0
+          ? 'Esse horário não aparece mais para quem visita.'
+          : outros.length === 1
+            ? `O das ${outros[0]} também sai da conversa — ficaria em cima desse compromisso.`
+            : `Os das ${juntar(outros)} também saem da conversa — ficariam em cima desse compromisso.`,
+        restantes.length > saem.length
           ? 'Marcou mais algum?'
-          : 'Com esse, o dia ficou sem horário livre — ele some da conversa. Marcou mais algum?',
+          : 'Com isso, o dia ficou sem horário livre — ele some da conversa. Marcou mais algum?',
       ],
       'mais',
     )
@@ -318,7 +361,8 @@ function Conversa({
     const chaves = restantes.map((t) => busyKey(emFoco.key, t))
     gravar([...busy, ...chaves].sort())
     setNesta((n) => [...n, ...chaves])
-    setUltimas(chaves)
+    const b = emUmBloco(chaves, cfg.durationMin, { titulo: '' })
+    setBloco(b && { inicio: b.inicio, duracaoMin: b.duracaoMin })
     setAgendado(null)
     void say(
       [
@@ -333,7 +377,7 @@ function Conversa({
     push('user', formatBusyShort(chave))
     gravar(busy.filter((b) => b !== chave))
     setNesta((n) => n.filter((b) => b !== chave))
-    setUltimas([])
+    setBloco(null)
     setAgendado(null)
     void say(
       [`Liberado: ${formatBusyLong(chave)} volta a ser oferecido.`, 'Quer mexer em mais algum?'],
@@ -348,13 +392,11 @@ function Conversa({
   // escolheu: o nome não passa pela API, não vai para o banco e não fica em log —
   // a coluna do perfil continua guardando só data e hora. Ver lib/ics.ts.
   function irParaAgenda() {
-    push('user', ultimas.length > 1 ? `Pôr os ${ultimas.length} na minha agenda` : 'Pôr na minha agenda')
+    push('user', 'Pôr na minha agenda')
     setDraft('')
     void say(
       [
-        ultimas.length > 1
-          ? 'Como quer chamar esses compromissos na sua agenda?'
-          : 'Como quer chamar esse compromisso na sua agenda?',
+        'Como quer chamar esse compromisso na sua agenda?',
         'O nome fica só no seu aparelho — não guardo isso aqui.',
       ],
       'nome',
@@ -362,20 +404,18 @@ function Conversa({
   }
 
   function porNaAgenda(nome: string) {
+    if (!bloco) return
     push('user', nome.trim() || 'Sem nome')
     setDraft('')
-    const compromisso = emUmBloco(ultimas, cfg.durationMin, {
+    setAgendado({
+      ...bloco,
       titulo: nome.trim() || 'Atendimento',
       local: localDoAtendimento,
       descricao: 'Anotado pela sua agenda no advoc.me.',
     })
-    if (!compromisso) return
-    setAgendado(compromisso)
     void say(
       [
-        ultimas.length > 1
-          ? `Os ${ultimas.length} horários vão juntos, como um compromisso só. Qual agenda você usa?`
-          : 'Qual agenda você usa?',
+        'Qual agenda você usa?',
         'Eu abro o compromisso nela já com dia, hora e nome — lá é só confirmar.',
       ],
       'qual',
@@ -417,7 +457,7 @@ function Conversa({
     push('user', 'Outro dia')
     setDia(null)
     setVerTodos(false)
-    setUltimas([])
+    setBloco(null)
     setAgendado(null)
     void say(['Claro. Que dia?'], 'dia')
   }
@@ -440,6 +480,7 @@ function Conversa({
   }
 
   const chips = verTodos ? dias : dias.slice(0, MAX_DAY_CHIPS)
+  const duracoes = [...new Set([...DURACOES, cfg.durationMin])].sort((a, b) => a - b)
   // 'liberar', 'nome' e 'qual' são desvios a partir de 'mais', e não etapas próprias:
   // sem esta linha o fio de progresso ZERAVA no meio da conversa e voltava —
   // parecia que ela tinha recomeçado sozinha.
@@ -598,6 +639,17 @@ function Conversa({
                     Outro dia
                   </Chip>
                 </ChipRow>
+              ) : step === 'duracao' ? (
+                <ChipRow label="Quanto tempo vai durar">
+                  {duracoes.map((m) => (
+                    <Chip key={m} onClick={() => fecharComDuracao(m)}>
+                      {rotuloDuracao(m)}
+                    </Chip>
+                  ))}
+                  <Chip subtle onClick={() => setStep('hora')}>
+                    Outro horário
+                  </Chip>
+                </ChipRow>
               ) : step === 'liberar' ? (
                 <ChipRow label="Horários fechados">
                   {busy.map((k) => (
@@ -646,12 +698,10 @@ function Conversa({
                 </ChipRow>
               ) : step === 'mais' ? (
                 <ChipRow label="E então">
-                  {ultimas.length > 0 && (
+                  {bloco && (
                     <Chip onClick={irParaAgenda}>
                       <CalendarIcon width={13} height={13} className="t-accent" />
-                      {ultimas.length > 1
-                        ? `Pôr os ${ultimas.length} na minha agenda`
-                        : 'Pôr na minha agenda'}
+                      Pôr na minha agenda
                     </Chip>
                   )}
                   {restantes.length > 0 && (
@@ -684,6 +734,12 @@ function Conversa({
                   >
                     Voltar ao painel
                   </button>
+                  <Link
+                    to="/editor?section=agenda"
+                    className="t-faint block w-full py-1 text-center text-[12.5px] font-medium underline-offset-4 hover:underline"
+                  >
+                    Mudar meus dias e horários de atendimento
+                  </Link>
                 </div>
               )}
             </motion.div>

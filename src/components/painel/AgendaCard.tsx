@@ -60,14 +60,24 @@ export function AgendaCard({ profile }: { profile: Profile }) {
             )}
           </p>
         </div>
-        <Link
-          to={comVolta('/agenda', '/painel')}
-          className="btn-primary w-full !py-3 sm:w-auto sm:!px-5"
-        >
-          <CalendarIcon width={17} height={17} />
-          Marcar um horário
-          <ArrowRight width={15} height={15} />
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto">
+          <Link
+            to={comVolta('/agenda', '/painel')}
+            className="btn-primary w-full !py-3 sm:w-auto sm:!px-5"
+          >
+            <CalendarIcon width={17} height={17} />
+            Marcar um horário
+            <ArrowRight width={15} height={15} />
+          </Link>
+          {/* Mudar a grade é o outro gesto da agenda, e ficava enterrado no editor:
+              quem já criou o perfil procurava aqui e não achava. */}
+          <Link
+            to="/editor?section=agenda"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy sm:w-auto"
+          >
+            Dias e horários de atendimento
+          </Link>
+        </div>
       </div>
       <p className="border-t border-ink/10 bg-paper-soft/70 px-5 py-2.5 text-[12px] leading-relaxed text-ink-faint">
         Marcou uma reunião por telefone ou pelo WhatsApp? Conte ao assistente e ele para de

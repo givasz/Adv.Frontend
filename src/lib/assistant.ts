@@ -12,21 +12,24 @@
 
 import { MONTHS_SHORT, WEEKDAYS_FULL, WEEKDAYS_SHORT } from './booking'
 import { whatsappHref } from './whatsapp'
-import type { AssistantConfig, AssistantDay, Profile } from './types'
+import type { AssistantConfig, AssistantDay, FaixaDeAtendimento, Profile } from './types'
 import { enderecoEmLinha, enderecoVisivel, type Endereco } from './endereco'
 
-/** Grade de horários oferecida no editor: 08:00 → 20:00, de 30 em 30 minutos. */
-export const TIME_PRESETS: string[] = (() => {
-  const out: string[] = []
-  for (let m = 8 * 60; m <= 20 * 60; m += 30) out.push(minToTime(m))
-  return out
-})()
+/** Manhã e tarde, com atendimentos de uma hora: 09:00, 10:00, 14:00, 15:00 e 16:00. */
+export const FAIXAS_PADRAO: FaixaDeAtendimento[] = [
+  { inicio: '09:00', fim: '11:00' },
+  { inicio: '14:00', fim: '17:00' },
+]
 
 const WEEKDAY_TIMES_DEFAULT = ['09:00', '10:00', '14:00', '15:00', '16:00']
 
 export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
-  days: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, times: [...WEEKDAY_TIMES_DEFAULT] })),
-  durationMin: 45,
+  days: [1, 2, 3, 4, 5].map((weekday) => ({
+    weekday,
+    times: [...WEEKDAY_TIMES_DEFAULT],
+    faixas: FAIXAS_PADRAO.map((f) => ({ ...f })),
+  })),
+  durationMin: 60,
   leadHours: 12,
   horizonDays: 14,
   greeting: '',
@@ -67,16 +70,18 @@ export function resolveAssistantConfig(
   now: Date = new Date(),
 ): AssistantConfig {
   const base = config ?? DEFAULT_ASSISTANT_CONFIG
-  const byWeekday = new Map<number, string[]>()
+  const byWeekday = new Map<number, AssistantDay>()
   for (const d of base.days ?? []) {
     if (!Number.isInteger(d?.weekday) || d.weekday < 0 || d.weekday > 6) continue
     const times = normalizeTimes(d.times ?? [])
     if (!times.length) continue
-    byWeekday.set(d.weekday, times)
+    const faixas = normalizeFaixas(d.faixas)
+    byWeekday.set(
+      d.weekday,
+      faixas.length ? { weekday: d.weekday, times, faixas } : { weekday: d.weekday, times },
+    )
   }
-  const days: AssistantDay[] = [...byWeekday.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([weekday, times]) => ({ weekday, times }))
+  const days = [...byWeekday.values()].sort((a, b) => a.weekday - b.weekday)
   return {
     days,
     durationMin: clamp(base.durationMin, 15, 180, DEFAULT_ASSISTANT_CONFIG.durationMin),
@@ -95,6 +100,116 @@ function clamp(v: unknown, min: number, max: number, dflt: number): number {
 /** Total de horários marcados na semana — usado no resumo do editor. */
 export function weeklySlotCount(config: AssistantConfig): number {
   return config.days.reduce((sum, d) => sum + d.times.length, 0)
+}
+
+// ---- Faixas de atendimento ("das 07:00 às 11:00") --------------------------
+//
+// Ninguém pensa a própria agenda hora por hora: pensa "de manhã das 7 às 11, de
+// tarde das 13 às 17". O editor monta a grade assim, e os horários saem da faixa
+// no passo da duração do atendimento. A conversa continua oferecendo `times` —
+// as faixas são só a forma de escrever, guardada para o editor reabrir igual.
+
+/** Teto de faixas por dia (o servidor corta no mesmo número). */
+export const MAX_FAIXAS = 12
+
+/** 23:59 — o último minuto que uma faixa pode alcançar. */
+export const FIM_DO_DIA = 23 * 60 + 59
+
+/** Faixas utilizáveis: formato de hora, início antes do fim, com teto. Mantém a ordem digitada. */
+export function normalizeFaixas(raw: unknown): FaixaDeAtendimento[] {
+  if (!Array.isArray(raw)) return []
+  const out: FaixaDeAtendimento[] = []
+  for (const f of raw as Partial<FaixaDeAtendimento>[]) {
+    const ini = timeToMin(String(f?.inicio ?? ''))
+    const fim = timeToMin(String(f?.fim ?? ''))
+    if (!Number.isFinite(ini) || !Number.isFinite(fim) || ini >= fim) continue
+    out.push({ inicio: minToTime(ini), fim: minToTime(fim) })
+    if (out.length === MAX_FAIXAS) break
+  }
+  return out
+}
+
+/**
+ * Os horários que cabem nas faixas: começa no início e anda de `durationMin` em
+ * `durationMin`, oferecendo só o atendimento que TERMINA até o fim da faixa — "das
+ * 7 às 11" com uma hora dá 07:00, 08:00, 09:00 e 10:00, nunca 11:00. Faixa mais
+ * curta que um atendimento ainda oferece o início: sumir com ela em silêncio
+ * seria pior do que passar alguns minutos.
+ */
+export function horariosDasFaixas(faixas: FaixaDeAtendimento[], durationMin: number): string[] {
+  const passo = Math.max(15, Math.round(durationMin) || 60)
+  const out: string[] = []
+  for (const f of faixas) {
+    const ini = timeToMin(f.inicio)
+    const fim = timeToMin(f.fim)
+    if (!Number.isFinite(ini) || !Number.isFinite(fim) || ini >= fim) continue
+    for (let m = ini; m === ini || m + passo <= fim; m += passo) out.push(minToTime(m))
+  }
+  return normalizeTimes(out)
+}
+
+/**
+ * As faixas de um dia, para o editor mostrar.
+ *
+ * As gravadas valem só se ainda geram exatamente os horários do dia — senão foram
+ * escritas por outra versão, ou a duração mudou por fora, e mostrar a faixa
+ * diria uma coisa enquanto a conversa oferece outra. Nesse caso (e na grade
+ * antiga, que só tem horários) a faixa é reconstruída juntando os horários
+ * seguidos no passo da duração: nada muda no que o visitante vê.
+ */
+export function faixasDoDia(day: AssistantDay, durationMin: number): FaixaDeAtendimento[] {
+  const times = normalizeTimes(day.times ?? [])
+  const gravadas = normalizeFaixas(day.faixas)
+  if (gravadas.length && horariosDasFaixas(gravadas, durationMin).join() === times.join()) {
+    return gravadas
+  }
+  const faixa = (ini: number, fim: number): FaixaDeAtendimento => ({
+    inicio: minToTime(ini),
+    fim: minToTime(Math.min(fim, FIM_DO_DIA)),
+  })
+  const out: FaixaDeAtendimento[] = []
+  let ini: number | null = null
+  let ultimo = 0
+  for (const t of times) {
+    const m = timeToMin(t)
+    if (ini !== null && m - ultimo === durationMin) {
+      ultimo = m
+      continue
+    }
+    if (ini !== null) out.push(faixa(ini, ultimo + durationMin))
+    ini = m
+    ultimo = m
+  }
+  if (ini !== null) out.push(faixa(ini, ultimo + durationMin))
+  return out
+}
+
+/** Um dia montado a partir das faixas — os horários sempre saem delas. */
+export function diaDasFaixas(
+  weekday: number,
+  faixas: FaixaDeAtendimento[],
+  durationMin: number,
+): AssistantDay {
+  return { weekday, faixas, times: horariosDasFaixas(faixas, durationMin) }
+}
+
+/**
+ * Os horários da grade que ficariam EM CIMA de um compromisso: começam antes de
+ * ele acabar e acabariam depois de ele começar. Uma reunião das 14:00 às 16:00
+ * fecha 14:00 e 15:00 — e, com atendimentos de 45 minutos, também o das 13:30.
+ */
+export function horariosQueBatem(
+  times: string[],
+  inicio: string,
+  duracaoMin: number,
+  durationMin: number,
+): string[] {
+  const ini = timeToMin(inicio)
+  const fim = ini + duracaoMin
+  return times.filter((t) => {
+    const m = timeToMin(t)
+    return m < fim && m + durationMin > ini
+  })
 }
 
 // ---- Datas oferecidas na conversa ----

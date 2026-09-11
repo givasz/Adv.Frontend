@@ -360,6 +360,8 @@ async function agendaDoAdvogado() {
     const hora = conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
     await hora.waitFor({ timeout: ESPERA })
     await hora.click()
+    // Quanto tempo vai durar — é a resposta que fecha o horário.
+    await clicar(pagina, '1 hora')
     // O compromisso indo para a agenda dele: nome → qual agenda → a agenda abre
     // preenchida. Google e Outlook são LINKS — confere que levam o nome e a hora.
     await clicar(pagina, 'Pôr na minha agenda')
@@ -415,6 +417,7 @@ async function agendaDoAdvogado() {
       .first()
       .click()
     await conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first().click()
+    await clicar(pagina, '1 hora')
     await clicar(pagina, 'Não, é só isso')
     const comprovante = pagina.getByText('Horários fechados', { exact: true }).first()
     await comprovante.waitFor({ timeout: ESPERA })
