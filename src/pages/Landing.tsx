@@ -13,6 +13,7 @@ import {
 import { PLAN_LABEL } from '@/lib/upsell'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
+import { ContratosVitrine } from '@/components/landing/ContratosVitrine'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
@@ -68,6 +69,11 @@ export default function Landing() {
         <div className="flex items-center gap-2 sm:gap-4">
           <a href="#assistente" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Assistente
+          </a>
+          {/* A partir de 768px: entre 640 e 768 os quatro links brigavam com o
+              menu da conta e o botão principal. */}
+          <a href="#contratos" className="hidden text-sm font-medium text-ink-soft hover:text-ink md:block">
+            Contratos
           </a>
           <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Como funciona
@@ -312,6 +318,10 @@ export default function Landing() {
           </div>
         </div>
       </motion.section>
+
+      {/* Contratos e procurações — recurso do Max, com a folha e o canhoto do
+          registro desenhados na mesma linguagem das telas de verdade. */}
+      <ContratosVitrine />
 
       {/* Como funciona */}
       <Section id="como-funciona" eyebrow="Como funciona" title="Do zero ao perfil publicado, em quatro passos.">
@@ -644,6 +654,14 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'O assistente virtual dá orientação jurídica aos visitantes?',
     a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, pergunta o assunto e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua.',
+  },
+  {
+    q: 'Os contratos que eu monto ficam guardados no advoc.me?',
+    a: 'Não. O texto, os dados do cliente e os valores ficam no seu aparelho e no PDF que você baixa. O que registramos é só a impressão digital do arquivo, o código impresso no rodapé e a data em que você confirmou a revisão — o bastante para qualquer pessoa conferir depois se o PDF mudou. Montar e registrar documentos é do plano Max.',
+  },
+  {
+    q: 'O advoc.me assina ou valida o contrato?',
+    a: 'Não. Você assina o PDF com a sua conta gov.br, com o seu certificado digital ou pela plataforma de assinatura que já usa. O registro confirma que o arquivo é o mesmo; ele não atesta o conteúdo nem a validade do documento, que continuam sob a sua responsabilidade.',
   },
   {
     q: 'O plano Free é grátis mesmo?',

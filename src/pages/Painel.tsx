@@ -340,6 +340,7 @@ export default function Painel() {
             title="Contratos e procurações"
             desc="Monte a minuta a partir de um modelo, revise e registre a impressão digital do PDF."
             icon={PenIcon}
+            selo={profile.plan === 'premium' ? undefined : 'Max'}
           />
           <DiscoverCard
             to="/editor?section=conteudo"
@@ -399,11 +400,14 @@ function DiscoverCard({
   title,
   desc,
   icon: Icon,
+  selo,
 }: {
   to: string
   title: string
   desc: string
   icon: (p: { width?: number; height?: number; className?: string }) => JSX.Element
+  /** plano que o recurso exige, mostrado a quem ainda não o tem */
+  selo?: string
 }) {
   return (
     <Link
@@ -417,7 +421,15 @@ function DiscoverCard({
         <Icon width={17} height={17} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-display text-[14.5px] font-semibold leading-tight text-ink">{title}</span>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-display text-[14.5px] font-semibold leading-tight text-ink">{title}</span>
+          {selo && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
+              <LockIcon width={10} height={10} aria-hidden />
+              {selo}
+            </span>
+          )}
+        </span>
         <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-soft">{desc}</span>
       </span>
       <ArrowRight

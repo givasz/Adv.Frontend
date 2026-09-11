@@ -19,6 +19,8 @@ function arquivos(): { nome: string; texto: string }[] {
     join(SRC, 'pages', 'ContratosPage.tsx'),
     join(SRC, 'pages', 'ContratoPage.tsx'),
     join(SRC, 'pages', 'ConferirDocumentoPage.tsx'),
+    // A vitrine da home: é onde a tentação de prometer mais é maior.
+    join(SRC, 'components', 'landing', 'ContratosVitrine.tsx'),
     ...readdirSync(join(SRC, 'components', 'contratos'))
       .filter((f) => f.endsWith('.tsx'))
       .map((f) => join(SRC, 'components', 'contratos', f)),
@@ -73,6 +75,13 @@ describe('as ressalvas que precisam estar na tela', () => {
     expect(t).toContain('Não guardamos')
     expect(t).toContain('o texto do documento')
     expect(t).toContain('não substitui a assinatura')
+  })
+
+  it('a vitrine da home diz que é do Max e o que o registro não atesta', () => {
+    const t = porNome('ContratosVitrine.tsx')
+    expect(t).toContain('plano Max')
+    expect(t).toContain('não atesta o conteúdo nem a validade')
+    expect(t).toContain('sem inteligência artificial')
   })
 
   it('a lista de documentos diz onde o texto fica', () => {

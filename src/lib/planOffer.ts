@@ -170,18 +170,19 @@ export const PLAN_OFFERS: PlanOffer[] = [
     name: 'Max',
     price: precoDoPlano('premium'),
     period: '/mês',
-    pitch: 'O perfil com a sua identidade, não a nossa.',
+    pitch: 'O perfil com a sua identidade — e contratos e procurações prontos para revisar.',
     items: [
       { text: 'Tudo do Pro, e mais:' },
+      // Primeiro da lista desde 11/09/2026: é o único recurso do Max que serve
+      // ao escritório, e não só ao perfil. "Registrada" é a palavra exata:
+      // guardamos a impressão digital do arquivo — não assinamos, não validamos e
+      // não guardamos o contrato. Enviar para assinatura daqui ainda não existe e
+      // por isso não está na frase.
+      { text: 'Contratos de honorários, procurações e declarações a partir de modelos, com o PDF registrado' },
       { text: 'Vídeo de apresentação no fim do perfil' },
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
       { text: 'Cartão de visita pronto para a gráfica, em PDF' },
-      // Entrou com o recurso no ar (10/09/2026). "Registrada" é a palavra exata:
-      // guardamos a impressão digital do arquivo — não assinamos, não validamos e
-      // não guardamos o contrato. Enviar para assinatura daqui ainda não existe e
-      // por isso não está na frase.
-      { text: 'Contratos e procurações a partir de modelos, com a impressão digital do PDF registrada' },
       { text: `Até ${FAQ_LIMIT.premium} perguntas frequentes (eram ${FAQ_LIMIT.pro})` },
       { text: 'Sua cor e sua marca — o rodapé advoc.me some' },
       { text: 'Comprovante de conformidade em PDF, quando precisar mostrar' },
