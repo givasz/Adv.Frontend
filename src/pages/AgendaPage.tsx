@@ -24,13 +24,19 @@ import {
   firstName,
   formatBusyLong,
   formatBusyShort,
+  faixaDoHorario,
   horariosQueBatem,
+  MAX_BUSY,
   MAX_DAY_CHIPS,
+  motivoSemHorario,
+  pareceData,
+  weekdayLong,
   minToTime,
   parseBrDate,
   resolveAssistantConfig,
   timeToMin,
   type AssistantDayOption,
+  type SemHorario,
 } from '@/lib/assistant'
 import { Avatar } from '@/components/ui/Avatar'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
@@ -87,6 +93,49 @@ function juntar(lista: string[]): string {
   return lista.length > 1
     ? `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`
     : (lista[0] ?? '')
+}
+
+// ---- Quando algo sai do trilho ---------------------------------------------
+//
+// Toda resposta de erro diz duas coisas: o que aconteceu com a agenda de quem
+// visita, e o que ele pode fazer agora. "Erro ao salvar" não diz nenhuma das duas.
+
+const LISTA_CHEIA = `Sua lista de horários fechados chegou ao limite de ${MAX_BUSY}. Libere os que já não valem em "Liberar um horário" — ou tire da grade os dias em que não vai atender.`
+
+/** A marcação não chegou ao servidor: por quê, e o que isso muda para quem visita. */
+function mensagemDeFalha(e: unknown): string {
+  const efeito = 'Para quem visita, sua agenda continua como estava antes dela.'
+  if (e instanceof SessaoExpirada) {
+    return `Sua sessão expirou e a última alteração não foi guardada. ${efeito} Entre de novo e refaça a marcação.`
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return `Você está sem internet, e a última alteração não foi guardada. ${efeito} Quando a conexão voltar, toque em Tentar de novo.`
+  }
+  const detalhe = e instanceof Error && e.message ? ` (${e.message.replace(/\.$/, '')})` : ''
+  return `Não consegui guardar a última alteração${detalhe}. ${efeito}`
+}
+
+/** A resposta para uma data digitada sem horário a fechar — ver motivoSemHorario. */
+function porQueNaoTemHorario(motivo: SemHorario | null, key: string): string {
+  const curta = `${key.slice(8, 10)}/${key.slice(5, 7)}`
+  switch (motivo) {
+    case 'passada':
+      return `${curta} já passou. Aqui só dá para fechar horários de hoje em diante.`
+    case 'nao-atende': {
+      const wd = new Date(
+        Number(key.slice(0, 4)),
+        Number(key.slice(5, 7)) - 1,
+        Number(key.slice(8, 10)),
+      ).getDay()
+      return `${cap(weekdayLong(wd))} não está na sua grade, então não há o que fechar em ${curta}. Se vai atender nesse dia, inclua-o em Dias e horários de atendimento.`
+    }
+    case 'lotado':
+      return `Todos os horários de ${curta} já estão fechados. Para reabrir algum, use "Liberar um horário".`
+    case 'ja-passaram':
+      return 'Os horários de hoje na sua grade já passaram — não sobrou nada para fechar hoje.'
+    default:
+      return 'Não entendi a data. Escreva assim: 25/11 — ou toque em um dos dias acima.'
+  }
 }
 
 export default function AgendaPage() {
@@ -177,6 +226,8 @@ function Conversa({
   const naApple = useMemo(ehApple, [])
   const [gravando, setGravando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  // Sessão vencida não se resolve tentando de novo: o aviso troca o botão pelo login.
+  const [sessaoExpirou, setSessaoExpirou] = useState(false)
 
   const cfg = useMemo(() => resolveAssistantConfig(profile.assistant), [profile.assistant])
   const busy = cfg.busy ?? []
@@ -223,11 +274,8 @@ function Conversa({
             () => setGravando(false),
             (e: unknown) => {
               setGravando(false)
-              if (e instanceof SessaoExpirada) {
-                setErro('Sua sessão expirou. Entre de novo para guardar o que faltou.')
-                return
-              }
-              setErro(e instanceof Error ? e.message : 'Não consegui guardar. Tente de novo.')
+              setSessaoExpirou(e instanceof SessaoExpirada)
+              setErro(mensagemDeFalha(e))
             },
           ),
         () => undefined,
@@ -235,6 +283,11 @@ function Conversa({
     },
     [profile, cfg, setProfile],
   )
+
+  // Reenvia a lista inteira como está na tela: é ela que a falha deixou de guardar.
+  function tentarDeNovo() {
+    gravar(busy)
+  }
 
   // ---- Roteiro --------------------------------------------------------------
 
@@ -304,14 +357,16 @@ function Conversa({
     setDraft('')
     const key = parseBrDate(bruto)
     if (!key) {
-      void say(['Não entendi a data. Escreva assim: 25/11 — ou toque em um dos dias acima.'])
+      void say([
+        pareceData(bruto)
+          ? `${bruto} não existe no calendário. Confira o dia e o mês — ex.: 25/11.`
+          : 'Não entendi a data. Escreva assim: 25/11 — ou toque em um dos dias acima.',
+      ])
       return
     }
     const opt = assistantDayAt(cfg, key)
     if (!opt) {
-      void say([
-        `Em ${key.slice(8, 10)}/${key.slice(5, 7)} não há horário livre na sua grade — ou você não atende nesse dia da semana, ou já fechou todos.`,
-      ])
+      void say([porQueNaoTemHorario(motivoSemHorario(cfg, key), key)])
       return
     }
     escolherDia(opt, true)
@@ -333,32 +388,65 @@ function Conversa({
     if (!emFoco || !inicio) return
     push('user', rotuloDuracao(minutos))
     const saem = horariosQueBatem(restantes, inicio, minutos, cfg.durationMin)
+    // O horário tocado já não está livre (o dia inteiro foi fechado antes, por
+    // exemplo). Gravar agora duplicaria a marcação e anunciaria algo que não mudou.
+    if (!saem.includes(inicio)) {
+      void say(
+        [`O das ${inicio} já está fechado.${restantes.length ? ' Escolha outro horário.' : ''}`],
+        restantes.length ? 'hora' : 'mais',
+      )
+      return
+    }
     const chaves = saem.map((t) => busyKey(emFoco.key, t))
+    // Acima do teto a lista seria cortada ao guardar, e justamente os horários
+    // mais distantes — este inclusive — sumiriam sem aviso.
+    if (busy.length + chaves.length > MAX_BUSY) {
+      void say([LISTA_CHEIA], 'mais')
+      return
+    }
     gravar([...busy, ...chaves].sort())
     setNesta((n) => [...n, ...chaves])
     setBloco({ inicio: busyKey(emFoco.key, inicio), duracaoMin: minutos })
+
     const fim = timeToMin(inicio) + minutos
     const outros = saem.filter((t) => t !== inicio)
-    void say(
-      [
-        `Anotado: ${emFoco.longLabel}, das ${inicio} ${fim < 24 * 60 ? `às ${minToTime(fim)}` : 'até o fim do dia'}.`,
-        outros.length === 0
-          ? 'Esse horário não aparece mais para quem visita.'
-          : outros.length === 1
-            ? `O das ${outros[0]} também sai da conversa — ficaria em cima desse compromisso.`
-            : `Os das ${juntar(outros)} também saem da conversa — ficariam em cima desse compromisso.`,
-        restantes.length > saem.length
-          ? 'Marcou mais algum?'
-          : 'Com isso, o dia ficou sem horário livre — ele some da conversa. Marcou mais algum?',
-      ],
-      'mais',
+    const dia = cfg.days.find((d) => d.weekday === emFoco.weekday)
+    const faixa = dia ? faixaDoHorario(dia, inicio, cfg.durationMin) : null
+    const linhas = [
+      `Anotado: ${emFoco.longLabel}, das ${inicio} ${fim < 24 * 60 ? `às ${minToTime(fim)}` : 'até a meia-noite'}.`,
+    ]
+    // Passar do horário não é erro — reunião estica, audiência atrasa —, mas ele
+    // precisa saber que o compromisso saiu da grade que ele mesmo montou.
+    if (fim > 24 * 60) {
+      linhas.push(
+        'Ele passa da meia-noite. Se continuar no dia seguinte em cima de algum horário da sua grade, feche lá também.',
+      )
+    } else if (faixa && fim > timeToMin(faixa.fim)) {
+      linhas.push(
+        `Ele termina ${rotuloDuracao(fim - timeToMin(faixa.fim))} depois do fim do seu atendimento nesse dia (${faixa.fim}). Tudo bem — se isso virar rotina, ajuste a grade em Dias e horários de atendimento.`,
+      )
+    }
+    linhas.push(
+      outros.length === 0
+        ? 'Esse horário não aparece mais para quem visita.'
+        : outros.length === 1
+          ? `O das ${outros[0]} também sai da conversa — ficaria em cima desse compromisso.`
+          : `Os das ${juntar(outros)} também saem da conversa — ficariam em cima desse compromisso.`,
+      restantes.length > saem.length
+        ? 'Marcou mais algum?'
+        : 'Com isso, o dia ficou sem horário livre — ele some da conversa. Marcou mais algum?',
     )
+    void say(linhas, 'mais')
   }
 
   function fecharDiaInteiro() {
     if (!emFoco) return
     push('user', 'O dia todo')
     const chaves = restantes.map((t) => busyKey(emFoco.key, t))
+    if (busy.length + chaves.length > MAX_BUSY) {
+      void say([LISTA_CHEIA], 'mais')
+      return
+    }
     gravar([...busy, ...chaves].sort())
     setNesta((n) => [...n, ...chaves])
     const b = emUmBloco(chaves, cfg.durationMin, { titulo: '' })
@@ -583,6 +671,38 @@ function Conversa({
           className="relative z-10 shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
           style={{ borderTop: '1px solid var(--c-border)', background: 'var(--c-surface)' }}
         >
+          {/* A falha de gravação fica AQUI, onde ele está olhando: o selo do
+              cabeçalho só diz "não guardou", e o motivo num `title` não aparece
+              no celular. */}
+          {erro && (
+            <div
+              role="alert"
+              className="mb-3 rounded-xl px-3.5 py-3 text-[12.5px] leading-relaxed"
+              style={{ background: 'var(--c-accent-soft)', color: 'var(--c-text)' }}
+            >
+              <p>{erro}</p>
+              {sessaoExpirou ? (
+                <Link
+                  to={`/entrar?next=${encodeURIComponent('/agenda')}`}
+                  className="mt-1.5 inline-block font-semibold underline underline-offset-4"
+                  style={{ color: 'var(--c-accent)' }}
+                >
+                  Entrar de novo
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={tentarDeNovo}
+                  disabled={gravando}
+                  className="mt-1.5 font-semibold underline underline-offset-4 disabled:opacity-50"
+                  style={{ color: 'var(--c-accent)' }}
+                >
+                  {gravando ? 'Tentando…' : 'Tentar de novo'}
+                </button>
+              )}
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             <motion.div
               key={step + (typing ? '-t' : '')}

@@ -212,6 +212,66 @@ export function horariosQueBatem(
   })
 }
 
+/** A faixa em que um horário cai — "das 13:00 às 17:00" para 16:00 —, ou `null`. */
+export function faixaDoHorario(
+  day: AssistantDay,
+  time: string,
+  durationMin: number,
+): FaixaDeAtendimento | null {
+  const m = timeToMin(time)
+  return (
+    faixasDoDia(day, durationMin).find((f) => timeToMin(f.inicio) <= m && m < timeToMin(f.fim)) ??
+    null
+  )
+}
+
+/**
+ * O que o advogado precisa saber sobre as faixas que digitou.
+ *
+ * Nada disso é erro — a grade continua valendo —, mas em cada caso a faixa diz
+ * uma coisa e a conversa oferece outra: "das 18:00 às 18:30" com atendimentos de
+ * uma hora oferece um horário que termina às 19:00; "das 07:00 às 11:30" deixa
+ * meia hora sem horário; duas faixas sobrepostas repetem horários. Sem o aviso,
+ * ele só descobre olhando a conversa de fora.
+ */
+export function avisosDasFaixas(faixas: FaixaDeAtendimento[], durationMin: number): string[] {
+  const avisos: string[] = []
+  for (const f of faixas) {
+    const ini = timeToMin(f.inicio)
+    const fim = timeToMin(f.fim)
+    if (!Number.isFinite(ini) || !Number.isFinite(fim) || ini >= fim) continue
+    const tamanho = fim - ini
+    if (tamanho < durationMin) {
+      const termina = ini + durationMin
+      avisos.push(
+        `Das ${f.inicio} às ${f.fim} não cabe um atendimento de ${durationMin} min: só ${f.inicio} é oferecido, e ele termina ${
+          termina >= 24 * 60 ? 'depois da meia-noite' : `às ${minToTime(termina)}`
+        }.`,
+      )
+      continue
+    }
+    const sobra = tamanho % durationMin
+    if (sobra >= 15) {
+      const ultimo = ini + (Math.floor(tamanho / durationMin) - 1) * durationMin
+      avisos.push(
+        `Das ${f.inicio} às ${f.fim}, o último atendimento vai das ${minToTime(ultimo)} às ${minToTime(ultimo + durationMin)}: os ${sobra} min finais ficam sem horário.`,
+      )
+    }
+  }
+  for (let i = 0; i < faixas.length; i++) {
+    for (let j = i + 1; j < faixas.length; j++) {
+      const a = faixas[i]
+      const b = faixas[j]
+      if (timeToMin(a.inicio) < timeToMin(b.fim) && timeToMin(b.inicio) < timeToMin(a.fim)) {
+        avisos.push(
+          `As faixas ${a.inicio}–${a.fim} e ${b.inicio}–${b.fim} se sobrepõem: os horários repetidos aparecem uma vez só.`,
+        )
+      }
+    }
+  }
+  return avisos
+}
+
 // ---- Datas oferecidas na conversa ----
 
 export interface AssistantDayOption {
@@ -366,9 +426,53 @@ export function assistantDayAt(
   const cfg = resolveAssistantConfig(config, now)
   const times = cfg.days.find((d) => d.weekday === day.getDay())?.times ?? []
   const ocupados = new Set(cfg.busy ?? [])
-  const livres = times.filter((t) => !ocupados.has(busyKey(key, t)))
+  // Hoje, o que já começou não tem mais o que fechar: some da lista em vez de
+  // virar um toque que não muda nada para quem visita.
+  const agoraMin = key === dayKey(now) ? now.getHours() * 60 + now.getMinutes() : -1
+  const livres = times.filter((t) => !ocupados.has(busyKey(key, t)) && timeToMin(t) > agoraMin)
   if (!livres.length) return null
   return describeDay(day, livres, now)
+}
+
+/** Por que uma data não tem horário para fechar — cada caso pede uma resposta diferente. */
+export type SemHorario = 'data-invalida' | 'passada' | 'nao-atende' | 'lotado' | 'ja-passaram'
+
+/**
+ * O motivo de `assistantDayAt` ter devolvido `null`.
+ *
+ * "Não há horário" sozinho deixa o advogado sem saber o que fazer: a data já
+ * passou? ele não atende nesse dia da semana? já fechou tudo? os de hoje já
+ * passaram? Cada resposta leva a um gesto diferente, e a conversa precisa dizer
+ * qual. Devolve `null` quando a data TEM horário livre.
+ */
+export function motivoSemHorario(
+  config: AssistantConfig,
+  key: string,
+  now: Date = new Date(),
+): SemHorario | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+  if (!m || !dataReal(Number(m[1]), Number(m[2]), Number(m[3]))) return 'data-invalida'
+  if (key < dayKey(now)) return 'passada'
+  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const cfg = resolveAssistantConfig(config, now)
+  const times = cfg.days.find((d) => d.weekday === day.getDay())?.times ?? []
+  if (!times.length) return 'nao-atende'
+  const ocupados = new Set(cfg.busy ?? [])
+  const livres = times.filter((t) => !ocupados.has(busyKey(key, t)))
+  if (!livres.length) return 'lotado'
+  if (key === dayKey(now)) {
+    const agoraMin = now.getHours() * 60 + now.getMinutes()
+    if (livres.every((t) => timeToMin(t) <= agoraMin)) return 'ja-passaram'
+  }
+  return null
+}
+
+/**
+ * Tem FORMA de data ("31/02", "25/13")? Serve para responder "essa data não
+ * existe" em vez de "não entendi" — quem digitou 31/02 escreveu uma data, só errou.
+ */
+export function pareceData(text: string): boolean {
+  return /^(\d{1,2})\s*[/.-]\s*(\d{1,2})(?:\s*[/.-]\s*(\d{2}|\d{4}))?$/.test(text.trim())
 }
 
 /**

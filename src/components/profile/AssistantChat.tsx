@@ -82,6 +82,14 @@ export function AssistantChat({
 }) {
   const config = useMemo(() => resolveAssistantConfig(profile.assistant), [profile.assistant])
   const days = useMemo(() => buildAssistantDays(config), [config])
+  // Os dias recalculados AGORA, quando o horário escolhido expirou no meio da
+  // conversa (ver horarioSaiu). Ficam por cima de `days` só até recomeçar — mexer
+  // no próprio `days` reabriria a conversa, que depende do tamanho dele.
+  const [diasFrescos, setDiasFrescos] = useState<AssistantDayOption[] | null>(null)
+  const diasVisiveis = diasFrescos ?? days
+  // Sem número válido não há para onde mandar o pedido: melhor dizer na abertura
+  // do que depois de a pessoa responder tudo.
+  const semWhatsapp = !assistantWhatsappHref(profile, {}, config.durationMin)
   const areas = useMemo(
     () => profile.areas.map((a) => a.label.trim()).filter(Boolean),
     [profile.areas],
@@ -122,6 +130,7 @@ export function AssistantChat({
     reset()
     setAnswers({})
     setShowAllDays(false)
+    setDiasFrescos(null)
     setDraft('')
     setStep('boot')
     const custom = config.greeting?.trim()
@@ -131,8 +140,18 @@ export function AssistantChat({
           `Olá! Sou o assistente virtual${first ? ` de ${first}` : ''}.`,
           'Posso reservar um horário de conversa. Não presto orientação jurídica — só organizo o pedido e encaminho.',
         ]
+    if (semWhatsapp) {
+      void say(
+        [
+          ...opening,
+          'Por enquanto este perfil não informou um WhatsApp para receber pedidos, então não consigo reservar um horário por aqui.',
+        ],
+        'done',
+      )
+      return
+    }
     void say(days.length ? [...opening, 'Qual dia fica melhor para você?'] : opening, days.length ? 'day' : 'done')
-  }, [config.greeting, days.length, first, say, reset])
+  }, [config.greeting, days.length, first, say, reset, semWhatsapp])
 
   useAutoStart(start, autoStart)
   usePinnedToBottom(listRef, [msgs, typing, step])
@@ -157,6 +176,18 @@ export function AssistantChat({
   function pickTime(time: string) {
     push('user', time)
     setAnswers((a) => ({ ...a, time }))
+    // Voltou só para trocar um horário que expirou: o resto do pedido já está
+    // respondido, e perguntar tudo de novo seria castigo por esperar.
+    if (answers.name) {
+      void say(
+        [
+          `Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`,
+          'Toque no botão abaixo para enviar pelo WhatsApp — o horário só vale depois da confirmação.',
+        ],
+        'done',
+      )
+      return
+    }
     if (bothFormats) {
       void say(['Anotado. A conversa seria presencial ou online?'], 'format')
       return
@@ -215,6 +246,10 @@ export function AssistantChat({
     push('user', value)
     setAnswers((a) => ({ ...a, name: value }))
     setDraft('')
+    if (!horarioAindaVale(answers)) {
+      horarioSaiu([`Prazer, ${firstName(value)}.`])
+      return
+    }
     void say(
       [
         `Prazer, ${firstName(value)}. Registrei seu pedido.`,
@@ -224,9 +259,42 @@ export function AssistantChat({
     )
   }
 
+  // ---- Horário que expirou no meio da conversa ----
+  //
+  // Os horários são calculados quando a conversa abre. Quem abre às 13:50, escolhe
+  // "hoje às 16:00" e demora a responder pode chegar ao fim com o horário já
+  // dentro da antecedência mínima — e mandar um pedido que o advogado não aceita.
+  // A conta é refeita antes de fechar o pedido e antes de abrir o WhatsApp.
+
+  function horarioAindaVale(a: AssistantAnswers): boolean {
+    if (!a.day || !a.time) return false
+    const { key } = a.day
+    const time = a.time
+    return buildAssistantDays(config).some((d) => d.key === key && d.times.includes(time))
+  }
+
+  function horarioSaiu(antes: string[] = []) {
+    const agora = buildAssistantDays(config)
+    setDiasFrescos(agora)
+    setShowAllDays(false)
+    setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
+    void say(
+      agora.length
+        ? [
+            ...antes,
+            'Só que esse horário acabou de sair da agenda — passou do prazo mínimo para pedir. Escolha outro, por favor:',
+          ]
+        : [
+            ...antes,
+            'Só que esse horário acabou de sair da agenda, e não sobrou outro aberto agora. Tente de novo mais tarde.',
+          ],
+      agora.length ? 'day' : 'done',
+    )
+  }
+
   // ---- Dados derivados da tela atual ----
 
-  const dayOptions = showAllDays ? days : days.slice(0, MAX_DAY_CHIPS)
+  const dayOptions = showAllDays ? diasVisiveis : diasVisiveis.slice(0, MAX_DAY_CHIPS)
   const times = answers.day?.times ?? []
   const answered = STEP_ORDER.indexOf(step)
   const progress = step === 'boot' ? 0 : Math.min(1, answered / (STEP_ORDER.length - 1))
@@ -371,7 +439,7 @@ export function AssistantChat({
                     {d.relative && <em className="t-faint not-italic">· {d.relative}</em>}
                   </Chip>
                 ))}
-                {!showAllDays && days.length > MAX_DAY_CHIPS && (
+                {!showAllDays && diasVisiveis.length > MAX_DAY_CHIPS && (
                   <Chip subtle onClick={() => setShowAllDays(true)}>
                     Ver mais dias
                   </Chip>
@@ -429,6 +497,12 @@ export function AssistantChat({
                 <a
                   href={href}
                   {...comoAbrirWhatsapp()}
+                  onClick={(e) => {
+                    // A pessoa pode ter parado no botão por um bom tempo.
+                    if (horarioAindaVale(answers)) return
+                    e.preventDefault()
+                    horarioSaiu()
+                  }}
                   className="t-btn w-full !py-3.5 text-[15px]"
                 >
                   <WhatsappIcon width={20} height={20} />

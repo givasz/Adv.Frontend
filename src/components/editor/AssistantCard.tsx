@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { AssistantConfig, FaixaDeAtendimento, Profile } from '@/lib/types'
 import { WEEKDAYS_FULL, WEEKDAYS_SHORT } from '@/lib/booking'
 import {
+  avisosDasFaixas,
   buildAssistantDays,
   DEFAULT_ASSISTANT_CONFIG,
   diaDasFaixas,
@@ -68,6 +69,10 @@ export function AssistantCard({
   const focusFaixas = useMemo(
     () => (focus ? faixasDoDia(focus, config.durationMin) : []),
     [focus, config.durationMin],
+  )
+  const avisos = useMemo(
+    () => avisosDasFaixas(focusFaixas, config.durationMin),
+    [focusFaixas, config.durationMin],
   )
 
   const greetingIssues = useMemo(
@@ -274,7 +279,7 @@ export function AssistantCard({
                 </li>
               ))}
             </ul>
-            {focusFaixas.length < MAX_FAIXAS && (
+            {focusFaixas.length < MAX_FAIXAS ? (
               <button
                 type="button"
                 onClick={adicionarFaixa}
@@ -282,6 +287,18 @@ export function AssistantCard({
               >
                 + Adicionar outra faixa
               </button>
+            ) : (
+              <p className="mt-2.5 text-[12px] text-ink-faint">
+                Este dia chegou ao máximo de {MAX_FAIXAS} faixas.
+              </p>
+            )}
+
+            {avisos.length > 0 && (
+              <ul className="mt-3 space-y-1.5 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5 text-[12px] leading-relaxed text-brass-deep">
+                {avisos.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
             )}
 
             <div className="mt-4">
@@ -369,6 +386,17 @@ export function AssistantCard({
             </p>
           </div>
 
+
+          {/* A grade tem horário, mas nenhum chega à conversa: sem este aviso o
+              advogado vê "35 horários por semana" e acha que está tudo no ar. */}
+          {upcomingSlots === 0 && weeklySlotCount(config) > 0 && (
+            <p className="rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-brass-deep">
+              Agora nenhum horário aparece para quem abre seu perfil: nos próximos{' '}
+              {config.horizonDays} {config.horizonDays === 1 ? 'dia' : 'dias'}, os horários da grade
+              já estão fechados ou caem antes da antecedência mínima. Aumente o “Aceitar até” ou
+              libere algum horário.
+            </p>
+          )}
 
           {/* resumo do que o visitante vai ver */}
           <div className="flex items-start gap-2.5 rounded-lg border border-ink/10 bg-paper-soft/60 px-3.5 py-3">

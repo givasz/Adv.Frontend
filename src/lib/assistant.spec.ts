@@ -10,6 +10,10 @@ import {
   falaDoEnderecoPresencial,
   horariosDasFaixas,
   horariosQueBatem,
+  motivoSemHorario,
+  pareceData,
+  avisosDasFaixas,
+  faixaDoHorario,
   formatBusyLong,
   formatBusyShort,
   normalizeBusy,
@@ -328,6 +332,87 @@ describe('assistantDayAt', () => {
   it('não devolve dia cujos horários já foram todos marcados', () => {
     const cfg = config({ busy: [busyKey('2026-08-26', '09:00'), busyKey('2026-08-26', '14:00')] })
     expect(assistantDayAt(cfg, '2026-08-26', QUARTA_10H)).toBeNull()
+  })
+})
+
+describe('assistantDayAt, hoje', () => {
+  it('não oferece para fechar o horário que já começou', () => {
+    // Às 10:00 da quarta, o das 09:00 já foi: só o das 14:00 ainda tem o que fechar.
+    expect(assistantDayAt(config(), '2026-08-19', QUARTA_10H)?.times).toEqual(['14:00'])
+  })
+})
+
+describe('motivoSemHorario', () => {
+  it('diz o motivo certo de cada data sem horário', () => {
+    expect(motivoSemHorario(config(), '2026-02-31', QUARTA_10H)).toBe('data-invalida')
+    expect(motivoSemHorario(config(), '2026-08-12', QUARTA_10H)).toBe('passada')
+    expect(motivoSemHorario(config(), '2026-08-20', QUARTA_10H)).toBe('nao-atende') // quinta
+    const cheio = config({ busy: [busyKey('2026-08-26', '09:00'), busyKey('2026-08-26', '14:00')] })
+    expect(motivoSemHorario(cheio, '2026-08-26', QUARTA_10H)).toBe('lotado')
+  })
+
+  it('hoje, quando o que sobrou já passou', () => {
+    const cfg = config({ busy: [busyKey('2026-08-19', '14:00')] })
+    expect(motivoSemHorario(cfg, '2026-08-19', QUARTA_10H)).toBe('ja-passaram')
+  })
+
+  it('data com horário livre não tem motivo', () => {
+    expect(motivoSemHorario(config(), '2026-08-26', QUARTA_10H)).toBeNull()
+  })
+})
+
+describe('pareceData', () => {
+  it('reconhece a forma de data mesmo quando a data não existe', () => {
+    expect(pareceData('31/02')).toBe(true)
+    expect(pareceData('25/13/2026')).toBe(true)
+    expect(pareceData('amanhã')).toBe(false)
+  })
+})
+
+describe('faixaDoHorario', () => {
+  it('acha a faixa em que o horário cai', () => {
+    const day = {
+      weekday: 1,
+      times: ['07:00', '08:00', '13:00', '14:00'],
+      faixas: [
+        { inicio: '07:00', fim: '09:00' },
+        { inicio: '13:00', fim: '15:00' },
+      ],
+    }
+    expect(faixaDoHorario(day, '14:00', 60)).toEqual({ inicio: '13:00', fim: '15:00' })
+    expect(faixaDoHorario(day, '11:00', 60)).toBeNull()
+  })
+})
+
+describe('avisosDasFaixas', () => {
+  it('faixa limpa não gera aviso', () => {
+    expect(avisosDasFaixas([{ inicio: '07:00', fim: '11:00' }], 60)).toEqual([])
+  })
+
+  it('avisa a faixa mais curta que um atendimento', () => {
+    expect(avisosDasFaixas([{ inicio: '18:00', fim: '18:30' }], 60)).toEqual([
+      'Das 18:00 às 18:30 não cabe um atendimento de 60 min: só 18:00 é oferecido, e ele termina às 19:00.',
+    ])
+  })
+
+  it('avisa o tempo que sobra no fim sem caber outro atendimento', () => {
+    expect(avisosDasFaixas([{ inicio: '07:00', fim: '11:30' }], 60)).toEqual([
+      'Das 07:00 às 11:30, o último atendimento vai das 10:00 às 11:00: os 30 min finais ficam sem horário.',
+    ])
+  })
+
+  it('avisa faixas sobrepostas', () => {
+    expect(
+      avisosDasFaixas(
+        [
+          { inicio: '07:00', fim: '11:00' },
+          { inicio: '10:00', fim: '12:00' },
+        ],
+        60,
+      ),
+    ).toEqual([
+      'As faixas 07:00–11:00 e 10:00–12:00 se sobrepõem: os horários repetidos aparecem uma vez só.',
+    ])
   })
 })
 
