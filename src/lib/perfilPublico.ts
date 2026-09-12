@@ -15,7 +15,12 @@ import type { Profile } from './types'
 // chegam por import dinâmico apenas quando um deles é aberto. A paridade com o
 // mockData tem teste (perfilPublico.spec.ts) — divergir quebraria o "Ver um
 // exemplo" da home em silêncio.
-export const EXAMPLE_SLUGS = ['marina-sales', 'guilherme-sales23'] as const
+//
+// A lista mora em ogTags.ts (sem imports, legível pela borda em Deno): é lá que
+// a decisão de NÃO indexar os exemplos no Google e de não pôr link de contato no
+// HTML estático precisa dos mesmos slugs. Aqui só a reexportação.
+export { EXAMPLE_SLUGS } from './ogTags'
+import { EXAMPLE_SLUGS } from './ogTags'
 
 export function isExampleSlug(slug: string): boolean {
   return (EXAMPLE_SLUGS as readonly string[]).includes(slug)

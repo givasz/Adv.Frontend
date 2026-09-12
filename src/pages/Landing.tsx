@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { HOME } from '@/lib/ogTags'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
@@ -55,7 +56,8 @@ export default function Landing() {
   const meu = useMyProfileLink()
 
   useEffect(() => {
-    document.title = 'advoc.me — presença digital profissional para advogados'
+    // O mesmo título do index.html e da borda — um título só para a home.
+    document.title = HOME.title
   }, [])
 
   return (

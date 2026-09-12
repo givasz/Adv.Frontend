@@ -3,8 +3,14 @@
 // Precisa ser gerado na hora, e não no build: perfis são publicados o tempo todo,
 // e um mapa congelado no último deploy deixa de fora justamente quem acabou de
 // entrar. Quem responde a lista é `GET /api/sitemap` (backend), que devolve só
-// `slug` e data — ver o comentário de ProfilesService.sitemap sobre por que o
-// `/directory` não serve para isto.
+// `slug` e data dos perfis e dos escritórios — ver ProfilesService.sitemap sobre
+// por que o `/directory` não serve para isto.
+//
+// Só `<loc>` e `<lastmod>`. O Google documenta que ignora `priority` e
+// `changefreq`, e que só usa `lastmod` quando ele é "consistentemente correto" —
+// o nosso vem do `updatedAt` do banco, que muda quando o dono salva, e de mais
+// nada. Inventar uma data para as páginas fixas seria justamente o que faz o
+// Google parar de acreditar nas outras.
 //
 // Falha para o lado seguro: sem a API, devolve um mapa só com as páginas fixas.
 // Um sitemap incompleto é bem melhor que um 500 — o buscador que recebe erro
@@ -19,39 +25,37 @@ interface EntradaDoMapa {
   updatedAt: string
 }
 
+interface MapaDaApi {
+  perfis: EntradaDoMapa[]
+  escritorios: EntradaDoMapa[]
+}
+
 const PRAZO_MS = 5000
 
 // As páginas fixas que valem indexação. O painel, o editor e as telas de conta
 // ficam de fora de propósito: exigem sessão, então o buscador só encontraria a
 // tela de login — e um resultado de busca que leva a um login é um resultado
-// ruim, que a plataforma paga em posição.
-const FIXAS: { caminho: string; prioridade: string; frequencia: string }[] = [
-  { caminho: '/', prioridade: '1.0', frequencia: 'weekly' },
-  { caminho: '/legal/termos', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/privacidade', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/lgpd', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/cookies', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/moderacao', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/denuncias', prioridade: '0.3', frequencia: 'monthly' },
-  { caminho: '/legal/ia', prioridade: '0.3', frequencia: 'monthly' },
+// ruim, que a plataforma paga em posição. (Elas também recebem `noindex` na
+// borda — ver perfil.ts.)
+const FIXAS = [
+  '/',
+  '/legal/termos',
+  '/legal/privacidade',
+  '/legal/lgpd',
+  '/legal/cookies',
+  '/legal/moderacao',
+  '/legal/denuncias',
+  '/legal/ia',
 ]
 
 export default async function handler(req: Request, _ctx: ContextoNetlify): Promise<Response> {
   const origem = new URL(req.url).origin
-  const perfis = await buscarPerfis(origem)
+  const mapa = await buscarMapa(origem)
 
   const urls = [
-    ...FIXAS.map(
-      (f) =>
-        `  <url>\n    <loc>${escaparXml(origem + f.caminho)}</loc>\n` +
-        `    <changefreq>${f.frequencia}</changefreq>\n    <priority>${f.prioridade}</priority>\n  </url>`,
-    ),
-    ...perfis.map(
-      (p) =>
-        `  <url>\n    <loc>${escaparXml(`${origem}/${p.slug}`)}</loc>\n` +
-        `    <lastmod>${escaparXml(p.updatedAt.slice(0, 10))}</lastmod>\n` +
-        `    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>`,
-    ),
+    ...FIXAS.map((caminho) => entrada(origem + caminho)),
+    ...mapa.perfis.map((p) => entrada(`${origem}/${p.slug}`, p.updatedAt)),
+    ...mapa.escritorios.map((e) => entrada(`${origem}/escritorio/${e.slug}`, e.updatedAt)),
   ]
 
   const xml =
@@ -62,24 +66,51 @@ export default async function handler(req: Request, _ctx: ContextoNetlify): Prom
     headers: {
       'content-type': 'application/xml; charset=utf-8',
       // Uma hora: o buscador não relê o mapa a cada minuto, e um perfil novo
-      // aparece na próxima passagem dele de qualquer forma.
+      // aparece na próxima passagem dele de qualquer forma — e antes disso o
+      // IndexNow já avisou o Bing (backend/src/seo/indexnow.ts).
       'cache-control': 'public, max-age=3600',
     },
   })
 }
 
-async function buscarPerfis(origem: string): Promise<EntradaDoMapa[]> {
+function entrada(loc: string, lastmod?: string): string {
+  const data = lastmod && /^\d{4}-\d{2}-\d{2}/.test(lastmod) ? lastmod.slice(0, 10) : ''
+  return (
+    `  <url>\n    <loc>${escaparXml(loc)}</loc>\n` +
+    (data ? `    <lastmod>${data}</lastmod>\n` : '') +
+    `  </url>`
+  )
+}
+
+async function buscarMapa(origem: string): Promise<MapaDaApi> {
+  const vazio: MapaDaApi = { perfis: [], escritorios: [] }
   try {
     const r = await fetch(`${origem}/api/sitemap`, {
       signal: AbortSignal.timeout(PRAZO_MS),
       headers: { accept: 'application/json' },
     })
-    if (!r.ok) return []
-    const dados = await r.json()
-    return Array.isArray(dados) ? (dados as EntradaDoMapa[]) : []
+    if (!r.ok) return vazio
+    const dados = (await r.json()) as unknown
+    // O formato antigo da API era a lista de perfis, crua. A borda e o backend
+    // sobem em deploys separados; aceitar os dois é o que evita um sitemap sem
+    // perfil nenhum na janela entre eles.
+    if (Array.isArray(dados)) return { perfis: filtrar(dados), escritorios: [] }
+    if (dados && typeof dados === 'object') {
+      const o = dados as Partial<MapaDaApi>
+      return { perfis: filtrar(o.perfis), escritorios: filtrar(o.escritorios) }
+    }
+    return vazio
   } catch {
-    return []
+    return vazio
   }
+}
+
+function filtrar(lista: unknown): EntradaDoMapa[] {
+  if (!Array.isArray(lista)) return []
+  return lista.filter(
+    (x): x is EntradaDoMapa =>
+      !!x && typeof x === 'object' && typeof (x as EntradaDoMapa).slug === 'string' && /^[a-z0-9-]+$/.test((x as EntradaDoMapa).slug),
+  )
 }
 
 /**

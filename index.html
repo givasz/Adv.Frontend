@@ -4,11 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f5f0e6" />
-    <title>advoc.me — o link na bio, para advogados</title>
+    <!-- Título e descrição da HOME — o mesmo texto de HOME em src/lib/ogTags.ts
+         (há teste que compara os dois). A borda reescreve este head em toda
+         página pública; o que está aqui é o que vale se a borda falhar. -->
+    <title>advoc.me — link na bio e página profissional para advogados</title>
     <meta
       name="description"
-      content="A página de perfil única e compartilhável para advogados. Dentro das normas da OAB."
+      content="Crie sua página profissional em minutos: áreas de atuação, contato pelo WhatsApp, assistente de agendamento e cartão digital. Conferida antes de ir ao ar, dentro das normas da OAB."
     />
+    <!-- `max-image-preview:large` deixa a foto sair em tamanho cheio no
+         resultado (o padrão é miniatura); `max-snippet:-1` libera o trecho
+         inteiro — e é o que decide se a página pode ser citada nas respostas
+         por IA do próprio Google. -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
 
     <!-- Identidade da aba e da tela de início — a marca de verdade, não mais uma
          balança desenhada em SVG parecida com o ícone da interface.
@@ -30,12 +38,15 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="advoc.me" />
     <meta property="og:locale" content="pt_BR" />
-    <meta property="og:title" content="advoc.me — o link na bio, para advogados" />
+    <meta property="og:title" content="advoc.me — link na bio e página profissional para advogados" />
     <meta
       property="og:description"
-      content="A página de perfil única e compartilhável para advogados. Dentro das normas da OAB."
+      content="Crie sua página profissional em minutos: áreas de atuação, contato pelo WhatsApp, assistente de agendamento e cartão digital. Conferida antes de ir ao ar, dentro das normas da OAB."
     />
     <meta property="og:image" content="/og-padrao.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="advoc.me — link na bio para advogados" />
     <meta name="twitter:card" content="summary_large_image" />
     <!-- Uma família de display por tema (ver src/lib/themes.ts): trocar de tema
          muda a VOZ do perfil, não só a cor. É um pedido de CSS só; o navegador
