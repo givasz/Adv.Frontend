@@ -94,7 +94,8 @@ export function AvisoDeTermos() {
             <ul className="list-disc space-y-1 pl-4">
               <li>
                 Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,
-                redefinição e troca de senha, decisões de moderação e mudanças nos documentos.
+                redefinição e troca de senha, decisões de moderação, convites de escritório e mudanças nos
+                documentos.
               </li>
               <li>
                 Quem envia é o Resend, empresa sediada nos Estados Unidos, que recebe só o endereço e

@@ -225,13 +225,12 @@ export function DarAcesso({
         </button>
       </div>
 
-      {/* Honesto sobre o caminho real: a plataforma ainda não envia e-mail (ver
-          docs/plano-admin.md, fase 2), então o convite chega no painel de quem
-          entrar com esse endereço. Prometer "vai receber um e-mail" seria
-          prometer o que não sai. */}
+      {/* O convite sai por e-mail (backend FirmsService.invite) e fica no painel
+          de quem entrar com esse endereço — os dois caminhos, porque o e-mail
+          pode cair no spam e o painel só é visto por quem já entrou. */}
       <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-        O convite aparece no painel dele ao entrar com esse e-mail. Até aceitar, ele continua
-        listado na página como está agora.
+        Mandamos o convite para esse e-mail, e ele também aparece no painel ao entrar com esse
+        endereço. Até aceitar, o advogado continua listado na página como está agora.
       </p>
     </div>
   )

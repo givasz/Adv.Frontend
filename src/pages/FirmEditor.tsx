@@ -504,7 +504,7 @@ export default function FirmEditor() {
           {/* Convite EM LINHA — sem tela sobreposta (ver components/ui/SubPage). */}
           <div className="grid gap-2 rounded-lg border border-ink/10 bg-paper-soft p-3">
             <label htmlFor="convite-email" className="text-[12.5px] font-medium text-ink-soft">
-              Convidar advogado que já tem conta
+              Convidar advogado por e-mail
             </label>
             <div className="flex flex-wrap gap-2">
               <input
@@ -531,8 +531,8 @@ export default function FirmEditor() {
               </button>
             </div>
             <p className="text-[11.5px] leading-relaxed text-ink-faint">
-              Quem já tem conta recebe o convite no painel. Quem ainda não tem entra pelo cadastro com
-              esse mesmo e-mail e o convite aparece lá.
+              Mandamos o convite para esse e-mail. Quem já tem conta também o vê no painel; quem ainda
+              não tem cria a conta com esse mesmo e-mail e o convite aparece lá.
             </p>
             {conviteErro && (
               <p role="alert" className="text-[12.5px] font-medium text-burgundy">
