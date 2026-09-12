@@ -194,30 +194,49 @@ const clicar = async (pagina, nome) => {
   await b.click()
 }
 
-// Perfil: dia → horário → formato → assunto livre → nome → WhatsApp.
+// A conversa do perfil do começo ao último passo: dia → horário → formato →
+// assunto livre → nome. Para no botão final — o que ele faz depende do perfil.
+async function ateOFimDaConversa(pagina) {
+  const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
+  await dia.waitFor({ timeout: ESPERA })
+  await dia.click()
+  const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
+  await hora.waitFor({ timeout: ESPERA })
+  await hora.click()
+  await clicar(pagina, 'Online')
+  // Os dois caminhos do assunto existem no produto: perfil COM áreas oferece os
+  // assuntos em botões ("Outro assunto" abre o campo livre); perfil que chega à
+  // conversa sem áreas — como o rascunho semeado — já pede o assunto escrito.
+  const outro = pagina.getByRole('button', { name: 'Outro assunto', exact: true })
+  const assunto = pagina.getByLabel('Assunto da conversa')
+  await outro.or(assunto).first().waitFor({ timeout: ESPERA })
+  if (await outro.isVisible()) await outro.click()
+  await assunto.waitFor({ timeout: ESPERA })
+  await assunto.fill('Revisão de contrato')
+  await clicar(pagina, 'Enviar resposta')
+  const nome = pagina.getByLabel('Seu nome')
+  await nome.waitFor({ timeout: ESPERA })
+  await nome.fill('Visitante Smoke')
+  await clicar(pagina, 'Enviar resposta')
+}
+
+// Perfil de VERDADE: a conversa termina num link de WhatsApp com as respostas.
+//
+// Roda no rascunho semeado (SEED), e não no perfil-modelo: desde 12/09/2026 o
+// exemplo não tem link nenhum no fim — o número dele é inventado e pode ser de
+// alguém real (ver lib/exemplo.ts e exemploNaoSai, abaixo). Em modo local o
+// rascunho responde pelo próprio endereço, com a agenda padrão preenchida.
 async function conversaDoPerfil() {
-  const { contexto, pagina, erros } = await abrir(`/${SLUG}/agendar`)
+  const { contexto, pagina, erros } = await abrir('/ana-smoke-1234/agendar')
   try {
-    const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
-    await dia.waitFor({ timeout: ESPERA })
-    await dia.click()
-    const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
-    await hora.waitFor({ timeout: ESPERA })
-    await hora.click()
-    await clicar(pagina, 'Online')
-    await clicar(pagina, 'Outro assunto')
-    const assunto = pagina.getByLabel('Assunto da conversa')
-    await assunto.waitFor({ timeout: ESPERA })
-    await assunto.fill('Revisão de contrato')
-    await clicar(pagina, 'Enviar resposta')
-    const nome = pagina.getByLabel('Seu nome')
-    await nome.waitFor({ timeout: ESPERA })
-    await nome.fill('Visitante Smoke')
-    await clicar(pagina, 'Enviar resposta')
+    await ateOFimDaConversa(pagina)
     const link = pagina.getByRole('link', { name: /Enviar no WhatsApp/ })
     await link.waitFor({ timeout: ESPERA })
     const href = decodeURIComponent((await link.getAttribute('href')) ?? '')
     if (!href.includes('Visitante Smoke')) erros.push('a mensagem final não levou as respostas')
+    if (!href.startsWith('https://wa.me/5531999999999')) {
+      erros.push('o pedido não foi para o WhatsApp do perfil')
+    }
   } catch (e) {
     erros.push(String(e).split('\n')[0])
   }
@@ -600,9 +619,101 @@ async function buscaDoEditor() {
   return erros
 }
 
+/**
+ * O perfil de EXEMPLO não sai da página — em lugar nenhum.
+ *
+ * Os perfis-modelo são fictícios, e isso inclui o WhatsApp: um número inventado
+ * pode ser de alguém de verdade. Desde 12/09/2026 os botões deles só dizem o que
+ * fariam (lib/exemplo.ts). São três portas, e cada uma é um componente
+ * diferente — conferir uma não prova as outras: o telefone da home (ProfileView
+ * em prévia), a página cheia do exemplo (ProfileView de verdade) e o fim da
+ * conversa do assistente (AssistantChat).
+ */
+async function exemploNaoSai() {
+  const erros = []
+
+  // Toca num link e confere: apareceu o aviso, a página não mudou, aba nenhuma abriu.
+  const tocar = async (contexto, pagina, escopo, nome, caminho) => {
+    const abas = []
+    const contar = (p) => abas.push(p)
+    contexto.on('page', contar)
+    const link = escopo.getByRole('link', { name: nome }).first()
+    // Centralizado antes do toque: rente à borda, o aviso do toque anterior (que
+    // mora no pé da tela) ficaria por cima dele.
+    await link.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+    await link.click()
+    await escopo
+      .getByRole('status')
+      .filter({ hasText: /Num perfil de verdade/ })
+      .first()
+      .waitFor({ timeout: ESPERA })
+    contexto.off('page', contar)
+    if (new URL(pagina.url()).pathname !== caminho) erros.push(`"${nome}" levou para ${pagina.url()}`)
+    if (abas.length) erros.push(`"${nome}" abriu outra aba`)
+    const fechar = escopo.getByRole('button', { name: 'Fechar o aviso' }).first()
+    await fechar.click()
+    await fechar.waitFor({ state: 'detached', timeout: ESPERA })
+  }
+
+  // 1. O telefone da home: o cartaz está lá, e nenhum botão sai.
+  {
+    const { contexto, pagina, erros: runtime } = await abrir('/')
+    try {
+      const moldura = pagina.locator('[data-moldura-telefone]').first()
+      await moldura.getByText('Exemplo · dados fictícios').waitFor({ timeout: ESPERA })
+      await tocar(contexto, pagina, moldura, 'Conversar no WhatsApp', '/')
+      await tocar(contexto, pagina, moldura, 'Instagram', '/')
+    } catch (e) {
+      erros.push(`telefone da home: ${String(e).split('\n')[0]}`)
+    }
+    erros.push(...runtime)
+    await contexto.close()
+  }
+
+  // 2. A página cheia do exemplo ("Ver um exemplo").
+  {
+    const { contexto, pagina, erros: runtime } = await abrir(`/${SLUG}`)
+    try {
+      await pagina.getByText(/sem levar a lugar nenhum/).waitFor({ timeout: ESPERA })
+      await tocar(contexto, pagina, pagina, 'Conversar no WhatsApp', `/${SLUG}`)
+      await tocar(contexto, pagina, pagina, 'LinkedIn', `/${SLUG}`)
+    } catch (e) {
+      erros.push(`página do exemplo: ${String(e).split('\n')[0]}`)
+    }
+    erros.push(...runtime)
+    await contexto.close()
+  }
+
+  // 3. O fim da conversa do assistente, no exemplo: botão sem link, e o
+  //    assistente diz que nada foi enviado.
+  {
+    const { contexto, pagina, erros: runtime } = await abrir(`/${SLUG}/agendar`)
+    try {
+      await ateOFimDaConversa(pagina)
+      const botao = pagina.getByRole('button', { name: /Enviar no WhatsApp/ })
+      await botao.waitFor({ timeout: ESPERA })
+      if (await pagina.getByRole('link', { name: /Enviar no WhatsApp/ }).count()) {
+        erros.push('o fim da conversa do exemplo ainda é um link para o WhatsApp')
+      }
+      await botao.click()
+      await pagina.getByText(/nada foi enviado/).first().waitFor({ timeout: ESPERA })
+      if (new URL(pagina.url()).pathname !== `/${SLUG}/agendar`) {
+        erros.push(`o fim da conversa do exemplo levou para ${pagina.url()}`)
+      }
+    } catch (e) {
+      erros.push(`conversa do exemplo: ${String(e).split('\n')[0]}`)
+    }
+    erros.push(...runtime)
+    await contexto.close()
+  }
+
+  return erros
+}
+
 const CONVERSAS = [
   ['busca do editor e portas do painel', buscaDoEditor],
   ['balão de conversa no celular da home', balaoNoCelular],
+  ['perfil de exemplo não sai da página', exemploNaoSai],
   ['agenda do advogado (editor)', agendaDoAdvogado],
   ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],

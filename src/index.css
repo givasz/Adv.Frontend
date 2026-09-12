@@ -383,6 +383,12 @@
   }
 }
 
+/* O aviso do perfil de exemplo sobe e aparece — só opacidade e deslocamento,
+   que o celular compõe sem repintar. Ver components/profile/AvisoDeExemplo. */
+.aviso-exemplo {
+  animation: rise-in 0.18s ease-out both;
+}
+
 /* esconde a barra de rolagem (usado no mockup de celular) */
 .no-scrollbar {
   -ms-overflow-style: none;

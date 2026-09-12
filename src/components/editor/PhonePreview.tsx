@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Profile } from '@/lib/types'
 import { themeStyle } from '@/lib/themes'
 import { ProfileView } from '@/components/profile/ProfileView'
+import { AvisoDeExemplo } from '@/components/profile/AvisoDeExemplo'
 
 // Indicador de scroll próprio (overlay), interativo — as scrollbars nativas variam por
 // SO/navegador (overlay some, temas diferentes). Este thumb é desenhado e controlado por
@@ -104,52 +105,81 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
         {/* notch */}
         {/* notch acima da faixa de status (que também é z-10, porém depois no DOM) */}
         <div className="absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-ink" />
+        {/* O CARTAZ. O telefone da home mostra um perfil fictício, e a legenda
+            miúda embaixo dele não bastava: quem olha a home vê uma advogada com
+            nome, foto e OAB, e nada no próprio aparelho dizia que ela não existe.
+            Uma etiqueta presa na moldura diz isso antes de qualquer leitura.
+
+            Fica DENTRO da largura do telefone (esquerda, e não pendurada para
+            fora): na coluna de 320px de um celular, qualquer coisa que passe da
+            borda vira rolagem lateral na home inteira. `aria-hidden` porque a
+            faixa dentro da tela diz o mesmo, em texto que o leitor de tela lê. */}
+        {hero && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-3.5 left-5 z-30 -rotate-6 select-none rounded-md bg-burgundy px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-paper shadow-lift ring-2 ring-paper"
+          >
+            Exemplo
+          </span>
+        )}
         {/* `data-moldura-telefone` é o que o balão de conversa procura para saber
             que está dentro de uma maquete e não numa página de verdade: ali ele
             se prende a ESTA caixa, e não à janela do navegador. Ver
             BalaoDeConversa.tsx. */}
         <div data-moldura-telefone className="relative overflow-hidden rounded-[1.8rem]">
-          <div
-            ref={scrollRef}
-            // as variáveis do tema aqui deixam a faixa de status abaixo usar a cor do perfil
-            style={themeStyle(profile.theme)}
-            className={`no-scrollbar relative flex flex-col overflow-x-hidden ${
-              hero
-                ? 'h-[560px] max-h-[74svh] overflow-y-auto'
-                : 'h-[540px] max-h-[62svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
-            }`}
-          >
-            {/* Faixa de status: acompanha a rolagem e evita que o conteúdo passe
-                por baixo do notch (como num aparelho de verdade). */}
+          {/* O aviso de "perfil de exemplo" aparece preso a ESTA caixa. Só é
+              acionado por perfil-modelo (ver lib/exemplo.ts): no editor e no
+              onboarding a prévia é do próprio advogado, e ele nunca dispara. */}
+          <AvisoDeExemplo onde="moldura">
             <div
-              className="sticky top-0 z-10 h-7 shrink-0"
-              style={{ background: 'var(--c-bg)' }}
-              aria-hidden
-            />
-            {/* No hero a conversa do assistente ABRE de verdade (é a demonstração);
-                no editor a prévia continua inerte. */}
-            <ProfileView profile={profile} preview chatEnabled={hero} />
-          </div>
-          {/* trilho + thumb interativos (área de toque generosa, thumb fino) */}
-          {thumb.show && (
-            <div
-              onPointerDown={onTrackPointerDown}
-              className="absolute bottom-1.5 right-0.5 top-1.5 w-3.5 cursor-pointer touch-none"
+              ref={scrollRef}
+              // as variáveis do tema aqui deixam a faixa de status abaixo usar a cor do perfil
+              style={themeStyle(profile.theme)}
+              className={`no-scrollbar relative flex flex-col overflow-x-hidden ${
+                hero
+                  ? 'h-[560px] max-h-[74svh] overflow-y-auto'
+                  : 'h-[540px] max-h-[62svh] overflow-y-auto sm:h-[620px] sm:max-h-[72svh]'
+              }`}
             >
-              <div
-                role="scrollbar"
-                aria-orientation="vertical"
-                onPointerDown={onThumbPointerDown}
-                onPointerMove={onThumbPointerMove}
-                onPointerUp={onThumbPointerUp}
-                onPointerCancel={onThumbPointerUp}
-                className={`absolute right-0 w-1.5 rounded-full transition-colors ${
-                  dragging ? 'w-2 cursor-grabbing bg-ink/50' : 'cursor-grab bg-ink/25 hover:bg-ink/40'
-                }`}
-                style={{ height: `${thumb.height}px`, top: `${thumb.top}px` }}
-              />
+              {/* Faixa de status: acompanha a rolagem e evita que o conteúdo passe
+                  por baixo do notch (como num aparelho de verdade). */}
+              <div className="sticky top-0 z-10 shrink-0" style={{ background: 'var(--c-bg)' }}>
+                <div className="h-7" aria-hidden />
+                {/* Na home, a faixa leva o aviso junto — e por ser grudenta, ele
+                    continua na tela enquanto a pessoa rola o perfil inteiro. É
+                    curta de propósito: a tela tem ~300px, e uma frase longa em
+                    caixa alta quebraria em duas linhas por cima do nome. */}
+                {hero && (
+                  <p className="bg-burgundy px-3 py-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-[0.14em] text-paper">
+                    Exemplo · dados fictícios
+                  </p>
+                )}
+              </div>
+              {/* No hero a conversa do assistente ABRE de verdade (é a demonstração);
+                  no editor a prévia continua inerte. */}
+              <ProfileView profile={profile} preview chatEnabled={hero} />
             </div>
-          )}
+            {/* trilho + thumb interativos (área de toque generosa, thumb fino) */}
+            {thumb.show && (
+              <div
+                onPointerDown={onTrackPointerDown}
+                className="absolute bottom-1.5 right-0.5 top-1.5 w-3.5 cursor-pointer touch-none"
+              >
+                <div
+                  role="scrollbar"
+                  aria-orientation="vertical"
+                  onPointerDown={onThumbPointerDown}
+                  onPointerMove={onThumbPointerMove}
+                  onPointerUp={onThumbPointerUp}
+                  onPointerCancel={onThumbPointerUp}
+                  className={`absolute right-0 w-1.5 rounded-full transition-colors ${
+                    dragging ? 'w-2 cursor-grabbing bg-ink/50' : 'cursor-grab bg-ink/25 hover:bg-ink/40'
+                  }`}
+                  style={{ height: `${thumb.height}px`, top: `${thumb.top}px` }}
+                />
+              </div>
+            )}
+          </AvisoDeExemplo>
         </div>
       </div>
       <p className="mt-3 text-center text-[12px] text-ink-faint">
@@ -157,7 +187,8 @@ export function PhonePreview({ profile, hero = false }: { profile: Profile; hero
       </p>
       {hero && (
         <p className="mt-1 text-center text-[11.5px] leading-snug text-ink-faint/85">
-          Perfil de exemplo — role o telefone e toque em “Agendar uma conversa”.
+          Perfil fictício: os botões só mostram o que fariam. Toque em “Agendar uma conversa” para
+          ver o assistente.
         </p>
       )}
     </div>

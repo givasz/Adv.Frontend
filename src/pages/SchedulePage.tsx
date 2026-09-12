@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { resolveSchedulingMode } from '@/lib/booking'
+import { isExampleSlug } from '@/lib/perfilPublico'
+import { HREF_DE_EXEMPLO, oQueAconteceria } from '@/lib/exemplo'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { comoAbrirWhatsapp, whatsappHref } from '@/lib/whatsapp'
 import { AssistantChat } from '@/components/profile/AssistantChat'
@@ -27,6 +29,10 @@ export default function SchedulePage() {
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [when, setWhen] = useState('')
+  // Tocou em "Enviar" num perfil de exemplo. Declarado aqui em cima, com os
+  // outros: um hook depois das saídas antecipadas abaixo é a tela branca do
+  // React #310 (ver scripts/smoke.mjs).
+  const [avisoDeExemplo, setAvisoDeExemplo] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -68,10 +74,16 @@ export default function SchedulePage() {
   const primeiro = profile.name.split(' ')[0]
 
   // Assistente: a conversa guiada ocupa a página inteira. Ela já tem cabeçalho e
-  // rodapé próprios, então entra sem o esqueleto de formulário.
+  // rodapé próprios, então entra sem o esqueleto de formulário. (No perfil de
+  // exemplo, o fim dela também não sai daqui — quem cuida disso é ela mesma.)
   if (modo === 'assistant') {
     return <AssistantChat profile={profile} onClose={() => navigate(voltar)} fullPage />
   }
+
+  // Perfil de exemplo: o número é inventado e pode ser de alguém de verdade. O
+  // botão continua lá (é o que se está demonstrando), mas não abre o WhatsApp —
+  // diz o que faria. Ver lib/exemplo.ts.
+  const exemplo = isExampleSlug(profile.slug)
 
   const wa = profile.contact.whatsapp
   const areas = profile.areas.filter((a) => a.label.trim())
@@ -158,11 +170,12 @@ export default function SchedulePage() {
         </label>
 
         <a
-          href={ready ? href : undefined}
-          {...comoAbrirWhatsapp()}
+          href={ready ? (exemplo ? HREF_DE_EXEMPLO : href) : undefined}
+          {...(exemplo ? {} : comoAbrirWhatsapp())}
           aria-disabled={!ready}
           onClick={(e) => {
-            if (!ready) e.preventDefault()
+            if (!ready || exemplo) e.preventDefault()
+            if (ready && exemplo) setAvisoDeExemplo(true)
           }}
           className={`btn-primary w-full !py-3 ${ready ? '' : 'pointer-events-none opacity-50'}`}
         >
@@ -170,6 +183,17 @@ export default function SchedulePage() {
           Enviar no WhatsApp
           <ArrowRight width={16} height={16} />
         </a>
+
+        {/* A região fica no DOM desde o início: leitor de tela só anuncia o que
+            muda dentro de uma região que já existia. */}
+        <div role="status" aria-live="polite">
+          {avisoDeExemplo && (
+            <p className="rounded-lg bg-ink px-3.5 py-2.5 text-center text-[12.5px] leading-snug text-paper">
+              {oQueAconteceria('whatsapp', primeiro)} Como este é um perfil de exemplo, nada foi
+              enviado.
+            </p>
+          )}
+        </div>
 
         {!wa ? (
           <p className="text-center text-[12px] text-brass-deep">

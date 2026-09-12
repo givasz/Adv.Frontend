@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { getTheme, themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { comoAbrirWhatsapp } from '@/lib/whatsapp'
+import { isExampleSlug } from '@/lib/perfilPublico'
 import { Avatar } from '@/components/ui/Avatar'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
@@ -108,6 +109,13 @@ export function AssistantChat({
   const [answers, setAnswers] = useState<AssistantAnswers>({})
   const [showAllDays, setShowAllDays] = useState(false)
   const [draft, setDraft] = useState('')
+  // Perfil de EXEMPLO: a conversa inteira funciona (é a demonstração), mas o fim
+  // não abre o WhatsApp — o número do perfil-modelo é inventado e pode ser de
+  // alguém real. O botão continua lá, e tocar nele faz o próprio assistente dizer
+  // o que aconteceria. Ver lib/exemplo.ts. `avisouExemplo` só encurta a fala a
+  // partir do segundo toque.
+  const exemplo = isExampleSlug(profile.slug)
+  const [avisouExemplo, setAvisouExemplo] = useState(false)
 
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -132,6 +140,7 @@ export function AssistantChat({
     setShowAllDays(false)
     setDiasFrescos(null)
     setDraft('')
+    setAvisouExemplo(false)
     setStep('boot')
     const custom = config.greeting?.trim()
     const opening = custom
@@ -356,6 +365,14 @@ export function AssistantChat({
             >
               Automático
             </span>
+            {/* No perfil de exemplo, um selo ao lado: a conversa funciona de
+                verdade, mas a pessoa do outro lado não existe. Cor fixa da marca,
+                e não a do tema, para não se confundir com o "Automático". */}
+            {exemplo && (
+              <span className="shrink-0 rounded-full bg-burgundy px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider text-paper">
+                Exemplo
+              </span>
+            )}
           </p>
         </div>
         {onClose && (
@@ -494,21 +511,50 @@ export function AssistantChat({
               />
             ) : ready ? (
               <div className="space-y-2">
-                <a
-                  href={href}
-                  {...comoAbrirWhatsapp()}
-                  onClick={(e) => {
-                    // A pessoa pode ter parado no botão por um bom tempo.
-                    if (horarioAindaVale(answers)) return
-                    e.preventDefault()
-                    horarioSaiu()
-                  }}
-                  className="t-btn w-full !py-3.5 text-[15px]"
-                >
-                  <WhatsappIcon width={20} height={20} />
-                  Enviar no WhatsApp
-                  <ArrowRight width={16} height={16} />
-                </a>
+                {exemplo ? (
+                  // Perfil de exemplo: o mesmo botão, com a mesma cara — e sem
+                  // link nenhum. Sem `href` não sobra o que abrir em nova aba nem
+                  // o que copiar: o número inventado nunca chega à tela.
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!horarioAindaVale(answers)) {
+                        horarioSaiu()
+                        return
+                      }
+                      void say(
+                        avisouExemplo
+                          ? ['Este é só um exemplo — nada foi enviado.']
+                          : [
+                              `Aqui o pedido seguiria pronto para o WhatsApp de ${first || 'quem publicou o perfil'}.`,
+                              'Como este é um perfil de exemplo, nada foi enviado — ninguém recebe esta mensagem.',
+                            ],
+                      )
+                      setAvisouExemplo(true)
+                    }}
+                    className="t-btn w-full !py-3.5 text-[15px]"
+                  >
+                    <WhatsappIcon width={20} height={20} />
+                    Enviar no WhatsApp
+                    <ArrowRight width={16} height={16} />
+                  </button>
+                ) : (
+                  <a
+                    href={href}
+                    {...comoAbrirWhatsapp()}
+                    onClick={(e) => {
+                      // A pessoa pode ter parado no botão por um bom tempo.
+                      if (horarioAindaVale(answers)) return
+                      e.preventDefault()
+                      horarioSaiu()
+                    }}
+                    className="t-btn w-full !py-3.5 text-[15px]"
+                  >
+                    <WhatsappIcon width={20} height={20} />
+                    Enviar no WhatsApp
+                    <ArrowRight width={16} height={16} />
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={start}

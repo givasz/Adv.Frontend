@@ -44,8 +44,11 @@ export function AssistantDemo({ profile }: { profile: Profile }) {
           />
         </div>
       </div>
+      {/* "Demonstração real" dizia que o componente é o de verdade — e é —, mas
+          lia como se o pedido fosse de verdade também. O perfil é fictício e o
+          fim da conversa não envia nada (ver lib/exemplo.ts). */}
       <p className="mt-3 text-center text-[12px] text-ink-faint">
-        Demonstração real — experimente responder
+        Experimente responder — é um perfil de exemplo, e nada é enviado a ninguém.
       </p>
     </div>
   )

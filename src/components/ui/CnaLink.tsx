@@ -1,4 +1,5 @@
 import { ExternalLinkIcon } from './icons'
+import { HREF_DE_EXEMPLO } from '@/lib/exemplo'
 
 // Consulta pública do Cadastro Nacional dos Advogados (CNA) — base OFICIAL e aberta
 // da OAB, onde QUALQUER pessoa confere uma inscrição.
@@ -35,7 +36,15 @@ export function CnaLink({
   compact = false,
   interactive = true,
   aviso = false,
+  aoTocarNoExemplo,
 }: {
+  /**
+   * Perfil de EXEMPLO (fictício): o link não sai para o CNA. O nome buscado seria
+   * o de uma pessoa inventada — e a consulta podia muito bem devolver um
+   * advogado REAL homônimo, ao lado de uma OAB que não é dele. No lugar, quem
+   * chama mostra o aviso de exemplo. Ver lib/exemplo.ts.
+   */
+  aoTocarNoExemplo?: () => void
   /** nome do advogado/sociedade — preenche a busca do CNA */
   name?: string
   compact?: boolean
@@ -61,12 +70,21 @@ export function CnaLink({
 
   const link = (
     <a
-      href={cnaSearchUrl(name)}
+      href={aoTocarNoExemplo ? HREF_DE_EXEMPLO : cnaSearchUrl(name)}
       title={TOOLTIP}
       aria-label="Conferir esta inscrição na consulta pública do CNA, da OAB."
       target="_blank"
       rel="noreferrer noopener nofollow"
-      onClick={interactive ? undefined : (e) => e.preventDefault()}
+      onClick={
+        aoTocarNoExemplo
+          ? (e) => {
+              e.preventDefault()
+              aoTocarNoExemplo()
+            }
+          : interactive
+            ? undefined
+            : (e) => e.preventDefault()
+      }
       style={{ color: 'var(--c-faint, #8d857a)' }}
       className={cls}
     >

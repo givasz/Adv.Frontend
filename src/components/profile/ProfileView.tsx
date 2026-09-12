@@ -31,6 +31,9 @@ const AssistantChat = lazy(() =>
 )
 import { assistantTitle } from '@/lib/assistantTitle'
 import { CnaLink } from '@/components/ui/CnaLink'
+import { isExampleSlug } from '@/lib/perfilPublico'
+import { HREF_DE_EXEMPLO, oQueAconteceria, type AcaoDeExemplo } from '@/lib/exemplo'
+import { useAvisoDeExemplo } from '@/components/profile/AvisoDeExemplo'
 import {
   ArrowRight,
   CalendarIcon,
@@ -157,12 +160,33 @@ export function ProfileView({
   // prévia do editor eles não navegam, e não há nada a medir neles.
   const stop = preview ? (e: React.MouseEvent) => e.preventDefault() : undefined
 
+  // PERFIL DE EXEMPLO (os perfis-modelo — pessoa e dados fictícios). Nenhum
+  // botão dele sai da página: o WhatsApp é um número inventado que pode ser de
+  // alguém real, e as redes levariam a perfis que não são nossos. No lugar, o
+  // toque diz o que faria num perfil de verdade (ver lib/exemplo.ts).
+  //
+  // Quem decide é o SLUG, não a tela: a regra vale no telefone da home e na
+  // página cheia do exemplo pelo mesmo caminho. Sem avisador por perto (a rota
+  // interna de screenshot dos temas), o toque só não sai — que é o mínimo.
+  const exemplo = isExampleSlug(profile.slug)
+  const avisarExemplo = useAvisoDeExemplo()
+  const primeiroNome = profile.name.split(' ')[0] ?? ''
+  /** O destino de um link: o de verdade, ou a âncora que não sai da página. */
+  const destino = (real: string | undefined) => (exemplo ? HREF_DE_EXEMPLO : real)
+  const avisoDoExemplo = (acao: AcaoDeExemplo, rotuloDaRede?: string) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    avisarExemplo?.(oQueAconteceria(acao, primeiroNome, rotuloDaRede))
+  }
+
   // Um clique de contato faz duas coisas: na PRÉVIA, não navega; no perfil de
   // verdade, avisa a métrica antes de seguir. Ver lib/eventos.ts — o aviso sai
   // por sendBeacon justamente porque a página está prestes a ser trocada, e um
-  // fetch comum morreria junto com o documento.
-  const clique = (evento: Parameters<typeof cliqueDoPerfil>[1]) =>
-    cliqueDoPerfil(profile.slug, evento, !!preview)
+  // fetch comum morreria junto com o documento. No exemplo, nenhuma das duas:
+  // não sai, e não há métrica de um perfil que não existe.
+  const clique = (evento: Parameters<typeof cliqueDoPerfil>[1], rotuloDaRede?: string) =>
+    exemplo
+      ? avisoDoExemplo(evento, rotuloDaRede)
+      : cliqueDoPerfil(profile.slug, evento, !!preview)
 
   const identity = (
     <>
@@ -176,7 +200,15 @@ export function ProfileView({
           ao passar o mouse não é ostensivo, e não é oponível a quem confiou no
           número. */}
       {profile.oabNumber.trim() && (
-        <CnaLink name={profile.name} compact aviso interactive={!preview} />
+        <CnaLink
+          name={profile.name}
+          compact
+          aviso
+          interactive={!preview}
+          aoTocarNoExemplo={
+            exemplo ? () => avisarExemplo?.(oQueAconteceria('cna', primeiroNome)) : undefined
+          }
+        />
       )}
     </>
   )
@@ -281,7 +313,7 @@ export function ProfileView({
             }`}
           >
             <a
-              href={linkDoMapa(profile.address, profile.city, profile.state)}
+              href={destino(linkDoMapa(profile.address, profile.city, profile.state))}
               onClick={clique('endereco')}
               target="_blank"
               rel="noreferrer noopener"
@@ -305,7 +337,7 @@ export function ProfileView({
           {waHref && (
             <m.a
               variants={item}
-              href={waHref}
+              href={destino(waHref)}
               onClick={clique('whatsapp')}
               {...waAlvo}
               className="t-btn w-full text-[15px]"
@@ -317,7 +349,7 @@ export function ProfileView({
           {schedulingMode === 'external' && safeHref(profile.contact.scheduling) && (
             <m.a
               variants={item}
-              href={safeHref(profile.contact.scheduling)}
+              href={destino(safeHref(profile.contact.scheduling))}
               onClick={clique('agendamento')}
               target="_blank"
               rel="noreferrer noopener"
@@ -406,8 +438,8 @@ export function ProfileView({
                 return (
                   <a
                     key={soc.kind + soc.url}
-                    href={href}
-                    onClick={clique(`rede:${soc.kind}`)}
+                    href={destino(href)}
+                    onClick={clique(`rede:${soc.kind}`, meta.label)}
                     target="_blank"
                     rel="noreferrer noopener"
                     className={`${tile} redes-item !py-3 text-sm font-medium`}
@@ -516,7 +548,7 @@ export function ProfileView({
         {profile.contact.email && (
           <m.a
             variants={item}
-            href={`mailto:${profile.contact.email}`}
+            href={destino(`mailto:${profile.contact.email}`)}
             onClick={clique('email')}
             className={`${tile} mt-9 justify-center !py-3 text-sm font-medium`}
           >

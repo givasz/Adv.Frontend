@@ -5,6 +5,7 @@ import { getPublicProfile, isExampleSlug } from '@/lib/perfilPublico'
 import { useAuth } from '@/lib/auth'
 import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
+import { AvisoDeExemplo } from '@/components/profile/AvisoDeExemplo'
 import { ShareBar } from '@/components/profile/ShareBar'
 import { OwnerBar } from '@/components/profile/OwnerBar'
 import { FlagIcon } from '@/components/ui/icons'
@@ -108,7 +109,7 @@ export default function PublicProfile() {
   // exemplo para não serem lidos como advogado real (OAB fictícia).
   const isExample = isExampleSlug(profile.slug)
 
-  return (
+  const pagina = (
     // overflow-x-CLIP, não hidden: hidden faz o main virar contêiner de rolagem
     // (overflow-y computa auto) e as barras sticky lá de dentro passam a grudar
     // nele — que nunca rola, então nunca grudam. clip corta o estouro lateral
@@ -121,7 +122,11 @@ export default function PublicProfile() {
         {isExample && (
           <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
             <Marca size={16} />
-            Perfil de demonstração — pessoa e dados fictícios, apenas para exemplo do advoc.me.
+            {/* A segunda frase é nova: os botões do exemplo não saem daqui (ver
+                lib/exemplo.ts), e quem toca precisa saber disso ANTES — não
+                descobrir pelo aviso depois do toque. */}
+            Perfil de demonstração — pessoa e dados fictícios. Os botões mostram o que fariam, sem
+            levar a lugar nenhum.
           </div>
         )}
         {isOwner && <OwnerBar />}
@@ -178,4 +183,9 @@ export default function PublicProfile() {
 
     </main>
   )
+
+  // Só o perfil de exemplo ganha o aviso. Num perfil de verdade os botões saem
+  // para onde devem, e uma região de aviso vazia em toda página pública seria só
+  // mais um nó para o leitor de tela atravessar.
+  return isExample ? <AvisoDeExemplo onde="pagina">{pagina}</AvisoDeExemplo> : pagina
 }
