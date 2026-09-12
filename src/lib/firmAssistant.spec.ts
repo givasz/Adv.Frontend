@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   buildFirmAssistantMessage,
   FIRM_PERIODS,
+  firmAlcancaAdvogado,
   firmAssistantDestination,
   firmAssistantWhatsapp,
   firmAssistantWhatsappHref,
+  firmRecebeSemPreferencia,
+  firmTemDestino,
+  type AssistantDayOption,
 } from './assistant'
 
 const escritorio = {
@@ -77,6 +81,74 @@ describe('destino do pedido', () => {
     const href = firmAssistantWhatsappHref(escritorio, { area: 'Família', name: 'Rita' })!
     expect(href.startsWith('https://wa.me/5511990000000?text=')).toBe(true)
     expect(decodeURIComponent(href)).toContain('Assunto: Família')
+  })
+})
+
+// Quem escolhe um advogado que usa a agenda do assistente marca dia e HORÁRIO —
+// e a mensagem tem de levar isso, não a pergunta de período que ficou para trás.
+describe('horário da agenda do advogado', () => {
+  const dia: AssistantDayOption = {
+    key: '2026-11-25',
+    date: new Date(2026, 10, 25),
+    weekday: 3,
+    label: 'qua, 25 nov',
+    longLabel: 'quarta-feira, 25 de novembro',
+    relative: '',
+    times: ['14:00'],
+  }
+
+  it('com horário escolhido, a mensagem leva dia, hora e duração — e não o período', () => {
+    const msg = buildFirmAssistantMessage(
+      'Andrade & Vieira',
+      { lawyer: 'Ana Beatriz', day: dia, time: '14:00', period: 'Tanto faz', name: 'Rita' },
+      60,
+    )
+    expect(msg).toContain('Dia e horário: quarta-feira, 25 de novembro às 14:00')
+    expect(msg).toContain('Duração prevista: 60 min')
+    expect(msg).not.toContain('Preferência de horário')
+  })
+
+  it('sem horário, segue com a preferência de período e sem duração', () => {
+    const msg = buildFirmAssistantMessage('Andrade & Vieira', { period: 'Tanto faz' }, 60)
+    expect(msg).toContain('Preferência de horário: Tanto faz')
+    expect(msg).not.toContain('Duração prevista')
+  })
+})
+
+describe('advogados com o mesmo nome', () => {
+  it('o pedido segue o id escolhido, não o primeiro nome igual', () => {
+    const f = {
+      ...escritorio,
+      assistantRoute: 'lawyer',
+      lawyers: [
+        { id: 'a', name: 'Ana Souza', whatsapp: '5511911111111' },
+        { id: 'b', name: 'Ana Souza', whatsapp: '5511922222222' },
+      ],
+    }
+    expect(firmAssistantWhatsapp(f, { lawyer: 'Ana Souza', lawyerId: 'b' })).toBe('5511922222222')
+  })
+})
+
+describe('para onde o pedido pode ir', () => {
+  it('sem WhatsApp do escritório e sem rota por advogado, não há destino', () => {
+    expect(firmTemDestino({ ...escritorio, contact: {} })).toBe(false)
+  })
+
+  it('com rota por advogado, basta um advogado com número — mas "tanto faz" não chega', () => {
+    const f = { ...escritorio, contact: {}, assistantRoute: 'lawyer' }
+    expect(firmTemDestino(f)).toBe(true)
+    expect(firmRecebeSemPreferencia(f)).toBe(false)
+    expect(firmAlcancaAdvogado(f, escritorio.lawyers[0])).toBe(true)
+    expect(firmAlcancaAdvogado(f, escritorio.lawyers[1])).toBe(false)
+  })
+
+  it('número que não serve para o WhatsApp não é anunciado como destino direto', () => {
+    const f = {
+      ...escritorio,
+      assistantRoute: 'lawyer',
+      lawyers: [{ name: 'Ana Beatriz', whatsapp: '12' }],
+    }
+    expect(firmAssistantDestination(f, { lawyer: 'Ana Beatriz' }).direct).toBe(false)
   })
 })
 

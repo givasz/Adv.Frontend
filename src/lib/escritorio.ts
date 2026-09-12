@@ -4,6 +4,7 @@
 // clientes/casos, urgência ou linguagem de venda.
 
 import type { Endereco } from './endereco'
+import type { AssistantConfig } from './types'
 
 /** Advogado integrante do escritório (card do grid + mini-perfil interno). */
 export interface FirmLawyer {
@@ -20,6 +21,28 @@ export interface FirmLawyer {
   linkedin?: string
   /** WhatsApp do advogado — usado quando o escritório encaminha o pedido a ele */
   whatsapp?: string
+  /**
+   * A agenda do assistente do PRÓPRIO advogado (dias, horários, ocupados), quando
+   * ele usa o assistente no perfil. Com ela, a conversa do escritório oferece os
+   * horários livres dele; sem ela, pergunta dia e período. O servidor só manda
+   * para quem ligou o assistente e tem plano que permite.
+   */
+  agenda?: AssistantConfig
+}
+
+/** Grade de exemplo, a mesma forma que o editor grava (faixas + horários). */
+function gradeDeExemplo(inicio: string, fim: string, horarios: string[]): AssistantConfig {
+  return {
+    days: [1, 2, 3, 4, 5].map((weekday) => ({
+      weekday,
+      times: [...horarios],
+      faixas: [{ inicio, fim }],
+    })),
+    durationMin: 60,
+    leadHours: 2,
+    horizonDays: 14,
+    busy: [],
+  }
 }
 
 /** Papel dentro da sociedade. `owner` responde pelo faturamento; `admin` também
@@ -188,6 +211,8 @@ export const sampleFirm: Firm = {
         'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/beatriz-andrade',
       whatsapp: '5511990000001',
+      // Usa a agenda do assistente: a conversa do escritório oferece os horários dela.
+      agenda: gradeDeExemplo('09:00', '12:00', ['09:00', '10:00', '11:00']),
     },
     {
       id: 'l2',
@@ -199,6 +224,7 @@ export const sampleFirm: Firm = {
         'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?q=80&w=400&auto=format&fit=crop',
       linkedin: 'https://linkedin.com/in/camila-nunes',
       whatsapp: '5511990000002',
+      agenda: gradeDeExemplo('14:00', '18:00', ['14:00', '15:00', '16:00', '17:00']),
     },
     {
       id: 'l3',

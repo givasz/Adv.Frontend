@@ -393,8 +393,10 @@ export default function FirmEditor() {
         <Card title="Assistente virtual">
           <p className="text-[12.5px] leading-relaxed text-ink-faint">
             Na página do escritório, quem quiser falar responde a uma conversa guiada (assunto,
-            advogado, formato e preferência de horário) e o pedido chega pronto no WhatsApp. É um
-            roteiro fixo: não dá orientação jurídica e não confirma horário.
+            advogado, formato e quando) e o pedido chega pronto no WhatsApp. Quem escolhe um
+            advogado com a agenda ligada vê os horários livres dessa agenda; nos outros casos, a
+            conversa pergunta dia e período. É um roteiro fixo: não dá orientação jurídica e não
+            confirma horário.
           </p>
           <Field label="Para onde vai o pedido">
             <div className="grid gap-2">
@@ -412,6 +414,46 @@ export default function FirmEditor() {
               />
             </div>
           </Field>
+
+          {/* Sem o número institucional, parte dos pedidos (ou todos) não tem para
+              onde ir — e o dono só descobriria pelo visitante. */}
+          {!firm.contact.whatsapp && (
+            <p className="rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-brass-deep">
+              {firm.assistantRoute === 'lawyer'
+                ? 'Sem o WhatsApp do escritório, quem não escolhe um advogado — ou escolhe alguém sem número — não tem para onde mandar o pedido. Preencha o WhatsApp do escritório acima.'
+                : 'Sem o WhatsApp do escritório, o assistente não tem para onde mandar o pedido. Preencha o WhatsApp do escritório acima.'}
+            </p>
+          )}
+
+          {/* Quem oferece horário e quem recebe só a preferência de período: sem
+              isto, o dono vê a conversa pedir "esta semana, de manhã" para um
+              advogado e horários para outro, e não entende por quê. */}
+          {firm.lawyers.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[12.5px] font-semibold text-ink">Horários na conversa</p>
+              <ul className="divide-y divide-ink/10 rounded-lg border border-ink/10">
+                {[...firm.lawyers]
+                  .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                  .map((l) => (
+                    <li
+                      key={l.id}
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-[12.5px]"
+                    >
+                      <span className="font-medium text-ink">{l.name}</span>
+                      <span className="text-ink-faint">
+                        {l.agenda
+                          ? 'oferece os horários livres da agenda'
+                          : 'sem agenda — pergunta dia e período'}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
+                Cada advogado liga a agenda no próprio perfil (Agendamento → assistente virtual) e
+                fecha os horários que marcou por fora em Sua agenda, no painel.
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Advogados */}

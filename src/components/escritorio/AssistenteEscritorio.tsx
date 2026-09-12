@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { lawyersInNeutralOrder, type Firm } from '@/lib/escritorio'
+import { lawyersInNeutralOrder, type Firm, type FirmLawyer } from '@/lib/escritorio'
 import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import {
+  buildAssistantDays,
   FIRM_ANY_LAWYER,
   FIRM_PERIODS,
   falaDoEnderecoPresencial,
+  firmAlcancaAdvogado,
   firmAssistantDestination,
   firmAssistantWhatsappHref,
+  firmRecebeSemPreferencia,
+  firmTemDestino,
+  MAX_DAY_CHIPS,
+  type AssistantDayOption,
   type FirmAssistantAnswers,
 } from '@/lib/assistant'
-import { ArrowRight, SparkIcon, WhatsappIcon } from '@/components/ui/icons'
+import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon } from '@/components/ui/icons'
 import {
   Bubble,
   cap,
@@ -24,28 +30,36 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 
 // Assistente virtual do ESCRITÓRIO. Mesma conversa guiada do perfil individual
 // (mesmo motor, mesmas peças em components/assistant), adaptada a quem tem vários
-// advogados e NENHUMA agenda:
+// advogados:
 //
-//   • sem grade de horários — a sociedade não tem agenda por advogado, então
-//     perguntar horário exato seria prometer o que ninguém pode confirmar. Pergunta
-//     dia e PERÍODO, como uma secretária faria, e o escritório confirma;
+//   • cada advogado é um perfil, e quem usa o assistente no próprio perfil tem
+//     agenda. Escolhido um advogado assim, a conversa oferece os dias e horários
+//     livres DELE — os mesmos do perfil, respeitando o que ele fechou em /agenda.
+//     Sem escolha, ou com alguém sem agenda, não há de onde tirar horário: a
+//     conversa pergunta dia e PERÍODO, como uma secretária faria;
 //   • a escolha de advogado é opcional e a lista é ALFABÉTICA. Nunca "o mais
 //     indicado para o seu caso": isso é ranking, e ranking é o que o Prov. 205/2021
-//     proíbe.
+//     proíbe. Ter agenda também não dá destaque a ninguém na lista.
 //
 // Não é IA e não pode virar: o roteiro é fechado (chips e perguntas fixas) e a
 // interface diz "Automático", nunca "IA". Um modelo respondendo dúvida de cliente na
 // página de um advogado seria consulta jurídica automatizada.
 
-type Step = 'boot' | 'area' | 'lawyer' | 'format' | 'period' | 'name' | 'done'
+type Step = 'boot' | 'area' | 'lawyer' | 'format' | 'day' | 'time' | 'period' | 'name' | 'done'
 
-const STEP_ORDER: Step[] = ['area', 'lawyer', 'format', 'period', 'name', 'done']
+// 'period' ocupa o lugar de 'day' no fio de progresso: é a mesma pergunta ("quando?")
+// para quem não tem agenda.
+const STEP_ORDER: Step[] = ['area', 'lawyer', 'format', 'day', 'time', 'name', 'done']
 
 export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   const { msgs, typing, push, say: falar, reset, reduced, listRef } = useConversation()
   const [step, setStep] = useState<Step>('boot')
   const [answers, setAnswers] = useState<FirmAssistantAnswers>({})
   const [draft, setDraft] = useState('')
+  // Os dias oferecidos, calculados no momento da pergunta — e de novo quando o
+  // horário escolhido expira no meio da conversa.
+  const [dias, setDias] = useState<AssistantDayOption[]>([])
+  const [verTodosOsDias, setVerTodosOsDias] = useState(false)
 
   const say = useCallback(
     (lines: string[], next?: Step) => falar(lines, next ? () => setStep(next) : undefined),
@@ -54,22 +68,49 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
 
   const areas = useMemo(() => firm.areas.map((a) => a.label).filter(Boolean), [firm.areas])
   const lawyers = useMemo(() => lawyersInNeutralOrder(firm), [firm])
+  const temDestino = firmTemDestino(firm)
+  const semPreferenciaChega = firmRecebeSemPreferencia(firm)
+  // Advogados a quem um pedido consegue chegar. Com o WhatsApp do escritório
+  // preenchido são todos; sem ele (e com encaminhamento direto), só quem tem número.
+  const alcancaveis = useMemo(
+    () => lawyers.filter((l) => firmAlcancaAdvogado(firm, l)),
+    [firm, lawyers],
+  )
+  const escolhido = useMemo(
+    () => lawyers.find((l) => l.id === answers.lawyerId),
+    [lawyers, answers.lawyerId],
+  )
 
   const start = useCallback(() => {
     reset()
     setAnswers({})
     setDraft('')
+    setDias([])
+    setVerTodosOsDias(false)
     setStep('boot')
     const abertura = [
       'Olá! Sou o assistente virtual do escritório.',
       'Não presto orientação jurídica — organizo o seu pedido e encaminho para a equipe.',
     ]
+    if (!temDestino) {
+      void say(
+        [
+          ...abertura,
+          'Por enquanto este escritório não informou um WhatsApp para receber pedidos, então não consigo encaminhar o seu por aqui.',
+        ],
+        'done',
+      )
+      return
+    }
     if (areas.length) {
       void say([...abertura, 'Sobre qual assunto você precisa falar?'], 'area')
     } else {
-      void say([...abertura, 'Prefere falar com alguém específico?'], lawyers.length ? 'lawyer' : 'format')
+      void say(
+        [...abertura, 'Prefere falar com alguém específico?'],
+        alcancaveis.length ? 'lawyer' : 'format',
+      )
     }
-  }, [areas.length, lawyers.length, reset, say])
+  }, [areas.length, alcancaveis.length, reset, say, temDestino])
 
   useEffect(() => {
     start()
@@ -83,25 +124,42 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   // aquela área cadastrada, a lista inteira aparece — melhor do que uma lista vazia,
   // e continua sem hierarquia.
   const candidatos = useMemo(() => {
-    if (!answers.area) return lawyers
-    const daArea = lawyers.filter((l) => l.area === answers.area)
-    return daArea.length ? daArea : lawyers
-  }, [answers.area, lawyers])
+    if (!answers.area) return alcancaveis
+    const daArea = alcancaveis.filter((l) => l.area === answers.area)
+    return daArea.length ? daArea : alcancaveis
+  }, [answers.area, alcancaveis])
 
   function pickArea(area: string) {
     push('user', area)
     setAnswers((a) => ({ ...a, area }))
-    if (!lawyers.length) {
+    if (!alcancaveis.length) {
       void say(['Anotado. A conversa seria presencial ou online?'], 'format')
       return
     }
     void say(['Anotado. Prefere falar com alguém específico?'], 'lawyer')
   }
 
-  function pickLawyer(nome: string) {
-    const escolhido = nome === FIRM_ANY_LAWYER ? undefined : nome
-    push('user', nome)
-    setAnswers((a) => ({ ...a, lawyer: escolhido }))
+  function pickLawyer(l: FirmLawyer | null) {
+    push('user', l ? l.name : FIRM_ANY_LAWYER)
+    // Sem preferência o pedido vai ao WhatsApp do escritório. Se ele não existe,
+    // seguir adiante levaria a pessoa até o fim para descobrir que não há destino.
+    if (!l && !semPreferenciaChega) {
+      void say(
+        [
+          'Sem preferência, o pedido iria para o WhatsApp do escritório, que ainda não foi informado. Escolha um dos advogados, por favor:',
+        ],
+        'lawyer',
+      )
+      return
+    }
+    setAnswers((a) => ({
+      ...a,
+      lawyer: l?.name,
+      lawyerId: l?.id,
+      day: undefined,
+      time: undefined,
+      period: undefined,
+    }))
     void say(['A conversa seria presencial ou online?'], 'format')
   }
 
@@ -111,15 +169,79 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     // Presencial numa sociedade é ir até a sede — e o endereço dela é o que a
     // pessoa vai precisar em seguida. Vazio quando não há endereço publicado.
     const endereco = format === 'presencial' ? falaDoEnderecoPresencial(firm) : ''
+    perguntarQuando(endereco ? [endereco] : [])
+  }
+
+  /** Dia e horário da agenda do advogado escolhido — ou período, quando não há agenda. */
+  function perguntarQuando(antes: string[]) {
+    const agenda = escolhido?.agenda
+    if (!escolhido || !agenda) {
+      void say([...antes, 'Que dia e período são melhores para você?'], 'period')
+      return
+    }
+    const livres = buildAssistantDays(agenda)
+    setDias(livres)
+    setVerTodosOsDias(false)
+    if (livres.length) {
+      void say(
+        [...antes, `Estes são os dias com horário livre na agenda de ${escolhido.name}. Qual fica melhor?`],
+        'day',
+      )
+      return
+    }
     void say(
-      [...(endereco ? [endereco] : []), 'Que dia e período são melhores para você?'],
+      [
+        ...antes,
+        `A agenda de ${escolhido.name} não tem horário livre nos próximos dias. Diga sua preferência e o pedido segue com ela:`,
+      ],
       'period',
     )
   }
 
+  function pickDay(day: AssistantDayOption) {
+    push('user', `${day.label}${day.relative ? ` (${day.relative})` : ''}`)
+    setAnswers((a) => ({ ...a, day, time: undefined, period: undefined }))
+    void say([`${cap(day.longLabel)}. Que horário prefere?`], 'time')
+  }
+
+  function outroDia() {
+    push('user', 'Outro dia')
+    setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
+    void say(['Claro. Qual dia?'], 'day')
+  }
+
+  // Nenhum dia da agenda serve: a pessoa ainda pode pedir, só que por período — e
+  // quem recebe procura um encaixe. Melhor do que um beco sem saída.
+  function preferirPeriodo() {
+    push('user', 'Nenhum desses dias')
+    setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
+    void say(['Sem problema. Diga sua preferência e o pedido segue com ela:'], 'period')
+  }
+
+  function pickTime(time: string) {
+    push('user', time)
+    setAnswers((a) => ({ ...a, time, period: undefined }))
+    // Voltou só para trocar um horário que expirou: o resto já está respondido.
+    if (answers.name) {
+      void say(
+        [
+          `Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`,
+          'Toque no botão abaixo para enviar o pedido — o horário só vale depois da confirmação.',
+        ],
+        'done',
+      )
+      return
+    }
+    void say(['Por último: como podemos te chamar?'], 'name')
+  }
+
   function pickPeriod(period: string) {
     push('user', period)
-    setAnswers((a) => ({ ...a, period }))
+    setAnswers((a) => ({ ...a, period, day: undefined, time: undefined }))
+    if (answers.name) {
+      void say(['Anotado. Toque no botão abaixo para enviar o pedido.'], 'done')
+      return
+    }
     void say(['Por último: como podemos te chamar?'], 'name')
   }
 
@@ -130,10 +252,15 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     const finais = { ...answers, name: value }
     setAnswers(finais)
     setDraft('')
+    const saudacao = `Prazer, ${value.split(/\s+/)[0]}.`
+    if (!horarioAindaVale(answers)) {
+      horarioSaiu([saudacao])
+      return
+    }
     const quem = firmAssistantDestination(firm, finais)
     void say(
       [
-        `Prazer, ${value.split(/\s+/)[0]}. Registrei o seu pedido.`,
+        `${saudacao} Registrei o seu pedido.`,
         quem.direct
           ? `Toque no botão abaixo para enviar tudo pelo WhatsApp de ${quem.label} — quem confirma o horário é ${quem.label}.`
           : 'Toque no botão abaixo para enviar tudo pelo WhatsApp — o escritório confirma o horário.',
@@ -142,19 +269,61 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     )
   }
 
+  // ---- Horário que expirou no meio da conversa ----
+  //
+  // Os dias são calculados quando a pergunta é feita. Quem escolhe "hoje às 16:00"
+  // e demora a responder pode chegar ao fim com o horário já dentro da antecedência
+  // mínima do advogado. A conta é refeita antes de fechar o pedido e antes de abrir
+  // o WhatsApp. Pedido por período não expira: não há horário a conferir.
+
+  function horarioAindaVale(a: FirmAssistantAnswers): boolean {
+    if (!a.day || !a.time) return true
+    const agenda = lawyers.find((l) => l.id === a.lawyerId)?.agenda
+    if (!agenda) return true
+    const { key } = a.day
+    const time = a.time
+    return buildAssistantDays(agenda).some((d) => d.key === key && d.times.includes(time))
+  }
+
+  function horarioSaiu(antes: string[] = []) {
+    const agenda = escolhido?.agenda
+    const agora = agenda ? buildAssistantDays(agenda) : []
+    setDias(agora)
+    setVerTodosOsDias(false)
+    setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
+    void say(
+      agora.length
+        ? [
+            ...antes,
+            'Só que esse horário acabou de sair da agenda — passou do prazo mínimo para pedir. Escolha outro, por favor:',
+          ]
+        : [
+            ...antes,
+            'Só que esse horário acabou de sair da agenda, e não sobrou outro livre. Diga sua preferência e o pedido segue com ela:',
+          ],
+      agora.length ? 'day' : 'period',
+    )
+  }
+
   // ---- Derivados ----
 
-  const answered = STEP_ORDER.indexOf(step)
+  const referencia = step === 'period' ? 'day' : step
+  const answered = STEP_ORDER.indexOf(referencia)
   const progress = step === 'boot' ? 0 : Math.min(1, answered / (STEP_ORDER.length - 1))
-  const href = firmAssistantWhatsappHref(firm, answers)
+  const comHorario = !!(answers.day && answers.time)
+  const duracao = comHorario ? escolhido?.agenda?.durationMin : undefined
+  const href = firmAssistantWhatsappHref(firm, answers, duracao)
   const destino = firmAssistantDestination(firm, answers)
   const ready = step === 'done' && !!answers.name && !!href
+  const diasNaTela = verTodosOsDias ? dias : dias.slice(0, MAX_DAY_CHIPS)
 
+  const quando = comHorario ? `${answers.day!.longLabel} às ${answers.time}` : answers.period
   const rows: [string, string][] = [
     answers.area ? ['Assunto', answers.area] : null,
     ['Advogado', answers.lawyer ?? 'Sem preferência'],
     answers.format ? ['Formato', cap(answers.format)] : null,
-    answers.period ? ['Quando', answers.period] : null,
+    quando ? ['Quando', quando] : null,
+    duracao ? ['Duração', `${duracao} minutos`] : null,
     answers.name ? ['Nome', answers.name] : null,
     // Para quem o pedido vai: com encaminhamento direto o visitante sai da conversa
     // no WhatsApp de uma pessoa, não do escritório. Isso não pode ser surpresa.
@@ -255,11 +424,11 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
               // Ordem alfabética e "Tanto faz" primeiro: a plataforma não indica
               // ninguém, e a lista não sugere que alguém é melhor que os outros.
               <ChipRow label="Advogado">
-                <Chip subtle onClick={() => pickLawyer(FIRM_ANY_LAWYER)}>
+                <Chip subtle onClick={() => pickLawyer(null)}>
                   {FIRM_ANY_LAWYER}
                 </Chip>
                 {candidatos.map((l) => (
-                  <Chip key={l.id} onClick={() => pickLawyer(l.name)}>
+                  <Chip key={l.id} onClick={() => pickLawyer(l)}>
                     {l.name}
                   </Chip>
                 ))}
@@ -268,6 +437,35 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
               <ChipRow label="Formato do atendimento">
                 <Chip onClick={() => pickFormat('presencial')}>Presencial</Chip>
                 <Chip onClick={() => pickFormat('online')}>Online</Chip>
+              </ChipRow>
+            ) : step === 'day' ? (
+              <ChipRow label="Escolha um dia">
+                {diasNaTela.map((d) => (
+                  <Chip key={d.key} onClick={() => pickDay(d)}>
+                    <CalendarIcon width={14} height={14} className="t-accent" />
+                    {d.label}
+                    {d.relative && <em className="t-faint not-italic">· {d.relative}</em>}
+                  </Chip>
+                ))}
+                {!verTodosOsDias && dias.length > MAX_DAY_CHIPS && (
+                  <Chip subtle onClick={() => setVerTodosOsDias(true)}>
+                    Ver mais dias
+                  </Chip>
+                )}
+                <Chip subtle onClick={preferirPeriodo}>
+                  Nenhum desses dias
+                </Chip>
+              </ChipRow>
+            ) : step === 'time' ? (
+              <ChipRow label="Escolha um horário">
+                {(answers.day?.times ?? []).map((t) => (
+                  <Chip key={t} onClick={() => pickTime(t)}>
+                    {t}
+                  </Chip>
+                ))}
+                <Chip subtle onClick={outroDia}>
+                  Outro dia
+                </Chip>
               </ChipRow>
             ) : step === 'period' ? (
               <ChipRow label="Preferência de horário">
@@ -291,6 +489,12 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
                 <a
                   href={href}
                   {...comoAbrirWhatsapp()}
+                  onClick={(e) => {
+                    // A pessoa pode ter parado no botão por um bom tempo.
+                    if (horarioAindaVale(answers)) return
+                    e.preventDefault()
+                    horarioSaiu()
+                  }}
                   className="t-btn w-full !py-3.5 text-[15px]"
                 >
                   <WhatsappIcon width={20} height={20} />

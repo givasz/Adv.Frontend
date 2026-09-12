@@ -228,9 +228,16 @@ async function conversaDoEscritorio() {
     // "Tanto faz" vem primeiro de propósito: escolher advogado é opcional e a
     // plataforma não indica ninguém (Prov. 205/2021 veda ranking).
     await pagina.getByRole('button', { name: 'Tanto faz', exact: true }).waitFor({ timeout: ESPERA })
+    // Camila usa a agenda do assistente no perfil dela: a conversa do escritório
+    // tem de oferecer os dias e horários DELA, não "esta semana, de manhã".
     await clicar(pagina, 'Camila Nunes')
     await clicar(pagina, 'Online')
-    await clicar(pagina, 'Esta semana, de manhã')
+    const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
+    await dia.waitFor({ timeout: ESPERA })
+    await dia.click()
+    const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
+    await hora.waitFor({ timeout: ESPERA })
+    await hora.click()
     const nome = pagina.getByLabel('Seu nome')
     await nome.waitFor({ timeout: ESPERA })
     await nome.fill('Visitante Smoke')
@@ -241,10 +248,32 @@ async function conversaDoEscritorio() {
     await link.waitFor({ timeout: ESPERA })
     const href = decodeURIComponent((await link.getAttribute('href')) ?? '')
     if (!href.includes('Advogado(a): Camila Nunes')) erros.push('o pedido não levou o advogado escolhido')
+    if (!href.includes('Dia e horário:')) erros.push('o pedido não levou o horário da agenda da advogada')
     // O escritório-modelo encaminha para o advogado escolhido: o link tem de ser o
     // WhatsApp dela, não o institucional.
     if (!href.startsWith('https://wa.me/5511990000002')) {
       erros.push('o pedido não foi para o WhatsApp da advogada escolhida')
+    }
+
+    // Sem preferência não há agenda de onde tirar horário: volta a pergunta de
+    // período, e o pedido vai para o WhatsApp do escritório.
+    await clicar(pagina, 'Recomeçar')
+    await clicar(pagina, 'Direito de Família')
+    await clicar(pagina, 'Tanto faz')
+    await clicar(pagina, 'Online')
+    await clicar(pagina, 'Esta semana, de manhã')
+    const nome2 = pagina.getByLabel('Seu nome')
+    await nome2.waitFor({ timeout: ESPERA })
+    await nome2.fill('Visitante Smoke')
+    await clicar(pagina, 'Enviar resposta')
+    const link2 = pagina.getByRole('link', { name: 'Enviar no WhatsApp' })
+    await link2.waitFor({ timeout: ESPERA })
+    const href2 = decodeURIComponent((await link2.getAttribute('href')) ?? '')
+    if (!href2.includes('Preferência de horário: Esta semana, de manhã')) {
+      erros.push('sem preferência, o pedido não levou o período')
+    }
+    if (!href2.startsWith('https://wa.me/5511990000000')) {
+      erros.push('sem preferência, o pedido não foi para o WhatsApp do escritório')
     }
   } catch (e) {
     erros.push(String(e).split('\n')[0])
