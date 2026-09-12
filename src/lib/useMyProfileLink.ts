@@ -10,9 +10,14 @@ import { useAuth } from './auth'
 // que não sabe quem você é.
 //
 // Três estados, três destinos honestos:
-//   deslogado           → criar
-//   logado, publicado   → ver o perfil que está no ar
-//   logado, sem publicar→ continuar de onde parou
+//   deslogado            → criar
+//   logado, publicado    → o PAINEL (é de lá que se vê, edita e compartilha o
+//                          perfil; o perfil público fica no menu da conta)
+//   logado, sem publicar → continuar de onde parou
+//
+// O botão levava ao perfil público até 12/09/2026. Quem já tem perfil abre a
+// home para MEXER nele, não para olhá-lo — e do perfil público não se chega a
+// nada. O painel é o centro; o perfil vira item do menu do nome.
 
 export interface MyProfileLink {
   to: string
@@ -28,6 +33,8 @@ export interface MyProfileLink {
   short: string
   /** true quando o destino é o perfil público (abre em nova aba) */
   external: boolean
+  /** endereço do perfil público quando ele está no ar — para o menu da conta */
+  perfil?: string
 }
 
 const CRIAR: MyProfileLink = {
@@ -36,6 +43,8 @@ const CRIAR: MyProfileLink = {
   short: 'Criar perfil',
   external: false,
 }
+
+const PAINEL: MyProfileLink = { to: '/painel', label: 'Meu painel', short: 'Painel', external: false }
 
 export function useMyProfileLink(): MyProfileLink {
   const { isAuthed } = useAuth()
@@ -47,15 +56,15 @@ export function useMyProfileLink(): MyProfileLink {
       return
     }
     let alive = true
-    // Enquanto o rascunho não chega, o rótulo segue neutro: prometer "Ver meu
-    // perfil" antes de saber se existe um levaria a uma página inexistente.
-    setLink({ to: '/painel', label: 'Meu painel', short: 'Painel', external: false })
+    // Enquanto o rascunho não chega, o rótulo já é o do painel: ele resolve o
+    // destino sozinho (sem perfil publicado, manda para /comecar).
+    setLink(PAINEL)
     api
       .getDraft()
       .then((p) => {
         if (!alive) return
         if (p.published && p.slug) {
-          setLink({ to: `/${p.slug}`, label: 'Ver meu perfil', short: 'Meu perfil', external: true })
+          setLink({ ...PAINEL, perfil: `/${p.slug}` })
         } else {
           setLink({ to: '/comecar', label: 'Continuar meu perfil', short: 'Continuar', external: false })
         }

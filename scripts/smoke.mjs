@@ -66,6 +66,16 @@ const ROTAS = [
   ['/painel', 'painel'],
   ['/painel?assinou=pro', 'painel após assinar'],
   ['/editor', 'editor'],
+  // A identidade virou três seções em 12/09/2026; cada uma renderiza cartões
+  // que só existem nela (cidade do IBGE, CEP, áreas com IA).
+  ['/editor?section=local', 'editor · local e endereço'],
+  ['/editor?section=areas', 'editor · áreas'],
+  // Chegar por âncora rola até o campo e o destaca — só acontece no navegador.
+  ['/editor?section=identidade#foto', 'editor · âncora da foto'],
+  ['/editor?section=bio', 'editor · apresentação'],
+  ['/editor?section=marca', 'editor · marca'],
+  ['/editor?section=qrcode', 'editor · cartão digital'],
+  ['/editor?section=conteudo', 'editor · documentos'],
   ['/editor?section=faq', 'editor · FAQ'],
   ['/editor?section=aparencia', 'editor · aparência'],
   ['/editor?section=plano', 'editor · plano'],
@@ -507,7 +517,56 @@ async function contratoDoAdvogado() {
   return erros
 }
 
+/**
+ * A busca do editor leva ao CAMPO, e o painel tem porta para cada seção.
+ *
+ * Digita "whats" na bio, clica no primeiro resultado: o endereço tem de virar
+ * ?section=redes#whatsapp, o campo tem de acender (classe `campo-alvo`) e o
+ * chip ativo tem de trocar. Depois, no painel: "Editar perfil" existe, a grade
+ * "Seu perfil" tem um cartão por seção e o índice fica ACIMA da agenda — três
+ * coisas que um teste de unidade não enxerga.
+ */
+async function buscaDoEditor() {
+  const { contexto, pagina, erros } = await abrir('/editor?section=bio')
+  try {
+    const busca = pagina.getByPlaceholder(/O que você quer mudar/)
+    await busca.waitFor({ timeout: ESPERA })
+    await busca.fill('whats')
+    const resultado = pagina.getByRole('list', { name: 'Resultados da busca' }).getByRole('link').first()
+    await resultado.waitFor({ timeout: ESPERA })
+    if (!/WhatsApp/.test(await resultado.innerText())) erros.push('"whats" não achou o WhatsApp primeiro')
+    await resultado.click()
+    await pagina.waitForURL(/section=redes#whatsapp$/, { timeout: ESPERA })
+    await pagina.waitForFunction(
+      () => document.getElementById('whatsapp')?.classList.contains('campo-alvo'),
+      null,
+      { timeout: ESPERA },
+    )
+    const ativo = await pagina
+      .locator('nav[aria-label="Seções do editor"] [aria-current="page"]')
+      .innerText()
+    if (!/Contato e redes/.test(ativo)) erros.push(`o chip ativo diz "${ativo}"`)
+
+    await pagina.goto(BASE + '/painel', { waitUntil: 'networkidle', timeout: ESPERA })
+    await pagina.getByRole('link', { name: 'Editar perfil' }).waitFor({ timeout: ESPERA })
+    for (const nome of ['Dados e foto', 'Apresentação', 'Contato e redes', 'Áreas', 'Local e endereço', 'Tema']) {
+      if (!(await pagina.getByRole('link', { name: new RegExp(`^${nome}`) }).count())) {
+        erros.push(`o painel não tem o cartão "${nome}"`)
+      }
+    }
+    const indice = await pagina.getByText('Índice de confiança', { exact: true }).boundingBox()
+    const agenda = await pagina.getByRole('heading', { name: 'Sua agenda' }).boundingBox()
+    if (!indice || !agenda) erros.push('não achou o índice ou a agenda no painel')
+    else if (indice.y > agenda.y) erros.push('a agenda apareceu acima do índice')
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
+  ['busca do editor e portas do painel', buscaDoEditor],
   ['balão de conversa no celular da home', balaoNoCelular],
   ['agenda do advogado (editor)', agendaDoAdvogado],
   ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],

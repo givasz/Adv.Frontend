@@ -4,52 +4,26 @@ import type { Profile } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
-import { THEMES, isThemeUnlocked } from '@/lib/themes'
+import { resolveSchedulingMode } from '@/lib/booking'
+import { canUseContratos } from '@/lib/plans'
+import { DESTINO_DO_FATOR, SECTIONS_BY_GROUP, editorPath } from '@/lib/editorSections'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { AvisoCobranca } from '@/components/editor/AvisoCobranca'
-import { Avatar } from '@/components/ui/Avatar'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
-import {
-  ArrowRight,
-  CardIcon,
-  DocIcon,
-  EyeIcon,
-  LockIcon,
-  PenIcon,
-  PlayIcon,
-  QrIcon,
-  ShieldIcon,
-} from '@/components/ui/icons'
+import { ArrowRight, CheckIcon, LockIcon, PenIcon } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 import { AgendaCard } from '@/components/painel/AgendaCard'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
+import { PainelHero } from '@/components/painel/PainelHero'
+import { SecaoTile, Tile } from '@/components/painel/SecaoTile'
+import { VisitasTile } from '@/components/painel/VisitasTile'
 import { Marca } from '@/components/ui/Marca'
 
-// Para onde cada passo leva no editor. Itens travados por plano também levam à seção —
-// lá o próprio recurso mostra seu valor antes de pedir upgrade (upsell natural).
-const DEST: Record<string, string> = {
-  nome: '/editor?section=identidade',
-  cidade: '/editor?section=identidade',
-  oab: '/editor?section=identidade',
-  bio: '/editor?section=bio',
-  whatsapp: '/editor?section=redes',
-  area1: '/editor?section=identidade',
-  foto: '/editor?section=identidade',
-  frase: '/editor?section=identidade',
-  redes: '/editor?section=redes',
-  email: '/editor?section=redes',
-  area2: '/editor?section=identidade',
-  faq: '/editor?section=faq',
-  agenda: '/editor?section=agenda',
-  marca: '/editor?section=marca',
-}
-
 const LAST_KEY = 'advocme:trust:last'
-
 
 // Frase de incentivo conforme o índice — tom profissional, sem gamificação infantil.
 function motivator(score: number): string {
@@ -60,12 +34,21 @@ function motivator(score: number): string {
   return 'Vamos deixar seu perfil mais completo.'
 }
 
+// A ordem do painel, de cima para baixo, segue a frequência com que cada coisa
+// é usada:
+//   1. quem é + link do perfil + editar/compartilhar (todo dia)
+//   2. cobrança, só quando há algo a dizer
+//   3. Índice de Confiança com os próximos passos dentro dele
+//   4. a agenda, a única tarefa que se repete toda semana
+//   5. "Seu perfil": um cartão por seção, com o que está preenchido
+//   6. ferramentas: visitas, QR, cartão, contratos, documentos
+//   7. o que o plano abriu e ainda não foi usado; planos; escritório
 export default function Painel() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [delta, setDelta] = useState(0)
-  // true logo depois de confirmar uma assinatura — dá o tom de celebração ao
-  // checklist do que abriu (some ao recarregar).
+  // true logo depois de confirmar uma assinatura — o checklist do que abriu
+  // sobe para o alto da página com tom de celebração (some ao recarregar).
   const [justUpgraded, setJustUpgraded] = useState(false)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -80,7 +63,7 @@ export default function Painel() {
   const acabouDeAssinar = searchParams.get('assinou')
 
   useEffect(() => {
-    document.title = 'Evolua seu perfil · advoc.me'
+    document.title = 'Seu painel · advoc.me'
     api
       .getDraft()
       .then((p) => {
@@ -137,13 +120,14 @@ export default function Painel() {
     )
   }
 
-  const firstName = profile.name.split(' ')[0] || 'você'
-  // Passos do conteúdo básico. Os fatores que dependem de plano (agenda, selo da
-  // OAB, marca, domínio) NÃO entram aqui: eles pertencem ao checklist do plano,
-  // logo acima, e apareceriam duas vezes na mesma tela.
+  // Passos do conteúdo básico. Os fatores que dependem de plano (agenda, marca)
+  // NÃO entram aqui: eles pertencem ao checklist do plano e à vitrine de planos,
+  // e apareceriam duas vezes na mesma tela.
   const freeSteps = trust.next.filter((f) => !f.plan)
-  const unlockedThemes = THEMES.filter((t) => isThemeUnlocked(t, profile.plan)).length
-
+  // Com o assistente ligado a agenda tem o cartão grande logo abaixo do índice;
+  // repetir o cartão pequeno na grade seria a mesma porta duas vezes.
+  const agendaEmDestaque = resolveSchedulingMode(profile) === 'assistant'
+  const secoesDoPerfil = SECTIONS_BY_GROUP.perfil.filter((id) => id !== 'agenda' || !agendaEmDestaque)
 
   return (
     <div className="grain min-h-dvh bg-paper-deep">
@@ -171,7 +155,11 @@ export default function Painel() {
             >
               Ver perfil
             </Link>
-            <AccountMenu compact supportTo={comVolta('/suporte', '/painel')} />
+            <AccountMenu
+              compact
+              perfilTo={`/${profile.slug}`}
+              supportTo={comVolta('/suporte', '/painel')}
+            />
           </div>
         </div>
       </header>
@@ -180,13 +168,7 @@ export default function Painel() {
           orquestrada vale mais que microinterações espalhadas — e é só CSS,
           desligado sozinho em prefers-reduced-motion. */}
       <main className="stagger mx-auto max-w-3xl px-5 py-8">
-        <div className="flex items-center gap-4">
-          <Avatar name={profile.name} src={profile.avatarUrl} size={52} />
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-semibold text-ink">Evolua seu perfil</h1>
-            <p className="text-[14px] text-ink-soft">Olá, {firstName}. Seu perfil já está online.</p>
-          </div>
-        </div>
+        <PainelHero profile={profile} />
 
         {/* Situação da cobrança — antes de tudo. Se o pagamento falhou, é a primeira
             coisa que a pessoa precisa saber, e é a única que ela não descobre
@@ -194,14 +176,15 @@ export default function Painel() {
             dizer (ver lib/assinatura.ts). */}
         <AvisoCobranca profile={profile} className="mt-6" />
 
-        {/* A agenda vem antes do índice: é a única tarefa recorrente do painel, e
-            quem abre o painel no meio da semana quase sempre vem por ela. */}
-        <AgendaCard profile={profile} />
+        {/* Acabou de assinar: o que abriu vem primeiro, com festa. Nos outros
+            dias o mesmo checklist mora mais abaixo, depois das ferramentas. */}
+        {justUpgraded && <PlanChecklist profile={profile} celebrate />}
 
-        {/* Índice de Confiança — roda que esverdeia conforme melhora */}
-        <div className="mt-6 rounded-xl2 border border-ink/10 bg-paper p-6 shadow-card">
-          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:gap-6 sm:text-left">
-            <TrustGauge score={trust.score} size={152} />
+        {/* Índice de Confiança — acima de tudo, com os próximos passos dentro:
+            o número e o que fazer para ele subir são uma coisa só. */}
+        <section className="mt-6 overflow-hidden rounded-xl2 border border-ink/10 bg-paper shadow-card">
+          <div className="flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:gap-6 sm:text-left">
+            <TrustGauge score={trust.score} size={140} />
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
                 Índice de confiança
@@ -217,25 +200,60 @@ export default function Painel() {
               <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">{motivator(trust.score)}</p>
             </div>
           </div>
+
+          {freeSteps.length > 0 ? (
+            <div className="border-t border-ink/[0.07] bg-paper-soft/60 px-4 py-4 sm:px-5">
+              <h2 className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-brass-deep">
+                Próximos passos
+              </h2>
+              <div className="mt-2.5 space-y-2.5">
+                {freeSteps.map((f) => (
+                  <StepCard key={f.key} factor={f} profile={profile} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="flex items-center gap-2 border-t border-ink/[0.07] px-6 py-3.5 text-[13px] text-ink-soft">
+              <CheckIcon width={15} height={15} strokeWidth={2.4} className="shrink-0 text-brass-deep" />
+              {trust.next.length === 0
+                ? 'Perfil completo — não há mais nada a preencher.'
+                : 'Tudo que o seu plano deixa preencher já está preenchido. Os pontos que faltam abrem com o Pro e o Max.'}
+            </p>
+          )}
+        </section>
+
+        {/* A agenda — logo abaixo do índice. É a única tarefa recorrente do painel. */}
+        <AgendaCard profile={profile} />
+
+        {/* Seu perfil — um cartão por seção, com o que está preenchido. É daqui
+            que se controla o perfil depois que o índice já não tem passos. */}
+        <PanelHeading>Seu perfil</PanelHeading>
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          {secoesDoPerfil.map((id) => (
+            <SecaoTile key={id} id={id} profile={profile} />
+          ))}
+        </div>
+
+        {/* Ferramentas — o que se TIRA do perfil: relatório, QR, cartão, documentos. */}
+        <PanelHeading>Ferramentas</PanelHeading>
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          <VisitasTile />
+          <SecaoTile id="qrcode" profile={profile} />
+          <SecaoTile id="cartao" profile={profile} />
+          <Tile
+            to={comVolta('/contratos', '/painel')}
+            title="Contratos e procurações"
+            texto="Monte a minuta a partir de um modelo, revise e registre a impressão digital do PDF."
+            icon={PenIcon}
+            selo={canUseContratos(profile.plan) ? undefined : 'Max'}
+          />
+          <SecaoTile id="conteudo" profile={profile} />
         </div>
 
         {/* O que o plano abriu — só o que ainda não foi aproveitado. Some sozinho
             conforme cada item é configurado, então quem já montou o perfil vê
             apenas a novidade. */}
-        <PlanChecklist profile={profile} celebrate={justUpgraded} />
-
-        {/* Próximos passos — só o que dá pra fazer no plano atual (sem cadeados).
-            Os itens de planos pagos vão para a seção de upsell abaixo. */}
-        {freeSteps.length > 0 && (
-          <>
-            <PanelHeading>Próximos passos</PanelHeading>
-            <div className="mt-3 space-y-2.5">
-              {freeSteps.map((f) => (
-                <StepCard key={f.key} factor={f} locked={false} profile={profile} />
-              ))}
-            </div>
-          </>
-        )}
+        {!justUpgraded && <PlanChecklist profile={profile} />}
 
         {/* Planos — cada tópico mostra a prova do que muda; o checkout faz o resto */}
         {profile.plan !== 'premium' && (
@@ -258,98 +276,6 @@ export default function Painel() {
           </section>
         )}
 
-        {/* A cara do perfil — temas (6 dos 8 são de plano pago → isca natural) */}
-        <PanelHeading>A cara do seu perfil</PanelHeading>
-        <Link
-          to="/editor?section=aparencia"
-          className="group mt-3 block rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-display text-[15px] font-semibold text-ink">Escolha um tema</p>
-              <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-soft">
-                {unlockedThemes} de {THEMES.length} liberados no seu plano — os demais são do Pro e do Max.
-              </p>
-            </div>
-            <ArrowRight
-              width={16}
-              height={16}
-              className="shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-0.5"
-            />
-          </div>
-          <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
-            {THEMES.map((t) => {
-              const unlocked = isThemeUnlocked(t, profile.plan)
-              return (
-                <div
-                  key={t.id}
-                  className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink/10"
-                  style={{ background: t.swatch.bg }}
-                  title={t.name}
-                >
-                  <span
-                    className="absolute bottom-1.5 left-1.5 h-1.5 w-5 rounded-full"
-                    style={{ background: t.swatch.accent }}
-                  />
-                  {!unlocked && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-ink/45 backdrop-blur-[1px]">
-                      <LockIcon width={12} height={12} strokeWidth={2} className="text-paper" />
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </Link>
-
-        {/* Descubra mais — recursos que não pontuam mas ampliam o alcance */}
-        <PanelHeading>Descubra mais</PanelHeading>
-        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-          <DiscoverCard
-            to="/editor?section=analytics"
-            title="Quem visita você"
-            desc="Veja quantas pessoas abriram seu perfil."
-            icon={EyeIcon}
-          />
-          <DiscoverCard
-            to="/editor?section=qrcode"
-            title="Seu cartão digital"
-            desc="Compartilhe seu perfil com um QR Code."
-            icon={QrIcon}
-          />
-          <DiscoverCard
-            to="/editor?section=cartao"
-            title="Seu cartão de visita"
-            desc="Monte a arte e leve o arquivo pronto para a gráfica."
-            icon={CardIcon}
-          />
-          <DiscoverCard
-            to="/editor?section=faq"
-            title="Perguntas frequentes"
-            desc="Responda as dúvidas que você mais ouve."
-            icon={DocIcon}
-          />
-          <DiscoverCard
-            to="/editor?section=video"
-            title="Seu vídeo"
-            desc="Cole um link do YouTube ou Vimeo — tem um passo a passo lá dentro."
-            icon={PlayIcon}
-          />
-          <DiscoverCard
-            to={comVolta('/contratos', '/painel')}
-            title="Contratos e procurações"
-            desc="Monte a minuta a partir de um modelo, revise e registre a impressão digital do PDF."
-            icon={PenIcon}
-            selo={profile.plan === 'premium' ? undefined : 'Max'}
-          />
-          <DiscoverCard
-            to="/editor?section=conteudo"
-            title="Documentos e privacidade"
-            desc="Gere sua política de privacidade e o comprovante de conformidade."
-            icon={ShieldIcon}
-          />
-        </div>
-
         {/* Escritório — criar, gerenciar ou responder a um convite */}
         <PanelHeading>Escritório</PanelHeading>
         <EscritorioCard />
@@ -363,6 +289,9 @@ export default function Painel() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-ink-faint">
+          <Link to={editorPath('plano')} className="inline-block py-2 hover:text-ink">
+            Seu plano
+          </Link>
           <Link to="/legal" className="inline-block py-2 hover:text-ink">
             Documentos e privacidade
           </Link>
@@ -375,15 +304,13 @@ export default function Painel() {
             Achou um problema? Falar com o suporte
           </Link>
         </div>
-
       </main>
     </div>
   )
 }
 
 // Cabeçalho de seção no idioma da marca: versalete + filete de latão que corre
-// até a margem — o mesmo timbre do perfil, trazido para o painel. Substitui o
-// rótulo cinza solto, que não dizia de que produto aquela tela era.
+// até a margem — o mesmo timbre do perfil, trazido para o painel.
 function PanelHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mt-9 flex items-center gap-3 px-1">
@@ -395,66 +322,12 @@ function PanelHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
-function DiscoverCard({
-  to,
-  title,
-  desc,
-  icon: Icon,
-  selo,
-}: {
-  to: string
-  title: string
-  desc: string
-  icon: (p: { width?: number; height?: number; className?: string }) => JSX.Element
-  /** plano que o recurso exige, mostrado a quem ainda não o tem */
-  selo?: string
-}) {
-  return (
-    <Link
-      to={to}
-      className="group flex items-center gap-3 rounded-xl2 border border-ink/10 bg-paper/60 p-4 transition-[transform,border-color,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-brass/50 hover:bg-paper hover:shadow-card"
-    >
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brass/25 bg-brass/[0.07] text-brass-deep transition-colors group-hover:bg-brass/15"
-        aria-hidden
-      >
-        <Icon width={17} height={17} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-display text-[14.5px] font-semibold leading-tight text-ink">{title}</span>
-          {selo && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              <LockIcon width={10} height={10} aria-hidden />
-              {selo}
-            </span>
-          )}
-        </span>
-        <span className="mt-0.5 block text-[12.5px] leading-relaxed text-ink-soft">{desc}</span>
-      </span>
-      <ArrowRight
-        width={15}
-        height={15}
-        className="shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-0.5"
-      />
-    </Link>
-  )
-}
-
-// Um passo do painel. A miniatura da esquerda mostra O QUE o passo produz (os
+// Um passo do índice. A miniatura da esquerda mostra O QUE o passo produz (os
 // logos das redes, o próprio avatar, o botão de WhatsApp) e a linha de baixo diz
-// o que muda para quem visita. Antes eram todos a mesma caixa com o mesmo chip de
-// pontos: uma lista onde nada se distinguia e nada dava vontade de tocar.
-function StepCard({
-  factor,
-  locked,
-  profile,
-}: {
-  factor: TrustFactor
-  locked: boolean
-  profile: Profile
-}) {
-  const to = DEST[factor.key] ?? '/editor?section=identidade'
+// o que muda para quem visita. O destino é o CAMPO, não a seção: "Adicionar
+// foto" abre o editor já rolado até a foto.
+function StepCard({ factor, profile }: { factor: TrustFactor; profile: Profile }) {
+  const to = DESTINO_DO_FATOR[factor.key] ?? editorPath('identidade')
   const hint = STEP_HINT[factor.key]
   return (
     <Link
@@ -472,7 +345,7 @@ function StepCard({
           </span>
           {factor.plan && (
             <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              {locked && <LockIcon width={10} height={10} />}
+              <LockIcon width={10} height={10} />
               {factor.plan === 'premium' ? 'Max' : 'Pro'}
             </span>
           )}

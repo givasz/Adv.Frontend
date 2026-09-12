@@ -174,7 +174,7 @@ export default function FirmEditor() {
                 Ver página
               </Link>
             )}
-            <AccountMenu compact />
+            <AccountMenu compact painel />
           </div>
         </div>
       </header>

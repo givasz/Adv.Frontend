@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type {
   GenerateKind,
@@ -62,6 +62,8 @@ import { CidadeUfCampos } from '@/components/editor/CidadeInput'
 import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
 import { ArrowLeft, LockIcon, SparkIcon, TrashIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
+import { EditorNav } from '@/components/editor/EditorNav'
+import { SECTIONS, isSectionId, type SectionId } from '@/lib/editorSections'
 
 type AiTarget = {
   kind: GenerateKind
@@ -71,20 +73,6 @@ type AiTarget = {
   /** pergunta que recebe a resposta gerada (kind === 'faq') */
   faqId?: string
 } | null
-type SectionId =
-  | 'identidade'
-  | 'bio'
-  | 'redes'
-  | 'agenda'
-  | 'aparencia'
-  | 'marca'
-  | 'faq'
-  | 'video'
-  | 'conteudo'
-  | 'analytics'
-  | 'qrcode'
-  | 'cartao'
-  | 'plano'
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
@@ -110,35 +98,6 @@ const PREVIEW_FAQS = [
   },
 ]
 
-// Cada seção do editor é um passo do assistente, aberto a partir de um card do painel.
-// Título e subtítulo conversam com o advogado — nada de "Configurações".
-const SECTIONS: Record<SectionId, { title: string; subtitle: string }> = {
-  identidade: { title: 'Seu perfil', subtitle: 'Seus dados e como você aparece para quem chega.' },
-  bio: { title: 'Sua apresentação', subtitle: 'Poucas linhas sobre você. A IA pode começar.' },
-  redes: { title: 'Seus canais', subtitle: 'Por onde os clientes falam com você.' },
-  agenda: { title: 'Sua agenda', subtitle: 'Deixe que marquem um horário direto no perfil.' },
-  aparencia: { title: 'A cara do perfil', subtitle: 'Escolha um visual que combine com você.' },
-  marca: { title: 'Sua marca', subtitle: 'Sua cor, o seu nome no rodapé e sem a marca advoc.me.' },
-  faq: {
-    title: 'Perguntas frequentes',
-    subtitle: 'As dúvidas que você mais ouve, respondidas por você no perfil.',
-  },
-  video: {
-    title: 'Seu vídeo',
-    subtitle: 'Um vídeo curto de apresentação no fim do perfil — do YouTube ou do Vimeo.',
-  },
-  conteudo: { title: 'Documentos', subtitle: 'Reúna seus termos legais e a política de privacidade.' },
-  analytics: { title: 'Quem visita você', subtitle: 'Descubra como as pessoas encontram seu perfil.' },
-  qrcode: { title: 'Seu cartão digital', subtitle: 'Um QR Code para compartilhar onde quiser.' },
-  cartao: {
-    title: 'Seu cartão de visita',
-    subtitle: 'A arte do seu cartão, pronta para levar à gráfica.',
-  },
-  plano: { title: 'Seu plano', subtitle: 'Troque quando quiser. Mais recursos, mais alcance.' },
-}
-
-const SECTION_IDS = Object.keys(SECTIONS) as SectionId[]
-
 export default function Editor() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -157,9 +116,8 @@ export default function Editor() {
   const [searchParams] = useSearchParams()
 
   const sectionParam = searchParams.get('section')
-  const section: SectionId = SECTION_IDS.includes(sectionParam as SectionId)
-    ? (sectionParam as SectionId)
-    : 'identidade'
+  const section: SectionId = isSectionId(sectionParam) ? sectionParam : 'identidade'
+  const { hash, key: navKey } = useLocation()
 
   useEffect(() => {
     api
@@ -253,6 +211,30 @@ export default function Editor() {
     if (section !== 'aparencia') setTryTheme(null)
   }, [section])
 
+  // Chegou por uma âncora (#foto, #whatsapp): rola até o campo, destaca e foca.
+  // É o que faz "Adicionar foto" no painel e a busca do editor levarem AO CAMPO,
+  // e não ao alto de uma seção onde a pessoa ainda tem de procurar.
+  //
+  // Espera a seção terminar de entrar (a animação leva 220ms) — antes disso o
+  // elemento ainda está deslocado e o scroll pararia no lugar errado. Depende
+  // de `carregado`, não de `profile`: o perfil muda a cada tecla, e re-rolar a
+  // página enquanto a pessoa digita seria intolerável. `navKey` muda a cada
+  // navegação, então clicar duas vezes no mesmo resultado rola duas vezes.
+  const carregado = !!profile
+  useEffect(() => {
+    if (!carregado || !hash) return
+    const id = decodeURIComponent(hash.slice(1))
+    const t = setTimeout(() => {
+      const el = document.getElementById(id)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('campo-alvo')
+      el.querySelector<HTMLElement>('input:not([type="file"]), textarea')?.focus({ preventScroll: true })
+      setTimeout(() => el.classList.remove('campo-alvo'), 2200)
+    }, 280)
+    return () => clearTimeout(t)
+  }, [carregado, hash, navKey])
+
   const bioIssues = useMemo(() => (profile ? checkCompliance(profile.bio) : []), [profile])
 
   if (loadError) return <FalhaAoCarregar mensagem={loadError} />
@@ -334,7 +316,9 @@ export default function Editor() {
   const meta = SECTIONS[section]
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-paper-deep">
+    <div className="min-h-dvh overflow-x-clip bg-paper-deep">
+      {/* overflow-x-CLIP, não hidden: hidden fazia deste div um scrollport e a
+          navegação e a prévia, ambas sticky, nunca grudavam de verdade. */}
       <h1 className="sr-only">Editar perfil — advoc.me</h1>
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -356,7 +340,12 @@ export default function Editor() {
             <Link to={`/${profile.slug}`} className="btn-primary !py-2 !px-4 text-[13px]" target="_blank">
               Ver perfil
             </Link>
-            <AccountMenu compact supportTo={comVolta('/suporte', `/editor?section=${section}`)} />
+            <AccountMenu
+              compact
+              perfilTo={`/${profile.slug}`}
+              painel
+              supportTo={comVolta('/suporte', `/editor?section=${section}`)}
+            />
           </div>
         </div>
       </header>
@@ -376,7 +365,15 @@ export default function Editor() {
         ))}
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[210px_minmax(0,1fr)_360px]">
+        {/* Navegação: busca + chips. No celular é a primeira coisa da coluna
+            (min-w-0: sem ele o trilho de chips, que não quebra linha, vira a
+            largura mínima da coluna e estoura a página inteira para o lado);
+            a partir de lg vira a coluna da esquerda, presa ao rolar. */}
+        <div className={`mx-auto w-full min-w-0 max-w-2xl lg:max-w-none ${tab === 'preview' ? 'hidden lg:block' : ''}`}>
+          <EditorNav section={section} plan={profile.plan} />
+        </div>
+
         {/* Coluna de edição */}
         {/* min-w-0: sem isso um conteúdo largo (uma grade de horários, por exemplo)
             vira a largura mínima da coluna e estoura a página no celular. */}
@@ -427,19 +424,19 @@ export default function Editor() {
               className="space-y-5"
             >
               {section === 'identidade' && (
-                <IdentitySection
-                  profile={profile}
-                  set={set}
-                  setProfile={setProfile}
-                  lim={lim}
-                  onAi={openAi}
-                  onUpsell={abrirUpsell}
-                />
+                <IdentitySection profile={profile} set={set} setProfile={setProfile} lim={lim} onAi={openAi} />
+              )}
+
+              {section === 'local' && <LocalSection profile={profile} set={set} />}
+
+              {section === 'areas' && (
+                <AreasSection profile={profile} set={set} lim={lim} onAi={openAi} onUpsell={abrirUpsell} />
               )}
 
               {section === 'bio' && (
                 <Card title="Bio" action={<AiButton label="Gerar" onClick={() => openAi({ kind: 'bio' })} />}>
                   <Field
+                    id="bio"
                     label="Sobre você"
                     hint={<QuotaCounter quota={charQuota(profile.plan, 'bio', profile.bio.length)} />}
                     info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.bio} title="O que a OAB permite na bio" />}
@@ -700,107 +697,126 @@ function IdentitySection({
   setProfile,
   lim,
   onAi,
-  onUpsell,
 }: {
   profile: Profile
   set: (patch: Partial<Profile>) => void
   setProfile: React.Dispatch<React.SetStateAction<Profile | null>>
   lim: (typeof CHAR_LIMITS)[Plan]
   onAi: (t: NonNullable<AiTarget>) => void
-  onUpsell: (f: UpsellFeature) => void
 }) {
-  const areasQuota = areaQuota(profile.plan, profile.areas.length)
+  return (
+    <Card title="Identidade">
+      <Field
+        id="nome"
+        label="Nome completo"
+        info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.name} title="O que a OAB permite no nome" align="left" />}
+      >
+        <TextInput
+          value={profile.name}
+          maxLength={NAME_MAX}
+          onChange={(e) => {
+            const name = e.target.value
+            setProfile((p) => {
+              if (!p) return p
+              // O endereço acompanha o nome, a menos que o usuário já tenha
+              // personalizado à mão (slugCustom). No Free, sempre segue o nome
+              // (o número único é aplicado no save).
+              const keep = p.plan !== 'free' && p.slugCustom
+              const slug = keep ? p.slug : slugify(name)
+              return { ...p, name, slug }
+            })
+          }}
+        />
+      </Field>
+      <div className="grid gap-4">
+        <Field id="oab" label="Número da OAB" hint="UF + número">
+          <OabNumberInput value={profile.oabNumber} onChange={(oabNumber) => set({ oabNumber })} />
+        </Field>
+        <Field
+          id="endereco-perfil"
+          label="Endereço do perfil"
+          hint={profile.plan === 'free' ? 'gerado do nome' : 'personalizável'}
+        >
+          {profile.plan === 'free' ? (
+            // O HOST real, nunca "advoc.me/" fixo: a marca é advoc.me, o endereço
+            // é onde os perfis vivem de fato, e são coisas diferentes até o
+            // domínio existir. Este campo é de onde a pessoa COPIA o link para
+            // mandar ao primeiro cliente — com o texto errado ela compartilha um
+            // link morto. Ver lib/publicUrl.ts, que existe por causa disso.
+            <TextInput
+              value={profileUrlLabel(profile.slug)}
+              readOnly
+              className="!bg-paper-deep text-ink-faint"
+            />
+          ) : (
+            <SlugField profile={profile} set={set} />
+          )}
+        </Field>
+      </div>
+      <div id="foto">
+        <span className="mb-1.5 block text-[13px] font-semibold text-ink">Foto de perfil</span>
+        <AvatarUpload
+          name={profile.name}
+          value={profile.avatarUrl}
+          onChange={(avatarUrl) => set({ avatarUrl })}
+          size={72}
+        />
+      </div>
+      <Field
+        id="frase"
+        label="Frase de apresentação"
+        hint={`${profile.headline.length}/${lim.headline}`}
+        info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.headline} title="O que a OAB permite na frase" />}
+      >
+        <TextInput
+          value={profile.headline}
+          maxLength={lim.headline}
+          onChange={(e) => set({ headline: e.target.value })}
+          placeholder="Advogada · Direito de Família"
+        />
+      </Field>
+      {/* A linha mais visível do perfil depois do nome — e a última a ganhar
+          revisão ao vivo. Um "o melhor criminalista da cidade" aqui é tão
+          irregular quanto na bio. */}
+      <MarginNotes issues={checkCompliance(profile.headline)} />
+      <button
+        type="button"
+        onClick={() => onAi({ kind: 'headline' })}
+        className="-mt-1 inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
+      >
+        <SparkIcon width={14} height={14} />
+        Gerar frase com IA
+        {!canUseAi('headline', profile.plan) && <LockIcon width={11} height={11} />}
+      </button>
+    </Card>
+  )
+}
+
+// Cidade, forma de atendimento e endereço — o "onde". Saiu do cartão de
+// identidade quando aquela seção ficou grande demais para ser a porta de
+// entrada do editor: quem vinha trocar a foto passava por seis campos de
+// endereço antes de achar o que veio fazer.
+function LocalSection({
+  profile,
+  set,
+}: {
+  profile: Profile
+  set: (patch: Partial<Profile>) => void
+}) {
   return (
     <>
-      <Card title="Identidade">
-        <Field
-          label="Nome completo"
-          info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.name} title="O que a OAB permite no nome" align="left" />}
-        >
-          <TextInput
-            value={profile.name}
-            maxLength={NAME_MAX}
-            onChange={(e) => {
-              const name = e.target.value
-              setProfile((p) => {
-                if (!p) return p
-                // O endereço acompanha o nome, a menos que o usuário já tenha
-                // personalizado à mão (slugCustom). No Free, sempre segue o nome
-                // (o número único é aplicado no save).
-                const keep = p.plan !== 'free' && p.slugCustom
-                const slug = keep ? p.slug : slugify(name)
-                return { ...p, name, slug }
-              })
-            }}
-          />
-        </Field>
-        <div className="grid gap-4">
-          <Field label="Número da OAB" hint="UF + número">
-            <OabNumberInput value={profile.oabNumber} onChange={(oabNumber) => set({ oabNumber })} />
-          </Field>
-          <Field label="Endereço do perfil" hint={profile.plan === 'free' ? 'gerado do nome' : 'personalizável'}>
-            {profile.plan === 'free' ? (
-              // O HOST real, nunca "advoc.me/" fixo: a marca é advoc.me, o endereço
-              // é onde os perfis vivem de fato, e são coisas diferentes até o
-              // domínio existir. Este campo é de onde a pessoa COPIA o link para
-              // mandar ao primeiro cliente — com o texto errado ela compartilha um
-              // link morto. Ver lib/publicUrl.ts, que existe por causa disso.
-              <TextInput
-                value={profileUrlLabel(profile.slug)}
-                readOnly
-                className="!bg-paper-deep text-ink-faint"
-              />
-            ) : (
-              <SlugField profile={profile} set={set} />
-            )}
-          </Field>
-        </div>
-        <div>
-          <span className="mb-1.5 block text-[13px] font-semibold text-ink">Foto de perfil</span>
-          <AvatarUpload
-            name={profile.name}
-            value={profile.avatarUrl}
-            onChange={(avatarUrl) => set({ avatarUrl })}
-            size={72}
-          />
-        </div>
-        <Field
-          label="Frase de apresentação"
-          hint={`${profile.headline.length}/${lim.headline}`}
-          info={<InfoTip items={OAB_GUIDANCE_BY_FIELD.headline} title="O que a OAB permite na frase" />}
-        >
-          <TextInput
-            value={profile.headline}
-            maxLength={lim.headline}
-            onChange={(e) => set({ headline: e.target.value })}
-            placeholder="Advogada · Direito de Família"
-          />
-        </Field>
-        {/* A linha mais visível do perfil depois do nome — e a última a ganhar
-            revisão ao vivo. Um "o melhor criminalista da cidade" aqui é tão
-            irregular quanto na bio. */}
-        <MarginNotes issues={checkCompliance(profile.headline)} />
-        <button
-          type="button"
-          onClick={() => onAi({ kind: 'headline' })}
-          className="-mt-1 inline-flex items-center gap-1.5 self-start rounded-full border border-brass/40 bg-brass/10 px-3 py-1.5 text-[12.5px] font-semibold text-brass-deep transition-colors hover:bg-brass/20"
-        >
-          <SparkIcon width={14} height={14} />
-          Gerar frase com IA
-          {!canUseAi('headline', profile.plan) && <LockIcon width={11} height={11} />}
-        </button>
-      </Card>
-
       <Card title="Localização e atendimento">
         {/* Cidade escolhida na lista do IBGE, não digitada no escuro: a grafia
             daqui sai no título de SEO, no link do mapa e na busca do diretório,
             e "São Paolo" quebrava os três sem avisar ninguém. */}
-        <CidadeUfCampos
-          city={profile.city}
-          state={profile.state}
-          onChange={({ city, state }) => set({ city, state })}
-        />
-        <Field label="Observação de região" hint="opcional">
+        <div id="cidade">
+          <CidadeUfCampos
+            city={profile.city}
+            state={profile.state}
+            onChange={({ city, state }) => set({ city, state })}
+          />
+        </div>
+        <Field id="regiao" label="Observação de região" hint="opcional">
           <TextInput
             value={profile.regionNote ?? ''}
             onChange={(e) => set({ regionNote: e.target.value })}
@@ -808,7 +824,7 @@ function IdentitySection({
           />
         </Field>
         <MarginNotes issues={checkCompliance(profile.regionNote ?? '')} />
-        <div className="flex gap-6">
+        <div id="atendimento" className="flex gap-6">
           <Toggle
             checked={profile.serviceMode.inPerson}
             onChange={(v) => set({ serviceMode: { ...profile.serviceMode, inPerson: v } })}
@@ -825,24 +841,42 @@ function IdentitySection({
       {/* Endereço em cartão PRÓPRIO, e não junto da cidade: são seis campos, uma
           consulta de CEP e uma escolha de privacidade — dentro do cartão de
           localização eles afogariam a única linha que todo perfil precisa ter. */}
-      <Card title="Endereço do escritório">
-        <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
-          Opcional. Quando preenchido, o perfil ganha o endereço e um botão que abre o mapa —
-          é o que falta para quem procura um advogado para ir até lá.
-        </p>
-        <EnderecoCampos
-          address={profile.address}
-          city={profile.city}
-          state={profile.state}
-          onChange={(address) => set({ address })}
-          onLocal={({ city, state }) => set({ city, state })}
-        />
-      </Card>
+      <div id="endereco">
+        <Card title="Endereço do escritório">
+          <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
+            Opcional. Quando preenchido, o perfil ganha o endereço e um botão que abre o mapa —
+            é o que falta para quem procura um advogado para ir até lá.
+          </p>
+          <EnderecoCampos
+            address={profile.address}
+            city={profile.city}
+            state={profile.state}
+            onChange={(address) => set({ address })}
+            onLocal={({ city, state }) => set({ city, state })}
+          />
+        </Card>
+      </div>
+    </>
+  )
+}
 
-      <Card
-        title="Áreas de atuação"
-        action={<QuotaCounter quota={areasQuota} />}
-      >
+function AreasSection({
+  profile,
+  set,
+  lim,
+  onAi,
+  onUpsell,
+}: {
+  profile: Profile
+  set: (patch: Partial<Profile>) => void
+  lim: (typeof CHAR_LIMITS)[Plan]
+  onAi: (t: NonNullable<AiTarget>) => void
+  onUpsell: (f: UpsellFeature) => void
+}) {
+  const areasQuota = areaQuota(profile.plan, profile.areas.length)
+  return (
+    <div id="areas">
+      <Card title="Áreas de atuação" action={<QuotaCounter quota={areasQuota} />}>
         {profile.areas.map((area) => (
           <AreaEditor
             key={area.id}
@@ -866,7 +900,7 @@ function IdentitySection({
           </button>
         ) : areasQuota.unlockPlan ? (
           // No limite do plano: em vez de só avisar, mostra o próximo slot como
-          // fantasma (cadeado). Clicar abre o modal focado em "áreas".
+          // fantasma (cadeado). Clicar abre a comparação focada em "áreas".
           <GhostSlot
             unlockPlan={areasQuota.unlockPlan}
             points={featurePoints('areas')}
@@ -878,7 +912,7 @@ function IdentitySection({
           </p>
         )}
       </Card>
-    </>
+    </div>
   )
 }
 
@@ -968,15 +1002,17 @@ function ContactSection({
       {/* Lista reordenável + interpretação do que foi digitado. Eram seis campos
           fixos que não davam para ordenar e engoliam "@usuario" em silêncio —
           ver components/editor/SocialsCard.tsx. */}
-      <SocialsCard profile={profile} set={set} />
+      <div id="redes">
+        <SocialsCard profile={profile} set={set} />
+      </div>
       <div className="rule-brass my-1" />
-      <Field label="WhatsApp" hint="DDD + número">
+      <Field id="whatsapp" label="WhatsApp" hint="DDD + número">
         <WhatsappInput
           value={profile.contact.whatsapp ?? ''}
           onChange={(whatsapp) => set({ contact: { ...profile.contact, whatsapp } })}
         />
       </Field>
-      <Field label="E-mail">
+      <Field id="email" label="E-mail">
         <TextInput
           type="email"
           value={profile.contact.email ?? ''}

@@ -12,6 +12,7 @@ import { profileUrlLabel } from '@/lib/publicUrl'
 import { AREA_LABEL_MAX, CHAR_LIMITS } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { AccountMenu } from '@/components/auth/AccountMenu'
+import { DESTINO_DO_FATOR } from '@/lib/editorSections'
 import { AiGenerator } from '@/components/editor/AiGenerator'
 import { UnlockMore } from '@/components/editor/UnlockMore'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
@@ -591,17 +592,9 @@ function ReviewSummary({ profile, area }: { profile: Profile; area: { label: str
   )
 }
 
-// Para onde cada item de melhoria leva no editor (espelha o painel).
-const FACTOR_DEST: Record<string, string> = {
-  foto: '/editor?section=identidade',
-  frase: '/editor?section=identidade',
-  redes: '/editor?section=redes',
-  email: '/editor?section=redes',
-  area2: '/editor?section=identidade',
-  faq: '/editor?section=faq',
-  agenda: '/editor?section=agenda',
-  marca: '/editor?section=marca',
-}
+// Para onde cada item de melhoria leva no editor — a mesma tabela do painel
+// (lib/editorSections.ts), que leva ao CAMPO e não só à seção.
+const FACTOR_DEST = DESTINO_DO_FATOR
 
 // Tela final — o momento de orgulho vira o momento de upsell. Mostra o perfil no
 // ar (rápido), o quão completo está + como melhorar, e a vitrine de planos.

@@ -9,11 +9,14 @@ import {
 } from 'react'
 
 export function Field({
+  id,
   label,
   hint,
   info,
   children,
 }: {
+  /** âncora do campo (`#foto`) — é para cá que a busca do editor e o painel levam */
+  id?: string
   label: string
   /** dica à direita do rótulo — texto simples ou um nó (ex.: contador de cota) */
   hint?: ReactNode
@@ -33,7 +36,7 @@ export function Field({
         })
       : children
   return (
-    <Wrapper className="block">
+    <Wrapper id={id} className="block">
       <span className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2">
         <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-ink">
           <span id={labelId}>{label}</span>

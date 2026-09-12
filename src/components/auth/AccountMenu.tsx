@@ -3,15 +3,25 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 
 // Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
-// página /entrar, voltando à página atual). Logado: e-mail + menu com "Sair".
+// página /entrar, voltando à página atual). Logado: nome + menu com o painel, o
+// perfil público, suporte, dados e "Sair".
+//
+// "Meu painel" e "Ver meu perfil" entraram aqui porque o nome no canto é onde
+// a pessoa clica para "ir para as minhas coisas" — e da home, com o botão
+// principal levando ao painel, o perfil público ficava sem porta.
 export function AccountMenu({
   compact = false,
   supportTo,
+  perfilTo,
+  painel = false,
 }: {
   compact?: boolean
-  /** abre o canal de suporte; sem o callback, o item não aparece */
-  /** destino do item "Falar com o suporte" (página, já com o caminho de volta) */
+  /** destino do item "Falar com o suporte" (página, já com o caminho de volta); sem ele, o item não aparece */
   supportTo?: string
+  /** endereço do perfil público ("/joao-silva") — abre em nova aba; sem ele, o item não aparece */
+  perfilTo?: string
+  /** mostra "Meu painel" (não faz sentido dentro do próprio painel) */
+  painel?: boolean
 }) {
   const { user, isAuthed, logout } = useAuth()
   const [open, setOpen] = useState(false)
@@ -61,6 +71,28 @@ export function AccountMenu({
               <p className="truncate text-[13px] font-medium text-ink">{user.name || shortName}</p>
               <p className="truncate text-[11.5px] text-ink-faint">{user.email}</p>
             </div>
+            {painel && (
+              <Link
+                to="/painel"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+              >
+                Meu painel
+              </Link>
+            )}
+            {perfilTo && (
+              <Link
+                to={perfilTo}
+                target="_blank"
+                rel="noreferrer noopener"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+              >
+                Ver meu perfil
+              </Link>
+            )}
             {supportTo && (
               <Link
                 to={supportTo}

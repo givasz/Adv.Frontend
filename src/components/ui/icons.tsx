@@ -369,3 +369,39 @@ export const socialMeta: Record<
   youtube: { label: 'YouTube', Icon: YoutubeIcon, color: '#FF0000' },
   tiktok: { label: 'TikTok', Icon: TiktokIcon, color: '#111111' },
 }
+
+// ---- Ícones das seções do editor (ver components/editor/sectionIcons.tsx) ----
+
+// Pessoa — a seção de nome, OAB e foto.
+export const UserIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20.5c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6" />
+  </svg>
+)
+
+// Etiqueta — áreas de atuação (cada área é uma tag no perfil).
+export const TagIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-8.5 8.5z" />
+    <circle cx="8" cy="8" r="1.25" />
+  </svg>
+)
+
+// Paleta — tema e aparência.
+export const PaletteIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.8 2-1.7 0-.9-.6-1.3-.6-2.1 0-.9.7-1.6 1.7-1.6h1.6a3.8 3.8 0 0 0 3.8-3.8C20.5 7 16.7 3.5 12 3.5Z" />
+    <circle cx="8" cy="10" r="1.1" />
+    <circle cx="12" cy="7.5" r="1.1" />
+    <circle cx="16" cy="10" r="1.1" />
+  </svg>
+)
+
+// Barras — visitas e cliques.
+export const ChartIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 20h16" />
+    <path d="M7 16v-5M12 16V7M17 16v-3" />
+  </svg>
+)

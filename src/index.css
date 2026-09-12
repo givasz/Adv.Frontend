@@ -401,3 +401,28 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Campo alvo de uma âncora do editor (#foto, #whatsapp): um anel de latão que
+   acende e some. Só box-shadow e cor de fundo — nada de altura animada, que
+   trava no celular (ver a regra da sanfona). Some sozinho com reduced-motion. */
+.campo-alvo {
+  border-radius: 0.75rem;
+  animation: campo-alvo 2.2s ease-out both;
+}
+@keyframes campo-alvo {
+  0%,
+  45% {
+    box-shadow: 0 0 0 6px rgba(176, 141, 87, 0.4);
+    background-color: rgba(176, 141, 87, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgba(176, 141, 87, 0);
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .campo-alvo {
+    animation: none;
+    box-shadow: 0 0 0 6px rgba(176, 141, 87, 0.4);
+  }
+}

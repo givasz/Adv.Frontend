@@ -204,7 +204,7 @@ export function ProfileView({
                 <p className="t-muted mt-1 text-[14px]">{profile.headline}</p>
               ) : (
                 owner && (
-                  <OwnerHint to="/editor?section=identidade" className="mt-1.5">
+                  <OwnerHint to="/editor?section=identidade#frase" className="mt-1.5">
                     Falta a sua frase de apresentação
                   </OwnerHint>
                 )
@@ -226,7 +226,7 @@ export function ProfileView({
               <p className="t-muted mt-2 text-[15px]">{profile.headline}</p>
             ) : (
               owner && (
-                <OwnerHint to="/editor?section=identidade" className="mt-2.5">
+                <OwnerHint to="/editor?section=identidade#frase" className="mt-2.5">
                   Falta a sua frase de apresentação
                 </OwnerHint>
               )
