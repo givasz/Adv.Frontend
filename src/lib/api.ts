@@ -9,6 +9,7 @@ import { API_BASE, apiFetch, TEM_BACKEND } from './http'
 import { checkCompliance, hasBlockingIssue, POLICY_VERSION } from './oab'
 import { fitToLimit } from './textLimit'
 import { generateWithOllama } from './localAi'
+import { draftText } from './rascunhoDeReserva'
 import { exampleProfiles, sampleProfile } from './mockData'
 import {
   blankFirm,
@@ -799,53 +800,4 @@ function mensagemDoServidor(corpo: string): string {
   } catch {
     return corpo.length <= 200 ? corpo : ''
   }
-}
-
-// Composição de rascunho OAB-safe a partir de palavras-chave.
-// No backend, isto vira um prompt para o Claude com guardrails do Prov. 205/2021.
-function draftText(req: GenerateRequest): string {
-  // Sanitiza as palavras-chave: o fallback nunca pode despejar comparações a
-  // terceiros ("como saul goodman") nem "especialista" crus do usuário.
-  const kw = req.keywords
-    .map((k) =>
-      k
-        .replace(/\b(como|igual a|tipo|feito)\b.*/i, '')
-        .replace(/\bespecialist\w*\b/gi, '')
-        .replace(/\bexpert\w*\b/gi, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim(),
-    )
-    .filter(Boolean)
-  const list =
-    kw.length > 1
-      ? `${kw.slice(0, -1).join(', ')} e ${kw[kw.length - 1]}`
-      : kw[0] ?? 'sua área de atuação'
-
-  if (req.kind === 'area') {
-    const area = req.areaLabel ?? 'esta área'
-    return `Atuo em ${area} com foco em ${list}. Ofereço orientação clara sobre direitos e alternativas em cada etapa, buscando o caminho mais adequado a cada situação. O objetivo é que você compreenda o processo e tome decisões bem informadas.`
-  }
-
-  if (req.kind === 'headline') {
-    const area = req.areaLabel || req.areas?.filter(Boolean)[0] || req.keywords.filter(Boolean)[0] || 'Direito'
-    return `Advogado(a) · ${area}`
-  }
-
-  if (req.kind === 'improve') {
-    return (
-      req.currentText?.trim() ||
-      `Advogado(a) inscrito(a) na OAB, com atuação em ${list}. O trabalho é conduzido de forma técnica e informativa, orientando cada pessoa sobre seus direitos e os caminhos possíveis.`
-    )
-  }
-
-  if (req.kind === 'faq') {
-    // Resposta de reserva: genérica e curta de propósito — serve para o advogado ter
-    // por onde começar quando a IA não está disponível, não para publicar como está.
-    const tema = req.areaLabel || req.areas?.filter(Boolean)[0] || 'esse tema'
-    return `De forma geral, ${tema} segue requisitos e prazos previstos em lei, que mudam conforme a situação de cada pessoa. O caminho costuma começar por reunir os documentos e verificar qual regra se aplica. Cada caso exige análise própria.`
-  }
-
-  const name = req.name?.split(' ')[0]
-  const opening = name ? `Sou ${name}, advogad(a) dedicad(a) a` : 'Dedico minha atuação a'
-  return `${opening} ${list}. Meu trabalho une técnica e escuta para orientar cada pessoa sobre seus direitos e os caminhos possíveis, com informação transparente do início ao fim. Acredito em uma advocacia próxima, que reduz a insegurança de quem precisa de apoio jurídico.`
 }
