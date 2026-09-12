@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { GenerateKind, Plan } from '@/lib/types'
+import type { GenerateKind, GenerateResult, Plan } from '@/lib/types'
 import { api } from '@/lib/api'
 import { checkCompliance } from '@/lib/oab'
 import { fitToLimit } from '@/lib/textLimit'
@@ -29,6 +29,13 @@ interface AiGeneratorProps {
 
 /** Quando a espera passa a merecer um aviso e um botão de parar. */
 const AVISO_DEMORA_MS = 8_000
+
+/**
+ * Espera entre uma geração e outra. O servidor recusa duas em 4 s
+ * (AI_RATE_RULES.respiro); a tela espera 5, para a latência nunca fazer o botão
+ * liberar antes dele e a pessoa receber um erro em vez de uma espera.
+ */
+const RESPIRO_MS = 5_000
 
 const TITLES: Record<GenerateKind, string> = {
   bio: 'Gerar bio',
@@ -78,6 +85,11 @@ export function AiGenerator({
   const [erro, setErro] = useState('')
   const [fallback, setFallback] = useState(false)
   const [demorando, setDemorando] = useState(false)
+  // Quantas gerações ainda cabem nas 24 h — o servidor diz a cada resposta, e
+  // quem vê "restam 3 de 15" não descobre o limite pelo erro.
+  const [limite, setLimite] = useState<GenerateResult['limite']>()
+  const [respirando, setRespirando] = useState(false)
+  const respiroRef = useRef<ReturnType<typeof setTimeout>>()
   const abortRef = useRef<AbortController | null>(null)
   // Painel EM LINHA, não modal. O gerador é a ferramenta mais usada de quem está
   // montando o perfil; abrir uma janela por cima escondia justamente o campo que
@@ -125,6 +137,10 @@ export function AiGenerator({
       .map((k) => k.trim())
       .filter(Boolean)
     if (needsKeywords && !list.length) return
+    if (respirando) return
+    setRespirando(true)
+    clearTimeout(respiroRef.current)
+    respiroRef.current = setTimeout(() => setRespirando(false), RESPIRO_MS)
     abortRef.current?.abort()
     const abortar = new AbortController()
     abortRef.current = abortar
@@ -156,6 +172,7 @@ export function AiGenerator({
       )
       if (abortar.signal.aborted) return
       setFallback(!!res.usedFallback)
+      if (res.limite) setLimite(res.limite)
       startReveal(res.text)
     } catch (err) {
       if (abortar.signal.aborted || (err as Error)?.name === 'AbortError') return
@@ -179,7 +196,13 @@ export function AiGenerator({
   }
 
   // Fechar o painel no meio de uma geração não deixa a chamada pendurada.
-  useEffect(() => () => abortRef.current?.abort(), [])
+  useEffect(
+    () => () => {
+      abortRef.current?.abort()
+      clearTimeout(respiroRef.current)
+    },
+    [],
+  )
 
   const title = kind === 'area' && areaLabel ? `Descrição — ${areaLabel}` : TITLES[kind]
 
@@ -214,7 +237,7 @@ export function AiGenerator({
             <button
               type="button"
               onClick={run}
-              disabled={loading || !currentText?.trim()}
+              disabled={loading || respirando || !currentText?.trim()}
               className="btn-primary mt-3 w-full disabled:opacity-50"
             >
               {loading ? '…' : 'Melhorar com IA'}
@@ -230,10 +253,18 @@ export function AiGenerator({
               aria-label="Palavras-chave"
               autoFocus
             />
-            <button type="button" onClick={run} disabled={loading} className="btn-primary shrink-0 !px-4">
+            <button type="button" onClick={run} disabled={loading || respirando} className="btn-primary shrink-0 !px-4">
               {loading ? '…' : 'Gerar'}
             </button>
           </div>
+        )}
+
+        {limite && (
+          <p className="mt-2 text-[11.5px] text-ink-faint" aria-live="polite">
+            {limite.restantesHoje > 0
+              ? `Gerações nas últimas 24 horas: restam ${limite.restantesHoje} de ${limite.tetoHoje}.`
+              : `Você usou as ${limite.tetoHoje} gerações das últimas 24 horas. Dá para seguir editando o texto à mão.`}
+          </p>
         )}
 
         {/* Modelos pré-aprovados (Prov. 205/2021) — só bio/área. */}
@@ -262,7 +293,7 @@ export function AiGenerator({
             className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-burgundy/30 bg-burgundy/5 p-3 text-[12.5px] text-burgundy-deep"
           >
             <span>{erro}</span>
-            <button type="button" onClick={run} className="btn-ghost !px-3 !py-1 text-[12.5px]">
+            <button type="button" onClick={run} disabled={respirando} className="btn-ghost !px-3 !py-1 text-[12.5px] disabled:opacity-50">
               Tentar de novo
             </button>
           </div>
@@ -278,7 +309,7 @@ export function AiGenerator({
               A IA não conseguiu redigir agora. Este é um texto-base, dentro das normas — edite à
               vontade ou tente de novo em instantes.
             </span>
-            <button type="button" onClick={run} className="btn-ghost !px-3 !py-1 text-[12.5px]">
+            <button type="button" onClick={run} disabled={respirando} className="btn-ghost !px-3 !py-1 text-[12.5px] disabled:opacity-50">
               Tentar de novo
             </button>
           </div>
@@ -378,7 +409,7 @@ export function AiGenerator({
                 >
                   Aplicar texto
                 </button>
-                <button type="button" onClick={run} className="btn-ghost">
+                <button type="button" onClick={run} disabled={respirando} className="btn-ghost disabled:opacity-50">
                   Gerar de novo
                 </button>
               </div>

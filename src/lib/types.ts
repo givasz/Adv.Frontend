@@ -327,4 +327,6 @@ export interface GenerateResult {
   usedFallback?: boolean
   /** versão da política de publicidade aplicada na verificação (ex.: "Prov. 205/2021") */
   policyVersion?: string
+  /** gerações que ainda cabem nas últimas 24 h de quem pediu (só com o backend) */
+  limite?: { restantesHoje: number; tetoHoje: number }
 }
