@@ -364,7 +364,10 @@ async function agendaDoAdvogado() {
     await clicar(pagina, '1 hora')
     // O compromisso indo para a agenda dele: nome → qual agenda → a agenda abre
     // preenchida. Google e Outlook são LINKS — confere que levam o nome e a hora.
-    await clicar(pagina, 'Pôr na minha agenda')
+    // O botão diz QUAL compromisso leva ("Pôr 25 nov · 14:00 na minha agenda").
+    const porNaAgenda = () => pagina.getByRole('button', { name: /^Pôr .+ na minha agenda$/ })
+    await porNaAgenda().waitFor({ timeout: ESPERA })
+    await porNaAgenda().click()
     const campoNome = pagina.getByLabel('Nome do compromisso na sua agenda')
     await campoNome.waitFor({ timeout: ESPERA })
     await campoNome.fill('Reunião — João')
@@ -399,12 +402,20 @@ async function agendaDoAdvogado() {
     }
     if (/DTSTART:\d{8}T\d{6}Z/.test(ics)) erros.push('o .ics saiu com hora em UTC (Z) em vez de local')
 
+    // Depois de ir para a agenda, o mesmo compromisso NÃO pode ser oferecido de
+    // novo: tocar outra vez só pedia o nome e criava o evento em dobro, sem dizer
+    // de qual horário se tratava.
+    await pagina.getByRole('button', { name: 'Outro dia', exact: true }).waitFor({ timeout: ESPERA })
+    if (await porNaAgenda().count()) {
+      erros.push('a oferta de pôr na agenda continuou depois de o compromisso ir para a agenda')
+    }
+
     // O roteiro continua andando depois de mexer na própria fonte de dados. E
     // "Outro dia" LIMPA a oferta da agenda de propósito — o botão não pode
     // oferecer um compromisso que já não é o que está na tela.
     await clicar(pagina, 'Outro dia')
     await pagina.getByLabel('Data do horário marcado').waitFor({ timeout: ESPERA })
-    if (await pagina.getByRole('button', { name: 'Pôr na minha agenda', exact: true }).count()) {
+    if (await porNaAgenda().count()) {
       erros.push('a oferta de pôr na agenda sobreviveu à troca de dia')
     }
     // Liberar tem de estar ao alcance de quem acabou de fechar um horário.

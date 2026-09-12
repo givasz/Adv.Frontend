@@ -480,11 +480,12 @@ function Conversa({
   // escolheu: o nome não passa pela API, não vai para o banco e não fica em log —
   // a coluna do perfil continua guardando só data e hora. Ver lib/ics.ts.
   function irParaAgenda() {
-    push('user', 'Pôr na minha agenda')
+    if (!bloco) return
+    push('user', `Pôr ${formatBusyShort(bloco.inicio)} na minha agenda`)
     setDraft('')
     void say(
       [
-        'Como quer chamar esse compromisso na sua agenda?',
+        `Como quer chamar o compromisso de ${formatBusyLong(bloco.inicio)} na sua agenda?`,
         'O nome fica só no seu aparelho — não guardo isso aqui.',
       ],
       'nome',
@@ -533,7 +534,13 @@ function Conversa({
         : 'Baixei o compromisso — abra o arquivo e o Calendário adiciona.',
       arquivo: 'Baixei o arquivo do compromisso. Abra-o e o telefone pergunta em qual agenda salvar.',
     }
-    void say([comoConfirmar[destino], 'Marcou mais algum?'], 'mais')
+    void say(
+      [
+        comoConfirmar[destino],
+        'Marcou mais algum? Me diga o dia e o horário, que eu ponho na agenda também.',
+      ],
+      'mais',
+    )
   }
 
   function outraAgenda() {
@@ -818,10 +825,14 @@ function Conversa({
                 </ChipRow>
               ) : step === 'mais' ? (
                 <ChipRow label="E então">
-                  {bloco && (
+                  {/* Uma vez por compromisso, e dizendo QUAL: depois de ele ir para a
+                      agenda, o botão sumido é o que evita o evento em dobro — e
+                      quem quer outro compromisso marca o horário dele primeiro.
+                      Para reabrir numa agenda diferente há o "Não abriu?". */}
+                  {bloco && !agendado && (
                     <Chip onClick={irParaAgenda}>
                       <CalendarIcon width={13} height={13} className="t-accent" />
-                      Pôr na minha agenda
+                      Pôr {formatBusyShort(bloco.inicio)} na minha agenda
                     </Chip>
                   )}
                   {restantes.length > 0 && (
