@@ -32,7 +32,7 @@ import { ArrowRight, CheckIcon } from './icons'
 export const TELAS_DO_APP = ['/painel', '/editor', '/comecar', '/planos', '/assinar', '/plano', '/conta', '/escritorio', '/suporte']
 
 export function AvisoDeTermos() {
-  const { termsPending } = useAuth()
+  const { termsPending, user } = useAuth()
   const { pathname } = useLocation()
   const [aberto, setAberto] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -93,17 +93,38 @@ export function AvisoDeTermos() {
           <div className="mt-3 border-t border-brass/25 pt-3 text-[12.5px] leading-relaxed text-ink-soft">
             <ul className="list-disc space-y-1 pl-4">
               <li>
-                Passamos a identificar a empresa que opera a plataforma, com CNPJ e endereço.
+                Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,
+                redefinição e troca de senha, decisões de moderação e mudanças nos documentos.
               </li>
               <li>
-                Registramos entrada na conta e publicação de perfil (data, hora e IP) por 180 dias,
-                como exige o art. 15 do Marco Civil da Internet.
+                Quem envia é o Resend, empresa sediada nos Estados Unidos, que recebe só o endereço e
+                o texto do aviso — sem rastreio de abertura nem de clique.
               </li>
               <li>
-                Ficou explícito que o conteúdo do perfil é de responsabilidade de quem o publica, e
-                que não conferimos inscrições na OAB.
+                Quem denuncia um perfil e informa um e-mail recebe a confirmação e o aviso de que a
+                análise terminou.
               </li>
             </ul>
+            {/* Quem nunca aceitou a revisão de 4 de setembro também precisa ler o
+                que ela mudou — a comparação é por data ISO, que ordena como texto. */}
+            {(user?.termsVersion ?? '') < '2026-09-04' && (
+              <>
+                <p className="mt-2.5 font-medium text-ink">E, da revisão de 4 de setembro:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>
+                    Passamos a identificar a empresa que opera a plataforma, com CNPJ e endereço.
+                  </li>
+                  <li>
+                    Registramos entrada na conta e publicação de perfil (data, hora e IP) por 180 dias,
+                    como exige o art. 15 do Marco Civil da Internet.
+                  </li>
+                  <li>
+                    Ficou explícito que o conteúdo do perfil é de responsabilidade de quem o publica, e
+                    que não conferimos inscrições na OAB.
+                  </li>
+                </ul>
+              </>
+            )}
             <p className="mt-2.5">
               <Link
                 to="/legal/termos"

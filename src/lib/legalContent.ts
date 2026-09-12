@@ -117,6 +117,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Hospedagem: o site e a rede de entrega de conteúdo que o servem, e o servidor onde a API e o banco de dados ficam. Esses serviços podem estar fora do Brasil, o que configura transferência internacional nos termos do art. 33 da LGPD; escolhemos provedores com compromissos contratuais de proteção compatíveis com a lei.',
           'Geração de texto por IA: quando você pede à IA que escreva ou revise um texto, as palavras-chave e o texto em questão — e, conforme o plano, seu nome, cidade e áreas — são enviados ao provedor de modelo de linguagem. Hoje usamos GroqCloud, xAI e Google, em cadeia de reserva, e a lista pode variar; nenhum deles recebe a sua conta, o seu e-mail ou dados de visitantes. Detalhes na Política de Inteligência Artificial.',
+          'Envio de e-mails: os avisos da sua conta (confirmação do endereço, redefinição e troca de senha, decisões de moderação e sobre a conta, contestações e mudanças nestes documentos) e o retorno a quem denuncia um perfil são enviados pelo Resend, provedor de envio de e-mail de empresa sediada nos Estados Unidos — o que configura transferência internacional nos termos do art. 33 da LGPD. Ele recebe o endereço de destino e o texto do aviso, e nada mais: não enviamos a ele o seu perfil nem dados de visitantes, e os avisos não usam rastreio de abertura nem de clique. Não mandamos publicidade por e-mail.',
           'Consulta de CEP: ao preencher o endereço no editor, o CEP digitado é consultado em serviços públicos de endereçamento (ViaCEP e BrasilAPI). Só o CEP é enviado.',
           'Fontes tipográficas: as famílias dos temas são servidas pelo Google Fonts; o navegador as busca diretamente daquele serviço, que recebe, como em qualquer acesso, o endereço IP e a identificação do navegador. Ver a Política de Cookies.',
           'Pagamento: quando o pagamento on-line estiver disponível, o provedor de pagamento receberá os dados necessários à cobrança e guardará os dados do cartão. Nós guardamos só os identificadores e o histórico dos eventos.',
@@ -134,6 +135,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           `Registro de acesso (entrada na conta e publicação de perfil): ${PRAZO_ACESSO}, apagados automaticamente depois disso. O prazo é teto, não piso: passados os seis meses que a lei exige, guardar mais seria tratar dado sem finalidade.`,
           'Aceite dos Termos: enquanto a conta existir, e depois pelo tempo em que possa ser necessário à defesa de direitos — é a prova de que o contrato foi celebrado.',
           'Sessões: até você sair, trocar a senha ou o prazo vencer — o prazo depende da opção "continuar conectado" e tem um limite máximo absoluto.',
+          'Avisos por e-mail: o endereço e o conteúdo de cada aviso saem do nosso banco no momento em que ele é enviado; fica só o registro de qual aviso saiu e quando, por 30 dias. Os links de confirmação do e-mail e de redefinição de senha valem por 48 horas e 1 hora, respectivamente, e funcionam uma vez só. O provedor de envio mantém o registro técnico da entrega pelo prazo da política dele.',
           `Cópias de segurança: o banco é copiado diariamente, de forma cifrada, para um servidor separado. As cópias são mantidas por ${PRAZO_BACKUP} e depois substituídas; um dado apagado do banco some das cópias ao fim desse ciclo.`,
         ],
       },
@@ -166,6 +168,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '7. Quem denuncia um perfil',
         paragraphs: [
           'A denúncia é anônima por padrão. Se você informar um e-mail, ele serve só para retorno e nunca é mostrado ao advogado denunciado — no relatório de dados dele, a denúncia aparece apenas pelo motivo e pela data.',
+          'O retorno são duas mensagens: a confirmação de que a denúncia chegou, no mesmo dia, e o aviso de que a análise terminou. Nenhuma das duas repete o perfil nem o motivo — assim, se alguém informar o seu e-mail numa denúncia que você não fez, a mensagem não diz nada sobre ninguém.',
         ],
       },
       {
@@ -185,7 +188,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '10. Mudanças e encarregado',
         paragraphs: [
-          `Podemos atualizar esta Política; a data no topo diz quando foi a última vez. Mudanças relevantes não ficam esperando que você repare: quem tem conta recebe um aviso ao entrar, com o resumo do que mudou, e o aceite da versão nova fica registrado.`,
+          `Podemos atualizar esta Política; a data no topo diz quando foi a última vez. Mudanças relevantes não ficam esperando que você repare: quem tem conta recebe um aviso por e-mail e outro ao entrar, com o resumo do que mudou, e o aceite da versão nova fica registrado.`,
           `O encarregado pelo tratamento de dados pessoais atende por ${CANAL_CONTA} — a fila tem prazo e o pedido fica registrado dos dois lados. Quem não tem conta usa ${CANAL_SEDE}.`,
         ],
       },
@@ -215,7 +218,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '2. Sua conta',
         bullets: [
-          'A conta é pessoal e exige e-mail e senha. Você é responsável por manter a senha em sigilo e por tudo o que for feito com ela; se desconfiar de acesso indevido, troque a senha em "Seus dados" — isso encerra as sessões nos outros aparelhos.',
+          'A conta é pessoal e exige e-mail e senha. Você é responsável por manter a senha em sigilo e por tudo o que for feito com ela; se desconfiar de acesso indevido, troque a senha em "Seus dados" — isso encerra as sessões nos outros aparelhos. Se esquecer a senha, use "Esqueci minha senha" na tela de entrada. É para o e-mail da conta que mandamos os avisos sobre ela, inclusive decisões de moderação e seus prazos, então mantenha acesso a essa caixa.',
           'É preciso ter 18 anos ou mais e ser advogado regularmente inscrito na OAB.',
           'O aceite destes Termos é condição da conta, e fica registrado: guardamos a data, a versão aceita e o endereço IP de onde partiu. Você vê esse registro na cópia dos seus dados, em "Seus dados".',
           'Você pode excluir a conta a qualquer momento, em "Seus dados". A exclusão apaga o perfil e libera o endereço público para outra pessoa, e não pode ser desfeita.',
@@ -319,7 +322,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '13. Alterações',
         paragraphs: [
-          'Podemos atualizar estes Termos. A data no topo diz quando foi a última vez; mudanças relevantes — em especial de preço ou de cobrança — são avisadas com antecedência na plataforma. Continuar usando o serviço depois do aviso significa concordar com a versão nova; se não concordar, você pode cancelar o plano e excluir a conta a qualquer momento.',
+          'Podemos atualizar estes Termos. A data no topo diz quando foi a última vez; mudanças relevantes — em especial de preço ou de cobrança — são avisadas com antecedência na plataforma e pelo e-mail da conta. Continuar usando o serviço depois do aviso significa concordar com a versão nova; se não concordar, você pode cancelar o plano e excluir a conta a qualquer momento.',
         ],
       },
       {
@@ -348,7 +351,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '1. Papéis',
         paragraphs: [
           `Controlador: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}, que opera o advoc.me.`,
-          'O advoc.me é controlador dos dados necessários para operar a plataforma: conta, perfil, assinatura, suporte e moderação. Os provedores de hospedagem, de geração de texto por IA e, quando ativo, de pagamento são operadores, que tratam dados só sob nossas instruções.',
+          'O advoc.me é controlador dos dados necessários para operar a plataforma: conta, perfil, assinatura, suporte e moderação. Os provedores de hospedagem, de geração de texto por IA, de envio de e-mail e, quando ativo, de pagamento são operadores, que tratam dados só sob nossas instruções.',
           'Os contatos que cada advogado recebe pelos canais dele não passam por nós: a mensagem vai do aparelho do visitante para o WhatsApp do advogado, que é o único controlador desses dados. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
         ],
       },
@@ -371,6 +374,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           `Conteúdo removido pela moderação: ${PRAZO_CONTEUDO_REMOVIDO}. Registro da decisão: ${PRAZO_REGISTRO_MODERACAO}.`,
           `Registro de acesso (Marco Civil, art. 15): ${PRAZO_ACESSO}. É o único prazo aqui que não é escolha nossa — é o que a lei manda guardar, e por isso não é reduzido a pedido do titular. Também não é ampliado: passado o prazo, é apagado.`,
           `Cópias de segurança cifradas: ${PRAZO_BACKUP}.`,
+          'Avisos por e-mail: endereço e conteúdo apagados no envio; o registro de qual aviso saiu e quando, 30 dias. Links de confirmação e de redefinição de senha: 48 horas e 1 hora, de uso único.',
         ],
       },
       {
@@ -387,7 +391,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '5. Transferência internacional',
         paragraphs: [
-          'Os provedores de hospedagem e de geração de texto por IA podem tratar dados fora do Brasil. Nesses casos a transferência se apoia no art. 33 da LGPD — em especial em cláusulas contratuais e garantias de proteção compatíveis com a lei — e enviamos a cada um só o necessário: ao provedor de IA, as palavras-chave e o texto pedido, nunca a conta, o e-mail ou dados de visitantes.',
+          'Os provedores de hospedagem, de geração de texto por IA e de envio de e-mail podem tratar dados fora do Brasil. Nesses casos a transferência se apoia no art. 33 da LGPD — em especial em cláusulas contratuais e garantias de proteção compatíveis com a lei — e enviamos a cada um só o necessário: ao provedor de IA, as palavras-chave e o texto pedido, nunca a conta, o e-mail ou dados de visitantes; ao provedor de e-mail (Resend), o endereço de destino e o texto do aviso, sem rastreio de abertura nem de clique.',
         ],
       },
       {

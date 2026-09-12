@@ -62,10 +62,10 @@ export function operadorIdentificacao(): string {
  * Versão vigente dos documentos legais — é a data da revisão, e é o que fica
  * gravado no aceite de cada conta.
  */
-export const TERMS_VERSION = '2026-09-04'
+export const TERMS_VERSION = '2026-09-12'
 
 /** A mesma data por extenso, para exibição no topo de cada documento. */
-export const TERMS_UPDATED = '4 de setembro de 2026'
+export const TERMS_UPDATED = '12 de setembro de 2026'
 
 /**
  * POR QUE NÃO HÁ E-MAIL DE CONTATO AQUI.
