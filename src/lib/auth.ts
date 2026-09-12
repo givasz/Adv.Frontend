@@ -37,6 +37,12 @@ export interface AuthUser {
   termsPending?: boolean
   /** Versão dos Termos aceita por esta conta — vazia quando nunca houve aceite. */
   termsVersion?: string
+  /**
+   * Falta confirmar o e-mail. Também decidido pelo servidor: com o correio
+   * desligado ele devolve `false`, porque pedir a confirmação de um link que não
+   * vai chegar seria uma faixa que ninguém consegue fazer sumir.
+   */
+  emailPending?: boolean
 }
 
 export interface Session {
@@ -494,6 +500,91 @@ function marcarAceiteLocal(versao = TERMS_VERSION) {
   setSession({ ...atual, user: { ...atual.user, termsVersion: versao, termsPending: false } })
 }
 
+// ---- E-mail: confirmação e "esqueci minha senha" ----------------------------
+
+/**
+ * O servidor consegue mandar e-mail agora?
+ *
+ * A tela de entrada só oferece "esqueci minha senha" quando sim: um link que
+ * nunca chega é pior do que nenhum botão. Sem backend (modo mock), não.
+ */
+export async function correioAtivo(): Promise<boolean> {
+  if (!useReal) return false
+  try {
+    const res = await apiFetch('/api/auth/correio')
+    if (!res.ok) return false
+    const { ativo } = (await res.json()) as { ativo?: unknown }
+    return ativo === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Pede o link de redefinição. O servidor responde igual exista a conta ou não —
+ * e a tela também precisa responder igual (ver EsqueciSenhaPage).
+ */
+export async function pedirRedefinicaoDeSenha(emailRaw: string): Promise<void> {
+  const email = emailRaw.trim().toLowerCase()
+  if (!EMAIL_RE.test(email)) throw new Error('Informe um e-mail válido.')
+  if (!useReal) throw new Error('A recuperação de senha precisa do servidor.')
+  const res = await apiFetch('/api/auth/senha/esqueci', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível pedir agora. Tente de novo.'))
+  }
+}
+
+/**
+ * Cria a senha nova a partir do link. O servidor derruba TODAS as sessões da
+ * conta — inclusive a deste navegador, se havia uma —, então o retrato local
+ * sai junto, senão o cabeçalho continuaria mostrando alguém que já saiu.
+ */
+export async function redefinirSenha(token: string, nova: string): Promise<void> {
+  const res = await apiFetch('/api/auth/senha/redefinir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, nova }),
+  })
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível salvar a senha nova.'))
+  }
+  esquecerSessaoLocal()
+}
+
+/** Confirma o e-mail pelo link — com ou sem sessão neste navegador. */
+export async function confirmarEmail(token: string): Promise<void> {
+  const res = await apiFetch('/api/auth/email/confirmar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível confirmar agora.'))
+  }
+  marcarEmailConfirmadoLocal()
+}
+
+/** Manda de novo o link de confirmação (o anterior deixa de valer). */
+export async function reenviarConfirmacaoDeEmail(): Promise<{ jaConfirmado: boolean }> {
+  const res = await apiFetch('/api/auth/email/reenviar', { method: 'POST' })
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível enviar agora.'))
+  }
+  const { jaConfirmado } = (await res.json()) as { jaConfirmado?: boolean }
+  if (jaConfirmado) marcarEmailConfirmadoLocal()
+  return { jaConfirmado: !!jaConfirmado }
+}
+
+function marcarEmailConfirmadoLocal() {
+  const atual = estado.session
+  if (!atual) return
+  setSession({ ...atual, user: { ...atual.user, emailPending: false } })
+}
+
 export async function logout(): Promise<void> {
   const eraReal = useReal && !!estado.session
   // Sair apaga também o rascunho guardado neste navegador (só no modo real, em
@@ -562,5 +653,7 @@ export function useAuth() {
      * antes de /auth/me responder faria a faixa piscar em toda navegação.
      */
     termsPending: !conferindo && !!session?.user?.termsPending,
+    /** Falta confirmar o e-mail (e o servidor pode mandar o link). Mesma espera. */
+    emailPending: !conferindo && !!session?.user?.emailPending,
   }
 }

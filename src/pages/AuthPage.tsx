@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { login, signup, useAuth } from '@/lib/auth'
+import { correioAtivo, login, signup, useAuth } from '@/lib/auth'
 import { passwordStrength } from '@/lib/passwordStrength'
 import { ArrowLeft, ArrowRight, CheckIcon, EyeIcon, EyeOffIcon, SparkIcon } from '@/components/ui/icons'
 import { caminhoDeVolta } from '@/components/ui/SubPage'
@@ -216,6 +216,8 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
                 />
               </Field>
 
+              {!isSignup && <EsqueciASenha />}
+
               {/* A barra só existe no cadastro: no login ela seria um julgamento
                   inútil sobre uma senha que a pessoa já tem. */}
               {isSignup && password.length > 0 && <StrengthMeter strength={strength} />}
@@ -362,6 +364,37 @@ function AceiteDosTermos({
         publicar.
       </span>
     </label>
+  )
+}
+
+/**
+ * "Esqueci minha senha" — só aparece quando o servidor consegue mandar o link.
+ *
+ * Um link que leva a uma tela dizendo "não dá" é uma porta pintada na parede. A
+ * pergunta ao servidor sai só no modo de entrar, e a tela não espera por ela: o
+ * link surge quando a resposta chega.
+ */
+function EsqueciASenha() {
+  const [ativo, setAtivo] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    void correioAtivo().then((a) => {
+      if (vivo) setAtivo(a)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+  if (!ativo) return null
+  return (
+    <p className="-mt-2 text-right">
+      <Link
+        to="/esqueci-senha"
+        className="-my-1 inline-block px-1 py-2 text-[12.5px] font-medium text-burgundy hover:underline"
+      >
+        Esqueci minha senha
+      </Link>
+    </p>
   )
 }
 

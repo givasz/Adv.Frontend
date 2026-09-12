@@ -333,6 +333,11 @@ function renderTag(t: TagDeCabecalho): string {
 export const ROTAS_RESERVADAS = new Set([
   'entrar',
   'criar-conta',
+  // Os links que chegam por e-mail. Um perfil em advoc.me/redefinir-senha tomaria
+  // o lugar da tela para a qual o botão do e-mail aponta.
+  'esqueci-senha',
+  'redefinir-senha',
+  'confirmar-email',
   'comecar',
   'painel',
   'editor',

@@ -29,7 +29,7 @@ import { ArrowRight, CheckIcon } from './icons'
 // linha. Nada cobre o que a pessoa estava fazendo.
 
 /** Onde a faixa aparece: as telas da conta. Some no perfil público e na landing. */
-const TELAS_DO_APP = ['/painel', '/editor', '/comecar', '/planos', '/assinar', '/plano', '/conta', '/escritorio', '/suporte']
+export const TELAS_DO_APP = ['/painel', '/editor', '/comecar', '/planos', '/assinar', '/plano', '/conta', '/escritorio', '/suporte']
 
 export function AvisoDeTermos() {
   const { termsPending } = useAuth()

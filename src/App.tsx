@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, type ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { AvisoDeTermos } from '@/components/ui/AvisoDeTermos'
+import { AvisoDeEmail } from '@/components/ui/AvisoDeEmail'
 // O perfil público é o produto — um minisite que abre por link compartilhado,
 // quase sempre num celular em rede ruim. Só ele entra no pacote inicial; todo
 // o resto (editor, painel, onboarding, admin…) chega sob demanda, para que o
@@ -9,6 +10,9 @@ import { AvisoDeTermos } from '@/components/ui/AvisoDeTermos'
 import PublicProfile from './pages/PublicProfile'
 const Landing = lazy(() => import('./pages/Landing'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
+const EsqueciSenhaPage = lazy(() => import('./pages/EsqueciSenhaPage'))
+const RedefinirSenhaPage = lazy(() => import('./pages/RedefinirSenhaPage'))
+const ConfirmarEmailPage = lazy(() => import('./pages/ConfirmarEmailPage'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Painel = lazy(() => import('./pages/Painel'))
 const Editor = lazy(() => import('./pages/Editor'))
@@ -84,8 +88,10 @@ export default function App() {
       {/* Fora do <Suspense> de propósito: o aviso de Termos não pode ficar
           esperando um pedaço lazy carregar — a faixa é justamente o que precisa
           aparecer ANTES de a pessoa continuar usando. Ela mesma decide em quais
-          telas se mostra (ver AvisoDeTermos). */}
+          telas se mostra (ver AvisoDeTermos). A de e-mail segue a mesma regra,
+          e cede a vez quando a dos Termos está na tela. */}
       <AvisoDeTermos />
+      <AvisoDeEmail />
       {/* O fallback é o mesmo spinner das trocas de sessão — a espera de um
           pedaço lazy não deve piscar diferente da espera do /auth/me. */}
       <Suspense fallback={<Carregando />}>
@@ -93,6 +99,11 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/entrar" element={<AuthPage mode="login" />} />
         <Route path="/criar-conta" element={<AuthPage mode="signup" />} />
+        {/* Os links que chegam por e-mail. Sem RequireAuth: quem esqueceu a senha
+            não entra, e o link de confirmação costuma abrir em outro aparelho. */}
+        <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+        <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+        <Route path="/confirmar-email" element={<ConfirmarEmailPage />} />
         {/* Áreas que exigem conta (mesmo no Free). Criar perfil → cadastro; gerir → login. */}
         <Route path="/comecar" element={<RequireAuth to="/criar-conta"><Onboarding /></RequireAuth>} />
         <Route path="/painel" element={<RequireAuth><Painel /></RequireAuth>} />

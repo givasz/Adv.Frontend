@@ -108,6 +108,11 @@ export default function DadosPage() {
               impressão digital de cada PDF, o código, a data e o endereço de onde você confirmou a
               revisão. O texto e os dados dos seus clientes ficam no seu aparelho, não aqui.
             </li>
+            <li>
+              <strong className="font-semibold text-ink">Avisos por e-mail:</strong> qual aviso mandamos e
+              quando. O endereço e o conteúdo de cada aviso somem assim que ele sai, e o registro some em 30
+              dias.
+            </li>
           </ul>
           <p className="mt-3 border-t border-ink/[0.07] pt-3 text-[12.5px] leading-relaxed text-ink-faint">
             Não guardamos dado de quem visita o seu perfil: o contato vai do aparelho do visitante
