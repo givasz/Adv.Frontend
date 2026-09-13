@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { checkCompliance } from '@/lib/oab'
 import {
   blankFirm,
@@ -24,6 +25,9 @@ export default function FirmEditor() {
   // autosave grava); a gestão de membros vem do servidor a cada convite/remoção e
   // não pode entrar no corpo do PUT — senão o autosave reescreveria a sociedade.
   const [firm, setFirm] = useState<Firm | null>(null)
+  // Só para a foto no chip da conta: o editor do escritório não tem o perfil
+  // pessoal em mãos, e o chip ficava na inicial.
+  const meu = useMyProfileLink()
   const [gestao, setGestao] = useState<{
     members: FirmMember[]
     seats?: { purchased: number; used: number }
@@ -174,7 +178,7 @@ export default function FirmEditor() {
                 Ver página
               </Link>
             )}
-            <AccountMenu compact painel />
+            <AccountMenu compact painel avatarUrl={meu.avatarUrl} />
           </div>
         </div>
       </header>

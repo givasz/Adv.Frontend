@@ -92,7 +92,7 @@ export default function Landing() {
           {/* O perfil público mora no menu do nome: o botão ao lado leva ao
               painel, e alguém que só quer OLHAR a própria página precisa de uma
               porta também. */}
-          <AccountMenu perfilTo={meu.perfil} painel={!!meu.perfil} />
+          <AccountMenu perfilTo={meu.perfil} painel={!!meu.perfil} avatarUrl={meu.avatarUrl} />
           {/* No celular esta linha carrega a marca, o nome da conta e este botão.
               Com "Ver meu perfil" por extenso, o texto quebrava em duas linhas e o
               botão virava um bloco alto no canto da tela.

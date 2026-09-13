@@ -159,6 +159,7 @@ export default function Painel() {
               compact
               perfilTo={`/${profile.slug}`}
               supportTo={comVolta('/suporte', '/painel')}
+              avatarUrl={profile.avatarUrl}
             />
           </div>
         </div>

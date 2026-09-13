@@ -346,6 +346,7 @@ export default function Editor() {
               perfilTo={`/${profile.slug}`}
               painel
               supportTo={comVolta('/suporte', `/editor?section=${section}`)}
+              avatarUrl={profile.avatarUrl}
             />
           </div>
         </div>

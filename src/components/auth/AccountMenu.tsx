@@ -14,6 +14,7 @@ export function AccountMenu({
   supportTo,
   perfilTo,
   painel = false,
+  avatarUrl,
 }: {
   compact?: boolean
   /** destino do item "Falar com o suporte" (página, já com o caminho de volta); sem ele, o item não aparece */
@@ -22,9 +23,22 @@ export function AccountMenu({
   perfilTo?: string
   /** mostra "Meu painel" (não faz sentido dentro do próprio painel) */
   painel?: boolean
+  /**
+   * A foto do perfil, no lugar da inicial do nome.
+   *
+   * A sessão (/auth/me) não carrega a foto — ela é um data URI de até algumas
+   * centenas de KB, e /auth/me é a primeira coisa que toda página pede. Quem
+   * tem o perfil em mãos (painel, editor, home via useMyProfileLink) passa a
+   * foto por aqui; quem não tem, fica na inicial. Até 13/09/2026 era SEMPRE a
+   * inicial, mesmo com foto no perfil — "aparece só o G".
+   */
+  avatarUrl?: string
 }) {
   const { user, isAuthed, logout } = useAuth()
   const [open, setOpen] = useState(false)
+  // Foto que não carregou (endereço externo fora do ar, data URI corrompido):
+  // volta para a inicial em vez de deixar um círculo vazio no canto.
+  const [fotoQuebrada, setFotoQuebrada] = useState(false)
   const location = useLocation()
 
   if (!isAuthed || !user) {
@@ -43,6 +57,7 @@ export function AccountMenu({
 
   const shortName = user.name?.split(' ')[0] || user.email.split('@')[0]
   const initial = (user.name || user.email).charAt(0).toUpperCase()
+  const foto = avatarUrl && !fotoQuebrada ? avatarUrl : undefined
 
   return (
     <div className="relative">
@@ -53,8 +68,19 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-burgundy/10 text-[13px] font-semibold text-burgundy">
-          {initial}
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-burgundy/10 text-[13px] font-semibold text-burgundy">
+          {foto ? (
+            // alt vazio: o nome já está escrito ao lado; repetir seria ruído
+            // para quem usa leitor de tela.
+            <img
+              src={foto}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setFotoQuebrada(true)}
+            />
+          ) : (
+            initial
+          )}
         </span>
         <span className="max-w-[120px] truncate text-[13px] font-medium text-ink">{shortName}</span>
       </button>

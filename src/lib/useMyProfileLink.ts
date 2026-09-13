@@ -35,6 +35,12 @@ export interface MyProfileLink {
   external: boolean
   /** endereço do perfil público quando ele está no ar — para o menu da conta */
   perfil?: string
+  /**
+   * A foto do perfil, publicado ou não — para o chip da conta na barra do topo.
+   * A sessão não a carrega (ver AccountMenu), e a home é a única tela com o
+   * menu da conta que não tem o perfil em mãos.
+   */
+  avatarUrl?: string
 }
 
 const CRIAR: MyProfileLink = {
@@ -63,10 +69,11 @@ export function useMyProfileLink(): MyProfileLink {
       .getDraft()
       .then((p) => {
         if (!alive) return
+        const avatarUrl = p.avatarUrl || undefined
         if (p.published && p.slug) {
-          setLink({ ...PAINEL, perfil: `/${p.slug}` })
+          setLink({ ...PAINEL, perfil: `/${p.slug}`, avatarUrl })
         } else {
-          setLink({ to: '/comecar', label: 'Continuar meu perfil', short: 'Continuar', external: false })
+          setLink({ to: '/comecar', label: 'Continuar meu perfil', short: 'Continuar', external: false, avatarUrl })
         }
       })
       .catch(() => {

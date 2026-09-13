@@ -230,7 +230,7 @@ export default function Onboarding() {
           <Marca size={29} />
           advoc.me
         </Link>
-        <AccountMenu compact />
+        <AccountMenu compact avatarUrl={profile?.avatarUrl || undefined} />
       </header>
 
       {/* Progresso com voz — passo atual, rótulo da etapa e barra segmentada */}
