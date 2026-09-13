@@ -33,6 +33,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const MudarPlanoPage = lazy(() => import('./pages/MudarPlanoPage'))
 const ContratosPage = lazy(() => import('./pages/ContratosPage'))
 const ContratoPage = lazy(() => import('./pages/ContratoPage'))
+const ModeloProprioPage = lazy(() => import('./pages/ModeloProprioPage'))
 const ConferirDocumentoPage = lazy(() => import('./pages/ConferirDocumentoPage'))
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
@@ -118,6 +119,9 @@ export default function App() {
             só o hash (ver lib/contratos/rascunhos.ts). */}
         <Route path="/contratos" element={<RequireAuth><ContratosPage /></RequireAuth>} />
         <Route path="/contratos/rascunho/:id" element={<RequireAuth><ContratoPage /></RequireAuth>} />
+        {/* Modelos próprios (Max, até 3): só texto, com campos entre chaves no
+            lugar do dado de cliente. "novo" cria. */}
+        <Route path="/contratos/modelos/:id" element={<RequireAuth><ModeloProprioPage /></RequireAuth>} />
         {/* Sem RequireAuth de propósito: quem confere um contrato é o cliente, a
             outra parte ou um juiz — gente sem conta. */}
         <Route path="/contratos/conferir" element={<ConferirDocumentoPage />} />

@@ -243,6 +243,8 @@ export function AreaQueCresce({
   className,
   minLinhas = 2,
   rotulo,
+  aoMontar,
+  maxLength,
 }: {
   id?: string
   value: string
@@ -252,8 +254,16 @@ export function AreaQueCresce({
   className?: string
   minLinhas?: number
   rotulo?: string
+  /** entrega o elemento a quem precisa do cursor (inserir campo onde se está escrevendo) */
+  aoMontar?: (el: HTMLTextAreaElement | null) => void
+  maxLength?: number
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    aoMontar?.(ref.current)
+    return () => aoMontar?.(null)
+  }, [aoMontar])
 
   useEffect(() => {
     const el = ref.current
@@ -279,6 +289,7 @@ export function AreaQueCresce({
       placeholder={placeholder}
       aria-describedby={describedBy}
       aria-label={rotulo}
+      maxLength={maxLength}
       className={className}
     />
   )

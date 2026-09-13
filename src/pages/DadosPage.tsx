@@ -109,6 +109,11 @@ export default function DadosPage() {
               revisão. O texto e os dados dos seus clientes ficam no seu aparelho, não aqui.
             </li>
             <li>
+              <strong className="font-semibold text-ink">Seus modelos de documento:</strong> o texto que
+              você escreveu, com campos entre chaves no lugar dos dados de cliente — que não são aceitos
+              no modelo.
+            </li>
+            <li>
               <strong className="font-semibold text-ink">Avisos por e-mail:</strong> qual aviso mandamos e
               quando. O endereço e o conteúdo de cada aviso somem assim que ele sai, e o registro some em 30
               dias.

@@ -29,6 +29,7 @@ import {
   canUseScheduling,
   canUseVideo,
   canUseContratos,
+  MODELOS_PROPRIOS_LIMITE,
 } from './plans'
 import { canUseAi } from './aiFeatures'
 import { THEMES, isThemeUnlocked } from './themes'
@@ -220,6 +221,15 @@ describe('a tabela comparativa é calculada, não digitada', () => {
         expect(r.values[p], `${r.label} · ${p}`).toBe(portao(p))
       }
     }
+  })
+
+  it('modelos próprios: o número da tabela é o limite de plans.ts, e só no Max', () => {
+    expect(linha(/^Modelos escritos por você/).values).toEqual({
+      free: false,
+      pro: false,
+      premium: `até ${MODELOS_PROPRIOS_LIMITE}`,
+    })
+    expect(textos('premium')).toContain(`Até ${MODELOS_PROPRIOS_LIMITE} modelos escritos por você, só com texto`)
   })
 
   it('recurso em preparo nunca aparece como ✓', () => {

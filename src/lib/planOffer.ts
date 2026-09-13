@@ -22,7 +22,16 @@
 
 import type { Plan } from './types'
 import { AI_MIN_PLAN } from './aiFeatures'
-import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, FIRM_PRICING, PLAN_PRICE, precoDoPlano } from './plans'
+import {
+  AREA_LIMIT,
+  CHAR_LIMITS,
+  FAQ_LIMIT,
+  FIRM_PRICING,
+  MODELOS_PROPRIOS_LIMITE,
+  PLAN_PRICE,
+  canUseContratos,
+  precoDoPlano,
+} from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
 
 /**
@@ -179,6 +188,10 @@ export const PLAN_OFFERS: PlanOffer[] = [
       // não guardamos o contrato. Enviar para assinatura daqui ainda não existe e
       // por isso não está na frase.
       { text: 'Contratos de honorários, procurações e declarações a partir de modelos, com o PDF registrado' },
+      // "Só com texto" é a promessa E a regra: o servidor recusa modelo com CPF,
+      // e-mail, telefone… (ver lib/contratos/proprio.ts). Não dizer isso aqui
+      // venderia um cofre de contratos que o produto se recusa a ser.
+      { text: `Até ${MODELOS_PROPRIOS_LIMITE} modelos escritos por você, só com texto — os dados do cliente entram a cada documento` },
       { text: 'Vídeo de apresentação no fim do perfil' },
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
@@ -349,6 +362,11 @@ export const PLAN_COMPARE: CompareGroup[] = [
         label: 'Impressão digital do PDF registrada',
         hint: 'qualquer pessoa confere se o arquivo mudou',
         values: aPartirDe('premium'),
+      },
+      {
+        label: 'Modelos escritos por você',
+        hint: 'só texto, sem dado de cliente',
+        values: porPlano((p) => (canUseContratos(p) ? `até ${MODELOS_PROPRIOS_LIMITE}` : false)),
       },
       // Enviar para assinatura eletrônica DAQUI (Clicksign, D4Sign…) não existe, e
       // não ganha linha nem marcada "em preparo" — mesma decisão do domínio

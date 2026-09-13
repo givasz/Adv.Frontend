@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { Dados, DocumentoMontado, ModeloId } from './modelos'
+import type { CopiaDeModeloProprio } from './proprio'
 
 export type EtapaDoRascunho = 'dados' | 'revisao' | 'registro' | 'assinatura'
 
@@ -36,8 +37,13 @@ export interface AssinadaLocal {
 
 export interface Rascunho {
   id: string
-  modelo: ModeloId
+  modelo: ModeloId | 'proprio'
   modeloVersao: string
+  /**
+   * Com modelo 'proprio': uma CÓPIA do modelo, tirada ao começar. Editar ou
+   * excluir o modelo depois não muda — nem quebra — documento já começado.
+   */
+  proprio?: CopiaDeModeloProprio
   dados: Dados
   /** existe a partir da revisão; é o texto que o advogado edita */
   documento: DocumentoMontado | null

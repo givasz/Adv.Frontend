@@ -38,7 +38,7 @@ function lerMock(): RegistroDoServidor[] {
   }
 }
 
-async function mensagemDeErro(res: Response, padrao: string): Promise<string> {
+export async function mensagemDeErro(res: Response, padrao: string): Promise<string> {
   try {
     const corpo = await res.json()
     const m = Array.isArray(corpo?.message) ? corpo.message[0] : corpo?.message
@@ -59,7 +59,7 @@ export async function listarRegistros(): Promise<RegistroDoServidor[]> {
 }
 
 interface NovoRevisado {
-  modelo: ModeloId
+  modelo: ModeloId | 'proprio'
   modeloVersao: string
   codigo: string
   hash: string

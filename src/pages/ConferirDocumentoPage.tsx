@@ -42,6 +42,7 @@ const ETAPA: Record<string, string> = {
 }
 
 function nomeDoModelo(m: string): string {
+  if (m === 'proprio') return 'Modelo próprio do advogado'
   return ehModelo(m) ? MODELOS[m].nome : 'Documento'
 }
 

@@ -23,7 +23,7 @@ const PONTOS = [
   {
     icon: <DocIcon width={18} height={18} />,
     title: 'Quatro modelos prontos',
-    body: 'Contrato de honorários, procuração, substabelecimento e declaração de hipossuficiência, montados com os dados que você preenche.',
+    body: 'Contrato de honorários, procuração, substabelecimento e declaração de hipossuficiência — e até 3 modelos escritos por você, só com texto.',
   },
   {
     icon: <PenIcon width={18} height={18} />,

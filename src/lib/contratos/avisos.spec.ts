@@ -19,6 +19,7 @@ function arquivos(): { nome: string; texto: string }[] {
     join(SRC, 'pages', 'ContratosPage.tsx'),
     join(SRC, 'pages', 'ContratoPage.tsx'),
     join(SRC, 'pages', 'ConferirDocumentoPage.tsx'),
+    join(SRC, 'pages', 'ModeloProprioPage.tsx'),
     // A vitrine da home: é onde a tentação de prometer mais é maior.
     join(SRC, 'components', 'landing', 'ContratosVitrine.tsx'),
     ...readdirSync(join(SRC, 'components', 'contratos'))
@@ -82,6 +83,13 @@ describe('as ressalvas que precisam estar na tela', () => {
     expect(t).toContain('plano Max')
     expect(t).toContain('não atesta o conteúdo nem a validade')
     expect(t).toContain('sem inteligência artificial')
+  })
+
+  it('o editor de modelo diz, visível, o que é recusado — e que nome não é detectado', () => {
+    const t = porNome('ModeloProprioPage.tsx')
+    expect(t).toContain('O modelo guarda só texto')
+    expect(t).toContain('CPF, CNPJ, e-mail, telefone, CEP, número de processo, conta e chave Pix são recusados')
+    expect(t).toContain('Nome de cliente não tem como ser detectado')
   })
 
   it('a lista de documentos diz onde o texto fica', () => {

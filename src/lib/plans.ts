@@ -104,6 +104,13 @@ export function canUseContratos(plan: Plan): boolean {
   return plan === 'premium'
 }
 
+/**
+ * Modelos de documento escritos pelo próprio advogado — só no Max, até 3.
+ * Só texto, com campos entre chaves no lugar do dado de cliente (ver
+ * lib/contratos/proprio.ts). MANTER EM SINCRONIA com backend/src/plans.ts.
+ */
+export const MODELOS_PROPRIOS_LIMITE = 3
+
 /** Vídeo de apresentação no perfil — também exclusivo do Max. */
 export function canUseVideo(plan: Plan): boolean {
   return plan === 'premium'

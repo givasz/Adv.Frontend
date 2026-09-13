@@ -103,6 +103,8 @@ const ROTAS = [
   // si é percorrido de ponta a ponta em contratoDoAdvogado.
   ['/contratos', 'contratos e procurações'],
   ['/contratos/conferir', 'conferir um documento (pública)'],
+  // O editor de modelo próprio — percorrido de ponta a ponta em modeloProprioDoAdvogado.
+  ['/contratos/modelos/novo', 'novo modelo de documento'],
   ['/suporte', 'suporte'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
@@ -753,6 +755,56 @@ async function comparacaoNoCelular() {
   return erros
 }
 
+/**
+ * Um modelo próprio do começo ao uso: escrever, ser barrado por um CPF no texto,
+ * trocar pelo campo, salvar, voltar à lista, usar o modelo e ver o campo que o
+ * advogado inventou virar pergunta — e a resposta aparecer na folha.
+ *
+ * É a trava de dado pessoal no DOM: se ela parar de aparecer, ou se o salvar
+ * passar por cima dela, este percurso quebra.
+ */
+async function modeloProprioDoAdvogado() {
+  const { contexto, pagina, erros } = await abrir('/contratos/modelos/novo')
+  try {
+    await pagina.getByText('O modelo guarda só texto').waitFor({ timeout: ESPERA })
+    await pagina.locator('input[name="nome-do-modelo"]').fill('Consultoria mensal')
+    await pagina.locator('input[name="titulo-do-documento"]').fill('Contrato de consultoria jurídica')
+    const objeto = pagina.getByLabel('Texto do trecho 2')
+    await objeto.fill('Consultoria mensal para o cliente de CPF 529.982.247-25.')
+    await pagina.getByText('Isto não pode ficar no modelo').waitFor({ timeout: ESPERA })
+    await clicar(pagina, 'Salvar modelo')
+    if (!/\/contratos\/modelos\/novo/.test(pagina.url())) erros.push('salvou um modelo com CPF no texto')
+
+    await objeto.fill('Consultoria jurídica mensal, pelo valor de {Valor mensal}.')
+    await pagina.getByText('Isto não pode ficar no modelo').waitFor({ state: 'detached', timeout: ESPERA })
+    await clicar(pagina, 'Salvar modelo')
+    await pagina.waitForURL(/\/contratos(\?|$)/, { timeout: ESPERA })
+
+    await pagina.getByRole('button', { name: 'Usar o modelo Consultoria mensal' }).click()
+    await pagina.waitForURL(/\/contratos\/rascunho\//, { timeout: ESPERA })
+    await pagina.locator('label', { hasText: /^Advogada$/ }).first().click()
+    await pagina.getByLabel(/^Endereço profissional/).fill('Av. Afonso Pena, 1500, Belo Horizonte/MG')
+    await pagina.getByLabel(/^Nome completo/).fill('João da Silva')
+    await pagina.getByLabel(/^Nacionalidade/).fill('brasileiro')
+    await pagina.getByLabel(/^Estado civil/).fill('solteiro')
+    await pagina.getByLabel(/^Profissão/).fill('engenheiro')
+    await pagina.getByLabel(/^CPF/).fill('52998224725')
+    await pagina.getByLabel(/^Endereço completo/).fill('Rua das Flores, 120, Belo Horizonte/MG')
+    await pagina.getByLabel(/^Valor mensal/).fill('R$ 2.000,00')
+    await clicar(pagina, 'Montar a minuta')
+
+    const folha = pagina.locator('article[aria-label^="Documento:"]')
+    await folha.waitFor({ timeout: ESPERA })
+    const textoDaFolha = (await folha.locator('textarea').evaluateAll((els) => els.map((e) => e.value))).join('\n')
+    if (!textoDaFolha.includes('pelo valor de R$ 2.000,00')) erros.push('o campo do modelo não virou o valor preenchido')
+    if (/\{|\}/.test(textoDaFolha)) erros.push('sobrou campo entre chaves na minuta')
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
   ['busca do editor e portas do painel', buscaDoEditor],
   ['comparação de planos no celular', comparacaoNoCelular],
@@ -760,6 +812,7 @@ const CONVERSAS = [
   ['perfil de exemplo não sai da página', exemploNaoSai],
   ['agenda do advogado (editor)', agendaDoAdvogado],
   ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],
+  ['modelo próprio: trava de dado pessoal, salvar e usar', modeloProprioDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],
   ['assistente do escritório', conversaDoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],

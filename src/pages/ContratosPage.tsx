@@ -7,8 +7,19 @@ import { canUseContratos } from '@/lib/plans'
 import {
   MODELOS,
   ORDEM_DOS_MODELOS,
+  ehModelo,
   type ModeloId,
 } from '@/lib/contratos/modelos'
+import {
+  QUEM_ASSINA_OPCOES,
+  camposDoModelo,
+  modeloDeProprio,
+  modeloDoRascunho,
+  versaoDoModeloProprio,
+  type ModeloProprioSalvo,
+} from '@/lib/contratos/proprio'
+import { listarModelosProprios } from '@/lib/contratos/modelosProprios'
+import { MODELOS_PROPRIOS_LIMITE } from '@/lib/plans'
 import {
   apagarRascunho,
   apagarTodosOsRascunhos,
@@ -52,6 +63,9 @@ export default function ContratosPage() {
   const [apagando, setApagando] = useState<string | null>(null)
   const [apagandoTudo, setApagandoTudo] = useState(false)
   const rascunhos = useRascunhos(userId)
+  const [proprios, setProprios] = useState<ModeloProprioSalvo[] | null>(null)
+  const [limiteProprios, setLimiteProprios] = useState(MODELOS_PROPRIOS_LIMITE)
+  const [falhaProprios, setFalhaProprios] = useState(false)
 
   useEffect(() => {
     api
@@ -66,6 +80,15 @@ export default function ContratosPage() {
       .catch(() => {
         setRegistros([])
         setFalhaRegistros(true)
+      })
+    listarModelosProprios()
+      .then(({ modelos, limite }) => {
+        setProprios(modelos)
+        setLimiteProprios(limite)
+      })
+      .catch(() => {
+        setProprios([])
+        setFalhaProprios(true)
       })
   }, [])
 
@@ -114,6 +137,33 @@ export default function ContratosPage() {
     salvarRascunho(userId, r)
     navigate(comVolta(`/contratos/rascunho/${r.id}`, '/contratos'))
   }
+
+  // Começar com um modelo próprio: o rascunho leva uma CÓPIA do texto e a versão
+  // dele. Editar ou excluir o modelo depois não muda o documento começado.
+  const comecarProprio = async (m: ModeloProprioSalvo) => {
+    const conteudo = { nome: m.nome, quemAssina: m.quemAssina, titulo: m.titulo, clausulas: m.clausulas }
+    const versao = await versaoDoModeloProprio(conteudo)
+    const copia = { ...conteudo, id: m.id, versao }
+    const agora = new Date().toISOString()
+    const r: Rascunho = {
+      id: novoId(),
+      modelo: 'proprio',
+      modeloVersao: versao,
+      proprio: copia,
+      dados: modeloDeProprio(copia).iniciais(contextoDoPerfil(perfil)),
+      documento: null,
+      etapa: 'dados',
+      criadoEm: agora,
+      atualizadoEm: agora,
+    }
+    salvarRascunho(userId, r)
+    navigate(comVolta(`/contratos/rascunho/${r.id}`, '/contratos'))
+  }
+
+  const nomeDoRegistro = (modelo?: string) =>
+    modelo === 'proprio' ? 'Modelo próprio' : modelo && ehModelo(modelo) ? MODELOS[modelo].nome : 'Documento'
+
+  const cheio = (proprios?.length ?? 0) >= limiteProprios
 
   return (
     <SubPage
@@ -208,6 +258,87 @@ export default function ContratosPage() {
         </div>
       </section>
 
+      {/* Seus modelos — até 3, só texto, guardados na conta */}
+      <section aria-labelledby="seus-modelos">
+        <div className="flex items-baseline justify-between gap-3 px-1">
+          <h2 id="seus-modelos" className={ROTULO_DE_SECAO}>
+            Seus modelos
+          </h2>
+          {proprios && (
+            <span className="text-[12px] tabular-nums text-ink-faint">
+              {proprios.length} de {limiteProprios}
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 px-1 text-[12.5px] leading-relaxed text-ink-soft">
+          Escreva até {limiteProprios} modelos seus. Eles guardam só texto: no lugar dos dados do cliente vão campos
+          entre chaves, preenchidos a cada documento.
+        </p>
+
+        {proprios === null ? (
+          <p className="mt-3 px-1 text-[13px] text-ink-faint" role="status">
+            Carregando seus modelos…
+          </p>
+        ) : falhaProprios ? (
+          <p className="mt-3 rounded-xl2 border border-burgundy/20 px-4 py-3 text-[13px] text-ink-soft" role="alert">
+            Não foi possível carregar seus modelos agora. Recarregue a página para tentar de novo.
+          </p>
+        ) : (
+          <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {proprios.map((m) => {
+              const { padrao, proprios: meus } = camposDoModelo(m)
+              const total = padrao.length + meus.length
+              return (
+                <li key={m.id} className="flex flex-col rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card">
+                  <span className="break-words font-display text-[16px] font-semibold leading-tight text-ink">{m.nome}</span>
+                  <span className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
+                    {m.clausulas.length} {m.clausulas.length === 1 ? 'trecho' : 'trechos'} · {total}{' '}
+                    {total === 1 ? 'campo' : 'campos'} · assina:{' '}
+                    {(QUEM_ASSINA_OPCOES.find((o) => o.valor === m.quemAssina)?.rotulo ?? '').toLowerCase()}
+                  </span>
+                  <span className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!liberado}
+                      onClick={() => void comecarProprio(m)}
+                      aria-label={`Usar o modelo ${m.nome}`}
+                      className="btn-primary !px-4 !py-2 text-[13px]"
+                    >
+                      Usar
+                    </button>
+                    <Link
+                      to={comVolta(`/contratos/modelos/${m.id}`, '/contratos')}
+                      aria-label={`${liberado ? 'Editar' : 'Ver ou excluir'} o modelo ${m.nome}`}
+                      className="btn-ghost !px-4 !py-2 text-[13px]"
+                    >
+                      {liberado ? 'Editar' : 'Ver ou excluir'}
+                    </Link>
+                  </span>
+                </li>
+              )
+            })}
+            {liberado && !cheio && (
+              <li>
+                <Link
+                  to={comVolta('/contratos/modelos/novo', '/contratos')}
+                  className="flex h-full min-h-[112px] flex-col items-center justify-center gap-1 rounded-xl2 border-2 border-dashed border-ink/15 px-4 py-4 text-center transition-colors hover:border-brass/60"
+                >
+                  <span className="text-[14px] font-semibold text-ink">+ Criar um modelo seu</span>
+                  <span className="text-[12px] text-ink-faint">
+                    {proprios.length === 0 ? 'Um contrato que você usa sempre' : `Cabem mais ${limiteProprios - proprios.length}`}
+                  </span>
+                </Link>
+              </li>
+            )}
+            {!liberado && proprios.length === 0 && (
+              <li className="rounded-xl2 border border-dashed border-ink/15 px-4 py-5 text-center text-[13px] text-ink-faint sm:col-span-2">
+                Modelos próprios são do plano Max.
+              </li>
+            )}
+          </ul>
+        )}
+      </section>
+
       {/* Neste aparelho */}
       <section aria-labelledby="neste-aparelho" className="pt-2">
         <h2 id="neste-aparelho" className={`${ROTULO_DE_SECAO} px-1`}>
@@ -220,7 +351,7 @@ export default function ContratosPage() {
         ) : (
           <ul className="mt-3 space-y-2">
             {rascunhos.map((r) => {
-              const m = MODELOS[r.modelo]
+              const m = modeloDoRascunho(r)
               const parte = nomeDaParte(r)
               return (
                 <li key={r.id} className="rounded-xl2 border border-ink/10 bg-paper shadow-card">
@@ -356,7 +487,7 @@ export default function ContratosPage() {
                     {g.codigo}
                   </span>
                   <span className="block text-[12px] leading-snug text-ink-faint">
-                    {MODELOS[g.revisado?.modelo as ModeloId]?.nome ?? 'Documento'}
+                    {nomeDoRegistro(g.revisado?.modelo)}
                     {g.revisado ? ` · ${dataEHora(g.revisado.registradoEm)}` : ''}
                     {g.assinadas ? ` · ${g.assinadas} ${g.assinadas === 1 ? 'versão assinada' : 'versões assinadas'}` : ''}
                   </span>

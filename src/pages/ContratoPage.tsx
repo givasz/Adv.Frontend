@@ -5,8 +5,8 @@ import { api, SessaoExpirada } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { canUseContratos } from '@/lib/plans'
 import { hostLabel } from '@/lib/publicUrl'
+import { modeloDoRascunho } from '@/lib/contratos/proprio'
 import {
-  MODELOS,
   camposVisiveis,
   pendencias,
   trechosPendentes,
@@ -129,7 +129,8 @@ export default function ContratoPage() {
     [userId],
   )
 
-  const modelo = rascunho ? MODELOS[rascunho.modelo] : null
+  // Da plataforma, ou a CÓPIA do modelo próprio que o rascunho levou ao começar.
+  const modelo = useMemo(() => (rascunho ? modeloDoRascunho(rascunho) : null), [rascunho])
   const ctx = useMemo(() => (perfil ? contextoDoPerfil(perfil) : null), [perfil])
   const pend = useMemo(() => (modelo && rascunho ? pendencias(modelo, rascunho.dados) : []), [modelo, rascunho])
   const doc = rascunho?.documento ?? null
@@ -371,6 +372,7 @@ export default function ContratoPage() {
       id: novoId(),
       modelo: rascunho.modelo,
       modeloVersao: rascunho.modeloVersao,
+      proprio: rascunho.proprio,
       dados: { ...rascunho.dados },
       documento: structuredClone(doc),
       etapa: 'revisao',

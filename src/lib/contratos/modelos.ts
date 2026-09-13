@@ -116,7 +116,8 @@ export interface Contexto {
 }
 
 export interface Modelo {
-  id: ModeloId
+  /** 'proprio' = modelo escrito pelo advogado (ver proprio.ts) */
+  id: ModeloId | 'proprio'
   versao: string
   nome: string
   resumo: string
@@ -131,9 +132,9 @@ export interface Modelo {
 /** Marca que o registro procura: enquanto houver uma no texto, não se registra. */
 export const MARCA_PENDENTE = '[preencher'
 
-const pendente = (rotulo: string) => `${MARCA_PENDENTE}: ${rotulo.toLowerCase()}]`
+export const pendente = (rotulo: string) => `${MARCA_PENDENTE}: ${rotulo.toLowerCase()}]`
 
-function valor(d: Dados, id: string, rotulo: string): string {
+export function valor(d: Dados, id: string, rotulo: string): string {
   const v = (d[id] ?? '').trim()
   return v || pendente(rotulo)
 }
@@ -141,7 +142,7 @@ function valor(d: Dados, id: string, rotulo: string): string {
 const opcional = (d: Dados, id: string) => (d[id] ?? '').trim()
 
 /** Tira o ponto final que a pessoa digitou, para a frase montada pôr o dela. */
-const semPontoFinal = (t: string) => t.replace(/[\s.;]+$/, '')
+export const semPontoFinal = (t: string) => t.replace(/[\s.;]+$/, '')
 
 /** "a, b e c" */
 export function listaNatural(itens: string[]): string {
@@ -201,7 +202,7 @@ function inscricaoPorExtenso(oab: string, tratamento: string): string {
   return oab.trim() ? `${inscrit} na ${oab.trim()}` : pendente('inscrição na OAB')
 }
 
-function genero(tratamento: string, masc: string, fem: string, neutro: string): string {
+export function genero(tratamento: string, masc: string, fem: string, neutro: string): string {
   return tratamento === 'advogado' ? masc : tratamento === 'advogada' ? fem : neutro
 }
 
@@ -218,7 +219,7 @@ function comParagrafos(caput: string, paragrafos: string[]): string {
 }
 
 let sequencia = 0
-function clausula(titulo: string, texto: string, numerada = true): Clausula {
+export function clausula(titulo: string, texto: string, numerada = true): Clausula {
   sequencia += 1
   return { id: `c${sequencia}-${Math.random().toString(36).slice(2, 8)}`, titulo, texto, numerada }
 }
@@ -228,7 +229,7 @@ export function clausulaEmBranco(): Clausula {
   return clausula('', '', true)
 }
 
-function localEData(d: Dados): string {
+export function localEData(d: Dados): string {
   return `${valor(d, 'local', 'Local')}, ${dataPorExtenso(d.data ?? '')}.`
 }
 
@@ -245,7 +246,7 @@ const TRATAMENTO: Campo = {
   ],
 }
 
-function grupoDoAdvogado(): Grupo {
+export function grupoDoAdvogado(): Grupo {
   return {
     id: 'advogado',
     titulo: 'Seus dados',
@@ -272,10 +273,10 @@ function grupoDoAdvogado(): Grupo {
   }
 }
 
-const ehPJ = (d: Dados) => d['cliente.tipo'] === 'pj'
+export const ehPJ = (d: Dados) => d['cliente.tipo'] === 'pj'
 const ehPF = (d: Dados) => !ehPJ(d)
 
-function grupoDoCliente(opts: { titulo: string; permitePJ: boolean; descricao?: string }): Grupo {
+export function grupoDoCliente(opts: { titulo: string; permitePJ: boolean; descricao?: string }): Grupo {
   const campos: Campo[] = []
   if (opts.permitePJ) {
     campos.push({
@@ -316,7 +317,7 @@ function grupoDoCliente(opts: { titulo: string; permitePJ: boolean; descricao?: 
   return { id: 'cliente', titulo: opts.titulo, descricao: opts.descricao, campos }
 }
 
-const GRUPO_LOCAL: Grupo = {
+export const GRUPO_LOCAL: Grupo = {
   id: 'local',
   titulo: 'Local e data',
   campos: [
@@ -325,7 +326,7 @@ const GRUPO_LOCAL: Grupo = {
   ],
 }
 
-function qualificacaoDoCliente(d: Dados, permitePJ: boolean): string {
+export function qualificacaoDoCliente(d: Dados, permitePJ: boolean): string {
   if (permitePJ && ehPJ(d)) {
     return (
       `${valor(d, 'cliente.razao', 'Razão social')}, pessoa jurídica de direito privado, ` +
@@ -346,19 +347,19 @@ function qualificacaoDoCliente(d: Dados, permitePJ: boolean): string {
   )
 }
 
-function nomeDoCliente(d: Dados, permitePJ: boolean): string {
+export function nomeDoCliente(d: Dados, permitePJ: boolean): string {
   return permitePJ && ehPJ(d)
     ? valor(d, 'cliente.razao', 'Razão social')
     : valor(d, 'cliente.nome', 'Nome completo')
 }
 
-function papelDoCliente(d: Dados, papel: string, permitePJ: boolean): string {
+export function papelDoCliente(d: Dados, papel: string, permitePJ: boolean): string {
   return permitePJ && ehPJ(d)
     ? `${papel} · representada por ${valor(d, 'cliente.representante', 'Quem assina pela empresa')}`
     : papel
 }
 
-function qualificacaoDoAdvogado(d: Dados, ctx: Contexto): string {
+export function qualificacaoDoAdvogado(d: Dados, ctx: Contexto): string {
   const t = d['advogado.tratamento'] ?? ''
   const email = opcional(d, 'advogado.email')
   return (
@@ -369,7 +370,7 @@ function qualificacaoDoAdvogado(d: Dados, ctx: Contexto): string {
   )
 }
 
-function iniciaisComuns(ctx: Contexto): Dados {
+export function iniciaisComuns(ctx: Contexto): Dados {
   const cidade = [ctx.advogado.cidade.trim(), ctx.advogado.uf.trim()].filter(Boolean).join('/')
   return {
     'cliente.tipo': 'pf',
