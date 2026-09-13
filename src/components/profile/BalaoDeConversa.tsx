@@ -58,16 +58,22 @@ const APARECE_APOS = 260
 const APARECE_APOS_NA_MOLDURA = 120
 
 /**
- * O elemento que de fato rola acima deste — a janela, ou a tela do celularzinho.
+ * A tela do celularzinho — o elemento que rola DENTRO da maquete.
  *
  * Sem isto o balão ouvia `window.scroll` também dentro da maquete, onde quem rola
  * é um `<div>` com `overflow-y: auto`. O efeito era ele nascer visível por cima
  * da foto e do nome do advogado, que é justamente o que a página tem para dizer.
+ *
+ * A busca para na moldura e NÃO exige que o elemento já tenha o que rolar. Até
+ * 13/09/2026 exigia (`scrollHeight > clientHeight`), e isso quebrava o editor no
+ * celular: a prévia fica montada mas ESCONDIDA (`display: none`) enquanto a aba
+ * de edição está aberta, e um elemento escondido mede zero — a busca falhava, o
+ * balão passava a ouvir a janela, e ao abrir a aba de prévia ele nunca aparecia.
  */
-function paiQueRola(el: HTMLElement | null): HTMLElement | null {
-  for (let n = el?.parentElement ?? null; n; n = n.parentElement) {
+function telaDaMaquete(el: HTMLElement | null, moldura: HTMLElement): HTMLElement | null {
+  for (let n = el?.parentElement ?? null; n && n !== moldura; n = n.parentElement) {
     const overflow = getComputedStyle(n).overflowY
-    if ((overflow === 'auto' || overflow === 'scroll') && n.scrollHeight > n.clientHeight) return n
+    if (overflow === 'auto' || overflow === 'scroll') return n
   }
   return null
 }
@@ -170,10 +176,19 @@ export function BalaoDeConversa({
   // para dizer; depois de uma rolagem, ele é um atalho para quem já se
   // interessou — que é o único momento em que ele ajuda alguém.
   useEffect(() => {
+    // PRÉVIA DO EDITOR (`inert`): aparece de cara, sem rolar. O advogado acabou
+    // de escolher o botão e precisa ver o que escolheu — e no celular a prévia
+    // vive noutra aba, onde "role a maquete para achar" não é uma instrução que
+    // alguém recebe. Na página de verdade e na demonstração da home continua
+    // valendo a regra de só aparecer depois da rolagem.
+    if (inert) {
+      setVisivel(true)
+      return
+    }
     // Dentro da maquete quem rola é a tela do celularzinho, não a janela — e o
     // balão tem de responder a ELA. Ouvir `window` ali fazia o balão nascer
     // visível por cima da foto e do nome, que é o que a página tem para dizer.
-    const rolante = naMoldura ? paiQueRola(ancora.current) : null
+    const rolante = naMoldura && destino ? telaDaMaquete(ancora.current, destino) : null
     const limite = naMoldura ? APARECE_APOS_NA_MOLDURA : APARECE_APOS
     const quanto = () => (rolante ? rolante.scrollTop : window.scrollY)
     const alvo: HTMLElement | Window = rolante ?? window
@@ -182,7 +197,7 @@ export function BalaoDeConversa({
     aoRolar()
     alvo.addEventListener('scroll', aoRolar, { passive: true })
     return () => alvo.removeEventListener('scroll', aoRolar)
-  }, [demo, naMoldura, destino])
+  }, [demo, inert, naMoldura, destino])
 
   // Recua no FIM da página. Quando o rodapé da plataforma (denúncia, Termos,
   // identificação do operador) entra na tela, o balão sai — um atalho fixo no
