@@ -148,6 +148,10 @@ export default function PublicProfile() {
           A identificação do operador vem junto pelo mesmo motivo: quem se sentir
           lesado tem direito de saber a quem se dirigir (CDC, arts. 6º, III e
           31), e um site sem dono é um site que vira réu por omissão. */}
+      {/* `data-balao-recua`: o balão flutuante (BalaoDeConversa) some enquanto
+          este rodapé estiver na tela, para nunca cobrir a denúncia nem a
+          identificação do operador. */}
+      <footer data-balao-recua>
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2">
         <Link
           to={`/${profile.slug}/denunciar`}
@@ -172,14 +176,14 @@ export default function PublicProfile() {
           Privacidade
         </Link>
       </div>
-      {/* `pb-28` e não `pb-10`: o balão de conversa é FIXO no canto inferior e,
-          num celular estreito, cobria justamente a linha da identificação — um
-          aviso legal escondido atrás de um botão não é um aviso legal. O espaço
-          extra fica no fim de uma página já rolada, onde ninguém o percebe. */}
-      <p className="mx-auto max-w-md px-5 pb-28 pt-2 text-center text-[10.5px] leading-relaxed text-ink-faint/60">
+      {/* Já foi `pb-28`: 112 px em branco para o balão fixo não cobrir esta
+          linha. Fazia a página rolar além do conteúdo (13/09/2026). Agora é o
+          balão que recua quando o rodapé aparece — ver `data-balao-recua`. */}
+      <p className="mx-auto max-w-md px-5 pb-8 pt-2 text-center text-[10.5px] leading-relaxed text-ink-faint/60">
         Página hospedada pelo advoc.me, operado por {OPERADOR.razaoSocial}, CNPJ {OPERADOR.cnpj}.
         O conteúdo é de responsabilidade do profissional que o publicou.
       </p>
+      </footer>
 
     </main>
   )

@@ -184,6 +184,23 @@ export function BalaoDeConversa({
     return () => alvo.removeEventListener('scroll', aoRolar)
   }, [demo, naMoldura, destino])
 
+  // Recua no FIM da página. Quando o rodapé da plataforma (denúncia, Termos,
+  // identificação do operador) entra na tela, o balão sai — um atalho fixo no
+  // canto cobria justamente a linha legal e o link de denunciar. A solução
+  // anterior era reservar 112 px em branco embaixo do rodapé (`pb-28`), o que
+  // fazia a página rolar além do conteúdo; agora quem cede a vez é o balão.
+  // Quem marca o rodapé é `data-balao-recua` (PublicProfile). Na maquete e na
+  // prévia do editor não há rodapé, e o balão simplesmente não recua.
+  const [recuado, setRecuado] = useState(false)
+  useEffect(() => {
+    if (!destino || naMoldura) return
+    const rodape = document.querySelector('[data-balao-recua]')
+    if (!rodape || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setRecuado(e.isIntersecting), { threshold: 0 })
+    io.observe(rodape)
+    return () => io.disconnect()
+  }, [destino, naMoldura])
+
   // Fechar é definitivo enquanto a página estiver aberta. Um balão que volta
   // depois de a pessoa o ter fechado deixa de ser atalho e vira insistência —
   // e insistir é o que a norma chama de captação.
@@ -233,7 +250,7 @@ export function BalaoDeConversa({
   // uma cor e o balão de outra.
   const balao = (
     <AnimatePresence>
-      {visivel && (
+      {visivel && !recuado && (
         <m.div
           initial={{ opacity: 0, y: 12, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
