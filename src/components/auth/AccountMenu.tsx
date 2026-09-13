@@ -87,11 +87,15 @@ export function AccountMenu({
 
       {open && (
         <>
-          {/* clique fora fecha */}
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
+          {/* clique fora fecha. z-40/z-50 e não z-10/z-20: na home o menu abria ATRÁS
+              do telefone da demonstração — a etiqueta "Exemplo" (z-30) e o entalhe
+              (z-20, depois no DOM) cobriam "Meu painel". A barra da home não cria
+              contexto próprio, então o menu disputa com a página inteira e precisa
+              estar acima de tudo que não é sobreposição de verdade (13/09/2026). */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div
             role="menu"
-            className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-xl2 border border-ink/10 bg-paper shadow-lift"
+            className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl2 border border-ink/10 bg-paper shadow-lift"
           >
             <div className="border-b border-ink/10 px-3.5 py-2.5">
               <p className="truncate text-[13px] font-medium text-ink">{user.name || shortName}</p>
