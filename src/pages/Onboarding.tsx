@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Plan, Profile } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
+import { useSalvarAntesDeSair } from '@/lib/salvarAntesDeSair'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { sampleProfile } from '@/lib/mockData'
 import { hasBlockingIssue } from '@/lib/oab'
@@ -126,13 +127,17 @@ export default function Onboarding() {
   const pendingPlan: Exclude<Plan, 'free'> | null =
     wantedPlan === 'pro' || wantedPlan === 'premium' ? wantedPlan : null
 
-  // Salva o rascunho com debounce (mesmo armazenamento do editor).
+  // Salva o rascunho com debounce (mesmo armazenamento do editor). O que está em
+  // voo fica em `pendente`, para ser gravado se a tela sumir antes do timer.
+  const pendente = useRef<Profile | null>(null)
   useEffect(() => {
     if (!profile) return
+    pendente.current = profile
     const t = setTimeout(() => {
       api
         .saveDraft(profile)
         .then((saved) => {
+          if (pendente.current === profile) pendente.current = null
           setErroAoSalvar(null)
           if (saved?.slug && saved.slug !== profile.slug) {
             setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
@@ -148,6 +153,19 @@ export default function Onboarding() {
     }, 600)
     return () => clearTimeout(t)
   }, [profile])
+
+  // Fechar a aba, trocar de app ou voltar no meio do preenchimento grava o que
+  // estiver em voo — ver lib/salvarAntesDeSair.
+  useSalvarAntesDeSair<Profile>({
+    pendente: () => pendente.current,
+    salvar: (p, sumindo) =>
+      api
+        .saveDraft(p, false, { keepalive: sumindo })
+        .then(() => {
+          if (pendente.current === p) pendente.current = null
+        })
+        .catch(() => undefined),
+  })
 
   const blockedBio = useMemo(() => (profile ? hasBlockingIssue(profile.bio) : false), [profile])
 

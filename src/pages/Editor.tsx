@@ -9,6 +9,8 @@ import type {
   Profile,
 } from '@/lib/types'
 import { api, SessaoExpirada } from '@/lib/api'
+import { useSalvarAntesDeSair } from '@/lib/salvarAntesDeSair'
+import { guardarPendente, horaDaCopia, lerPendente, limparPendente, type Pendente } from '@/lib/alteracoesPendentes'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { allAreas } from '@/lib/mockData'
@@ -104,6 +106,9 @@ export default function Editor() {
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Cópia de segurança de uma gravação que falhou, encontrada ao abrir o editor
+  // (ver lib/alteracoesPendentes): oferecida, nunca aplicada em silêncio.
+  const [recuperavel, setRecuperavel] = useState<Pendente<Profile> | null>(null)
   const [ai, setAi] = useState<AiTarget>(null)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   // Upsell e checkout deixaram de ser modais: viram páginas (/planos, /assinar).
@@ -124,6 +129,9 @@ export default function Editor() {
     api
       .getDraft()
       .then((d) => {
+        const copia = lerPendente<Profile>('perfil')
+        if (copia && JSON.stringify(copia.dados) !== JSON.stringify(d)) setRecuperavel(copia)
+        else if (copia) limparPendente('perfil')
         // Auto-correção de endereço órfão: um slug auto-gerado (nome-1234, do tempo
         // de Free) que não foi personalizado à mão e não bate mais com o nome atual
         // volta a seguir o nome. Evita mostrar o nome antigo depois de renomear.
@@ -150,12 +158,13 @@ export default function Editor() {
   const pending = useRef<Profile | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const persist = useCallback(async (draft: Profile) => {
+  const persist = useCallback(async (draft: Profile, sumindo = false) => {
     try {
-      const saved = await api.saveDraft(draft)
+      const saved = await api.saveDraft(draft, false, { keepalive: sumindo })
       // Só limpa o pendente se nada novo entrou na fila enquanto salvávamos.
       if (pending.current === draft) pending.current = null
       setSaveState('saved')
+      limparPendente('perfil')
       if (saved?.slug) {
         setProfile((p) => (p && p.slug !== saved.slug ? { ...p, slug: saved.slug } : p))
       }
@@ -164,6 +173,9 @@ export default function Editor() {
       // Falha de rede ou recusa do servidor NÃO pode passar por "Tudo salvo".
       setSaveState('error')
       setSaveError(e instanceof Error ? e.message : 'Não foi possível salvar agora.')
+      // O texto continua só na memória desta tela: guarda uma cópia para o caso
+      // de a tela cair antes de a gravação voltar a funcionar (sessão caída → login).
+      guardarPendente('perfil', draft)
       return null
     }
   }, [])
@@ -194,17 +206,19 @@ export default function Editor() {
     }
   }, [profile, persist])
 
-  // Fechar/recarregar a aba com algo por salvar pede confirmação — o navegador não
-  // espera um fetch pendente, e perder texto em silêncio é o pior desfecho possível.
-  useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!pending.current) return
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', onBeforeUnload)
-    return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [])
+  // Antes de a tela sumir — aba fechada (pergunta), app trocado no celular (grava
+  // com keepalive), navegação dentro do app (grava na desmontagem) — o que está
+  // em voo é gravado. Ver lib/salvarAntesDeSair.
+  useSalvarAntesDeSair<Profile>({
+    pendente: () => pending.current,
+    salvar: (draft, sumindo) => {
+      if (timer.current) {
+        clearTimeout(timer.current)
+        timer.current = null
+      }
+      return persist(draft, sumindo)
+    },
+  })
 
   // Sair da aparência encerra a prova: nas outras seções a prévia tem de mostrar o
   // perfil como ele está de verdade.
@@ -390,6 +404,39 @@ export default function Editor() {
           </button>
 
           <ModerationBanner status={profile.moderationStatus} note={profile.moderationNote} />
+
+          {/* Uma gravação falhou numa abertura anterior desta aba e o texto ficou
+              guardado aqui no navegador. Quem decide é a pessoa: restaurar ou
+              descartar — nunca aplicar por cima do que veio do servidor. */}
+          {recuperavel && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brass/40 bg-brass/[0.10] px-3 py-2.5">
+              <p className="text-[12.5px] font-medium text-ink">
+                Há alterações das {horaDaCopia(recuperavel.quando)} que não chegaram a ser salvas.
+              </p>
+              <span className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfile(recuperavel.dados)
+                    setRecuperavel(null)
+                  }}
+                  className="rounded-full bg-burgundy px-3 py-1.5 text-[12px] font-semibold text-paper hover:bg-burgundy-deep"
+                >
+                  Restaurar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    limparPendente('perfil')
+                    setRecuperavel(null)
+                  }}
+                  className="rounded-full border border-ink/20 px-3 py-1.5 text-[12px] font-semibold text-ink-soft hover:border-ink/40"
+                >
+                  Descartar
+                </button>
+              </span>
+            </div>
+          )}
 
           <div>
             <h2 className="font-display text-[24px] font-semibold leading-tight text-ink">{meta.title}</h2>

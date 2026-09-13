@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { useSalvarAntesDeSair } from '@/lib/salvarAntesDeSair'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { checkCompliance } from '@/lib/oab'
 import {
@@ -53,13 +54,17 @@ export default function FirmEditor() {
   }, [receber])
 
   // Salva com debounce quando há nome (sociedade precisa de nome para existir).
+  // O que está em voo fica em `pendente`, para ser gravado se a tela sumir.
+  const pendente = useRef<Firm | null>(null)
   useEffect(() => {
     if (!firm || !firm.name.trim()) return
+    pendente.current = firm
     setSaved(false)
     const t = setTimeout(() => {
       api
         .saveFirm(firm)
         .then((s) => {
+          if (pendente.current === firm) pendente.current = null
           setSaved(true)
           setSaveError('')
           const institucional = receber(s)
@@ -73,6 +78,19 @@ export default function FirmEditor() {
     }, 700)
     return () => clearTimeout(t)
   }, [firm, receber])
+
+  // Fechar a aba, trocar de app ou navegar grava o que estiver em voo — ver
+  // lib/salvarAntesDeSair.
+  useSalvarAntesDeSair<Firm>({
+    pendente: () => pendente.current,
+    salvar: (f, sumindo) =>
+      api
+        .saveFirm(f, { keepalive: sumindo })
+        .then(() => {
+          if (pendente.current === f) pendente.current = null
+        })
+        .catch(() => undefined),
+  })
 
   // O NOME da sociedade também é conferido: é a maior linha da página institucional,
   // e o servidor recusa salvar se tiver termo vedado (ver firms.service.ts). Fica em

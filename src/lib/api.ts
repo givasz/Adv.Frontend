@@ -365,13 +365,14 @@ export const api = {
     return loadFirmDraft()
   },
 
-  async saveFirm(firm: Firm): Promise<Firm> {
+  async saveFirm(firm: Firm, opts: { keepalive?: boolean } = {}): Promise<Firm> {
     if (USE_REAL_API) {
       if (!(await contaAtivaConferida())) throw sessaoCaiu(firmErrorMessage(401, ''))
       // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
       // "Tudo salvo": o corpo de erro não é um Firm.
       return firmFetch('/api/firms/me', {
         method: 'PUT',
+        keepalive: !!opts.keepalive,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(firm),
       })
@@ -551,7 +552,11 @@ export const api = {
    *   confirmação a cada debounce do editor transformaria uma declaração num
    *   reflexo — e uma declaração que ninguém lê não prova nada.
    */
-  async saveDraft(profile: Profile, truthDeclared = false): Promise<Profile> {
+  async saveDraft(
+    profile: Profile,
+    truthDeclared = false,
+    opts: { keepalive?: boolean } = {},
+  ): Promise<Profile> {
     // Modo real SEM sessão: recusa em vez de gravar no navegador. O silêncio era
     // pior que o erro — o editor dizia "Tudo salvo", nada chegava à conta, e o
     // trabalho sumia no próximo aparelho (ou na próxima limpeza do navegador).
@@ -563,6 +568,9 @@ export const api = {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...profile, truthDeclared }),
+        // A página pode estar indo embora (ver lib/salvarAntesDeSair): keepalive
+        // deixa o envio completar mesmo depois que ela morreu.
+        keepalive: !!opts.keepalive,
       })
       // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
       // caracteres, sessão expirada) virava um objeto de erro tratado como perfil
