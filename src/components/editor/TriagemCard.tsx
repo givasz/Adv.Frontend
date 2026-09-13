@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type {
   DestinoPossivel,
@@ -43,7 +43,9 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
+  ChevronDown,
   MessageIcon,
+  PenIcon,
   PlayIcon,
   ShieldIcon,
   SparkIcon,
@@ -535,17 +537,34 @@ function PerguntaItem({
   // duas respostas apontando para lugares diferentes não têm desempate honesto.
   const podeRamificar = pergunta.kind !== 'multipla' && !!pergunta.options?.length
 
+  // CONFIRMAR não grava nada — o editor já salva enquanto se escreve (é o "Tudo
+  // salvo" do topo). O que o botão faz é dizer "terminei esta": fecha o painel
+  // e devolve o foco ao botão de editar, para quem navega por teclado não se
+  // perder. Pergunta pela metade não confirma, e a tela diz o que falta — um
+  // botão apagado sem explicação é um botão quebrado.
+  const faltaEnunciado = !pergunta.label.trim()
+  const podeConfirmar = !faltaEnunciado && !semOpcao
+  const painelId = useId()
+  const editarRef = useRef<HTMLButtonElement>(null)
+  const confirmar = () => {
+    if (!podeConfirmar) return
+    onAbrir()
+    requestAnimationFrame(() => editarRef.current?.focus())
+  }
+
   return (
     <li className="rounded-lg border border-ink/10 bg-paper-soft/60">
       <div className="flex items-start gap-2 p-3">
         <span className="mt-1 w-5 shrink-0 text-center text-[12px] font-semibold tabular-nums text-ink-faint">
           {indice + 1}
         </span>
+        <div className="min-w-0 flex-1">
         <button
           type="button"
           onClick={onAbrir}
           aria-expanded={aberta}
-          className="min-w-0 flex-1 text-left"
+          aria-controls={painelId}
+          className="block w-full min-w-0 text-left"
         >
           <span className="block truncate text-[13.5px] font-medium text-ink">
             {pergunta.label.trim() || <span className="text-ink-faint">Pergunta sem enunciado</span>}
@@ -562,6 +581,28 @@ function PerguntaItem({
             </span>
           )}
         </button>
+        {/* EDITAR escrito, e não só o texto clicável: tocar no enunciado para
+            abrir é um gesto que ninguém adivinha. Vira "Fechar" com o painel
+            aberto, para o mesmo botão desfazer o que fez. */}
+        {!preview && (
+          <button
+            ref={editarRef}
+            type="button"
+            onClick={onAbrir}
+            aria-expanded={aberta}
+            aria-controls={painelId}
+            aria-label={`${aberta ? 'Fechar' : 'Editar'} a pergunta ${indice + 1}`}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-burgundy/30 px-3 py-1 text-[12.5px] font-semibold text-burgundy transition-colors hover:bg-burgundy/[0.06]"
+          >
+            {aberta ? (
+              <ChevronDown width={13} height={13} className="rotate-180" aria-hidden />
+            ) : (
+              <PenIcon width={13} height={13} aria-hidden />
+            )}
+            {aberta ? 'Fechar' : 'Editar'}
+          </button>
+        )}
+        </div>
         {/* Setas, e não arrastar: a lista é curta, o alvo é grande no dedo e o
             gesto existe para quem navega por teclado ou leitor de tela. */}
         <div className="flex shrink-0 items-center gap-0.5">
@@ -601,7 +642,7 @@ function PerguntaItem({
       )}
 
       {aberta && !preview && (
-        <div className="space-y-3 border-t border-ink/10 px-3 py-3.5">
+        <div id={painelId} className="space-y-3 border-t border-ink/10 px-3 py-3.5">
           <Field
             label="A pergunta, como quem visita vai ler"
             hint={`${pergunta.label.length}/${TRIAGEM_LABEL_MAX}`}
@@ -623,6 +664,16 @@ function PerguntaItem({
               value={pergunta.label}
               maxLength={TRIAGEM_LABEL_MAX}
               onChange={(e) => onTrocar({ label: e.target.value })}
+              // Pergunta recém-criada abre com o cursor no campo: é a única coisa
+              // que dá para fazer nela, e procurar onde tocar é trabalho à toa.
+              autoFocus={!pergunta.label}
+              // Enter confirma — como atalho. O caminho principal é o botão:
+              // no celular o Enter do teclado nem sempre está à vista.
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+                e.preventDefault()
+                confirmar()
+              }}
               placeholder="Qual assunto você deseja tratar?"
             />
           </Field>
@@ -787,6 +838,25 @@ function PerguntaItem({
             onChange={(optional) => onTrocar({ optional })}
             label="Quem visita pode pular esta pergunta"
           />
+
+          <div className="flex flex-col gap-2 border-t border-ink/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11.5px] leading-relaxed text-ink-faint" aria-live="polite">
+              {faltaEnunciado
+                ? 'Escreva a pergunta para confirmar.'
+                : semOpcao
+                  ? 'Escreva ao menos uma opção de resposta para confirmar.'
+                  : 'O que você escreve já fica salvo. Confirme quando terminar esta pergunta.'}
+            </p>
+            <button
+              type="button"
+              onClick={confirmar}
+              disabled={!podeConfirmar}
+              className="btn-primary !px-4 !py-2 text-[13px] disabled:cursor-not-allowed disabled:opacity-50 sm:shrink-0"
+            >
+              <CheckIcon width={15} height={15} strokeWidth={2.4} aria-hidden />
+              Confirmar pergunta
+            </button>
+          </div>
         </div>
       )}
     </li>

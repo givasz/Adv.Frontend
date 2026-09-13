@@ -755,6 +755,15 @@ async function acessibilidadeDaTriagem() {
       if ((await pagina.getByLabel('Opção 3', { exact: true }).count()) !== 1) {
         erros.push('“+ Adicionar opção” não adicionou nada')
       }
+
+      // CONFIRMAR fecha o painel sem depender do Enter; EDITAR, escrito, reabre;
+      // e o Enter no enunciado também confirma, como atalho.
+      await clicar(pagina, 'Confirmar pergunta')
+      await enunciado.waitFor({ state: 'detached', timeout: ESPERA })
+      await pagina.getByRole('button', { name: `Editar a pergunta ${antes + 1}` }).click()
+      await enunciado.waitFor({ timeout: ESPERA })
+      await enunciado.press('Enter')
+      await enunciado.waitFor({ state: 'detached', timeout: ESPERA })
       // E excluir tem de excluir.
       await pagina.getByRole('button', { name: `Excluir a pergunta ${antes + 1}` }).click()
       await itens.nth(antes).waitFor({ state: 'detached', timeout: ESPERA })
@@ -788,7 +797,7 @@ async function acessibilidadeDaTriagem() {
 
       // RAMIFICAR: manda a primeira resposta encerrar a triagem e confere que o
       // roteiro passa a dizer isso. É o desenho do caminho sendo lido de volta.
-      await itens.first().locator('button[aria-expanded]').click()
+      await pagina.getByRole('button', { name: 'Editar a pergunta 1' }).click()
       const paraOnde = pagina.locator('select').first()
       await paraOnde.waitFor({ timeout: ESPERA })
       await paraOnde.selectOption('fim')
@@ -805,7 +814,7 @@ async function acessibilidadeDaTriagem() {
       await pagina.getByRole('button', { name: /Ver modelos/ }).click()
       await pagina.getByRole('button', { name: /^Direito de Família/ }).click()
       await itens.nth(1).waitFor({ timeout: ESPERA })
-      const primeira = pagina.locator('li button[aria-expanded]').first()
+      const primeira = pagina.getByRole('button', { name: 'Editar a pergunta 1' })
       await primeira.waitFor({ timeout: ESPERA })
       await primeira.click()
       const mudos = await semNome(pagina, '[data-triagem-editor]')
