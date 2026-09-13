@@ -60,7 +60,7 @@ function numeroLegivel(v: string): string {
  */
 const ESPACO_RIGIDO = String.fromCharCode(160)
 function precoInteiro(preco: string): string {
-  return preco.replace(' ', ' ')
+  return preco.replace(' ', ESPACO_RIGIDO)
 }
 
 // ---- Celular ----------------------------------------------------------------
