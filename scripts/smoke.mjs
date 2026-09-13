@@ -63,6 +63,10 @@ const ROTAS = [
   ['/', 'landing'],
   ['/entrar', 'login'],
   ['/criar-conta', 'cadastro'],
+  // A volta do Google. Com o código de recusa na URL a tela desenha a frase sem
+  // perguntar ao servidor — o percurso com o Google de verdade não cabe aqui, e
+  // as travas dele estão em backend/src/auth/google.spec.ts e google-conta.spec.ts.
+  ['/entrar/google?erro=cancelado', 'entrar com o Google (volta cancelada)'],
   // Os links que chegam por e-mail. Sem o token no endereço, as duas de link
   // mostram o caminho de volta — é esse desenho que se confere aqui (o percurso
   // com token precisa do servidor, e é coberto em backend/src/auth/recuperacao.spec.ts).

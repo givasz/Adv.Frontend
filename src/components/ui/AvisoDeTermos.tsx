@@ -93,19 +93,38 @@ export function AvisoDeTermos() {
           <div className="mt-3 border-t border-brass/25 pt-3 text-[12.5px] leading-relaxed text-ink-soft">
             <ul className="list-disc space-y-1 pl-4">
               <li>
-                Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,
-                redefinição e troca de senha, decisões de moderação, convites de escritório e mudanças nos
-                documentos.
+                Dá para entrar com a sua conta Google, se preferir. É opcional: e-mail e senha continuam
+                funcionando igual.
               </li>
               <li>
-                Quem envia é o Resend, empresa sediada nos Estados Unidos, que recebe só o endereço e
-                o texto do aviso — sem rastreio de abertura nem de clique.
-              </li>
-              <li>
-                Quem denuncia um perfil e informa um e-mail recebe a confirmação e o aviso de que a
-                análise terminou.
+                Quem entra com o Google nos passa só nome, e-mail e um identificador da conta — nenhum
+                acesso a Gmail, agenda, contatos ou arquivos. Guardamos o identificador para reconhecer
+                você na próxima vez.
               </li>
             </ul>
+            {/* Quem aceitou antes da revisão do e-mail (a primeira de 12 de
+                setembro) também precisa ler o que ela mudou. Datas ISO ordenam
+                como texto: "2026-09-12" < "2026-09-12-2". */}
+            {(user?.termsVersion ?? '') < '2026-09-12' && (
+              <>
+                <p className="mt-2.5 font-medium text-ink">E, da revisão anterior, também de 12 de setembro:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>
+                    Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,
+                    redefinição e troca de senha, decisões de moderação, convites de escritório e mudanças
+                    nos documentos.
+                  </li>
+                  <li>
+                    Quem envia é o Resend, empresa sediada nos Estados Unidos, que recebe só o endereço e
+                    o texto do aviso — sem rastreio de abertura nem de clique.
+                  </li>
+                  <li>
+                    Quem denuncia um perfil e informa um e-mail recebe a confirmação e o aviso de que a
+                    análise terminou.
+                  </li>
+                </ul>
+              </>
+            )}
             {/* Quem nunca aceitou a revisão de 4 de setembro também precisa ler o
                 que ela mudou — a comparação é por data ISO, que ordena como texto. */}
             {(user?.termsVersion ?? '') < '2026-09-04' && (

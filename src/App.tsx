@@ -10,6 +10,7 @@ import { AvisoDeEmail } from '@/components/ui/AvisoDeEmail'
 import PublicProfile from './pages/PublicProfile'
 const Landing = lazy(() => import('./pages/Landing'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
+const EntrarComGooglePage = lazy(() => import('./pages/EntrarComGooglePage'))
 const EsqueciSenhaPage = lazy(() => import('./pages/EsqueciSenhaPage'))
 const RedefinirSenhaPage = lazy(() => import('./pages/RedefinirSenhaPage'))
 const ConfirmarEmailPage = lazy(() => import('./pages/ConfirmarEmailPage'))
@@ -100,6 +101,9 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/entrar" element={<AuthPage mode="login" />} />
         <Route path="/criar-conta" element={<AuthPage mode="signup" />} />
+        {/* A volta do "Continuar com o Google": o servidor já conferiu quem é a
+            pessoa, e esta tela abre a sessão — ou pede o aceite, se a conta é nova. */}
+        <Route path="/entrar/google" element={<EntrarComGooglePage />} />
         {/* Os links que chegam por e-mail. Sem RequireAuth: quem esqueceu a senha
             não entra, e o link de confirmação costuma abrir em outro aparelho. */}
         <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />

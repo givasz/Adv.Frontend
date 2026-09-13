@@ -216,7 +216,20 @@ export default function DadosPage() {
                 .
               </p>
 
-              {!abrindoExclusao ? (
+              {user?.temSenha === false ? (
+                // Sem senha não há o que digitar no campo abaixo. A exclusão continua
+                // pedindo uma (backend AccountService.deleteAccount): é o que separa o
+                // dono de quem encontrar o aparelho aberto — e criá-la pelo link do
+                // e-mail prova a mesma coisa.
+                <p className="mt-3 rounded-lg border border-ink/10 bg-paper px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-soft">
+                  Sua conta entra com o Google e ainda não tem senha. A exclusão pede uma — é o que separa
+                  você de quem encontrar este aparelho aberto. Crie em{' '}
+                  <Link to="/esqueci-senha" className="font-semibold text-burgundy underline underline-offset-2">
+                    Esqueci minha senha
+                  </Link>{' '}
+                  (o link chega no seu e-mail) e volte aqui.
+                </p>
+              ) : !abrindoExclusao ? (
                 <button
                   type="button"
                   onClick={() => setAbrindoExclusao(true)}
@@ -355,9 +368,23 @@ function TrocaDeSenha() {
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-[17px] font-semibold text-ink">Sua senha</h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
-            Trocar a senha encerra a sessão em todos os outros aparelhos — este continua conectado.
-          </p>
+          {user?.temSenha === false ? (
+            // Conta criada pelo Google nasce sem senha: não há "senha atual" a
+            // pedir, e o formulário de troca seria uma porta que não abre. O
+            // caminho para criar uma é o link por e-mail, que prova a mesma coisa.
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              Você entra com o Google e ainda não tem senha aqui. Se quiser uma — para entrar sem o Google,
+              ou para excluir a conta —, peça o link em{' '}
+              <Link to="/esqueci-senha" className="font-semibold text-burgundy underline underline-offset-2">
+                Esqueci minha senha
+              </Link>
+              . Ele chega no seu e-mail.
+            </p>
+          ) : (
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              Trocar a senha encerra a sessão em todos os outros aparelhos — este continua conectado.
+            </p>
+          )}
 
           {ok !== null && (
             <p className="mt-3 flex items-start gap-2 rounded-lg border border-brass/30 bg-brass/[0.07] px-3 py-2 text-[13px] text-ink-soft">
@@ -371,7 +398,7 @@ function TrocaDeSenha() {
             </p>
           )}
 
-          {!aberto ? (
+          {user?.temSenha === false ? null : !aberto ? (
             <button
               type="button"
               onClick={() => {

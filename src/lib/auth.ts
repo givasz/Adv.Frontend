@@ -16,7 +16,7 @@
 // OBRIGATÓRIA para assinar um plano pago. O gate vive na UI (ver `requireAccount`).
 
 import { useSyncExternalStore } from 'react'
-import { apiFetch, setCsrfToken, TEM_BACKEND } from './http'
+import { API_BASE, apiFetch, setCsrfToken, TEM_BACKEND } from './http'
 import { passwordProblem } from './passwordStrength'
 import { TERMS_VERSION } from './legalIdentity'
 
@@ -43,6 +43,14 @@ export interface AuthUser {
    * vai chegar seria uma faixa que ninguém consegue fazer sumir.
    */
   emailPending?: boolean
+  /**
+   * A conta tem senha? Conta criada pelo "Continuar com o Google" nasce sem, e
+   * as telas que pedem a senha (trocar senha, excluir conta) mostram o caminho
+   * para criar uma. Ausente (retrato antigo) = tem, que era o único caso.
+   */
+  temSenha?: boolean
+  /** A conta está ligada a uma conta Google. */
+  google?: boolean
 }
 
 export interface Session {
@@ -518,6 +526,64 @@ export async function correioAtivo(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+// ---- Continuar com o Google -------------------------------------------------
+
+let consultaDoGoogle: Promise<boolean> | null = null
+
+/**
+ * O servidor oferece a entrada com o Google agora?
+ *
+ * Só com as chaves configuradas E a Política declarando o Google (ver backend
+ * src/auth/google.ts). Uma pergunta por carregamento de página: trocar de
+ * "Entrar" para "Criar conta" não pergunta de novo. Sem backend (mock), não.
+ */
+export function googleAtivo(): Promise<boolean> {
+  if (!useReal) return Promise.resolve(false)
+  consultaDoGoogle ??= apiFetch('/api/auth/google')
+    .then(async (res) => res.ok && ((await res.json()) as { ativo?: unknown }).ativo === true)
+    .catch(() => false)
+  return consultaDoGoogle
+}
+
+/**
+ * O endereço que leva ao Google. É navegação de verdade (link, mesma aba), e
+ * não fetch: quem manda o navegador ao Google é o servidor, com o pedido selado
+ * num cookie. `lembrar` e `next` atravessam o Google dentro desse cookie.
+ */
+export function urlEntrarComGoogle(next: string, lembrar: boolean): string {
+  const q = new URLSearchParams({ lembrar: lembrar ? '1' : '0', next })
+  return `${API_BASE}/api/auth/google/entrar?${q}`
+}
+
+export type ConclusaoGoogle =
+  /** Conta nova: falta o aceite dos Termos. Nada foi criado ainda. */
+  | { etapa: 'aceite'; email: string; nome: string }
+  | { etapa: 'sessao'; session: Session; next: string; senhaDesligada: boolean }
+
+/**
+ * Pede a sessão depois da volta do Google (tela /entrar/google).
+ *
+ * Com `aceitouTermos`, cria a conta se ela ainda não existir — o servidor recusa
+ * criar sem, do mesmo jeito que recusa o cadastro por e-mail sem a caixa.
+ */
+export async function concluirGoogle(aceitouTermos: boolean): Promise<ConclusaoGoogle> {
+  const res = await apiFetch('/api/auth/google/concluir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ aceitouTermos }),
+  })
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível entrar com o Google.'))
+  }
+  const dados = (await res.json()) as
+    | { etapa: 'aceite'; email?: string; nome?: string }
+    | (RespostaSessao & { etapa: 'sessao'; next?: string; senhaDesligada?: boolean })
+  if (dados.etapa === 'aceite') return { etapa: 'aceite', email: dados.email ?? '', nome: dados.nome ?? '' }
+  const session = aplicar(dados)
+  await confirmarCookie()
+  return { etapa: 'sessao', session, next: dados.next ?? '/painel', senhaDesligada: !!dados.senhaDesligada }
 }
 
 /**
