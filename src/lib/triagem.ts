@@ -372,6 +372,92 @@ export function resolveTriagem(profile: Pick<Profile, 'triage'>): TriagemConfig 
 }
 
 /**
+ * A triagem na forma que o EDITOR usa: estrutura garantida, texto intocado.
+ *
+ * Existe por causa de um defeito que o normalizador do servidor causava quando
+ * era aplicado a cada tecla: ele faz `trim()`, então o espaço digitado no fim
+ * sumia antes da letra seguinte ("Em " virava "Em", e a frase saía
+ * "Emqualcidade"); e ele descarta opção vazia, então a opção recém-criada morria
+ * antes de aparecer — "+ Adicionar opção" não adicionava nada.
+ *
+ * O servidor continua limpando tudo ao gravar, e a conversa continua lendo a
+ * forma limpa. Aqui só se garante o que a TELA precisa para não quebrar: tipo
+ * válido, opções como objetos, as listas fixas de "sim/não" e de atendimento, e
+ * os caminhos só para frente — esses, sim, com a mesma regra do servidor, para
+ * que mover uma pergunta nunca deixe um loop desenhado na tela nem por um instante.
+ *
+ * Aplicar duas vezes dá o mesmo resultado, e é isso que permite usá-la em toda
+ * alteração sem acumular efeito.
+ */
+export function triagemEmEdicao(raw: unknown): TriagemConfig {
+  const bruto = (raw ?? {}) as Partial<TriagemConfig>
+  const lista: unknown[] = Array.isArray(bruto.questions) ? bruto.questions : []
+  const questions: PerguntaDeTriagem[] = []
+
+  for (const item of lista) {
+    if (questions.length === TRIAGEM_MAX_PERGUNTAS) break
+    if (!item || typeof item !== 'object') continue
+    const q = item as Partial<PerguntaDeTriagem>
+    const kind: TipoDePergunta =
+      q.kind && TIPOS_DE_PERGUNTA.includes(q.kind) ? q.kind : 'texto'
+    const pergunta: PerguntaDeTriagem = {
+      id: String(q.id ?? `t${questions.length + 1}`),
+      kind,
+      // Sem trim e sem juntar espaços: é o texto sendo digitado.
+      label: typeof q.label === 'string' ? q.label.slice(0, TRIAGEM_LABEL_MAX) : '',
+    }
+    const opcoesBrutas: unknown[] = Array.isArray(q.options) ? q.options : []
+    if (TIPOS_COM_OPCOES.includes(kind)) {
+      // Opção VAZIA fica: é a que acabou de ser criada e ainda vai ser escrita.
+      pergunta.options = opcoesBrutas.slice(0, TRIAGEM_MAX_OPCOES).map((o, j) => {
+        const bruta = (typeof o === 'string' ? { texto: o } : (o ?? {})) as Partial<OpcaoDeTriagem>
+        const opcao: OpcaoDeTriagem = {
+          id: String(bruta.id ?? `o${j + 1}`),
+          texto: typeof bruta.texto === 'string' ? bruta.texto.slice(0, TRIAGEM_OPCAO_MAX) : '',
+        }
+        if (bruta.proxima) opcao.proxima = String(bruta.proxima)
+        return opcao
+      })
+    } else if (OPCOES_FIXAS[kind]) {
+      // Trocar o tipo para "sim/não" já traz as duas opções — sem elas não
+      // haveria de onde puxar o caminho de cada resposta.
+      const anteriores = new Map(
+        opcoesBrutas
+          .filter((o): o is OpcaoDeTriagem => !!o && typeof o === 'object')
+          .map((o) => [String(o.id ?? ''), o.proxima]),
+      )
+      pergunta.options = (OPCOES_FIXAS[kind] ?? []).map((o) => {
+        const destino = anteriores.get(o.id)
+        return destino ? { ...o, proxima: destino } : { ...o }
+      })
+    }
+    if (q.optional === true) pergunta.optional = true
+    if (q.proxima) pergunta.proxima = String(q.proxima)
+    questions.push(pergunta)
+  }
+
+  const indicePorId = new Map(questions.map((x, i) => [x.id, i]))
+  const valido = (destino: string | undefined, i: number): string | undefined => {
+    if (!destino) return undefined
+    if (destino === FIM_DA_TRIAGEM) return FIM_DA_TRIAGEM
+    const alvo = indicePorId.get(destino)
+    return alvo !== undefined && alvo > i ? destino : undefined
+  }
+  questions.forEach((x, i) => {
+    const daPergunta = valido(x.proxima, i)
+    if (daPergunta) x.proxima = daPergunta
+    else delete x.proxima
+    for (const o of x.options ?? []) {
+      const daOpcao = x.kind === 'multipla' ? undefined : valido(o.proxima, i)
+      if (daOpcao) o.proxima = daOpcao
+      else delete o.proxima
+    }
+  })
+
+  return { enabled: bruto.enabled === true, questions }
+}
+
+/**
  * A triagem vale para ESTE perfil? Plano, interruptor e ao menos uma pergunta
  * respondível — as três coisas, e nesta ordem.
  *

@@ -13,12 +13,14 @@ import {
   normalizarTriagem,
   perguntasAlcancaveis,
   perguntasUtilizaveis,
-  resolveTriagem,
   roteiroDaConversa,
   TRIAGEM_LABEL_MAX,
   TRIAGEM_MAX_OPCOES,
   TRIAGEM_MAX_PERGUNTAS,
   TRIAGEM_OPCAO_MAX,
+  TRIAGEM_VAZIA,
+  TIPOS_UNICOS,
+  triagemEmEdicao,
 } from '@/lib/triagem'
 import {
   AVISO_DOS_MODELOS,
@@ -75,15 +77,26 @@ export function TriagemCard({
   /** sai do editor gravando o que estiver em voo (ver Editor.irPara) */
   irPara?: (destino: string) => void
 }) {
-  const config = useMemo(() => resolveTriagem(profile), [profile.triage])
+  // O editor trabalha com o texto CRU. Passar cada tecla pelo normalizador do
+  // servidor comia o espaço digitado no fim ("Em " virava "Em") e descartava a
+  // opção recém-criada, ainda vazia. Quem limpa o texto é o servidor, ao
+  // gravar; aqui só se garante a forma — ver triagemEmEdicao.
+  const config = useMemo(
+    () => triagemEmEdicao(profile.triage ?? TRIAGEM_VAZIA),
+    [profile.triage],
+  )
   const perguntas = config.questions
+  // As contas de CAMINHO (roteiro, quem é alcançável) usam a forma que a
+  // conversa vai ler: texto limpo, perguntas incompletas de fora.
+  const normalizadas = useMemo(() => normalizarTriagem(config).questions, [config])
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [verModelos, setVerModelos] = useState(false)
 
   const areas = profile.areas.map((a) => a.label.trim()).filter(Boolean)
   const modelos = useMemo(() => modelosDeTriagem(areas), [areas.join('|')])
   const assistenteLigado = resolveSchedulingMode(profile) === 'assistant'
-  const utilizaveis = perguntasUtilizaveis(perguntas)
+  const utilizaveis = perguntasUtilizaveis(normalizadas)
+  const idsUtilizaveis = new Set(utilizaveis.map((q) => q.id))
   const bothFormats = profile.serviceMode.inPerson && profile.serviceMode.online
   const temAtendimento = perguntas.some((q) => q.kind === 'atendimento')
   const temContato = perguntas.some((q) => q.kind === 'contato')
@@ -96,17 +109,17 @@ export function TriagemCard({
     [assistenteLigado, profile.assistant],
   )
   const roteiro = useMemo(
-    () => roteiroDaConversa(perguntas, { comHorarios, dosDoisJeitos: bothFormats }),
-    [perguntas, comHorarios, bothFormats],
+    () => roteiroDaConversa(normalizadas, { comHorarios, dosDoisJeitos: bothFormats }),
+    [normalizadas, comHorarios, bothFormats],
   )
   // Quem a conversa consegue alcançar. O defeito clássico de todo formulário com
   // caminhos é a pergunta para a qual ninguém é mandado: ela fica na tela,
   // parece no ar, e nunca é feita a ninguém.
-  const alcancaveis = useMemo(() => perguntasAlcancaveis(perguntas), [perguntas])
+  const alcancaveis = useMemo(() => perguntasAlcancaveis(normalizadas), [normalizadas])
 
   const patch = (questions: PerguntaDeTriagem[], enabled = config.enabled) => {
     if (preview) return
-    set({ triage: normalizarTriagem({ enabled, questions }) })
+    set({ triage: triagemEmEdicao({ enabled, questions }) })
   }
 
   const trocar = (id: string, p: Partial<PerguntaDeTriagem>) =>
@@ -246,7 +259,10 @@ export function TriagemCard({
                 indice={i}
                 total={perguntas.length}
                 destinos={destinosPossiveis(perguntas, i)}
-                alcancavel={alcancaveis.has(q.id)}
+                // Pergunta INCOMPLETA não é órfã: ela já diz o que falta ("sem
+                // opções ainda"), e o selo de "ninguém chega" só confundiria.
+                alcancavel={!idsUtilizaveis.has(q.id) || alcancaveis.has(q.id)}
+                tiposOcupados={perguntas.filter((x) => x.id !== q.id).map((x) => x.kind)}
                 aberta={abertaId === q.id}
                 preview={preview}
                 onAbrir={() => setAbertaId(abertaId === q.id ? null : q.id)}
@@ -473,6 +489,7 @@ function PerguntaItem({
   total,
   destinos,
   alcancavel,
+  tiposOcupados,
   aberta,
   preview,
   onAbrir,
@@ -487,6 +504,8 @@ function PerguntaItem({
   destinos: DestinoPossivel[]
   /** a conversa consegue chegar até aqui? */
   alcancavel: boolean
+  /** tipos já usados por OUTRAS perguntas — nome e formato só cabem uma vez */
+  tiposOcupados: TipoDePergunta[]
   aberta: boolean
   preview: boolean
   onAbrir: () => void
@@ -496,11 +515,13 @@ function PerguntaItem({
 }) {
   const meta = TIPO_META[pergunta.kind]
   // Enunciado E opções: o visitante lê os dois, e é nas opções que ele toca.
+  const textosDaPergunta = [pergunta.label, ...(pergunta.options ?? []).map((o) => o.texto)]
   const achados = useMemo(
     () => conferirPerguntaInteira(pergunta),
-    [pergunta.label, pergunta.options?.join('|')],
+    // Pelos TEXTOS: as opções são objetos, e `join` de objeto dá sempre
+    // "[object Object]" — o aviso não acordava quando se escrevia numa opção.
+    [textosDaPergunta.join('|')],
   )
-  const textosDaPergunta = [pergunta.label, ...(pergunta.options ?? []).map((o) => o.texto)]
   const issues = useMemo(
     () => checkCompliance(textosDaPergunta.join(' ')),
     [textosDaPergunta.join('|')],
@@ -616,6 +637,12 @@ function PerguntaItem({
                   key={k}
                   type="button"
                   aria-pressed={pergunta.kind === k}
+                  // Nome e formato alimentam campos únicos da mensagem: uma
+                  // segunda pergunta desse tipo seria descartada ao gravar.
+                  // Melhor não deixar escolher do que deixar sumir.
+                  disabled={
+                    pergunta.kind !== k && TIPOS_UNICOS.includes(k) && tiposOcupados.includes(k)
+                  }
                   onClick={() =>
                     onTrocar({
                       kind: k,
@@ -629,7 +656,7 @@ function PerguntaItem({
                           : undefined,
                     })
                   }
-                  className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                     pergunta.kind === k
                       ? 'border-burgundy bg-burgundy/[0.07] text-burgundy'
                       : 'border-ink/15 text-ink-soft hover:border-brass/50'

@@ -728,6 +728,33 @@ async function acessibilidadeDaTriagem() {
       if ((await itens.count()) !== antes + 1) {
         erros.push('“+ Adicionar pergunta” não adicionou nada')
       }
+
+      // DIGITAR tem de funcionar. O editor passava cada tecla pelo normalizador
+      // do servidor, que come o espaço do fim — "Em " virava "Em" e a frase
+      // saía "Emqualcidade". `fill` escreveria tudo de uma vez e NÃO pegaria
+      // isso: é tecla por tecla, como uma pessoa digita.
+      const enunciado = pagina.getByPlaceholder('Qual assunto você deseja tratar?')
+      await enunciado.pressSequentially('Em qual cidade')
+      const escrito = await enunciado.inputValue()
+      if (escrito !== 'Em qual cidade') {
+        erros.push(`o enunciado não aceita espaço (ficou "${escrito}")`)
+      }
+      // A pergunta nova de escolha nasce com dois campos de opção — que o mesmo
+      // normalizador descartava por estarem vazios.
+      const opcao1 = pagina.getByLabel('Opção 1', { exact: true })
+      if (!(await opcao1.count())) {
+        erros.push('a pergunta nova nasceu sem campos de opção')
+      } else {
+        await opcao1.pressSequentially('Belo Horizonte')
+        const opcaoEscrita = await opcao1.inputValue()
+        if (opcaoEscrita !== 'Belo Horizonte') {
+          erros.push(`a opção não aceita espaço (ficou "${opcaoEscrita}")`)
+        }
+      }
+      await clicar(pagina, '+ Adicionar opção')
+      if ((await pagina.getByLabel('Opção 3', { exact: true }).count()) !== 1) {
+        erros.push('“+ Adicionar opção” não adicionou nada')
+      }
       // E excluir tem de excluir.
       await pagina.getByRole('button', { name: `Excluir a pergunta ${antes + 1}` }).click()
       await itens.nth(antes).waitFor({ state: 'detached', timeout: ESPERA })
