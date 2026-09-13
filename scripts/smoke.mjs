@@ -101,6 +101,7 @@ const ROTAS = [
   ['/editor?section=video', 'editor · vídeo'],
   // A grade do assistente. A conversa em si tem página própria (ver /agenda).
   ['/editor?section=agenda', 'editor · agenda'],
+  ['/editor?section=botao', 'editor · botão flutuante'],
   // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
   ['/agenda', 'sua agenda (conversa do advogado)'],
   // Contratos: a mesa de documentos e a conferência PÚBLICA — o documento em

@@ -94,6 +94,12 @@ export interface ContactChannels {
 // termina no WhatsApp do advogado. Ver lib/assistant.ts.
 export type SchedulingMode = 'off' | 'external' | 'whatsapp' | 'assistant'
 
+/**
+ * O botão que acompanha a rolagem no canto do perfil — um só, escolhido pelo
+ * advogado: o WhatsApp, o assistente virtual, ou nenhum. Ver lib/botaoFlutuante.ts.
+ */
+export type BotaoFlutuante = 'off' | 'whatsapp' | 'assistant'
+
 /** Uma faixa de atendimento do dia: "das 07:00 às 11:00". */
 export interface FaixaDeAtendimento {
   inicio: string
@@ -147,6 +153,9 @@ export interface AssistantConfig {
    * visitante é o oposto da sobriedade que o Prov. 205/2021 pede — ele cabe em
    * quem atende muito pelo perfil, e não cabe em quem prefere uma página
    * discreta. Perk de plano pago (Pro e Max): a trava vale no servidor.
+   *
+   * LEGADO desde 13/09/2026: a escolha agora é `Profile.floating`, que também
+   * oferece o WhatsApp. Este campo só é lido quando aquele não veio.
    */
   floating?: boolean
 }
@@ -244,6 +253,12 @@ export interface Profile {
   booking?: BookingConfig
   /** config do assistente virtual (só relevante no modo 'assistant') */
   assistant?: AssistantConfig
+  /**
+   * O botão no canto do perfil: WhatsApp, assistente ou nenhum. Desligado por
+   * padrão, e o servidor já manda 'off' fora do Pro e do Max. Ausente = perfil
+   * anterior à escolha (vale `assistant.floating`).
+   */
+  floating?: BotaoFlutuante
   /**
    * O plano que VALE AGORA. Não é necessariamente o que foi contratado: quando a
    * cobrança falha e a carência acaba, o servidor devolve `free` aqui mesmo com o

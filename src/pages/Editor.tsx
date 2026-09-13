@@ -50,6 +50,7 @@ import { AuditReportCard } from '@/components/editor/AuditReportCard'
 import { MetricasCard } from '@/components/editor/MetricasCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
+import { BotaoFlutuanteCard } from '@/components/editor/BotaoFlutuanteCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { CampoUnico } from '@/components/editor/CampoUnico'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
@@ -489,6 +490,24 @@ export default function Editor() {
                       onOpen={() => abrirUpsell('agenda')}
                     >
                       <SchedulingCard profile={profile} set={() => {}} preview />
+                    </LockedFeature>
+                  )}
+                </Card>
+              )}
+
+              {section === 'botao' && (
+                <Card title="Botão flutuante">
+                  {canUseScheduling(profile.plan) ? (
+                    <BotaoFlutuanteCard profile={profile} set={set} />
+                  ) : (
+                    // Free: a escolha fica no lugar, borrada sob o cadeado — mesmo
+                    // tratamento da agenda, que é do mesmo plano.
+                    <LockedFeature
+                      unlockPlan={nextPlan(profile.plan) ?? 'pro'}
+                      points={featurePoints('agenda')}
+                      onOpen={() => abrirUpsell('agenda')}
+                    >
+                      <BotaoFlutuanteCard profile={profile} set={() => {}} preview />
                     </LockedFeature>
                   )}
                 </Card>

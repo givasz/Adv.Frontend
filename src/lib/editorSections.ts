@@ -29,6 +29,7 @@ import { resolveAssistantConfig, weeklySlotCount } from './assistant'
 import { getTheme, THEMES, isThemeUnlocked } from './themes'
 import { parseVideoUrl } from './video'
 import { enderecoVisivel, temEndereco } from './endereco'
+import { botaoFlutuanteEscolhido } from './botaoFlutuante'
 
 export type SectionId =
   | 'identidade'
@@ -37,6 +38,7 @@ export type SectionId =
   | 'bio'
   | 'redes'
   | 'agenda'
+  | 'botao'
   | 'faq'
   | 'video'
   | 'aparencia'
@@ -274,6 +276,32 @@ export const SECTIONS: Record<SectionId, SectionMeta> = {
     },
   },
 
+  botao: {
+    id: 'botao',
+    title: 'Botão flutuante',
+    short: 'Botão flutuante',
+    subtitle: 'Um atalho no canto do perfil: o seu WhatsApp ou o assistente virtual.',
+    group: 'perfil',
+    plan: 'pro',
+    keywords: ['flutuante', 'botão flutuante', 'balão', 'atalho', 'canto', 'whatsapp flutuante', 'assistente flutuante'],
+    campos: [],
+    resumo: (p) => {
+      if (!canUseScheduling(p.plan)) return { texto: 'WhatsApp ou assistente no canto do perfil — a partir do Pro.' }
+      const escolha = botaoFlutuanteEscolhido(p)
+      if (escolha === 'whatsapp') {
+        return p.contact.whatsapp
+          ? { texto: 'WhatsApp no canto do perfil.' }
+          : { texto: 'WhatsApp escolhido, mas falta o número em Contato.', pendente: true }
+      }
+      if (escolha === 'assistant') {
+        return resolveSchedulingMode(p) === 'assistant'
+          ? { texto: 'Assistente virtual no canto do perfil.' }
+          : { texto: 'Assistente escolhido, mas ele está desligado na Agenda.', pendente: true }
+      }
+      return { texto: 'Nenhum — o perfil não tem atalho no canto.' }
+    },
+  },
+
   faq: {
     id: 'faq',
     title: 'Perguntas frequentes',
@@ -416,7 +444,7 @@ export const SECTION_IDS = Object.keys(SECTIONS) as SectionId[]
 
 /** Ordem de exibição dentro de cada grupo — do mais mexido para o menos. */
 export const SECTIONS_BY_GROUP: Record<SectionGroup, SectionId[]> = {
-  perfil: ['identidade', 'bio', 'redes', 'areas', 'local', 'agenda', 'faq', 'aparencia', 'video', 'marca'],
+  perfil: ['identidade', 'bio', 'redes', 'areas', 'local', 'agenda', 'botao', 'faq', 'aparencia', 'video', 'marca'],
   ferramentas: ['analytics', 'qrcode', 'cartao', 'conteudo'],
   conta: ['plano'],
 }

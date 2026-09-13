@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { AssistantConfig, FaixaDeAtendimento, Profile } from '@/lib/types'
 import { WEEKDAYS_FULL, WEEKDAYS_SHORT } from '@/lib/booking'
 import {
@@ -17,7 +18,7 @@ import {
 } from '@/lib/assistant'
 import { checkCompliance } from '@/lib/oab'
 import { AgendaOcupados } from './AgendaOcupados'
-import { Field, TextArea, Toggle } from './fields'
+import { Field, TextArea } from './fields'
 import { InfoTip } from './InfoTip'
 import { comVolta } from '@/components/ui/SubPage'
 import { MarginNotes } from './MarginNotes'
@@ -372,19 +373,18 @@ export function AssistantCard({
           </Field>
           <MarginNotes issues={greetingIssues} />
 
-          {/* 6 — balão no canto da página */}
-          <div className="rounded-lg border border-ink/10 bg-paper-deep/60 p-3">
-            <Toggle
-              checked={config.floating === true}
-              onChange={(floating) => patch({ floating })}
-              label="Mostrar um balão de conversa no canto do perfil"
-            />
-            <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-              {config.floating
-                ? 'O balão acompanha a rolagem e abre esta mesma conversa. Ele não pede nada a quem visita: quem escreve é a pessoa, no WhatsApp dela.'
-                : 'Desligado, o agendamento continua no corpo da página — o balão é só um atalho a mais, sempre à vista.'}
-            </p>
-          </div>
+          {/* 6 — o atalho no canto do perfil mora em "Botão flutuante": lá o
+              advogado escolhe entre este assistente e o WhatsApp — um só. */}
+          <p className="rounded-lg border border-ink/10 bg-paper-deep/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink-faint">
+            Quer um atalho no canto do perfil que abre esta conversa? Escolha o assistente em{' '}
+            <Link
+              to="/editor?section=botao"
+              className="font-semibold text-burgundy underline-offset-4 hover:underline"
+            >
+              Botão flutuante
+            </Link>
+            .
+          </p>
 
 
           {/* A grade tem horário, mas nenhum chega à conversa: sem este aviso o

@@ -15,6 +15,7 @@ import {
   SparkIcon,
   TagIcon,
   UserIcon,
+  WhatsappIcon,
 } from '@/components/ui/icons'
 
 export type SectionIcon = (p: { width?: number; height?: number; className?: string }) => JSX.Element
@@ -29,6 +30,7 @@ export const SECTION_ICON: Record<SectionId, SectionIcon> = {
   areas: TagIcon,
   local: PinIcon,
   agenda: CalendarIcon,
+  botao: WhatsappIcon,
   faq: InfoIcon,
   aparencia: PaletteIcon,
   video: PlayIcon,

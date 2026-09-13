@@ -118,11 +118,11 @@ export const sampleProfile: Profile = {
     leadHours: 2,
     horizonDays: 14,
     greeting: '',
-    // Ligado no exemplo para o recurso aparecer onde a maioria o vê pela
-    // primeira vez. No produto ele nasce DESLIGADO em todo perfil — quem liga é
-    // o advogado, no editor.
-    floating: true,
   },
+  // Botão no canto ligado no exemplo, com o assistente, para o recurso aparecer
+  // onde a maioria o vê pela primeira vez. No produto ele nasce DESLIGADO em todo
+  // perfil — quem escolhe é o advogado, em "Botão flutuante".
+  floating: 'assistant',
   plan: 'premium',
   // Névoa e não o Papel padrão: o exemplo é a primeira coisa que alguém vê do
   // produto, e a grotesca fria do Névoa (Archivo nos títulos) mostra melhor que

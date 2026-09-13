@@ -20,7 +20,8 @@ import { canUseFaq, canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
 import { Avatar } from '@/components/ui/Avatar'
 import { VideoPlayer } from '@/components/profile/VideoPlayer'
-import { BalaoDeConversa, balaoVisivel } from '@/components/profile/BalaoDeConversa'
+import { BalaoDeConversa } from '@/components/profile/BalaoDeConversa'
+import { botaoFlutuante } from '@/lib/botaoFlutuante'
 
 // A conversa completa (com toda a maquina de roteiro em lib/assistant e
 // components/assistant) so abre na DEMONSTRACAO da home — no perfil de verdade
@@ -152,6 +153,9 @@ export function ProfileView({
     profile.contact.whatsapp,
     `Olá, ${profile.name.split(' ')[0]}! Vim pelo seu perfil no advoc.me e gostaria de tirar uma dúvida.`,
   )
+  // O botão no canto — o WhatsApp ou o assistente, o que o advogado escolheu, e
+  // só se o que ele precisa existe. Ver lib/botaoFlutuante.ts.
+  const flutuante = botaoFlutuante(profile, { schedulingMode, temWhatsapp: !!waHref })
   // Como a âncora abre: mesma aba no celular (o navegador embutido do Instagram
   // descarta `_blank` em silêncio), aba nova no computador. Ver lib/whatsapp.ts.
   const waAlvo = comoAbrirWhatsapp()
@@ -603,20 +607,24 @@ export function ProfileView({
         </m.footer>
       </m.div>
 
-      {/* Balão de conversa no canto — atalho para a MESMA conversa do corpo da
-          página. Três condições, e todas precisam valer:
-            • o advogado ligou (`assistant.floating`, desligado por padrão);
-            • o servidor deixou (o campo só vem `true` em Pro/Max);
-            • o assistente é de fato o modo de agendamento escolhido — um
-              atalho para uma conversa que não existe seria um botão quebrado.
-          `canSchedule` mantém a prévia do editor inerte, como o resto. */}
-      {balaoVisivel(profile, { schedulingMode }) && (
+      {/* Botão no canto — o atalho que acompanha a rolagem. O advogado escolhe UM
+          (ou nenhum) em "Botão flutuante": o WhatsApp, ou o assistente que abre a
+          MESMA conversa do corpo da página. Só aparece com a condição do tipo
+          valendo — número que serve, ou o assistente como modo de agendamento —,
+          e o servidor já manda 'off' fora do Pro e do Max. */}
+      {flutuante && (
         <BalaoDeConversa
           profile={profile}
+          tipo={flutuante}
+          // O MESMO link e o MESMO clique do botão de WhatsApp do corpo: no
+          // exemplo não sai da página, no perfil de verdade conta a métrica.
+          whatsapp={waHref ? { href: destino(waHref) ?? waHref, onClick: clique('whatsapp') } : undefined}
           demo={demoChat}
           // Na prévia do editor ele APARECE e não navega — é onde o advogado
-          // acabou de ligar o interruptor, e precisa ver o que ligou.
-          inert={!canSchedule}
+          // acabou de escolher, e precisa ver o que escolheu. O do WhatsApp só
+          // fica inerte na prévia; o do assistente segue `canSchedule`, que
+          // mantém viva a conversa da demonstração da home.
+          inert={flutuante === 'whatsapp' ? !!preview : !canSchedule}
           onDemo={() => setSchedOpen(true)}
         />
       )}

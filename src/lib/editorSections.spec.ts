@@ -104,6 +104,21 @@ describe('editorSections — resumo do que está preenchido', () => {
     expect(SECTIONS.cartao.resumo(essencial).pendente).toBeFalsy()
   })
 
+  it('o botão flutuante diz a escolha, e aponta o que falta para ela aparecer', () => {
+    const pro = { ...sampleProfile, plan: 'pro' as const }
+    expect(SECTIONS.botao.resumo({ ...pro, floating: 'whatsapp' }).texto).toBe('WhatsApp no canto do perfil.')
+    expect(
+      SECTIONS.botao.resumo({ ...pro, floating: 'whatsapp', contact: {} }).pendente,
+    ).toBe(true)
+    expect(
+      SECTIONS.botao.resumo({ ...pro, floating: 'assistant', schedulingMode: 'off' }).pendente,
+    ).toBe(true)
+    expect(SECTIONS.botao.resumo({ ...pro, floating: 'off' }).pendente).toBeFalsy()
+    // No Free é recurso travado — não é tarefa pendente.
+    expect(SECTIONS.botao.resumo(essencial).pendente).toBeFalsy()
+    expect(sectionUnlocked('botao', 'free')).toBe(false)
+  })
+
   it('a agenda com assistente ligado conta os horários da semana', () => {
     const r = SECTIONS.agenda.resumo({ ...sampleProfile, plan: 'pro', schedulingMode: 'assistant' })
     expect(r.texto).toMatch(/Assistente ligado · \d+ horários? por semana/)
@@ -165,6 +180,7 @@ describe('editorSections — busca', () => {
     expect(primeiro('perguntas').section).toBe('faq')
     expect(primeiro('cancelar').section).toBe('plano')
     expect(primeiro('visitas').section).toBe('analytics')
+    expect(primeiro('flutuante').section).toBe('botao')
   })
 
   it('começo de palavra vale mais do que trecho no meio', () => {

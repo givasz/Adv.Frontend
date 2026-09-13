@@ -8,10 +8,15 @@ import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { registrarEvento } from '@/lib/eventos'
 import { themeStyle } from '@/lib/themes'
-import { SparkIcon, XIcon } from '@/components/ui/icons'
+import { comoAbrirWhatsapp } from '@/lib/whatsapp'
+import { SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import { assistantTitle } from '@/lib/assistantTitle'
 
 // O balão de conversa — o atalho que segue a rolagem no canto do perfil.
+//
+// Desde 13/09/2026 ele tem DOIS tipos, e o advogado escolhe um (ou nenhum) em
+// "Botão flutuante": o atalho para o assistente, e o atalho para o WhatsApp.
+// Quem decide QUAL aparece é lib/botaoFlutuante.ts; aqui só se desenha.
 //
 // ---------------------------------------------------------------------------
 // O QUE ELE É, E O QUE ELE DELIBERADAMENTE NÃO É
@@ -42,9 +47,9 @@ import { assistantTitle } from '@/lib/assistantTitle'
 // formulário nenhum (escreve do WhatsApp dele, onde já está logado) e o
 // advogado recebe a mensagem no lugar onde de fato atende.
 //
-// TRAVA DE PLANO: quem decide é o servidor. `profile.assistant.floating` só
-// chega `true` em perfil Pro ou Max (ver backend, buildAssistant) — aqui a
-// conferência é a segunda camada, para a prévia do editor obedecer também.
+// TRAVA DE PLANO: quem decide é o servidor. `profile.floating` só chega
+// diferente de 'off' em perfil Pro ou Max (ver backend, botao-flutuante.ts) —
+// lib/botaoFlutuante.ts confere de novo, para a prévia do editor obedecer também.
 // ---------------------------------------------------------------------------
 
 /** Depois de quantos pixels de rolagem o balão aparece, numa página de verdade. */
@@ -78,36 +83,30 @@ function paiQueRola(el: HTMLElement | null): HTMLElement | null {
 export const BALAO_ROTULO = 'Agendar uma conversa'
 
 /**
- * O balão deve aparecer neste perfil?
- *
- * Três condições, e as três precisam valer:
- *   • o advogado LIGOU (`assistant.floating`, desligado por padrão);
- *   • o servidor deixou — o campo só chega `true` em Pro/Max (buildAssistant);
- *   • o assistente é de fato o modo de agendamento escolhido, senão o balão
- *     seria um atalho para uma conversa que não existe.
- *
- * Função pura e exportada para ter teste: a decisão de mostrar um elemento que
- * persegue o visitante é exatamente o tipo de coisa que não pode regredir num
- * refactor de JSX.
+ * O rótulo do atalho de WhatsApp — o MESMO do botão de WhatsApp do corpo da
+ * página. Dois textos para o mesmo gesto fariam o visitante achar que são coisas
+ * diferentes. Passa pelos mesmos testes de conformidade do rótulo acima: REGRAS.md
+ * permite botão de contato, desde que sem apelo ("Contrate pelo WhatsApp" não).
  */
-export function balaoVisivel(
-  profile: Pick<Profile, 'assistant'>,
-  opcoes: { schedulingMode: string },
-): boolean {
-  if (profile.assistant?.floating !== true) return false
-  // Sem o assistente como modo de agendamento, o balão seria um atalho para uma
-  // conversa que não existe. (E `schedulingMode` já chega 'off' em perfil Free —
-  // `resolveSchedulingMode` consulta o plano —, então a trava paga vem junto.)
-  return opcoes.schedulingMode === 'assistant'
-}
+export const BALAO_ROTULO_WHATSAPP = 'Conversar no WhatsApp'
 
 export function BalaoDeConversa({
   profile,
+  tipo,
+  whatsapp,
   demo = false,
   inert = false,
   onDemo,
 }: {
   profile: Profile
+  /** qual atalho desenhar — decidido por lib/botaoFlutuante.ts */
+  tipo: 'assistant' | 'whatsapp'
+  /**
+   * O link do WhatsApp como o corpo da página o monta: o endereço (ou a âncora
+   * que não sai da página, no perfil de exemplo) e o clique que conta a métrica.
+   * Vem de fora para os dois botões de WhatsApp nunca divergirem.
+   */
+  whatsapp?: { href: string; onClick?: (e: React.MouseEvent) => void }
   /** vitrine da home: o toque abre a conversa ali mesmo, dentro do telefone */
   demo?: boolean
   /**
@@ -170,18 +169,21 @@ export function BalaoDeConversa({
   // e insistir é o que a norma chama de captação.
   if (dispensado) return null
 
+  const ehWhatsapp = tipo === 'whatsapp'
   const conteudo = (
     <>
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15"
         aria-hidden
       >
-        <SparkIcon width={18} height={18} />
+        {ehWhatsapp ? <WhatsappIcon width={18} height={18} /> : <SparkIcon width={18} height={18} />}
       </span>
       <span className="min-w-0 text-left">
-        <span className="block text-[14px] font-semibold leading-tight">{BALAO_ROTULO}</span>
+        <span className="block text-[14px] font-semibold leading-tight">
+          {ehWhatsapp ? BALAO_ROTULO_WHATSAPP : BALAO_ROTULO}
+        </span>
         <span className="block text-[11.5px] leading-tight opacity-80">
-          {assistantTitle(profile)}
+          {ehWhatsapp ? profile.name : assistantTitle(profile)}
         </span>
       </span>
     </>
@@ -233,6 +235,19 @@ export function BalaoDeConversa({
             <div className={classe} style={estilo}>
               {conteudo}
             </div>
+          ) : ehWhatsapp ? (
+            // O WhatsApp não passa pela demonstração da home: quem decide o que
+            // o toque faz é o link do corpo da página, que já sabe lidar com o
+            // perfil de exemplo (não sai) e com a métrica (conta antes de sair).
+            <a
+              href={whatsapp?.href}
+              onClick={whatsapp?.onClick}
+              {...comoAbrirWhatsapp()}
+              className={classe}
+              style={estilo}
+            >
+              {conteudo}
+            </a>
           ) : demo ? (
             <button type="button" onClick={onDemo} className={classe} style={estilo}>
               {conteudo}

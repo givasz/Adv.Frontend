@@ -1,4 +1,4 @@
-// O balão de conversa: quando aparece, e o que ele deliberadamente não é.
+// O botão no canto do perfil: qual aparece, e o que ele deliberadamente não é.
 //
 // ---------------------------------------------------------------------------
 // O PEDIDO, E O QUE FOI CONSTRUÍDO NO LUGAR
@@ -8,8 +8,9 @@
 // conversa sem compromisso :)", com campo de nome, campo de telefone e caixa de
 // consentimento.
 //
-// O que existe aqui é o atalho SEM a captura. Duas razões independentes, e cada
-// uma sozinha já bastaria:
+// O que existe aqui é o atalho SEM a captura — para o assistente ou, desde
+// 13/09/2026, para o WhatsApp. Duas razões independentes, e cada uma sozinha já
+// bastaria:
 //
 //   1. REGRAS.md, sobre a Cartilha do CFOAB: "'caixas de perguntas' e chats não
 //      podem ser usados para capturar clientes disfarçadamente". Quem responde
@@ -23,85 +24,106 @@
 // ---------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest'
-import { balaoVisivel, BALAO_ROTULO } from './BalaoDeConversa'
+import { BALAO_ROTULO, BALAO_ROTULO_WHATSAPP } from './BalaoDeConversa'
+import { botaoFlutuante, botaoFlutuanteEscolhido } from '@/lib/botaoFlutuante'
 import { checkCompliance } from '@/lib/oab'
 import type { Profile } from '@/lib/types'
 
-const perfil = (floating?: boolean) =>
-  ({ assistant: { floating } }) as unknown as Pick<Profile, 'assistant'>
+type P = Pick<Profile, 'floating' | 'assistant' | 'plan'>
+const perfil = (over: Record<string, unknown> = {}) => ({ plan: 'pro', ...over }) as unknown as P
 
-const ligado = { schedulingMode: 'assistant' }
+/** Tudo o que os dois botões precisam: assistente ligado e número que serve. */
+const tudo = { schedulingMode: 'assistant', temWhatsapp: true }
 
-describe('quando o balão aparece', () => {
-  it('aparece quando o advogado ligou e o assistente é o modo escolhido', () => {
-    expect(balaoVisivel(perfil(true), ligado)).toBe(true)
-  })
-
-  it('vale também na prévia do editor — lá ele aparece, só não navega', () => {
-    // Esta decisão NÃO consulta o modo de prévia, e é de propósito: a prévia é
-    // onde o advogado acabou de ligar o interruptor. Um interruptor que não muda
-    // nada na prévia ao lado é indistinguível de um quebrado — a pessoa liga e
-    // desliga procurando o efeito. Quem torna o balão inerte lá é a prop `inert`
-    // do componente, depois de ele ter sido decidido visível aqui.
-    const chaves = Object.keys(ligado)
-    expect(chaves).toEqual(['schedulingMode'])
-  })
-
-  it('NÃO aparece por padrão — ligar é ato deliberado', () => {
+describe('qual botão aparece', () => {
+  it('NÃO aparece nenhum por padrão — ligar é ato deliberado', () => {
     // Um elemento que persegue o visitante é o oposto da sobriedade que o
     // Prov. 205/2021 pede. Ele não pode nascer ligado em perfil nenhum.
-    expect(balaoVisivel(perfil(undefined), ligado)).toBe(false)
-    expect(balaoVisivel(perfil(false), ligado)).toBe(false)
-    expect(balaoVisivel({} as Pick<Profile, 'assistant'>, ligado)).toBe(false)
+    expect(botaoFlutuante(perfil(), tudo)).toBeNull()
+    expect(botaoFlutuante(perfil({ floating: 'off' }), tudo)).toBeNull()
   })
 
-  it('só `true` liga — valor caído do corpo da requisição não vale', () => {
-    for (const lixo of ['true', 1, 'sim', {}]) {
-      expect(balaoVisivel(perfil(lixo as never), ligado)).toBe(false)
-    }
+  it('o WhatsApp aparece com número que serve — e não depende do agendamento', () => {
+    expect(botaoFlutuante(perfil({ floating: 'whatsapp' }), tudo)).toBe('whatsapp')
+    expect(
+      botaoFlutuante(perfil({ floating: 'whatsapp' }), { schedulingMode: 'off', temWhatsapp: true }),
+    ).toBe('whatsapp')
   })
 
-  it('não aparece quando o agendamento não é o assistente', () => {
-    // Seria um atalho para uma conversa que não existe.
+  it('o WhatsApp sem número não aparece — seria um atalho para lugar nenhum', () => {
+    expect(
+      botaoFlutuante(perfil({ floating: 'whatsapp' }), { ...tudo, temWhatsapp: false }),
+    ).toBeNull()
+  })
+
+  it('o assistente só aparece com o assistente como modo de agendamento', () => {
+    expect(botaoFlutuante(perfil({ floating: 'assistant' }), tudo)).toBe('assistant')
     for (const modo of ['off', 'whatsapp', 'external']) {
-      expect(balaoVisivel(perfil(true), { ...ligado, schedulingMode: modo })).toBe(false)
+      expect(
+        botaoFlutuante(perfil({ floating: 'assistant' }), { ...tudo, schedulingMode: modo }),
+      ).toBeNull()
     }
   })
 
-  it('a trava de plano é do SERVIDOR, e o modo já a carrega', () => {
-    // `schedulingMode` chega 'off' em perfil Free (resolveSchedulingMode chama
-    // canUseScheduling), e o campo `floating` só vem `true` do backend em
-    // Pro/Max. São duas camadas independentes, e a de fora é o servidor.
-    expect(balaoVisivel(perfil(true), { schedulingMode: 'off' })).toBe(false)
+  it('nunca os dois: a escolha é uma só', () => {
+    expect(botaoFlutuante(perfil({ floating: 'assistant' }), tudo)).not.toBe('whatsapp')
+    expect(botaoFlutuante(perfil({ floating: 'whatsapp' }), tudo)).not.toBe('assistant')
+  })
+
+  it('fora do Pro e do Max, nenhum — a segunda camada da trava do servidor', () => {
+    expect(botaoFlutuante(perfil({ plan: 'free', floating: 'whatsapp' }), tudo)).toBeNull()
+    expect(botaoFlutuante(perfil({ plan: 'free', floating: 'assistant' }), tudo)).toBeNull()
   })
 })
 
-describe('o texto do balão é publicidade de advogado', () => {
-  it('passa na mesma checagem de conformidade do resto do perfil', () => {
-    expect(checkCompliance(BALAO_ROTULO)).toEqual([])
+describe('perfil de antes da escolha', () => {
+  it('quem tinha o balão do assistente ligado continua com ele', () => {
+    expect(botaoFlutuanteEscolhido(perfil({ assistant: { floating: true } }))).toBe('assistant')
+    expect(botaoFlutuante(perfil({ assistant: { floating: true } }), tudo)).toBe('assistant')
   })
 
-  it('não usa o vocabulário que a norma veda', () => {
-    const texto = BALAO_ROTULO.toLowerCase()
-    // "sem compromisso" e "grátis" são apelo comercial pelos mesmos critérios
-    // (Prov. 205/2021 Art. 3º, I); "agora"/"já" são chamada imperativa
-    // (CED art. 42, V). A frase da referência tinha a primeira.
-    for (const proibido of [
-      'sem compromisso',
-      'grátis',
-      'gratuita',
-      'agora',
-      'já',
-      'garanta',
-      'contrate',
-      'não perca',
-    ]) {
-      expect(texto, `o balão diz "${proibido}"`).not.toContain(proibido)
+  it('a escolha nova vence o balão antigo', () => {
+    expect(botaoFlutuanteEscolhido(perfil({ floating: 'off', assistant: { floating: true } }))).toBe('off')
+  })
+
+  it('valor caído do corpo da requisição não liga nada', () => {
+    for (const lixo of ['sim', true, 1, {}, 'WHATSAPP']) {
+      expect(botaoFlutuante(perfil({ floating: lixo }), tudo)).toBeNull()
     }
+    expect(botaoFlutuante(perfil({ assistant: { floating: 'true' } }), tudo)).toBeNull()
   })
+})
 
-  it('descreve o que acontece ao tocar, e não o que se quer que a pessoa faça', () => {
+describe('o texto dos botões é publicidade de advogado', () => {
+  for (const rotulo of [BALAO_ROTULO, BALAO_ROTULO_WHATSAPP]) {
+    it(`"${rotulo}" passa na mesma checagem de conformidade do resto do perfil`, () => {
+      expect(checkCompliance(rotulo)).toEqual([])
+    })
+
+    it(`"${rotulo}" não usa o vocabulário que a norma veda`, () => {
+      const texto = rotulo.toLowerCase()
+      // "sem compromisso" e "grátis" são apelo comercial pelos mesmos critérios
+      // (Prov. 205/2021 Art. 3º, I); "agora"/"já" são chamada imperativa
+      // (CED art. 42, V). A frase da referência tinha a primeira.
+      for (const proibido of [
+        'sem compromisso',
+        'grátis',
+        'gratuita',
+        'agora',
+        'já',
+        'garanta',
+        'contrate',
+        'não perca',
+      ]) {
+        expect(texto, `o botão diz "${proibido}"`).not.toContain(proibido)
+      }
+    })
+  }
+
+  it('descrevem o que acontece ao tocar, e não o que se quer que a pessoa faça', () => {
     expect(BALAO_ROTULO).toBe('Agendar uma conversa')
+    // O mesmo texto do botão de WhatsApp do corpo da página.
+    expect(BALAO_ROTULO_WHATSAPP).toBe('Conversar no WhatsApp')
   })
 })
 
