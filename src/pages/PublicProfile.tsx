@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { getPublicProfile, isExampleSlug } from '@/lib/perfilPublico'
@@ -7,6 +7,7 @@ import { applyProfileSeo } from '@/lib/seo'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { AvisoDeExemplo } from '@/components/profile/AvisoDeExemplo'
 import { ShareBar } from '@/components/profile/ShareBar'
+import { profileVars } from '@/lib/themes'
 import { OwnerBar } from '@/components/profile/OwnerBar'
 import { FlagIcon } from '@/components/ui/icons'
 // Módulo de constantes puro (sem dependências) — não pesa no caminho crítico do
@@ -61,19 +62,6 @@ export default function PublicProfile() {
     }
   }, [slug])
 
-  // Altura real das barras do topo, para o botão flutuante não sumir atrás delas.
-  const barsRef = useRef<HTMLDivElement>(null)
-  const [barsHeight, setBarsHeight] = useState(0)
-  useEffect(() => {
-    const el = barsRef.current
-    if (!el) return
-    const medir = () => setBarsHeight(el.offsetHeight)
-    medir()
-    const ro = new ResizeObserver(medir)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [isOwner, state])
-
   // SEO local automático — título, meta e JSON-LD (Attorney) a partir do perfil.
   // Nos perfis de exemplo (fictícios) NÃO injetamos schema de advogado real.
   useEffect(() => {
@@ -115,10 +103,9 @@ export default function PublicProfile() {
     // nele — que nunca rola, então nunca grudam. clip corta o estouro lateral
     // sem criar scrollport, e o sticky volta a valer contra a janela.
     <main className="relative flex min-h-dvh flex-col overflow-x-clip">
-      {/* As barras do topo são grudentas e o botão "Compartilhar" é fixo. Medimos
-          a altura real (a do dono QUEBRA em duas linhas no celular) para o botão
-          descer o tanto certo em vez de ficar escondido atrás. */}
-      <div ref={barsRef}>
+      {/* As barras do topo são grudentas; o "Compartilhar" logo abaixo é estático
+          (rola com a página) — ver ShareBar. */}
+      <div>
         {isExample && (
           <div className="sticky top-0 z-30 flex items-center justify-center gap-1.5 bg-ink px-4 py-2 text-center text-[11.5px] font-medium leading-snug text-paper-soft">
             <Marca size={16} />
@@ -131,7 +118,7 @@ export default function PublicProfile() {
         )}
         {isOwner && <OwnerBar />}
       </div>
-      <ShareBar slug={profile.slug} name={profile.name} topOffset={barsHeight} />
+      <ShareBar slug={profile.slug} name={profile.name} vars={profileVars(profile)} />
       <ProfileView profile={profile} owner={isOwner} />
 
       {/* Rodapé da PLATAFORMA (não do advogado). Discreto de propósito — mas
