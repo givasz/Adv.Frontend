@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
-import { getTheme, themeStyle } from '@/lib/themes'
+import { themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import { isExampleSlug } from '@/lib/perfilPublico'
@@ -597,7 +597,7 @@ export function AssistantChat({
   if (page) {
     return (
       <div
-        className={`themed min-h-dvh w-full surf-${getTheme(profile.theme).style.surface}`}
+        className="themed min-h-dvh w-full"
         style={themeStyle(profile.theme)}
       >
         {body}

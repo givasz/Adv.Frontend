@@ -48,6 +48,9 @@ import { THEMES, isThemeUnlocked } from './themes'
 export const PAGAMENTO_ONLINE_DISPONIVEL = false
 
 const temaCount = (p: Plan) => THEMES.filter((t) => isThemeUnlocked(t, p)).length
+// "1 tema visual", "3 temas visuais": desde 13/09/2026 o Free entrega só o neutro,
+// e "1 temas" na vitrine é o tipo de descuido que parece descuido com tudo.
+const temasVisuais = (n: number) => (n === 1 ? '1 tema visual' : `${n} temas visuais`)
 
 export interface OfferItem {
   text: string
@@ -131,7 +134,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: `${FAQ_LIMIT.free} pergunta frequente respondida no perfil` },
       { text: `Bio de até ${CHAR_LIMITS.free.bio} caracteres` },
       { text: 'WhatsApp, e-mail e redes sociais' },
-      { text: `${temaCount('free')} temas visuais` },
+      { text: temasVisuais(temaCount('free')) },
       { text: 'A IA escreve a bio e a descrição das áreas' },
     ],
     falta: [

@@ -1,4 +1,4 @@
-type Frame = 'circle' | 'arch' | 'square' | 'ornate'
+type Frame = 'circle' | 'arch' | 'square'
 
 interface AvatarProps {
   src?: string
@@ -17,21 +17,14 @@ interface AvatarProps {
 
 const radiusFor: Record<Frame, string> = {
   circle: '9999px',
-  ornate: '9999px',
   arch: '9999px 9999px 14px 14px',
   square: '6px',
 }
 
-function ringShadow(frame: Frame): string | undefined {
-  if (frame === 'ornate') {
-    // anel duplo em latão/ouro
-    return [
-      '0 0 0 2px var(--c-bg, #f5f0e6)',
-      '0 0 0 3px var(--c-ring, rgba(176,141,87,0.5))',
-      '0 0 0 6px var(--c-bg, #f5f0e6)',
-      '0 0 0 7px var(--c-ring, rgba(176,141,87,0.5))',
-    ].join(', ')
-  }
+function ringShadow(): string {
+  // Um anel só, fino, na cor de acento. O anel duplo ("ornate") saiu em
+  // 13/09/2026 junto com os acabamentos dos temas: era moldura de retrato de
+  // gala, não de perfil profissional.
   return '0 0 0 2px var(--c-bg, #f5f0e6), 0 0 0 3.5px var(--c-ring, rgba(176,141,87,0.4))'
 }
 
@@ -61,7 +54,7 @@ export function Avatar({
         height,
         borderRadius: radiusFor[frame],
         background: 'var(--c-accent-soft, rgba(107,33,49,0.10))',
-        boxShadow: ring ? ringShadow(frame) : undefined,
+        boxShadow: ring ? ringShadow() : undefined,
       }}
     >
       {src ? (

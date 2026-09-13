@@ -60,7 +60,8 @@ describe('os números anunciados são os do produto', () => {
   it('a contagem de temas bate com themes.ts', () => {
     const conta = (p: 'free' | 'pro' | 'premium') =>
       THEMES.filter((t) => isThemeUnlocked(t, p)).length
-    expect(textos('free')).toContain(`${conta('free')} temas`)
+    // Singular quando é um só ("1 tema visual"): o Free entrega só o neutro.
+    expect(textos('free')).toContain(conta('free') === 1 ? '1 tema visual' : `${conta('free')} temas`)
     expect(textos('pro')).toContain(`${conta('pro')} dos ${THEMES.length} temas`)
   })
 

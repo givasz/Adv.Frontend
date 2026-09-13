@@ -1,40 +1,47 @@
 // Sistema de temas — cada tema é uma identidade visual COMPLETA: paleta (CSS vars),
 // TIPOGRAFIA própria (display + corpo) e traços estruturais (tile, avatar, filete,
-// cabeçalho, acabamento) via `style`.
+// cabeçalho) via `style`.
+//
+// REDESENHO DE 13/09/2026 — minimalismo com a elegância do impresso jurídico.
+// A coleção anterior (Esmeralda, Toga, Meia-noite, Grafite, Ofício…) apostava em
+// relevo metálico no nome, textura de mármore, vinheta e anel duplo na foto. Tudo
+// isso saiu, e não só por gosto: o REGRAS.md (§2, "Design chamativo ou mercantil")
+// lista foil metálico, mármore brilhante e fonte cursiva extravagante como o que
+// contraria a sobriedade exigida do advogado (Prov. 205/2021, Art. 3º caput; CED
+// Art. 44). O que restou é o que um bom timbre de escritório sempre teve: UM
+// papel, UMA tinta, uma família de letra e réguas. Cor discreta — grafite, marinho,
+// sépia, oliva, o bordô da casa — e nunca ouro.
 //
 // Duas decisões que regem tudo aqui:
 //
-// 1. NADA DE DINGBAT. Losango, fleurão e bolinha saíram: um símbolo decorativo
-//    envelhece mal, some no contraste e faz um perfil de advogado parecer convite
-//    de casamento. O ornamento agora é TIPOGRÁFICO — filete, versalete, entreletra
-//    e peso. É o que faz um impresso jurídico parecer sério, e é o que sobrevive
-//    em qualquer tamanho de tela.
+// 1. NADA DE DINGBAT nem de acabamento. Losango, fleurão, foil e textura saíram:
+//    o ornamento é TIPOGRÁFICO — filete, versalete, entreletra e peso. É o que faz
+//    um impresso jurídico parecer sério, e o que sobrevive em qualquer tela.
 //
 // 2. TEMA É ESCOLA TIPOGRÁFICA, não troca de cor. Cada um tem sua fonte de
 //    display (e às vezes de corpo); trocar de tema muda a VOZ do perfil, não só o
 //    matiz. Fontes carregadas em index.html; o navegador só baixa a do tema em uso.
 //
-// A escada por plano continua legível — e é ESCADA DE OFÍCIO, não de ostentação:
-//   free    → chapado, uma cor, sem relevo (limpo, "de entrada")
-//   pro     → paleta encorpada + um traço estrutural forte, ainda chapado
-//   premium → fundo de maior contraste, superfície de vidro e nome em relevo
+// A escada por plano é ESCADA DE OFÍCIO, não de ostentação — e é o que vende o
+// plano, já que o Free entrega só o neutro:
+//   free    → Papel, o neutro de todo perfil (é também o fallback de tema inválido)
+//   pro     → três temas de papel claro com uma tinta própria cada
+//   premium → os quatro mais resolvidos, inclusive o Névoa, que subiu de plano
+//             (13/09/2026) por ser o mais bem acabado da coleção antiga
 //
-// O que os temas de topo entregam é GRAVIDADE (contraste, tipografia de alto
-// contraste, filete duplo, versalete), não brilho. O relevo do nome é estático de
-// propósito: a varredura metálica animada saiu em 2026-08-21 — ver .foil no
-// index.css. Nomes e descrições evitam vocabulário de luxo ("ouro", "déco",
-// "mármore"): a peça é a mesma, mas a divulgação de advogado tem de primar pela
-// discrição (Prov. 205/2021, Art. 3º caput), e isso vale para como NÓS a vendemos.
+// Nomes e descrições evitam vocabulário de luxo ("ouro", "mármore", "esmeralda"):
+// a peça é a mesma, mas a divulgação de advogado tem de primar pela discrição, e
+// isso vale para como NÓS a vendemos.
 
 export type ThemeId =
   | 'papel'
-  | 'nevoa'
-  | 'esmeralda'
-  | 'toga'
+  | 'linho'
   | 'ardosia'
-  | 'meia-noite'
-  | 'obsidian'
-  | 'marmore'
+  | 'oliva'
+  | 'nevoa'
+  | 'timbre'
+  | 'nanquim'
+  | 'marinho'
 
 export type Tier = 'free' | 'pro' | 'premium'
 
@@ -49,13 +56,20 @@ export type Tier = 'free' | 'pro' | 'premium'
  */
 export type RuleStyle = 'hairline' | 'tapered' | 'double' | 'capline' | 'bar'
 
+/**
+ * Traços estruturais. Só o que se faz com borda, forma e alinhamento — os
+ * acabamentos (`finish: foil`, `surface: marble | vignette`) e o anel duplo da
+ * foto (`avatar: ornate`) deixaram de existir em 13/09/2026: eram justamente os
+ * elementos que o REGRAS.md aponta como incompatíveis com a sobriedade.
+ *   tile      → card (superfície + sombra leve) · outline (só borda) · underline (lista)
+ *   avatar    → circle · arch (retrato em arco) · square (cantos quase retos)
+ *   header    → centered · letterhead (filete acima e abaixo) · editorial (à esquerda)
+ */
 export interface ThemeStyle {
-  tile: 'card' | 'outline' | 'underline' | 'glass' | 'filled'
-  avatar: 'circle' | 'arch' | 'square' | 'ornate'
+  tile: 'card' | 'outline' | 'underline'
+  avatar: 'circle' | 'arch' | 'square'
   rule: RuleStyle
   header: 'centered' | 'letterhead' | 'editorial'
-  finish: 'flat' | 'foil'
-  surface: 'plain' | 'vignette' | 'marble'
   nameCase: 'none' | 'upper'
 }
 
@@ -76,6 +90,9 @@ export interface Theme {
 // textura da altura da página (caro em GPU de celular) e o grão mudava de
 // escala com o tamanho do perfil. Com 240×240 intrínseco o navegador rasteriza
 // UMA vez e ladrilha; o stitchTiles já faz a emenda ser invisível.
+//
+// O grão é a única "textura" que ficou, e é quase invisível (≤ 0,04): dá ao
+// fundo chapado um leve ar de papel sem virar efeito.
 const NOISE =
   "url(\"data:image/svg+xml,%3Csvg width='240' height='240' viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"
 
@@ -87,56 +104,173 @@ const PLAYFAIR = `'Playfair Display', 'Fraunces', Georgia, serif`
 const NEWSREADER = `'Newsreader', 'Fraunces', Georgia, serif`
 const LORA = `'Lora', 'Fraunces', Georgia, serif`
 const CORMORANT = `'Cormorant Garamond', 'Playfair Display', Georgia, serif`
+const SOURCE_SERIF = `'Source Serif 4', 'Newsreader', Georgia, serif`
 const ARCHIVO = `'Archivo', 'Hanken Grotesk', system-ui, sans-serif`
-const SYNE = `'Syne', 'Hanken Grotesk', system-ui, sans-serif`
+const PLEX = `'IBM Plex Sans', 'Hanken Grotesk', system-ui, sans-serif`
 
 export const THEMES: Theme[] = [
   // ---------------- FREE ----------------
   {
+    // O neutro. É o tema de quem nunca escolheu um, e o destino de qualquer id
+    // desconhecido ou acima do plano (ver getTheme e backend/src/plans.ts).
     id: 'papel',
     name: 'Papel',
     tier: 'free',
     dark: false,
-    blurb: 'Timbre de escritório — marfim, tinta e bordô, com serifa clássica.',
-    swatch: { bg: '#f4efe4', accent: '#7a2532', text: '#211c17' },
+    blurb: 'Marfim, tinta e um só bordô — o neutro de todo perfil.',
+    swatch: { bg: '#f5f1e8', accent: '#6b2131', text: '#1f1b17' },
     style: {
       tile: 'card',
       avatar: 'circle',
       rule: 'hairline',
-      header: 'letterhead',
-      finish: 'flat',
-      surface: 'plain',
+      header: 'centered',
       nameCase: 'none',
     },
     vars: {
-      '--c-bg': '#f4efe4',
-      '--c-bg-image': 'none',
-      '--c-surface': '#fbf7ee',
-      '--c-text': '#211c17',
-      '--c-muted': '#443b32',
-      '--c-faint': '#6b6155',
-      '--c-border': 'rgba(33,28,23,0.10)',
-      '--c-accent': '#7a2532',
+      '--c-bg': '#f5f1e8',
+      '--c-surface': '#fcfaf5',
+      '--c-text': '#1f1b17',
+      '--c-muted': '#4a423a',
+      '--c-faint': '#6a6157',
+      '--c-border': 'rgba(31,27,23,0.10)',
+      // O bordô da marca, e só ele: um tema, UM matiz de acento.
+      '--c-accent': '#6b2131',
       '--c-accent-ink': '#fbf7ee',
-      // Um tema, UM matiz de acento. Antes o soft/ring eram dourados enquanto o
-      // acento era bordô: duas cores de destaque brigando sem intenção nenhuma.
-      '--c-accent-soft': 'rgba(122,37,50,0.10)',
-      '--c-ring': 'rgba(122,37,50,0.30)',
-      '--c-grain': '0.05',
+      '--c-accent-soft': 'rgba(107,33,49,0.09)',
+      '--c-ring': 'rgba(107,33,49,0.30)',
+      '--c-grain': '0.03',
       '--c-noise': NOISE,
       '--font-display': FRAUNCES,
       '--font-body': SANS,
       '--display-tracking': '-0.01em',
       '--name-tracking': '-0.015em',
       '--label-tracking': '0.18em',
-      '--tile-radius': '14px',
+      '--tile-radius': '12px',
+      '--btn-radius': '999px',
+    },
+  },
+  // ---------------- PRO ----------------
+  {
+    id: 'linho',
+    name: 'Linho',
+    tier: 'pro',
+    dark: false,
+    blurb: 'Papel de linho, serifa de leitura e tinta sépia — quieto e quente.',
+    swatch: { bg: '#f6f3ec', accent: '#5a4331', text: '#201d19' },
+    style: {
+      tile: 'underline',
+      avatar: 'circle',
+      rule: 'tapered',
+      header: 'letterhead',
+      nameCase: 'none',
+    },
+    vars: {
+      '--c-bg': '#f6f3ec',
+      '--c-surface': '#fdfbf6',
+      '--c-text': '#201d19',
+      '--c-muted': '#4b453d',
+      '--c-faint': '#6b645a',
+      '--c-border': 'rgba(32,29,25,0.12)',
+      // Sépia: a tinta de caneta-tinteiro sobre papel de linho. Passa em AA
+      // (8,3:1) e continua sendo tinta, não cor.
+      '--c-accent': '#5a4331',
+      '--c-accent-ink': '#fbf8f1',
+      '--c-accent-soft': 'rgba(90,67,49,0.09)',
+      '--c-ring': 'rgba(90,67,49,0.30)',
+      '--c-grain': '0.035',
+      '--c-noise': NOISE,
+      '--font-display': LORA,
+      '--font-body': SANS,
+      '--display-tracking': '-0.005em',
+      '--name-tracking': '-0.01em',
+      '--label-tracking': '0.16em',
+      '--tile-radius': '8px',
       '--btn-radius': '999px',
     },
   },
   {
+    id: 'ardosia',
+    name: 'Ardósia',
+    tier: 'pro',
+    dark: false,
+    blurb: 'Grafite sobre cinza claro, sem serifa e à esquerda — o tom corporativo.',
+    swatch: { bg: '#eef0f2', accent: '#2a3542', text: '#1b232c' },
+    style: {
+      tile: 'outline',
+      avatar: 'square',
+      rule: 'bar',
+      header: 'editorial',
+      nameCase: 'upper',
+    },
+    vars: {
+      '--c-bg': '#eef0f2',
+      '--c-surface': '#ffffff',
+      '--c-text': '#1b232c',
+      '--c-muted': '#434e5a',
+      '--c-faint': '#5d6873',
+      '--c-border': 'rgba(27,35,44,0.16)',
+      '--c-accent': '#2a3542',
+      '--c-accent-ink': '#ffffff',
+      '--c-accent-soft': 'rgba(42,53,66,0.08)',
+      '--c-ring': 'rgba(42,53,66,0.32)',
+      '--c-grain': '0.012',
+      '--c-noise': NOISE,
+      // Único tema com a MESMA família no display e no corpo: é o gesto
+      // corporativo — um sistema tipográfico só, sem contraste editorial.
+      '--font-display': PLEX,
+      '--font-body': PLEX,
+      '--display-tracking': '0.01em',
+      '--name-tracking': '0.08em',
+      '--label-tracking': '0.22em',
+      '--tile-radius': '3px',
+      '--btn-radius': '4px',
+    },
+  },
+  {
+    id: 'oliva',
+    name: 'Oliva',
+    tier: 'pro',
+    dark: false,
+    blurb: 'Verde-oliva sobre marfim, serifa de jornal e foto em arco.',
+    swatch: { bg: '#f4f3ec', accent: '#4c5a2b', text: '#1d2018' },
+    style: {
+      tile: 'outline',
+      avatar: 'arch',
+      rule: 'capline',
+      header: 'centered',
+      nameCase: 'none',
+    },
+    vars: {
+      '--c-bg': '#f4f3ec',
+      '--c-surface': '#fbfaf5',
+      '--c-text': '#1d2018',
+      '--c-muted': '#454a3c',
+      '--c-faint': '#656a5a',
+      '--c-border': 'rgba(29,32,24,0.11)',
+      // Oliva, não esmeralda: verde de folha seca, terroso, sem brilho de pedra.
+      '--c-accent': '#4c5a2b',
+      '--c-accent-ink': '#f7f6ee',
+      '--c-accent-soft': 'rgba(76,90,43,0.10)',
+      '--c-ring': 'rgba(76,90,43,0.34)',
+      '--c-grain': '0.03',
+      '--c-noise': NOISE,
+      '--font-display': NEWSREADER,
+      '--font-body': SANS,
+      '--display-tracking': '-0.015em',
+      '--name-tracking': '-0.02em',
+      '--label-tracking': '0.16em',
+      '--tile-radius': '6px',
+      '--btn-radius': '999px',
+    },
+  },
+  // ---------------- MAX ----------------
+  {
+    // Subiu do Free para o Max em 13/09/2026: é o tema mais bem resolvido da
+    // coleção anterior e passou a ser um dos motivos de assinar. Segue sendo o
+    // tema do perfil de exemplo (mockData), que já é um perfil Max.
     id: 'nevoa',
     name: 'Névoa',
-    tier: 'free',
+    tier: 'premium',
     dark: false,
     blurb: 'Grotesca fria e muito respiro — links em lista, quase sem moldura.',
     swatch: { bg: '#f1f4f5', accent: '#2d5f70', text: '#16212a' },
@@ -145,13 +279,10 @@ export const THEMES: Theme[] = [
       avatar: 'circle',
       rule: 'tapered',
       header: 'centered',
-      finish: 'flat',
-      surface: 'plain',
       nameCase: 'none',
     },
     vars: {
       '--c-bg': '#f1f4f5',
-      '--c-bg-image': 'none',
       '--c-surface': '#ffffff',
       '--c-text': '#16212a',
       '--c-muted': '#46545f',
@@ -176,262 +307,124 @@ export const THEMES: Theme[] = [
       '--btn-radius': '999px',
     },
   },
-  // ---------------- PRO ----------------
   {
-    id: 'esmeralda',
-    name: 'Esmeralda',
-    tier: 'pro',
+    id: 'timbre',
+    name: 'Timbre',
+    tier: 'premium',
     dark: false,
-    blurb: 'Verde profundo sobre marfim, serifa de jornal e foto em arco.',
-    swatch: { bg: '#f3f1ea', accent: '#14503f', text: '#1a2620' },
+    blurb: 'Azul-marinho sobre creme, versalete e filete duplo — papel timbrado.',
+    swatch: { bg: '#f8f5ee', accent: '#1f3350', text: '#1c1f27' },
     style: {
       tile: 'outline',
-      avatar: 'arch',
-      rule: 'capline',
-      header: 'letterhead',
-      finish: 'flat',
-      surface: 'plain',
-      nameCase: 'none',
-    },
-    vars: {
-      // Fundo marfim NEUTRO: o cinza-esverdeado anterior tingia o verde do acento
-      // e o conjunto ficava lavado, com cara de formulário.
-      '--c-bg': '#f3f1ea',
-      '--c-bg-image': 'none',
-      '--c-surface': '#fcfbf6',
-      '--c-text': '#1a2620',
-      '--c-muted': '#3d4c44',
-      // Escurecido para passar em 4.5:1 sobre o fundo E sobre a superfície: é
-      // texto pequeno (tempo de leitura, nota de região, rodapé), não decoração.
-      '--c-faint': '#636f68',
-      '--c-border': 'rgba(20,80,63,0.20)',
-      '--c-accent': '#14503f',
-      '--c-accent-ink': '#f6f5ef',
-      // Antes o realce era dourado sobre um acento verde — duas famílias de cor
-      // sem parentesco. Agora tudo desce do próprio verde.
-      '--c-accent-soft': 'rgba(20,80,63,0.09)',
-      '--c-ring': 'rgba(20,80,63,0.34)',
-      '--c-grain': '0.03',
-      '--c-noise': NOISE,
-      '--font-display': NEWSREADER,
-      '--font-body': SANS,
-      '--display-tracking': '-0.015em',
-      '--name-tracking': '-0.02em',
-      '--label-tracking': '0.16em',
-      '--tile-radius': '6px',
-      '--btn-radius': '999px',
-    },
-  },
-  {
-    id: 'toga',
-    name: 'Toga',
-    tier: 'pro',
-    dark: false,
-    blurb: 'Vinho encorpado sobre areia, serifa de leitura e barra de acento.',
-    swatch: { bg: '#f5eee3', accent: '#7a1f2b', text: '#291a1c' },
-    style: {
-      tile: 'filled',
-      avatar: 'circle',
-      rule: 'bar',
-      header: 'centered',
-      finish: 'flat',
-      surface: 'plain',
-      nameCase: 'none',
-    },
-    vars: {
-      '--c-bg': '#f5eee3',
-      '--c-bg-image': 'none',
-      '--c-surface': '#fcf6ec',
-      '--c-text': '#291a1c',
-      '--c-muted': '#503c3f',
-      // Antes #8a7370: tinha ~3.4:1 sobre o fundo, abaixo do mínimo para texto
-      // pequeno. Escurecido para passar em AA.
-      '--c-faint': '#6f5a57',
-      '--c-border': 'rgba(41,26,28,0.12)',
-      '--c-accent': '#7a1f2b',
-      '--c-accent-ink': '#fcf6ec',
-      '--c-accent-soft': 'rgba(122,31,43,0.09)',
-      '--c-ring': 'rgba(122,31,43,0.30)',
-      '--c-grain': '0.04',
-      '--c-noise': NOISE,
-      '--font-display': LORA,
-      '--font-body': SANS,
-      '--display-tracking': '-0.005em',
-      '--name-tracking': '-0.01em',
-      '--label-tracking': '0.16em',
-      '--tile-radius': '16px',
-      '--btn-radius': '999px',
-    },
-  },
-  {
-    id: 'ardosia',
-    name: 'Ardósia',
-    tier: 'pro',
-    dark: false,
-    blurb: 'Grotesca corporativa em grafite — cantos retos, filete duplo.',
-    swatch: { bg: '#eaedef', accent: '#1f2d3a', text: '#1c2630' },
-    style: {
-      tile: 'card',
       avatar: 'square',
       rule: 'double',
       header: 'letterhead',
-      finish: 'flat',
-      surface: 'plain',
       nameCase: 'upper',
     },
     vars: {
-      '--c-bg': '#eaedef',
-      '--c-bg-image': 'none',
-      '--c-surface': '#ffffff',
-      '--c-text': '#1c2630',
-      '--c-muted': '#44525f',
-      // Escurecido para passar em 4.5:1 sobre o fundo E sobre a superfície: é
-      // texto pequeno (tempo de leitura, nota de região, rodapé), não decoração.
-      '--c-faint': '#5f6b77',
-      '--c-border': 'rgba(31,45,58,0.18)',
-      '--c-accent': '#1f2d3a',
-      '--c-accent-ink': '#ffffff',
-      '--c-accent-soft': 'rgba(31,45,58,0.08)',
-      '--c-ring': 'rgba(31,45,58,0.32)',
-      '--c-grain': '0.015',
+      '--c-bg': '#f8f5ee',
+      '--c-surface': '#fffdf8',
+      '--c-text': '#1c1f27',
+      '--c-muted': '#454a56',
+      '--c-faint': '#626874',
+      '--c-border': 'rgba(31,51,80,0.22)',
+      // Marinho de tinta sobre creme: a combinação do papel timbrado clássico
+      // (11,7:1). Nada de dourado — o REGRAS.md sugere justamente marinho.
+      '--c-accent': '#1f3350',
+      '--c-accent-ink': '#f8f5ee',
+      '--c-accent-soft': 'rgba(31,51,80,0.08)',
+      '--c-ring': 'rgba(31,51,80,0.36)',
+      '--c-grain': '0.03',
       '--c-noise': NOISE,
-      // Único tema com a MESMA família no display e no corpo: é o gesto
-      // corporativo — um sistema tipográfico só, sem contraste editorial.
-      '--font-display': ARCHIVO,
-      '--font-body': ARCHIVO,
-      '--display-tracking': '0.02em',
-      '--name-tracking': '0.08em',
-      '--label-tracking': '0.22em',
-      '--tile-radius': '3px',
-      '--btn-radius': '4px',
-    },
-  },
-  // ---------------- PREMIUM ----------------
-  {
-    id: 'meia-noite',
-    name: 'Meia-noite',
-    tier: 'premium',
-    dark: true,
-    blurb: 'Fundo azul-noite e serifa de alto contraste — leitura calma no escuro.',
-    swatch: { bg: '#0f1420', accent: '#e0c088', text: '#eef1f8' },
-    style: {
-      tile: 'glass',
-      avatar: 'ornate',
-      rule: 'tapered',
-      header: 'centered',
-      finish: 'foil',
-      surface: 'vignette',
-      nameCase: 'none',
-    },
-    vars: {
-      '--c-bg': '#0f1420',
-      '--c-bg-image':
-        'radial-gradient(120% 90% at 50% -10%, #1e2a49 0%, #141d31 45%, #0f1420 100%)',
-      '--c-surface': 'rgba(232,236,245,0.055)',
-      '--c-text': '#eef1f8',
-      '--c-muted': '#aab3c6',
-      '--c-faint': '#8a94aa',
-      '--c-border': 'rgba(232,236,245,0.14)',
-      '--c-accent': '#e0c088',
-      '--c-accent-ink': '#0f1420',
-      '--c-accent-soft': 'rgba(224,192,136,0.16)',
-      '--c-ring': 'rgba(224,192,136,0.55)',
-      '--c-grain': '0.05',
-      '--c-noise': NOISE,
-      // Cormorant tem hastes finíssimas: aqui ela ganha corpo pelo TAMANHO do
-      // nome, e o alto contraste é justamente o que brilha no fundo escuro.
+      // Cormorant tem hastes finas: em versalete com entreletra larga ela vira
+      // gravação de timbre, e o tamanho do nome dá o corpo que falta.
       '--font-display': CORMORANT,
       '--font-body': SANS,
-      '--display-tracking': '0.005em',
-      '--name-tracking': '0.01em',
-      '--label-tracking': '0.2em',
-      '--tile-radius': '18px',
-      '--btn-radius': '999px',
-    },
-  },
-  {
-    id: 'obsidian',
-    name: 'Grafite',
-    tier: 'premium',
-    dark: true,
-    blurb: 'Preto profundo e tipografia contemporânea em caixa alta.',
-    swatch: { bg: '#0c0c0d', accent: '#c9a888', text: '#ece7df' },
-    style: {
-      tile: 'glass',
-      avatar: 'ornate',
-      rule: 'bar',
-      header: 'centered',
-      finish: 'foil',
-      surface: 'plain',
-      nameCase: 'upper',
-    },
-    vars: {
-      '--c-bg': '#0c0c0d',
-      '--c-bg-image': 'radial-gradient(120% 80% at 50% 0%, #1b1b1f 0%, #0c0c0d 60%)',
-      '--c-surface': 'rgba(255,255,255,0.045)',
-      '--c-text': '#ece7df',
-      '--c-muted': '#b0a89c',
-      '--c-faint': '#8d857a',
-      '--c-border': 'rgba(255,255,255,0.12)',
-      '--c-accent': '#c9a888',
-      '--c-accent-ink': '#0c0c0d',
-      '--c-accent-soft': 'rgba(201,168,136,0.15)',
-      '--c-ring': 'rgba(201,168,136,0.52)',
-      '--c-grain': '0.06',
-      '--c-noise': NOISE,
-      '--font-display': SYNE,
-      '--font-body': SANS,
-      '--display-tracking': '0.04em',
+      '--display-tracking': '0.02em',
       '--name-tracking': '0.12em',
       '--label-tracking': '0.26em',
-      '--tile-radius': '16px',
-      '--btn-radius': '999px',
+      '--tile-radius': '3px',
+      '--btn-radius': '3px',
     },
   },
   {
-    // ⚠️ O id continua 'marmore' de propósito: ele está gravado nos perfis que já
-    // escolheram este tema, e `resolveTheme` derruba id desconhecido para o neutro
-    // — renomear a chave apagaria a escolha dessas pessoas em silêncio. Só o nome
-    // exibido e a descrição mudaram, para sair do vocabulário de luxo.
-    id: 'marmore',
-    name: 'Ofício',
+    id: 'nanquim',
+    name: 'Nanquim',
     tier: 'premium',
     dark: false,
-    blurb: 'Papel claro, cantos vivos e caixa alta — ar de papel timbrado.',
-    swatch: { bg: '#f4f1ea', accent: '#7d6229', text: '#23201b' },
+    blurb: 'Só preto e branco, serifa de alto contraste — nada além do essencial.',
+    swatch: { bg: '#ffffff', accent: '#121212', text: '#121212' },
     style: {
-      tile: 'outline',
-      avatar: 'square',
-      rule: 'double',
-      header: 'letterhead',
-      finish: 'foil',
-      surface: 'marble',
-      nameCase: 'upper',
+      tile: 'underline',
+      avatar: 'circle',
+      rule: 'hairline',
+      header: 'editorial',
+      nameCase: 'none',
     },
     vars: {
-      '--c-bg': '#f4f1ea',
-      '--c-bg-image':
-        'radial-gradient(90% 60% at 12% 0%, rgba(125,98,41,0.09) 0%, transparent 55%), radial-gradient(80% 60% at 100% 100%, rgba(125,98,41,0.07) 0%, transparent 50%)',
-      '--c-surface': '#fffefb',
-      '--c-text': '#23201b',
-      '--c-muted': '#4d473d',
-      '--c-faint': '#756d5e',
-      '--c-border': 'rgba(125,98,41,0.34)',
-      // Ouro escurecido: o anterior (#8a6d34) ficava em 3.9:1 sobre o mármore e
-      // não passava em AA quando usado como texto de acento.
-      '--c-accent': '#7d6229',
-      '--c-accent-ink': '#fffdf8',
-      '--c-accent-soft': 'rgba(125,98,41,0.12)',
-      '--c-ring': 'rgba(125,98,41,0.5)',
-      '--c-grain': '0.03',
+      '--c-bg': '#ffffff',
+      '--c-surface': '#ffffff',
+      '--c-text': '#121212',
+      '--c-muted': '#3d3d3d',
+      '--c-faint': '#5e5e5e',
+      '--c-border': 'rgba(18,18,18,0.14)',
+      // Uma tinta só: o acento É o texto. O botão de WhatsApp sai preto com letra
+      // branca — o mais discreto que um botão consegue ser.
+      '--c-accent': '#121212',
+      '--c-accent-ink': '#ffffff',
+      '--c-accent-soft': 'rgba(18,18,18,0.06)',
+      '--c-ring': 'rgba(18,18,18,0.30)',
+      // Branco absoluto, sem grão: papel couché, não papel de carta.
+      '--c-grain': '0',
       '--c-noise': NOISE,
       '--font-display': PLAYFAIR,
       '--font-body': SANS,
-      '--display-tracking': '0.03em',
-      '--name-tracking': '0.14em',
-      '--label-tracking': '0.28em',
-      '--tile-radius': '2px',
+      '--display-tracking': '-0.01em',
+      '--name-tracking': '-0.015em',
+      '--label-tracking': '0.2em',
+      '--tile-radius': '0px',
       '--btn-radius': '2px',
+    },
+  },
+  {
+    id: 'marinho',
+    name: 'Marinho',
+    tier: 'premium',
+    dark: true,
+    blurb: 'Fundo azul-marinho e tinta clara — leitura calma no escuro.',
+    swatch: { bg: '#0f1b2d', accent: '#d8d0bf', text: '#eceff4' },
+    style: {
+      tile: 'outline',
+      avatar: 'circle',
+      rule: 'tapered',
+      header: 'centered',
+      nameCase: 'none',
+    },
+    vars: {
+      // Chapado. O Meia-noite tinha gradiente radial + vinheta; aqui o fundo é
+      // uma cor só — o escuro já é o gesto, não precisa de profundidade fingida.
+      '--c-bg': '#0f1b2d',
+      '--c-surface': 'rgba(255,255,255,0.045)',
+      '--c-text': '#eceff4',
+      '--c-muted': '#b7c0cd',
+      '--c-faint': '#94a0b0',
+      '--c-border': 'rgba(236,239,244,0.16)',
+      // Pedra clara, não ouro: sobre o marinho lê como papel sobre a mesa
+      // (11,2:1) e não como metal.
+      '--c-accent': '#d8d0bf',
+      '--c-accent-ink': '#0f1b2d',
+      '--c-accent-soft': 'rgba(216,208,191,0.12)',
+      '--c-ring': 'rgba(216,208,191,0.50)',
+      '--c-grain': '0.04',
+      '--c-noise': NOISE,
+      // Serifa de haste firme: no fundo escuro a fina (Cormorant) some.
+      '--font-display': SOURCE_SERIF,
+      '--font-body': SANS,
+      '--display-tracking': '0',
+      '--name-tracking': '-0.005em',
+      '--label-tracking': '0.2em',
+      '--tile-radius': '10px',
+      '--btn-radius': '999px',
     },
   },
 ]
@@ -440,8 +433,25 @@ const tierRank: Record<Tier, number> = { free: 0, pro: 1, premium: 2 }
 
 export const DEFAULT_THEME: ThemeId = 'papel'
 
-export function getTheme(id: ThemeId | undefined): Theme {
-  return THEMES.find((t) => t.id === id) ?? THEMES[0]
+/**
+ * Ids da coleção anterior (até 13/09/2026) → sucessor mais próximo. Os ids
+ * antigos estão GRAVADOS nos perfis que os escolheram; sem este mapa, cada um
+ * deles cairia em silêncio para o neutro. O sucessor é o que preserva a
+ * intenção (a mesma fonte, o mesmo tom de fundo), não o mesmo nome. ESPELHA
+ * LEGACY_THEME de backend/src/plans.ts — o servidor grava o id novo no
+ * próximo salvamento.
+ */
+export const LEGACY_THEME: Record<string, ThemeId> = {
+  esmeralda: 'oliva', // Newsreader, foto em arco, capline — só o verde mudou
+  toga: 'linho', // Lora sobre papel quente
+  'meia-noite': 'marinho', // o escuro azul
+  obsidian: 'marinho', // o outro escuro
+  marmore: 'timbre', // timbre claro em versalete e filete duplo
+}
+
+export function getTheme(id: ThemeId | string | undefined): Theme {
+  const real = id && Object.prototype.hasOwnProperty.call(LEGACY_THEME, id) ? LEGACY_THEME[id] : id
+  return THEMES.find((t) => t.id === real) ?? THEMES[0]
 }
 
 export function isThemeUnlocked(theme: Theme, plan: Tier): boolean {

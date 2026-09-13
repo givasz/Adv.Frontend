@@ -120,7 +120,6 @@ export function ProfileView({
     ? ({ '--c-accent': brand.accent, '--c-accent-soft': hexToRgba(brand.accent, 0.14) } as React.CSSProperties)
     : undefined
   const tile = s.tile === 'card' ? 't-tile' : `t-tile tv-${s.tile}`
-  const foil = s.finish === 'foil'
   const left = s.header === 'editorial'
   // A entreletra do NOME vem do tema (--name-tracking), não de uma classe fixa:
   // caixa alta pede ar, serifa em corpo grande pede aperto, e cada família tem
@@ -132,7 +131,6 @@ export function ProfileView({
     s.nameCase === 'upper'
       ? 'uppercase text-[21px] sm:text-[25px] font-medium'
       : 'text-[26px] sm:text-[30px] font-semibold',
-    foil ? 'foil' : '',
   ].join(' ')
   const nameStyle: React.CSSProperties = { letterSpacing: 'var(--name-tracking, -0.01em)' }
 
@@ -220,7 +218,7 @@ export function ProfileView({
   return (
     <LazyMotion features={domAnimation}>
     <div
-      className={`themed w-full flex-1 surf-${s.surface}`}
+      className="themed w-full flex-1"
       style={{ ...themeStyle(profile.theme), ...brandVars }}
     >
       <m.div
@@ -680,7 +678,15 @@ function OwnerHint({
 //
 // Cada variante é uma escolha do tema (ThemeStyle.rule), não um enfeite solto.
 
-/** Filete horizontal do tema. `soft` usa a cor de borda; senão, a de acento. */
+/**
+ * Filete horizontal do tema. `soft` usa a cor de borda; senão, a de acento.
+ *
+ * `block` de propósito: é um <span>, e um span inline ignora largura, altura e
+ * margem vertical. Dentro dos títulos de seção ele vive num flex (que já o
+ * blockifica), mas o ThemeDivider o solta sozinho entre blocos — e ali, até
+ * 13/09/2026, os separadores tapered, capline e bar simplesmente não
+ * apareciam: a bio colava na grade de redes em todo tema que os usava.
+ */
 function Rule({
   className = '',
   soft = false,
@@ -696,7 +702,7 @@ function Rule({
   return (
     <span
       aria-hidden
-      className={className}
+      className={`block ${className}`}
       style={{
         height: thick ? 2 : 1,
         // `fade`: o filete se dissolve nas pontas em vez de terminar seco —

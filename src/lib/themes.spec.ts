@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTheme, isThemeUnlocked, THEMES, themeStyle, type Theme } from './themes'
+import { getTheme, isThemeUnlocked, LEGACY_THEME, THEMES, themeStyle, type Theme } from './themes'
 
 // ---- utilidades de cor ----
 
@@ -82,6 +82,34 @@ describe('temas — coerência da paleta', () => {
   }
 })
 
+describe('temas — sobriedade (REGRAS.md §2, "Design chamativo ou mercantil")', () => {
+  // O REGRAS.md nomeia o que contraria a discrição exigida da divulgação de
+  // advogado: foil metálico, mármore brilhante, fonte cursiva. Os acabamentos
+  // deixaram de existir no TIPO (ThemeStyle não tem mais finish/surface), e o
+  // que sobra aqui é o que ainda daria para contrabandear por variável CSS.
+  it('nenhum tema pinta fundo com gradiente ou imagem — o fundo é uma cor só', () => {
+    for (const t of THEMES) {
+      expect(t.vars['--c-bg-image'], `${t.id} declara --c-bg-image`).toBeUndefined()
+      expect(t.vars['--c-bg']).toMatch(/^#[0-9a-f]{6}$/i)
+    }
+  })
+
+  it('o grão é quase invisível', () => {
+    for (const t of THEMES) {
+      expect(Number(t.vars['--c-grain']), `${t.id}`).toBeLessThanOrEqual(0.04)
+    }
+  })
+
+  it('nome e descrição não vendem luxo', () => {
+    // Vocabulário de ostentação. Vale para como NÓS anunciamos o tema, não só
+    // para o que o advogado escreve.
+    const vedado = /\b(ouro|dourad|prata|mármore|marmore|luxo|premium|exclusiv|brilh|esmeralda|diamante)/i
+    for (const t of THEMES) {
+      expect(`${t.name} ${t.blurb}`, `${t.id}`).not.toMatch(vedado)
+    }
+  })
+})
+
 describe('temas — identidade tipográfica', () => {
   it('cada tema declara fonte de display, de corpo e entreletras', () => {
     for (const t of THEMES) {
@@ -113,6 +141,12 @@ describe('temas — escada de planos', () => {
     expect(isThemeUnlocked(getTheme('papel'), 'free')).toBe(true)
   })
 
+  it('o Free entrega só o neutro; o Névoa é do Max desde 13/09/2026', () => {
+    const livres = THEMES.filter((t) => isThemeUnlocked(t, 'free')).map((t) => t.id)
+    expect(livres).toEqual(['papel'])
+    expect(getTheme('nevoa').tier).toBe('premium')
+  })
+
   it('cada plano libera estritamente mais temas que o anterior', () => {
     const n = (p: 'free' | 'pro' | 'premium') => THEMES.filter((t) => isThemeUnlocked(t, p)).length
     expect(n('free')).toBeLessThan(n('pro'))
@@ -123,8 +157,31 @@ describe('temas — escada de planos', () => {
   it('ids são únicos e themeStyle devolve as variáveis do tema', () => {
     const ids = THEMES.map((t) => t.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(themeStyle('obsidian')).toMatchObject({ '--c-bg': '#0c0c0d' })
+    expect(themeStyle('marinho')).toMatchObject({ '--c-bg': '#0f1b2d' })
     // Tema desconhecido cai no padrão em vez de quebrar a página.
     expect(getTheme(undefined as never).id).toBe('papel')
+    expect(getTheme('nao-existe').id).toBe('papel')
+  })
+})
+
+describe('temas — ids da coleção anterior', () => {
+  // Os ids antigos estão gravados nos perfis. Sem o mapa, quem escolheu
+  // Meia-noite abriria o próprio perfil no neutro sem ninguém avisar.
+  it('cada id antigo aponta para um tema que existe', () => {
+    for (const [antigo, novo] of Object.entries(LEGACY_THEME)) {
+      expect(THEMES.some((t) => t.id === novo), `${antigo} → ${novo}`).toBe(true)
+      expect(getTheme(antigo).id).toBe(novo)
+    }
+  })
+
+  it('o mapa não reaproveita nenhum id vivo como chave', () => {
+    for (const antigo of Object.keys(LEGACY_THEME)) {
+      expect(THEMES.some((t) => t.id === antigo), antigo).toBe(false)
+    }
+  })
+
+  it('chave herdada do protótipo não vira tema', () => {
+    expect(getTheme('constructor').id).toBe('papel')
+    expect(getTheme('__proto__').id).toBe('papel')
   })
 })

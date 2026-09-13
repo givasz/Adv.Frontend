@@ -25,7 +25,7 @@ import { slugify } from './brFormat'
 
 /** As mesmas fontes que o index.html carrega — a folha de impressão precisa delas. */
 const GOOGLE_FONTS_HREF =
-  'https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Cormorant+Garamond:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Hanken+Grotesk:wght@400;500;600;700&family=Lora:wght@400..700&family=Newsreader:opsz,wght@6..72,400..700&family=Playfair+Display:ital,wght@0,400..800;1,400..600&family=Syne:wght@400..800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Cormorant+Garamond:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Lora:wght@400..700&family=Newsreader:opsz,wght@6..72,400..700&family=Playfair+Display:ital,wght@0,400..800;1,400..600&family=Source+Serif+4:opsz,wght@8..60,400..700&display=swap'
 
 const fileBase = (profile: Profile) => `cartao-${slugify(profile.name) || 'advogado'}`
 
@@ -45,7 +45,7 @@ const fontCache = new Map<string, string>()
  * Famílias do index.html que têm eixo de TAMANHO ÓPTICO — só elas levam o eixo
  * no endereço da folha de estilo.
  */
-const COM_OPSZ = new Set(['Fraunces', 'Newsreader'])
+const COM_OPSZ = new Set(['Fraunces', 'Newsreader', 'Source Serif 4'])
 
 /**
  * Nome com que a fonte entra no arquivo exportado. NÃO é o nome real da família,

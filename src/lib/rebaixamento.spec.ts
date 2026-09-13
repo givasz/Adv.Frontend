@@ -120,7 +120,7 @@ describe('a lista fala do perfil real', () => {
   })
 
   it('tema pago volta ao neutro, e a tela diz qual tema era', () => {
-    const { perde } = mudancasAoDescer(perfil({ plan: 'premium', theme: 'obsidian' }), 'free')
+    const { perde } = mudancasAoDescer(perfil({ plan: 'premium', theme: 'marinho' }), 'free')
     expect(juntos(perde)).toMatch(/tema .+ volta ao tema neutro/i)
   })
 

@@ -95,7 +95,7 @@ export function SecaoTile({ id, profile }: { id: SectionId; profile: Profile }) 
   )
 }
 
-// Os temas em miniatura dentro do cartão de tema — 6 dos 8 são de plano pago,
+// Os temas em miniatura dentro do cartão de tema — 7 dos 8 são de plano pago,
 // e ver as cores é o que faz querer experimentar.
 function Amostras({ plan }: { plan: Profile['plan'] }) {
   return (

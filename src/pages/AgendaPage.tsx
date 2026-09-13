@@ -15,7 +15,7 @@ import {
   linkOutlook,
   type Compromisso,
 } from '@/lib/ics'
-import { getTheme, themeStyle } from '@/lib/themes'
+import { themeStyle } from '@/lib/themes'
 import {
   assistantDayAt,
   buildAssistantDays,
@@ -582,11 +582,10 @@ function Conversa({
   const referencia = ORDEM.includes(step) ? step : 'mais'
   const andados = ORDEM.indexOf(referencia)
   const progresso = step === 'boot' ? 0 : Math.min(1, (andados + 1) / ORDEM.length)
-  const tema = getTheme(profile.theme)
 
   return (
     <div
-      className={`themed min-h-dvh w-full surf-${tema.style.surface}`}
+      className="themed min-h-dvh w-full"
       style={themeStyle(profile.theme)}
     >
       <div data-agenda-chat className="mx-auto flex h-dvh w-full max-w-[520px] flex-col overflow-hidden">

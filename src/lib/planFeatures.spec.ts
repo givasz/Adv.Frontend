@@ -113,7 +113,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       plan: 'premium',
       slug: 'marina-sales',
       schedulingMode: 'assistant',
-      theme: 'toga',
+      theme: 'linho',
       bio: 'x'.repeat(400),
       faqs: Array.from({ length: FAQ_LIMIT.premium }, (_, i) => ({
         id: `f${i}`,
