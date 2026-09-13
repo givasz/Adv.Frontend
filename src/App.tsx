@@ -18,6 +18,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Painel = lazy(() => import('./pages/Painel'))
 const Editor = lazy(() => import('./pages/Editor'))
 const AgendaPage = lazy(() => import('./pages/AgendaPage'))
+const TestarAssistentePage = lazy(() => import('./pages/TestarAssistentePage'))
 const Preview = lazy(() => import('./pages/Preview'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const Escritorio = lazy(() => import('./pages/Escritorio'))
@@ -118,6 +119,10 @@ export default function App() {
             porque é a única tarefa que se REPETE — e porque é a mesma conversa
             que o cliente vê, do outro lado. */}
         <Route path="/agenda" element={<RequireAuth><AgendaPage /></RequireAuth>} />
+        {/* Ensaio do próprio assistente: a conversa de verdade, com o perfil
+            gravado, e sem abrir o WhatsApp no fim. É a resposta a "se eu fosse um
+            cliente, o que eu veria?" — ver pages/TestarAssistentePage.tsx. */}
+        <Route path="/assistente/testar" element={<RequireAuth><TestarAssistentePage /></RequireAuth>} />
         {/* Contratos e procurações: minuta por modelo, revisão e registro da
             impressão digital do PDF. O texto fica no aparelho; o servidor guarda
             só o hash (ver lib/contratos/rascunhos.ts). */}

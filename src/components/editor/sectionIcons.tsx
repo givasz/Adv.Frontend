@@ -11,6 +11,7 @@ import {
   PinIcon,
   PlayIcon,
   QrIcon,
+  SearchIcon,
   ShieldIcon,
   SparkIcon,
   TagIcon,
@@ -30,6 +31,10 @@ export const SECTION_ICON: Record<SectionId, SectionIcon> = {
   areas: TagIcon,
   local: PinIcon,
   agenda: CalendarIcon,
+  // Lupa: triagem é examinar o que chega antes de atender. O balão de conversa
+  // já é a marca de "Contato e redes", e duas seções com o mesmo ícone tiram
+  // do ícone a única coisa que ele faz — dizer onde a pessoa está.
+  triagem: SearchIcon,
   botao: WhatsappIcon,
   faq: InfoIcon,
   aparencia: PaletteIcon,

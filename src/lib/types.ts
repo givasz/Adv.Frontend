@@ -5,6 +5,7 @@ import type { CardConfig } from './cardArt'
 import type { VideoOrientation } from './video'
 import type { Subscription } from './assinatura'
 import type { Endereco } from './endereco'
+import type { TriagemConfig } from './triagem'
 
 export type Plan = 'free' | 'pro' | 'premium'
 
@@ -253,6 +254,16 @@ export interface Profile {
   booking?: BookingConfig
   /** config do assistente virtual (só relevante no modo 'assistant') */
   assistant?: AssistantConfig
+  /**
+   * Assistente de TRIAGEM (plano Max): as perguntas que o advogado escolhe fazer
+   * antes de encaminhar um atendimento. Roda DENTRO do assistente virtual, antes
+   * da escolha de dia e horário — ver lib/triagem.ts.
+   *
+   * Guarda só as PERGUNTAS. As respostas do visitante não passam por nós: elas
+   * viram uma mensagem montada no aparelho dele, que vai direto ao WhatsApp do
+   * advogado. Ausente = perfil sem triagem (o roteiro segue como sempre foi).
+   */
+  triage?: TriagemConfig
   /**
    * O botão no canto do perfil: WhatsApp, assistente ou nenhum. Desligado por
    * padrão, e o servidor já manda 'off' fora do Pro e do Max. Ausente = perfil

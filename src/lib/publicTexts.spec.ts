@@ -16,6 +16,12 @@ const limpo = {
   faqs: [{ question: 'Como funciona a guarda compartilhada?', answer: 'As decisões são tomadas pelos dois pais.' }],
   branding: { brandName: 'Sales Advocacia' },
   assistant: { greeting: 'Olá! Posso ajudar a marcar um horário.' },
+  triage: {
+    enabled: true,
+    questions: [
+      { id: 'q1', kind: 'escolha', label: 'Qual assunto você deseja tratar?', options: ['Família'] },
+    ],
+  },
 }
 
 describe('publicTexts — inventário do que o visitante lê', () => {
@@ -32,6 +38,8 @@ describe('publicTexts — inventário do que o visitante lê', () => {
         'Resposta da pergunta frequente',
         'Legenda do vídeo',
         'Abertura do assistente',
+        'Pergunta da triagem',
+        'Opção de resposta da triagem',
         'Nome no rodapé do perfil',
       ]),
     )
@@ -63,6 +71,11 @@ describe('publicStatus — cada campo público bloqueia por conta própria', () 
     ['Legenda do vídeo', { videoCaption: VEDADO }],
     ['Abertura do assistente', { assistant: { greeting: VEDADO } }],
     ['Nome no rodapé do perfil', { branding: { brandName: VEDADO } }],
+    ['Pergunta da triagem', { triage: { questions: [{ label: VEDADO }] } }],
+    [
+      'Opção de resposta da triagem',
+      { triage: { questions: [{ label: 'Qual assunto?', options: ['Cível', VEDADO] }] } },
+    ],
   ]
 
   it.each(CASOS)('%s bloqueia a publicação', (label, perfil) => {

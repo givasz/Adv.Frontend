@@ -285,6 +285,28 @@ export default function Landing() {
               pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Quem confirma é você.
             </p>
 
+            {/* A triagem entra AQUI, dentro do bloco que já vende o assistente, e
+                não numa seção própria: ela é o degrau seguinte do mesmo recurso —
+                o Pro marca horário, o Max faz as perguntas do advogado antes.
+                A segunda frase é a que impede a linha de virar "deixe a IA
+                atender seus clientes": quem decide continua sendo ele. */}
+            <div className="mt-6 max-w-md rounded-xl2 border border-brass/30 bg-brass/[0.06] p-5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-burgundy px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-paper">
+                Max
+              </span>
+              <h3 className="mt-2.5 font-display text-[19px] font-semibold leading-tight text-ink">
+                E você escolhe o que ele pergunta antes.
+              </h3>
+              <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
+                Monte a sua triagem: assunto, se já existe processo, forma de atendimento, um relato
+                em poucas linhas — as perguntas são suas, na sua ordem. O assistente coleta,
+                organiza e encaminha.{' '}
+                <span className="font-medium text-ink">
+                  A avaliação do caso e a decisão de atender continuam sendo suas.
+                </span>
+              </p>
+            </div>
+
             <ul className="mt-7 grid gap-4 sm:grid-cols-2">
               {[
                 {
@@ -305,7 +327,7 @@ export default function Landing() {
                 {
                   icon: <ScaleIcon width={18} height={18} />,
                   title: 'Sem passar do limite',
-                  body: 'O assistente se identifica como automático e não dá orientação jurídica — só organiza o horário.',
+                  body: 'O assistente se identifica como automático e não dá orientação jurídica. Se perguntarem “tenho direito?”, ele diz que quem avalia é você — e segue.',
                 },
               ].map((f) => (
                 <li key={f.title} className="flex gap-3">
@@ -503,7 +525,7 @@ export default function Landing() {
             },
             {
               title: 'Não guardamos dado de visitante',
-              body: 'Quem escreve para você pelo perfil manda a mensagem do próprio aparelho para o seu WhatsApp. Ela não passa por nós, e não sabemos quem foi.',
+              body: 'Quem escreve para você pelo perfil — inclusive quem responde a uma triagem inteira — manda a mensagem do próprio aparelho para o seu WhatsApp. Ela não passa por nós, e não sabemos quem foi.',
             },
             {
               title: 'Não fingimos verificar',
@@ -513,8 +535,16 @@ export default function Landing() {
               title: 'Não vendemos dados nem rastreamos',
               body: 'Sem cookies de publicidade, sem perfil de comportamento, sem venda de dados. Você baixa e exclui o que guardamos, quando quiser.',
             },
+            // Ocupa as duas colunas: é a frase que separa este produto de um
+            // "chatbot jurídico", e ela merece fechar a seção em vez de ficar
+            // órfã numa metade de linha.
+            {
+              title: 'Não respondemos consultas por você',
+              largo: true,
+              body: 'O assistente coleta e organiza — ele não interpreta o caso, não diz que alguém tem direito a algo, não estima chances e não fala de honorários. Perguntado sobre o caso, ele responde que a avaliação é do advogado. A pessoalidade da prestação é sua, e é assim que o Provimento 205/2021 trata a diferença entre um chatbot e uma consulta automatizada.',
+            },
           ].map((c) => (
-            <Panel key={c.title}>
+            <Panel key={c.title} className={c.largo ? 'sm:col-span-2' : undefined}>
               <h3 className="font-display text-lg font-semibold text-ink">{c.title}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{c.body}</p>
             </Panel>
@@ -621,8 +651,12 @@ function Section({
   )
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6">{children}</div>
+function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6 ${className}`}>
+      {children}
+    </div>
+  )
 }
 
 // Item de FAQ acessível (nativo <details>), sem estado — expande/recolhe.
@@ -661,7 +695,15 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'O assistente virtual dá orientação jurídica aos visitantes?',
-    a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, pergunta o assunto e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua.',
+    a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, faz as perguntas que você escolheu e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua. Não há IA nesse caminho: o assistente não interpreta o que é escrito, apenas repassa.',
+  },
+  {
+    q: 'Posso escolher as perguntas que o assistente faz?',
+    a: 'Sim, no plano Max. Você monta a sua triagem — assunto, se já existe processo, forma de atendimento, um relato curto — e o assistente faz exatamente essas perguntas, na sua ordem, sem inventar nenhuma. As respostas chegam organizadas no seu WhatsApp. A plataforma orienta a não pedir CPF, documentos, dados bancários ou informação de saúde nessa primeira conversa, e avisa o visitante a não enviar nada disso; a configuração e a responsabilidade pelo conteúdo continuam sendo suas.',
+  },
+  {
+    q: 'As respostas da triagem ficam guardadas no advoc.me?',
+    a: 'Não. Elas existem só na conversa aberta no aparelho de quem responde e viram uma mensagem que sai dali direto para o seu WhatsApp. Não há tela, banco ou relatório nosso com essas respostas — o histórico do atendimento é o seu WhatsApp.',
   },
   {
     q: 'Os contratos que eu monto ficam guardados no advoc.me?',

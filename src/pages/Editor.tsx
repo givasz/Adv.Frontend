@@ -27,6 +27,7 @@ import {
   canUseDigitalCard,
   canUsePrintCard,
   canUseScheduling,
+  canUseTriagem,
   canUseVideo,
 } from '@/lib/plans'
 import { areaQuota, charQuota, featurePoints, nextPlan, type UpsellFeature } from '@/lib/upsell'
@@ -52,6 +53,7 @@ import { AuditReportCard } from '@/components/editor/AuditReportCard'
 import { MetricasCard } from '@/components/editor/MetricasCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
+import { TriagemCard } from '@/components/editor/TriagemCard'
 import { BotaoFlutuanteCard } from '@/components/editor/BotaoFlutuanteCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { CampoUnico } from '@/components/editor/CampoUnico'
@@ -83,6 +85,24 @@ const nextId = () => `id-${Date.now()}-${uid++}`
 // Vídeo institucional do Judiciário usado só como espectro sob o cadeado da
 // seção de vídeo — nunca é salvo no perfil de ninguém.
 const PREVIEW_VIDEO_URL = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'
+
+// A triagem que o Free e o Pro veem sob o cadeado. Quatro perguntas reais, das
+// que um escritório de verdade faria — um espectro com campos vazios não vende
+// nada porque não mostra nada. Nunca é salvo em perfil nenhum.
+const TRIAGEM_PREVIEW = {
+  enabled: true,
+  questions: [
+    {
+      id: 'preview-t1',
+      kind: 'escolha' as const,
+      label: 'Qual assunto você deseja tratar?',
+      options: ['Família', 'Trabalhista', 'Cível', 'Outro assunto'],
+    },
+    { id: 'preview-t2', kind: 'sim-nao' as const, label: 'Você já possui processo sobre esse assunto?' },
+    { id: 'preview-t3', kind: 'atendimento' as const, label: 'Como prefere o atendimento?' },
+    { id: 'preview-t4', kind: 'texto-longo' as const, label: 'Conte brevemente o que aconteceu.' },
+  ],
+}
 
 // Conteúdo de exemplo mostrado BORRADO sob o cadeado da seção de FAQ: serve só
 // para o advogado ver o formato do que teria. Nunca é salvo em perfil nenhum.
@@ -538,6 +558,25 @@ export default function Editor() {
                       onOpen={() => abrirUpsell('agenda')}
                     >
                       <SchedulingCard profile={profile} set={() => {}} preview />
+                    </LockedFeature>
+                  )}
+                </Card>
+              )}
+
+              {section === 'triagem' && (
+                <Card title="Assistente de triagem">
+                  {canUseTriagem(profile.plan) ? (
+                    <TriagemCard profile={profile} set={set} irPara={irPara} />
+                  ) : (
+                    // Fora do Max, a seção continua no lugar com o espectro real
+                    // sob o cadeado — e o espectro traz um modelo montado, para o
+                    // advogado ver a triagem que ele TERIA, não uma tela vazia.
+                    <LockedFeature unlockPlan="premium" onOpen={() => abrirUpsell('triagem')}>
+                      <TriagemCard
+                        profile={{ ...profile, plan: 'premium', triage: TRIAGEM_PREVIEW }}
+                        set={() => {}}
+                        preview
+                      />
                     </LockedFeature>
                   )}
                 </Card>

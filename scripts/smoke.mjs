@@ -51,6 +51,19 @@ try {
     socials: [],
     contact: { whatsapp: '5531999999999' },
     schedulingMode: 'assistant',
+    triage: {
+      enabled: true,
+      questions: [
+        {
+          id: 'st1',
+          kind: 'escolha',
+          label: 'Qual assunto você deseja tratar?',
+          options: ['Direito de Família', 'Outro assunto'],
+        },
+        { id: 'st2', kind: 'sim-nao', label: 'Você já possui processo sobre esse assunto?' },
+        { id: 'st3', kind: 'texto-longo', label: 'Conte brevemente o que aconteceu.' },
+      ],
+    },
     plan: 'premium',
     theme: 'papel',
     views: 3,
@@ -101,6 +114,11 @@ const ROTAS = [
   ['/editor?section=video', 'editor · vídeo'],
   // A grade do assistente. A conversa em si tem página própria (ver /agenda).
   ['/editor?section=agenda', 'editor · agenda'],
+  // A triagem: lista de perguntas, painel de edição por pergunta e os avisos de
+  // dado sensível — tudo em uma tela só.
+  ['/editor?section=triagem', 'editor · assistente de triagem'],
+  // O ensaio do próprio assistente — percorrido em conversaDeTeste.
+  ['/assistente/testar', 'testar meu assistente'],
   ['/editor?section=botao', 'editor · botão flutuante'],
   // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
   ['/agenda', 'sua agenda (conversa do advogado)'],
@@ -143,7 +161,7 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
 const EXIGEM_CONTA =
-  /^\/(painel|editor|agenda|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar|contratos(?!\/conferir))/
+  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar|contratos(?!\/conferir))/
 
 const navegador = await chromium.launch()
 const falhas = []
@@ -201,30 +219,61 @@ const clicar = async (pagina, nome) => {
   await b.click()
 }
 
-// A conversa do perfil do começo ao último passo: dia → horário → formato →
-// assunto livre → nome. Para no botão final — o que ele faz depende do perfil.
-async function ateOFimDaConversa(pagina) {
-  const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
-  await dia.waitFor({ timeout: ESPERA })
-  await dia.click()
-  const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
-  await hora.waitFor({ timeout: ESPERA })
-  await hora.click()
-  await clicar(pagina, 'Online')
-  // Os dois caminhos do assunto existem no produto: perfil COM áreas oferece os
-  // assuntos em botões ("Outro assunto" abre o campo livre); perfil que chega à
-  // conversa sem áreas — como o rascunho semeado — já pede o assunto escrito.
-  const outro = pagina.getByRole('button', { name: 'Outro assunto', exact: true })
-  const assunto = pagina.getByLabel('Assunto da conversa')
-  await outro.or(assunto).first().waitFor({ timeout: ESPERA })
-  if (await outro.isVisible()) await outro.click()
-  await assunto.waitFor({ timeout: ESPERA })
-  await assunto.fill('Revisão de contrato')
-  await clicar(pagina, 'Enviar resposta')
-  const nome = pagina.getByLabel('Seu nome')
-  await nome.waitFor({ timeout: ESPERA })
-  await nome.fill('Visitante Smoke')
-  await clicar(pagina, 'Enviar resposta')
+// A conversa do perfil, do começo ao último passo.
+//
+// Responde ao que está EM CENA, e não a uma sequência decorada: com a triagem
+// (plano Max), o roteiro tem um tamanho e uma ordem diferentes em cada perfil —
+// as perguntas são do advogado. O percurso é sempre o mesmo gesto: se há campo,
+// escreve; se há "Pronto", marca e confirma; senão, toca na primeira opção.
+// Para no botão final — o que ele faz depende do perfil.
+async function ateOFimDaConversa(pagina, { nome = 'Visitante Smoke', texto = 'Revisão de contrato' } = {}) {
+  const area = pagina.locator('[data-conversa-resposta]')
+
+  /**
+   * Espera o assistente TERMINAR de responder e abrir o próximo gesto.
+   *
+   * Entre duas falas seguidas o "digitando…" some por um instante e a área
+   * volta a mostrar os controles anteriores. Sem esta espera, o percurso
+   * respondia duas vezes à mesma pergunta e o clique caía num botão que estava
+   * sendo desmontado. `data-passo` é o sinal de que a conversa de fato andou.
+   */
+  const proximoGesto = (anterior) =>
+    pagina.waitForFunction(
+      (ant) => {
+        const el = document.querySelector('[data-conversa-resposta]')
+        if (!el || el.dataset.digitando === '1') return false
+        if (el.dataset.passo === ant) return false
+        return !!el.querySelector('input, button')
+      },
+      anterior,
+      { timeout: ESPERA },
+    )
+
+  await proximoGesto('boot')
+  for (let volta = 0; volta < 24; volta++) {
+    const passo = await area.getAttribute('data-passo')
+    // O fim tem duas caras: link do WhatsApp no perfil de verdade, botão inerte
+    // no perfil de exemplo e no teste do próprio advogado.
+    if (passo === 'done') return
+
+    const campo = area.locator('input').first()
+    if (await campo.count()) {
+      const rotulo = (await campo.getAttribute('aria-label')) ?? ''
+      const tipo = await campo.getAttribute('type')
+      await campo.fill(tipo === 'date' ? '2030-01-15' : /nome|chamar/i.test(rotulo) ? nome : texto)
+      await clicar(pagina, 'Enviar resposta')
+    } else if (await area.getByRole('button', { name: /^Pronto/ }).count()) {
+      // Múltipla escolha: marca a primeira e confirma.
+      await area.locator('button[aria-pressed]').first().click()
+      await area.getByRole('button', { name: /^Pronto/ }).click()
+    } else {
+      // Qualquer outro passo é uma fileira de opções: a primeira serve — dia,
+      // horário, "Sim", "Presencial", o primeiro assunto da triagem.
+      await area.locator('button').first().click()
+    }
+    await proximoGesto(passo)
+  }
+  throw new Error('a conversa não chegou ao fim em 24 voltas')
 }
 
 // Perfil de VERDADE: a conversa termina num link de WhatsApp com as respostas.
@@ -244,6 +293,42 @@ async function conversaDoPerfil() {
     if (!href.startsWith('https://wa.me/5531999999999')) {
       erros.push('o pedido não foi para o WhatsApp do perfil')
     }
+    // A triagem inteira tem de chegar ao advogado: o bloco, as perguntas DELE e
+    // a ressalva de que aquilo não é análise jurídica.
+    if (!href.includes('— Triagem —')) erros.push('a mensagem saiu sem o bloco da triagem')
+    if (!href.includes('Qual assunto você deseja tratar?')) {
+      erros.push('a mensagem saiu sem as perguntas da triagem')
+    }
+    if (!/não são análise jurídica/i.test(href)) {
+      erros.push('a mensagem saiu sem a ressalva da triagem')
+    }
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
+/**
+ * O ENSAIO do próprio advogado, em /assistente/testar.
+ *
+ * É a mesma conversa do visitante, com o perfil gravado — e o que importa aqui é
+ * o que ela NÃO faz no fim: o botão do WhatsApp não pode ser um link. Um teste
+ * que manda mensagem de verdade é um teste que ninguém faz duas vezes, e o
+ * destinatário seria o próprio advogado.
+ */
+async function conversaDeTeste() {
+  const { contexto, pagina, erros } = await abrir('/assistente/testar')
+  try {
+    await pagina.getByText(/nada é enviado/i).first().waitFor({ timeout: ESPERA })
+    await ateOFimDaConversa(pagina)
+    const botao = pagina.getByRole('button', { name: /Enviar no WhatsApp/ })
+    await botao.waitFor({ timeout: ESPERA })
+    if (await pagina.getByRole('link', { name: /Enviar no WhatsApp/ }).count()) {
+      erros.push('o teste do assistente termina num link de WhatsApp de verdade')
+    }
+    await botao.click()
+    await pagina.getByText(/nada foi enviado/).first().waitFor({ timeout: ESPERA })
   } catch (e) {
     erros.push(String(e).split('\n')[0])
   }
@@ -579,6 +664,135 @@ async function contratoDoAdvogado() {
 }
 
 /**
+ * A TELA DA TRIAGEM, de ponta a ponta: montar, ver o roteiro e acessibilidade.
+ *
+ * Não substitui uma auditoria, mas trava o que mais some sem ninguém notar: um
+ * botão sem nome acessível (só ícone) e um campo sem rótulo viram "botão" e
+ * "caixa de edição" para quem usa leitor de tela — e a tela inteira deixa de
+ * ser navegável. Aqui há muitos dos dois: setas de ordenar, lixeiras por opção,
+ * chips de resposta.
+ *
+ * Também confere o que a triagem acrescenta ao teclado: cada pergunta em cena
+ * tem de ser alcançável pelo Tab, sem armadilha de foco.
+ */
+async function acessibilidadeDaTriagem() {
+  const erros = []
+
+  /** Nomes acessíveis vazios entre os controles de um pedaço da tela. */
+  const semNome = (pagina, escopo) =>
+    pagina.locator(escopo).evaluate((raiz) => {
+      const nome = (el) =>
+        (
+          el.getAttribute('aria-label') ||
+          (el.getAttribute('aria-labelledby')
+            ? (document.getElementById(el.getAttribute('aria-labelledby'))?.textContent ?? '')
+            : '') ||
+          (el.closest('label')?.textContent ?? '') ||
+          el.textContent ||
+          el.getAttribute('placeholder') ||
+          ''
+        ).trim()
+      return Array.from(raiz.querySelectorAll('button, input, select, textarea'))
+        .filter((el) => el.offsetParent !== null && !nome(el))
+        .map((el) => `${el.tagName.toLowerCase()}${el.type ? `[${el.type}]` : ''}`)
+    })
+
+  // 1. O editor da triagem, com uma pergunta ABERTA (é onde moram os controles
+  //    só de ícone: mover para cima, mover para baixo, excluir, remover opção).
+  {
+    const { contexto, pagina, erros: runtime } = await abrir('/editor?section=triagem')
+    try {
+      const itens = pagina.locator('[data-perguntas] > li')
+      await itens.first().waitFor({ timeout: ESPERA })
+      const antes = await itens.count()
+      // "+ Adicionar pergunta" tem de ADICIONAR. A pergunta nova nasce sem
+      // enunciado (é o advogado quem vai escrever), e o normalizador chegou a
+      // descartá-la por isso — o botão não fazia nada, e nenhum teste via.
+      await clicar(pagina, '+ Adicionar pergunta')
+      await itens.nth(antes).waitFor({ timeout: ESPERA })
+      if ((await itens.count()) !== antes + 1) {
+        erros.push('“+ Adicionar pergunta” não adicionou nada')
+      }
+      // E excluir tem de excluir.
+      await pagina.getByRole('button', { name: `Excluir a pergunta ${antes + 1}` }).click()
+      await itens.nth(antes).waitFor({ state: 'detached', timeout: ESPERA })
+      if ((await itens.count()) !== antes) erros.push('excluir não removeu a pergunta')
+
+      // SEM NENHUMA PERGUNTA, a tela tem de oferecer um começo de UM TOQUE —
+      // é o caminho de quem abriu o editor justamente para não ter trabalho.
+      for (let i = antes; i > 0; i--) {
+        await pagina.getByRole('button', { name: `Excluir a pergunta ${i}` }).click()
+      }
+      const umToque = pagina.getByRole('button', { name: /^Usar a triagem geral/ })
+      await umToque.waitFor({ timeout: ESPERA })
+      await umToque.click()
+      await itens.nth(1).waitFor({ timeout: ESPERA })
+      if ((await itens.count()) < 3) erros.push('o modelo de um toque não montou a triagem')
+
+      // E o ROTEIRO tem de mostrar o que o visitante vai ver — as perguntas do
+      // advogado E os passos que vêm depois delas.
+      const roteiro = pagina.locator('[data-roteiro] li')
+      await roteiro.first().waitFor({ timeout: ESPERA })
+      const passos = await roteiro.allInnerTexts()
+      if (!passos.some((t) => /Qual assunto/i.test(t))) {
+        erros.push('o roteiro não mostra as perguntas do advogado')
+      }
+      if (!passos.some((t) => /WhatsApp/i.test(t))) {
+        erros.push('o roteiro não mostra o fim da conversa')
+      }
+      if (!(await pagina.getByRole('button', { name: /Testar meu assistente/ }).isEnabled())) {
+        erros.push('“Testar meu assistente” ficou desabilitado com a triagem montada')
+      }
+
+      // O botão que abre os modelos leva o título da caixa junto no nome
+      // acessível ("Começar por um modelo Ver modelos") — daí a expressão.
+      await pagina.getByRole('button', { name: /Ver modelos/ }).click()
+      await pagina.getByRole('button', { name: /^Direito de Família/ }).click()
+      await itens.nth(1).waitFor({ timeout: ESPERA })
+      const primeira = pagina.locator('li button[aria-expanded]').first()
+      await primeira.waitFor({ timeout: ESPERA })
+      await primeira.click()
+      const mudos = await semNome(pagina, '[data-triagem-editor]')
+      if (mudos.length) erros.push(`controles sem nome acessível no editor: ${mudos.join(', ')}`)
+      // Ordenar pelo teclado: a primeira pergunta não sobe, a segunda sim.
+      const paraCima = pagina.getByRole('button', { name: 'Mover a pergunta 2 para cima' })
+      await paraCima.waitFor({ timeout: ESPERA })
+      await paraCima.press('Enter')
+    } catch (e) {
+      erros.push(`editor da triagem: ${String(e).split('\n')[0]}`)
+    }
+    erros.push(...runtime)
+    await contexto.close()
+  }
+
+  // 2. A conversa: cada gesto alcançável pelo Tab e com nome.
+  {
+    const { contexto, pagina, erros: runtime } = await abrir('/ana-smoke-1234/agendar')
+    try {
+      const area = pagina.locator('[data-conversa-resposta]')
+      await area.locator('button').first().waitFor({ timeout: ESPERA })
+      const mudos = await semNome(pagina, '[data-conversa-resposta]')
+      if (mudos.length) erros.push(`controles sem nome na conversa: ${mudos.join(', ')}`)
+      // O log da conversa é anunciado sozinho (role=log + aria-live).
+      const log = pagina.locator('[role="log"]')
+      if ((await log.getAttribute('aria-live')) !== 'polite') {
+        erros.push('a conversa não é anunciada por leitor de tela (aria-live)')
+      }
+      // Tab alcança a primeira opção da triagem.
+      await pagina.keyboard.press('Tab')
+      const focado = await pagina.evaluate(() => document.activeElement?.textContent?.trim() ?? '')
+      if (!focado) erros.push('o Tab não alcançou nenhum controle da conversa')
+    } catch (e) {
+      erros.push(`conversa da triagem: ${String(e).split('\n')[0]}`)
+    }
+    erros.push(...runtime)
+    await contexto.close()
+  }
+
+  return erros
+}
+
+/**
  * A busca do editor leva ao CAMPO, e o painel tem porta para cada seção.
  *
  * Digita "whats" na bio, clica no primeiro resultado: o endereço tem de virar
@@ -819,6 +1033,8 @@ const CONVERSAS = [
   ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],
   ['modelo próprio: trava de dado pessoal, salvar e usar', modeloProprioDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],
+  ['teste do próprio assistente', conversaDeTeste],
+  ['tela da triagem: montar, ver o roteiro e acessibilidade', acessibilidadeDaTriagem],
   ['assistente do escritório', conversaDoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],
 ]

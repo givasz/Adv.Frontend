@@ -76,10 +76,18 @@ export function TypingDots() {
 export function Summary({
   title,
   rows,
+  empilhadas = [],
   reduced,
 }: {
   title: string
   rows: [string, string][]
+  /**
+   * Pares que NÃO cabem em duas colunas: a pergunta da triagem é uma frase
+   * inteira, e espremê-la nos 74px do rótulo deixaria "Você já possui processo
+   * relacionado a esse assunto?" em sete linhas de uma palavra. Aqui a pergunta
+   * fica em cima e a resposta embaixo.
+   */
+  empilhadas?: [string, string][]
   reduced: boolean
 }) {
   return (
@@ -102,6 +110,12 @@ export function Summary({
           <div key={k} className="flex gap-3 px-4 py-2.5">
             <dt className="t-faint w-[74px] shrink-0 text-[11.5px] uppercase tracking-wider">{k}</dt>
             <dd className="t-muted flex-1 text-[13.5px] leading-snug">{v}</dd>
+          </div>
+        ))}
+        {empilhadas.map(([k, v], i) => (
+          <div key={`${k}-${i}`} className="px-4 py-2.5">
+            <dt className="t-faint text-[11.5px] leading-snug">{k}</dt>
+            <dd className="t-muted mt-0.5 text-[13.5px] font-medium leading-snug">{v}</dd>
           </div>
         ))}
       </dl>
@@ -161,6 +175,41 @@ export function Chip({
   )
 }
 
+/**
+ * Chip que LEMBRA se foi tocado — a peça da pergunta de múltipla escolha da
+ * triagem, onde o visitante marca quantas quiser antes de confirmar.
+ *
+ * `aria-pressed` e não `checked`: são botões que alternam, não um formulário de
+ * caixas de seleção, e é assim que o leitor de tela anuncia o estado sem que a
+ * conversa deixe de ser uma conversa.
+ */
+export function ChipToggle({
+  children,
+  on,
+  onClick,
+}: {
+  children: React.ReactNode
+  on: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-all duration-200 hover:-translate-y-px active:translate-y-0"
+      style={{
+        borderColor: on ? 'var(--c-accent)' : 'var(--c-border)',
+        background: on ? 'var(--c-accent)' : 'transparent',
+        color: on ? 'var(--c-accent-ink)' : 'var(--c-faint)',
+      }}
+    >
+      {on && <CheckIcon width={13} height={13} strokeWidth={2.6} aria-hidden />}
+      {children}
+    </button>
+  )
+}
+
 export function Composer({
   value,
   onChange,
@@ -170,6 +219,8 @@ export function Composer({
   canSend,
   skipLabel,
   onSkip,
+  type = 'text',
+  maxLength = 140,
 }: {
   value: string
   onChange: (v: string) => void
@@ -179,6 +230,10 @@ export function Composer({
   canSend: boolean
   skipLabel?: string
   onSkip?: () => void
+  /** 'date' abre o calendário do aparelho — usado pela pergunta de data da triagem. */
+  type?: 'text' | 'date'
+  /** teto de caracteres; a triagem usa um maior no "conte brevemente" */
+  maxLength?: number
 }) {
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -194,12 +249,15 @@ export function Composer({
     >
       <input
         ref={ref}
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        maxLength={140}
-        className="min-w-0 flex-1 rounded-full border px-4 py-2.5 text-[14px] outline-none transition-colors"
+        // Só no texto: no campo de data o atributo não significa nada e o
+        // navegador ignora — mas deixá-lo ali confunde quem lê o código depois.
+        maxLength={type === 'text' ? maxLength : undefined}
+        className="min-w-0 flex-1 rounded-full border px-4 py-2.5 text-[16px] outline-none transition-colors sm:text-[14px]"
         style={{
           borderColor: 'var(--c-border)',
           background: 'var(--c-bg)',

@@ -14,6 +14,7 @@ import {
   cap,
   Chip,
   ChipRow,
+  ChipToggle,
   Composer,
   Summary,
   TypingDots,
@@ -31,6 +32,20 @@ import {
   type AssistantAnswers,
   type AssistantDayOption,
 } from '@/lib/assistant'
+import {
+  AVISO_DE_SEGURANCA,
+  formatarData,
+  limparResposta,
+  OPCOES_ATENDIMENTO,
+  OPCOES_SIM_NAO,
+  pedeOrientacaoJuridica,
+  perguntasDaConversa,
+  respostaLivre,
+  respostaNeutra,
+  tetoDaResposta,
+  type PerguntaDeTriagem,
+  type RespostaDeTriagem,
+} from '@/lib/triagem'
 
 // Assistente virtual: uma conversa GUIADA (não é IA, não interpreta texto livre) que
 // coleta dia, horário, formato e assunto e entrega tudo pronto no WhatsApp do advogado.
@@ -39,8 +54,25 @@ import {
 //
 // Conformidade: o roteiro é operacional. Ele não avalia o caso, não estima chances, não
 // fala de honorários e não insiste — apenas organiza um pedido de horário (Prov. 205/2021).
+//
+// ---------------------------------------------------------------------------
+// TRIAGEM (plano Max) — o roteiro que o PRÓPRIO ADVOGADO escreve.
+//
+// Quando ela está ligada, as perguntas dele vêm ANTES do agendamento, na ordem em
+// que ele as ordenou, e substituem o par "assunto + detalhe" embutido: quem define
+// o que é perguntado é ele, não nós. O assistente continua sem interpretar nada —
+// ele lê enunciado, registra resposta e passa para a próxima.
+//
+// Três coisas mudam, e só elas:
+//   • uma fala de segurança abre a conversa (não envie documento, senha, banco);
+//   • um pedido de ANÁLISE JURÍDICA recebe uma recusa neutra e a conversa segue
+//     (ver pedeOrientacaoJuridica) — nunca uma resposta sobre o caso;
+//   • sem grade de horários, a triagem ainda roda e o pedido vira de CONTATO.
+//
+// Nada do que o visitante responde é gravado em lugar nenhum: as respostas vivem
+// neste componente até virarem uma mensagem no aparelho dele. Ver lib/triagem.ts.
 
-type Step = 'boot' | 'day' | 'time' | 'format' | 'subject' | 'detail' | 'name' | 'done'
+type Step = 'boot' | 'triagem' | 'day' | 'time' | 'format' | 'subject' | 'detail' | 'name' | 'done'
 
 const STEP_ORDER: Step[] = ['day', 'time', 'format', 'subject', 'detail', 'name', 'done']
 const OTHER_SUBJECT = 'Outro assunto'
@@ -52,10 +84,17 @@ export function AssistantChat({
   fullPage = false,
   autoStart = true,
   pace = 1,
+  teste = false,
 }: {
   profile: Profile
   /** ausente no modo 'inline' (demonstração embutida) */
   onClose?: () => void
+  /**
+   * Ensaio do próprio advogado ("Testar meu assistente"). A conversa roda inteira
+   * e de verdade — é o ponto —, mas o fim não abre o WhatsApp: o pedido seria
+   * dele para ele mesmo. Mesmo tratamento do perfil de exemplo.
+   */
+  teste?: boolean
   /**
    * 'page'   = tela inteira, com endereço próprio (/:slug/agendar) — o padrão no perfil;
    * 'inline' = embutido numa página (ex.: a vitrine da home);
@@ -116,6 +155,25 @@ export function AssistantChat({
   // partir do segundo toque.
   const exemplo = isExampleSlug(profile.slug)
   const [avisouExemplo, setAvisouExemplo] = useState(false)
+  /** A conversa roda, mas o fim não envia nada: perfil-modelo ou ensaio do dono. */
+  const semEnvio = exemplo || teste
+
+  // ---- Triagem (plano Max) ----
+  // A lista vem do perfil e NUNCA muda durante a conversa: nada do que o visitante
+  // escreve entra aqui, o que é a resposta de arquitetura ao prompt injection.
+  const perguntas = useMemo(() => perguntasDaConversa(profile), [profile])
+  const temTriagem = perguntas.length > 0
+  // O advogado pode ter posto a preferência de atendimento e o nome DENTRO da
+  // triagem. Quando pôs, o roteiro não pergunta de novo — duas perguntas iguais
+  // seguidas é o defeito mais visível que um assistente pode ter.
+  const formatoNaTriagem = perguntas.some((q) => q.kind === 'atendimento')
+  const nomeNaTriagem = perguntas.some((q) => q.kind === 'contato')
+  const [triagemIdx, setTriagemIdx] = useState(0)
+  const [triagem, setTriagem] = useState<RespostaDeTriagem[]>([])
+  /** Opções já marcadas numa pergunta de múltipla escolha, antes de confirmar. */
+  const [marcadas, setMarcadas] = useState<string[]>([])
+  /** Quantas vezes o visitante já pediu uma análise do caso (ver respostaNeutra). */
+  const [pedidosDeAnalise, setPedidosDeAnalise] = useState(0)
 
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -141,14 +199,23 @@ export function AssistantChat({
     setDiasFrescos(null)
     setDraft('')
     setAvisouExemplo(false)
+    setTriagemIdx(0)
+    setTriagem([])
+    setMarcadas([])
+    setPedidosDeAnalise(0)
     setStep('boot')
     const custom = config.greeting?.trim()
     const opening = custom
       ? [custom]
-      : [
-          `Olá! Sou o assistente virtual${first ? ` de ${first}` : ''}.`,
-          'Posso reservar um horário de conversa. Não presto orientação jurídica — só organizo o pedido e encaminho.',
-        ]
+      : temTriagem
+        ? [
+            `Olá! Sou o assistente virtual${first ? ` de ${first}` : ''}.`,
+            'Vou fazer algumas perguntas para organizar o seu atendimento. Não presto orientação jurídica — quem avalia o caso é o advogado.',
+          ]
+        : [
+            `Olá! Sou o assistente virtual${first ? ` de ${first}` : ''}.`,
+            'Posso reservar um horário de conversa. Não presto orientação jurídica — só organizo o pedido e encaminho.',
+          ]
     if (semWhatsapp) {
       void say(
         [
@@ -159,11 +226,80 @@ export function AssistantChat({
       )
       return
     }
+    // Com triagem, a fala de segurança vem ANTES da primeira pergunta: é o único
+    // momento em que a pessoa ainda não escreveu nada e pode decidir o que
+    // escrever. Depois da primeira resposta, o aviso chegaria tarde.
+    if (temTriagem) {
+      void say([...opening, AVISO_DE_SEGURANCA, perguntas[0].label], 'triagem')
+      return
+    }
     void say(days.length ? [...opening, 'Qual dia fica melhor para você?'] : opening, days.length ? 'day' : 'done')
-  }, [config.greeting, days.length, first, say, reset, semWhatsapp])
+  }, [config.greeting, days.length, first, say, reset, semWhatsapp, temTriagem, perguntas])
 
   useAutoStart(start, autoStart)
   usePinnedToBottom(listRef, [msgs, typing, step])
+
+  // ---- Transições da TRIAGEM ----
+
+  /**
+   * Registra uma resposta e vai para a próxima pergunta do advogado.
+   *
+   * Duas respostas NÃO entram no bloco da triagem: a preferência de atendimento e
+   * o nome. Elas alimentam os campos que a mensagem já tem ("Formato:", "Nome:"),
+   * e repeti-las embaixo faria o advogado ler a mesma informação duas vezes na
+   * mesma mensagem. O enunciado continua sendo o dele — o que muda é onde a
+   * resposta aparece.
+   */
+  function responderTriagem(indice: number, bruto: string, antesDaProxima: string[] = []) {
+    const pergunta = perguntas[indice]
+    if (!pergunta) return
+    const resposta = limparResposta(bruto, tetoDaResposta(pergunta.kind))
+    push('user', resposta || 'Prefiro não responder agora')
+    if (pergunta.kind === 'contato') {
+      if (resposta) setAnswers((a) => ({ ...a, name: resposta }))
+    } else if (pergunta.kind === 'atendimento') {
+      if (resposta) setAnswers((a) => ({ ...a, format: resposta.toLowerCase() }))
+    } else {
+      setTriagem((r) => [...r, { id: pergunta.id, pergunta: pergunta.label, resposta }])
+    }
+
+    // Pedido de análise jurídica numa resposta escrita à mão: o assistente diz,
+    // de frente, que não avalia — e segue. Ignorar deixaria a pessoa achando que
+    // alguém vai responder depois; responder seria consulta automatizada, que é o
+    // que o Prov. 205/2021 veda.
+    const antes = [...antesDaProxima]
+    if (respostaLivre(pergunta.kind) && pedeOrientacaoJuridica(resposta)) {
+      const n = pedidosDeAnalise + 1
+      setPedidosDeAnalise(n)
+      antes.unshift(respostaNeutra(n))
+    }
+    seguirTriagem(indice + 1, antes)
+  }
+
+  /** Da pergunta `proximo` em diante — ou o agendamento, quando acabarem. */
+  function seguirTriagem(proximo: number, antes: string[] = []) {
+    setDraft('')
+    setMarcadas([])
+    let i = proximo
+    // Perfil que atende de um jeito só não tem o que perguntar sobre formato: a
+    // resposta já é conhecida, e perguntar seria fingir uma escolha.
+    while (perguntas[i]?.kind === 'atendimento' && !bothFormats) {
+      setAnswers((a) => ({ ...a, format: a.format ?? soloFormat }))
+      i++
+    }
+    setTriagemIdx(i)
+    if (i < perguntas.length) {
+      void say([...antes, perguntas[i].label], 'triagem')
+      return
+    }
+    // Acabaram as perguntas do advogado. Daqui para a frente é o agendamento de
+    // sempre — e, sem grade, o pedido é de contato.
+    if (diasVisiveis.length) {
+      void say([...antes, 'Obrigado. Agora, qual dia fica melhor para você?'], 'day')
+      return
+    }
+    askSubject(antes, false)
+  }
 
   // ---- Transições ----
 
@@ -197,25 +333,40 @@ export function AssistantChat({
       )
       return
     }
-    if (bothFormats) {
+    // Com a preferência de atendimento já perguntada DENTRO da triagem, repetir
+    // a pergunta aqui seria o assistente não tendo escutado a própria conversa.
+    if (bothFormats && !formatoNaTriagem) {
       void say(['Anotado. A conversa seria presencial ou online?'], 'format')
       return
     }
-    setAnswers((a) => ({ ...a, time, format: soloFormat }))
+    const escolhido = answers.format ?? soloFormat
+    setAnswers((a) => ({ ...a, time, format: a.format ?? soloFormat }))
     // Perfil que só atende presencial nunca chega à pergunta de formato — mas o
     // endereço faz a mesma falta. Ele entra aqui, no mesmo ponto do roteiro.
-    askSubject(soloFormat === 'presencial' ? endereco : '')
+    // (Na triagem o endereço já foi dito ao responder a pergunta de atendimento.)
+    askSubject(escolhido === 'presencial' && !formatoNaTriagem ? [endereco] : [])
   }
 
   function pickFormat(format: string) {
     push('user', cap(format))
     setAnswers((a) => ({ ...a, format }))
-    askSubject(format === 'presencial' ? endereco : '')
+    askSubject(format === 'presencial' ? [endereco] : [])
   }
 
-  /** `antes` é a fala do endereço, quando houver — ver falaDoEnderecoPresencial. */
-  function askSubject(antes = '') {
-    const abre = antes ? [antes] : []
+  /**
+   * `antes` são as falas que precedem a pergunta (o endereço do presencial, a
+   * ressalva de que não há análise jurídica). `comHorario` distingue um pedido de
+   * HORÁRIO de um pedido de CONTATO — só o primeiro pode prometer confirmação de
+   * um horário.
+   */
+  function askSubject(antes: string[] = [], comHorario = true) {
+    const abre = antes.filter(Boolean)
+    // Com triagem, o par "assunto + detalhe" embutido não existe: quem define o
+    // que é perguntado é o advogado, e ele já perguntou.
+    if (temTriagem) {
+      pedirNomeOuFechar(abre, comHorario)
+      return
+    }
     if (!areas.length) {
       void say(
         [...abre, 'Sobre qual assunto seria a conversa? Pode escrever em poucas palavras.'],
@@ -224,6 +375,38 @@ export function AssistantChat({
       return
     }
     void say([...abre, 'Sobre qual assunto seria a conversa?'], 'subject')
+  }
+
+  /** O nome fecha a conversa — a menos que a triagem já o tenha perguntado. */
+  function pedirNomeOuFechar(abre: string[], comHorario: boolean) {
+    if (!nomeNaTriagem) {
+      void say([...abre, 'Por último: como posso te chamar?'], 'name')
+      return
+    }
+    encerrar(abre, comHorario)
+  }
+
+  /**
+   * A última fala. Com horário escolhido, o pedido é de agendamento e a promessa
+   * é a de sempre: quem confirma é o advogado. Sem horário (triagem em perfil sem
+   * grade aberta), é um pedido de CONTATO — e prometer confirmação de um horário
+   * que ninguém marcou seria a conversa mentindo no último balão.
+   */
+  function encerrar(abre: string[], comHorario: boolean) {
+    void say(
+      comHorario
+        ? [
+            ...abre,
+            'Registrei seu pedido.',
+            'Toque no botão abaixo para enviar tudo pelo WhatsApp — o horário só vale depois da confirmação.',
+          ]
+        : [
+            ...abre,
+            'Registrei suas respostas.',
+            'Toque no botão abaixo para enviar pelo WhatsApp. O advogado vai analisar e responder — quem confirma o atendimento é ele.',
+          ],
+      'done',
+    )
   }
 
   function pickSubject(subject: string) {
@@ -250,22 +433,18 @@ export function AssistantChat({
   }
 
   function sendName(text: string) {
-    const value = text.trim()
+    const value = limparResposta(text)
     if (!value) return
     push('user', value)
     setAnswers((a) => ({ ...a, name: value }))
     setDraft('')
-    if (!horarioAindaVale(answers)) {
+    // Sem horário escolhido não há o que expirar: é o caso da triagem num perfil
+    // que não abriu grade nenhuma.
+    if (answers.time && !horarioAindaVale(answers)) {
       horarioSaiu([`Prazer, ${firstName(value)}.`])
       return
     }
-    void say(
-      [
-        `Prazer, ${firstName(value)}. Registrei seu pedido.`,
-        'Toque no botão abaixo para enviar tudo pelo WhatsApp — o horário só vale depois da confirmação.',
-      ],
-      'done',
-    )
+    encerrar([`Prazer, ${firstName(value)}.`], !!answers.time)
   }
 
   // ---- Horário que expirou no meio da conversa ----
@@ -287,17 +466,31 @@ export function AssistantChat({
     setDiasFrescos(agora)
     setShowAllDays(false)
     setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
+    if (agora.length) {
+      void say(
+        [
+          ...antes,
+          'Só que esse horário acabou de sair da agenda — passou do prazo mínimo para pedir. Escolha outro, por favor:',
+        ],
+        'day',
+      )
+      return
+    }
+    // Nenhum horário sobrou. Com triagem, o que a pessoa respondeu continua
+    // valendo: mandar isso e esperar o retorno é melhor do que pedir para ela
+    // voltar mais tarde e responder tudo de novo.
     void say(
-      agora.length
+      temTriagem
         ? [
             ...antes,
-            'Só que esse horário acabou de sair da agenda — passou do prazo mínimo para pedir. Escolha outro, por favor:',
+            'Só que esse horário acabou de sair da agenda, e não sobrou outro aberto agora.',
+            'Posso enviar o que você já respondeu — aí o advogado retorna com um horário.',
           ]
         : [
             ...antes,
             'Só que esse horário acabou de sair da agenda, e não sobrou outro aberto agora. Tente de novo mais tarde.',
           ],
-      agora.length ? 'day' : 'done',
+      'done',
     )
   }
 
@@ -306,10 +499,31 @@ export function AssistantChat({
   const dayOptions = showAllDays ? diasVisiveis : diasVisiveis.slice(0, MAX_DAY_CHIPS)
   const times = answers.day?.times ?? []
   const answered = STEP_ORDER.indexOf(step)
-  const progress = step === 'boot' ? 0 : Math.min(1, answered / (STEP_ORDER.length - 1))
-  const href = assistantWhatsappHref(profile, answers, config.durationMin)
-  // Sem horário escolhido não há pedido: o fim da conversa vira só um recado.
-  const ready = step === 'done' && !!answers.time && !!href
+  // As respostas da triagem viajam junto: é o que vira o bloco "— Triagem —" na
+  // mensagem. Fora do Max a lista é sempre vazia e nada muda.
+  const respostas: AssistantAnswers = temTriagem ? { ...answers, triagem } : answers
+  const href = assistantWhatsappHref(profile, respostas, config.durationMin)
+  // Com triagem, o fio de progresso conta as perguntas do advogado — o roteiro
+  // tem um tamanho diferente em cada perfil, e o STEP_ORDER fixo mostraria a
+  // barra pulando de 0 a 60% na primeira resposta.
+  const progress = temTriagem
+    ? progressoDaTriagem({
+        step,
+        respondidas: triagemIdx,
+        perguntas: perguntas.length,
+        comDias: diasVisiveis.length > 0,
+        pedeFormato: bothFormats && !formatoNaTriagem,
+        pedeNome: !nomeNaTriagem,
+        answers,
+      })
+    : step === 'boot'
+      ? 0
+      : Math.min(1, answered / (STEP_ORDER.length - 1))
+  // Sem horário escolhido não há PEDIDO DE HORÁRIO — mas com triagem há um pedido
+  // de contato, que vale por si. O que nunca há é conversa sem WhatsApp de destino.
+  const ready = step === 'done' && !!href && (!!answers.time || temTriagem)
+  /** A pergunta em cena, quando o roteiro está na triagem. */
+  const perguntaAtual = step === 'triagem' ? perguntas[triagemIdx] : undefined
 
   const modo = fullPage ? 'page' : variant
   const sheet = modo === 'sheet'
@@ -424,16 +638,26 @@ export function AssistantChat({
         {typing && <TypingDots />}
         {ready && (
           <Summary
-            title="Pedido de horário"
+            title={answers.time ? 'Pedido de horário' : 'Pedido de contato'}
             rows={summaryRows(answers, config.durationMin)}
+            empilhadas={triagem.map((r) => [r.pergunta, r.resposta || '—'] as [string, string])}
             reduced={reduced}
           />
         )}
         </div>
       </div>
 
-      {/* Área de resposta — chips ou campo de texto, conforme a etapa */}
+      {/* Área de resposta — chips ou campo de texto, conforme a etapa.
+          Os três `data-` são como o teste de fumaça percorre o roteiro: com a
+          triagem, o que aparece aqui muda a cada perfil, e o teste responde ao
+          que estiver em cena em vez de repetir uma sequência fixa.
+          `data-passo` é o sinal de que a conversa ANDOU — entre duas falas do
+          assistente a área volta a mostrar os controles anteriores por um
+          instante, e sem ele o teste respondia duas vezes à mesma pergunta. */}
       <div
+        data-conversa-resposta
+        data-passo={step === 'triagem' ? `triagem-${triagemIdx}` : step}
+        data-digitando={typing ? '1' : '0'}
         className="relative z-10 shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
         style={{ borderTop: '1px solid var(--c-border)', background: 'var(--c-surface)' }}
       >
@@ -447,6 +671,17 @@ export function AssistantChat({
           >
             {typing ? (
               <p className="t-faint py-2 text-center text-[12px]">…</p>
+            ) : perguntaAtual ? (
+              <CampoDaTriagem
+                pergunta={perguntaAtual}
+                indice={triagemIdx}
+                draft={draft}
+                setDraft={setDraft}
+                marcadas={marcadas}
+                setMarcadas={setMarcadas}
+                onResponder={responderTriagem}
+                endereco={endereco}
+              />
             ) : step === 'day' ? (
               <ChipRow label="Escolha um dia">
                 {dayOptions.map((d) => (
@@ -511,24 +746,29 @@ export function AssistantChat({
               />
             ) : ready ? (
               <div className="space-y-2">
-                {exemplo ? (
-                  // Perfil de exemplo: o mesmo botão, com a mesma cara — e sem
-                  // link nenhum. Sem `href` não sobra o que abrir em nova aba nem
-                  // o que copiar: o número inventado nunca chega à tela.
+                {semEnvio ? (
+                  // Perfil de exemplo, ou o ensaio do próprio advogado: o mesmo
+                  // botão, com a mesma cara — e sem link nenhum. Sem `href` não
+                  // sobra o que abrir em nova aba nem o que copiar.
                   <button
                     type="button"
                     onClick={() => {
-                      if (!horarioAindaVale(answers)) {
+                      if (answers.time && !horarioAindaVale(answers)) {
                         horarioSaiu()
                         return
                       }
                       void say(
                         avisouExemplo
-                          ? ['Este é só um exemplo — nada foi enviado.']
-                          : [
-                              `Aqui o pedido seguiria pronto para o WhatsApp de ${first || 'quem publicou o perfil'}.`,
-                              'Como este é um perfil de exemplo, nada foi enviado — ninguém recebe esta mensagem.',
-                            ],
+                          ? [teste ? 'Continua sendo um teste — nada foi enviado.' : 'Este é só um exemplo — nada foi enviado.']
+                          : teste
+                            ? [
+                                'Aqui a mensagem seguiria pronta para o seu WhatsApp, com tudo o que foi respondido.',
+                                'Como este é um teste seu, nada foi enviado.',
+                              ]
+                            : [
+                                `Aqui o pedido seguiria pronto para o WhatsApp de ${first || 'quem publicou o perfil'}.`,
+                                'Como este é um perfil de exemplo, nada foi enviado — ninguém recebe esta mensagem.',
+                              ],
                       )
                       setAvisouExemplo(true)
                     }}
@@ -543,8 +783,9 @@ export function AssistantChat({
                     href={href}
                     {...comoAbrirWhatsapp()}
                     onClick={(e) => {
-                      // A pessoa pode ter parado no botão por um bom tempo.
-                      if (horarioAindaVale(answers)) return
+                      // A pessoa pode ter parado no botão por um bom tempo. Sem
+                      // horário escolhido não há o que expirar.
+                      if (!answers.time || horarioAindaVale(answers)) return
                       e.preventDefault()
                       horarioSaiu()
                     }}
@@ -560,7 +801,7 @@ export function AssistantChat({
                   onClick={start}
                   className="t-faint w-full py-1 text-center text-[12.5px] font-medium underline-offset-4 hover:underline"
                 >
-                  Escolher outro horário
+                  {answers.time ? 'Escolher outro horário' : 'Começar de novo'}
                 </button>
               </div>
             ) : step === 'done' ? (
@@ -576,17 +817,21 @@ export function AssistantChat({
         {/* O aviso de privacidade entra só quando a conversa começa a PEDIR dado
             pessoal (assunto e nome). Mostrá-lo desde o "escolha um dia" seria
             ruído; escondê-lo na etapa do assunto seria pedir sem avisar. */}
-        {(step === 'detail' || step === 'name' || ready) && (
+        {(step === 'detail' || step === 'name' || step === 'triagem' || ready) && (
           <PrivacyNote
             fluxo="assistente"
             tone="themed"
-            semGuarda={step !== 'detail'}
+            // A orientação "escreva em linhas gerais" só faz sentido ENQUANTO há
+            // um campo livre aberto. Numa pergunta de escolha ela viraria conselho
+            // sobre um campo que não existe.
+            semGuarda={step === 'triagem' ? !respostaLivre(perguntaAtual?.kind ?? 'escolha') : step !== 'detail'}
             className="mt-2.5 text-center"
           />
         )}
         <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
-          Assistente automático. Não presta orientação jurídica e não confirma o horário —
-          quem confirma é {first || 'o(a) advogado(a)'}.
+          Assistente automático. Não presta orientação jurídica e não confirma{' '}
+          {temTriagem && !diasVisiveis.length ? 'o atendimento' : 'o horário'} — quem confirma é{' '}
+          {first || 'o(a) advogado(a)'}.
         </p>
       </div>
     </div>
@@ -650,4 +895,167 @@ function useAutoStart(start: () => void, autoStart: boolean) {
   useEffect(() => {
     if (autoStart) start()
   }, [start, autoStart])
+}
+
+// ---- A área de resposta de uma pergunta da triagem -------------------------
+//
+// Um tipo por vez, e nenhum deles é um formulário: escolha vira chip, sim/não
+// vira dois chips, texto vira o mesmo campo do resto da conversa. O visitante
+// não deve perceber que mudou de mecanismo no meio do caminho.
+//
+// O enunciado JÁ FOI DITO pelo assistente, no balão acima. Aqui o rótulo é o do
+// gesto ("Escolha uma opção"), e o `aria-label` do campo livre repete a pergunta
+// — quem ouve a tela precisa do vínculo que o olho faz sozinho.
+
+const ROTULO_DO_GESTO: Record<PerguntaDeTriagem['kind'], string> = {
+  escolha: 'Escolha uma opção',
+  multipla: 'Marque quantas quiser',
+  'sim-nao': 'Sim ou não',
+  atendimento: 'Formato do atendimento',
+  data: 'Escolha uma data',
+  texto: 'Sua resposta',
+  'texto-longo': 'Sua resposta',
+  contato: 'Seu nome',
+}
+
+function CampoDaTriagem({
+  pergunta,
+  indice,
+  draft,
+  setDraft,
+  marcadas,
+  setMarcadas,
+  onResponder,
+  endereco,
+}: {
+  pergunta: PerguntaDeTriagem
+  indice: number
+  draft: string
+  setDraft: (v: string) => void
+  marcadas: string[]
+  setMarcadas: (v: string[]) => void
+  onResponder: (indice: number, texto: string, antes?: string[]) => void
+  /** fala do endereço, dita quando a pessoa escolhe presencial */
+  endereco: string
+}) {
+  const rotulo = ROTULO_DO_GESTO[pergunta.kind]
+  const pular = pergunta.optional ? (
+    <Chip subtle onClick={() => onResponder(indice, '')}>
+      Prefiro não responder
+    </Chip>
+  ) : null
+
+  if (pergunta.kind === 'sim-nao' || pergunta.kind === 'escolha' || pergunta.kind === 'atendimento') {
+    const opcoes =
+      pergunta.kind === 'sim-nao'
+        ? OPCOES_SIM_NAO
+        : pergunta.kind === 'atendimento'
+          ? OPCOES_ATENDIMENTO
+          : (pergunta.options ?? [])
+    return (
+      <ChipRow label={rotulo}>
+        {opcoes.map((o) => (
+          <Chip
+            key={o}
+            onClick={() =>
+              // Escolher "presencial" é a hora de dizer onde fica o escritório —
+              // quem acabou de decidir sair de casa pergunta "onde?" em seguida.
+              onResponder(
+                indice,
+                o,
+                pergunta.kind === 'atendimento' && o === 'Presencial' && endereco ? [endereco] : [],
+              )
+            }
+          >
+            {o}
+          </Chip>
+        ))}
+        {pular}
+      </ChipRow>
+    )
+  }
+
+  if (pergunta.kind === 'multipla') {
+    const alterna = (o: string) =>
+      setMarcadas(marcadas.includes(o) ? marcadas.filter((x) => x !== o) : [...marcadas, o])
+    return (
+      <div>
+        <ChipRow label={rotulo}>
+          {(pergunta.options ?? []).map((o) => (
+            <ChipToggle key={o} on={marcadas.includes(o)} onClick={() => alterna(o)}>
+              {o}
+            </ChipToggle>
+          ))}
+        </ChipRow>
+        <div className="mt-2.5 flex items-center gap-3">
+          <button
+            type="button"
+            disabled={!marcadas.length}
+            // A ordem das OPÇÕES manda, não a ordem em que foram tocadas: a
+            // resposta é lida pelo advogado, e ele reconhece a própria lista.
+            onClick={() =>
+              onResponder(indice, (pergunta.options ?? []).filter((o) => marcadas.includes(o)).join(', '))
+            }
+            className="rounded-full px-4 py-2 text-[13.5px] font-semibold transition-opacity disabled:opacity-40"
+            style={{ background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }}
+          >
+            Pronto{marcadas.length ? ` (${marcadas.length})` : ''}
+          </button>
+          {pergunta.optional && (
+            <button
+              type="button"
+              onClick={() => onResponder(indice, '')}
+              className="t-faint text-[13px] font-medium underline-offset-4 hover:underline"
+            >
+              Prefiro não responder
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Campo escrito: data, resposta curta, resposta longa e o nome.
+  const data = pergunta.kind === 'data'
+  return (
+    <Composer
+      value={draft}
+      onChange={setDraft}
+      onSend={() => onResponder(indice, data ? formatarData(draft) : draft)}
+      type={data ? 'date' : 'text'}
+      maxLength={tetoDaResposta(pergunta.kind)}
+      placeholder={data ? '' : pergunta.kind === 'contato' ? 'Seu nome' : 'Escreva sua resposta'}
+      label={pergunta.label}
+      skipLabel={pergunta.optional ? 'Pular' : undefined}
+      onSkip={pergunta.optional ? () => onResponder(indice, '') : undefined}
+      canSend={draft.trim().length > (pergunta.kind === 'contato' ? 1 : 0)}
+    />
+  )
+}
+
+// ---- Fio de progresso da conversa com triagem ------------------------------
+//
+// O roteiro tem um tamanho diferente em cada perfil (3 perguntas aqui, 7 ali,
+// com ou sem grade de horários), então a fração é contada, não tabelada. Sem
+// isto a barra pulava de 0 a 60% na primeira resposta de quem tem sete perguntas.
+function progressoDaTriagem(o: {
+  step: Step
+  respondidas: number
+  perguntas: number
+  comDias: boolean
+  pedeFormato: boolean
+  pedeNome: boolean
+  answers: AssistantAnswers
+}): number {
+  if (o.step === 'boot') return 0
+  if (o.step === 'done') return 1
+  const total = o.perguntas + (o.comDias ? 2 : 0) + (o.pedeFormato ? 1 : 0) + (o.pedeNome ? 1 : 0)
+  if (!total) return 1
+  const feitos =
+    o.respondidas +
+    (o.answers.day ? 1 : 0) +
+    (o.answers.time ? 1 : 0) +
+    (o.pedeFormato && o.answers.format ? 1 : 0) +
+    (o.pedeNome && o.answers.name ? 1 : 0)
+  return Math.min(1, feitos / total)
 }

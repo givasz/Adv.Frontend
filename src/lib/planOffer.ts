@@ -121,6 +121,17 @@ const BALAO =
  */
 const ENDERECO = 'Endereço com o seu nome, sem o número que o Free carimba no fim'
 
+/**
+ * A triagem é o que o Max acrescenta ao assistente do Pro, e a frase precisa
+ * dizer as DUAS metades: quem escreve as perguntas é o advogado, e quem decide
+ * sobre o atendimento continua sendo ele. Sem a segunda metade, a linha venderia
+ * "deixe a IA atender seus clientes" — que é exatamente o que este produto não
+ * é, e o que o Prov. 205/2021 não admite (a pessoalidade da prestação não se
+ * afasta). Não há IA nenhuma neste caminho: ver lib/triagem.ts.
+ */
+const TRIAGEM =
+  'Assistente de triagem: você escreve as perguntas que ele faz antes de encaminhar, e recebe tudo organizado no WhatsApp'
+
 export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'free',
@@ -171,6 +182,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: 'A IA também escreve sua frase de apresentação e revisa seus textos' },
     ],
     falta: [
+      'O assistente marca horário, mas não faz as suas perguntas de triagem',
       'Sem vídeo, cartão para a gráfica, cor própria e contratos',
       'Rodapé “criado com advoc.me” continua',
     ],
@@ -195,6 +207,10 @@ export const PLAN_OFFERS: PlanOffer[] = [
       // e-mail, telefone… (ver lib/contratos/proprio.ts). Não dizer isso aqui
       // venderia um cofre de contratos que o produto se recusa a ser.
       { text: `Até ${MODELOS_PROPRIOS_LIMITE} modelos escritos por você, só com texto — os dados do cliente entram a cada documento` },
+      // Logo depois dos contratos (que seguem em primeiro desde 11/09/2026, por
+      // decisão própria): a triagem é o que mais muda o DIA do advogado — o
+      // contato chega triado —, enquanto os demais mudam a página.
+      { text: TRIAGEM },
       { text: 'Vídeo de apresentação no fim do perfil' },
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
@@ -312,6 +328,11 @@ export const PLAN_COMPARE: CompareGroup[] = [
         label: 'Assistente de agendamento',
         hint: 'o pedido chega pronto no seu WhatsApp',
         values: aPartirDe('pro'),
+      },
+      {
+        label: 'Assistente de triagem',
+        hint: 'você define as perguntas feitas antes do encaminhamento',
+        values: aPartirDe('premium'),
       },
       { label: 'Atalho de conversa no canto do perfil', values: aPartirDe('pro') },
       { label: 'Cartão digital (QR Code e vCard)', values: aPartirDe('pro') },

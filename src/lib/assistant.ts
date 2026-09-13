@@ -14,6 +14,7 @@ import { MONTHS_SHORT, WEEKDAYS_FULL, WEEKDAYS_SHORT } from './booking'
 import { whatsappHref } from './whatsapp'
 import type { AssistantConfig, AssistantDay, FaixaDeAtendimento, Profile } from './types'
 import { enderecoEmLinha, enderecoVisivel, type Endereco } from './endereco'
+import { linhasDaTriagem, type RespostaDeTriagem } from './triagem'
 
 /** Manhã e tarde, com atendimentos de uma hora: 09:00, 10:00, 14:00, 15:00 e 16:00. */
 export const FAIXAS_PADRAO: FaixaDeAtendimento[] = [
@@ -574,6 +575,12 @@ export interface AssistantAnswers {
   subject?: string
   detail?: string
   name?: string
+  /**
+   * As perguntas da TRIAGEM respondidas, na ordem em que foram feitas (plano
+   * Max — ver lib/triagem.ts). Vazio ou ausente no perfil sem triagem, e aí a
+   * mensagem sai exatamente como sempre saiu.
+   */
+  triagem?: RespostaDeTriagem[]
 }
 
 /** Resumo humano do horário escolhido: "segunda-feira, 25 de agosto às 14:00". */
@@ -585,6 +592,12 @@ export function formatChoice(answers: AssistantAnswers): string {
 /**
  * Monta a mensagem que o visitante envia ao advogado. Texto sóbrio e factual:
  * sem promessa, sem preço, sem apelo — só os dados do pedido.
+ *
+ * Com TRIAGEM, o bloco das perguntas entra depois dos campos estruturados, com a
+ * ressalva de que aquilo foi escrito pelo visitante e não é análise jurídica
+ * (ver linhasDaTriagem). A abertura e o fecho mudam quando não há horário
+ * escolhido: uma triagem sem grade é um pedido de CONTATO, e prometer "aguardo a
+ * confirmação" de um horário que ninguém marcou seria a mensagem mentindo.
  */
 export function buildAssistantMessage(
   profile: Pick<Profile, 'name'>,
@@ -592,20 +605,25 @@ export function buildAssistantMessage(
   durationMin?: number,
 ): string {
   const first = firstName(profile.name)
+  const horario = formatChoice(answers)
   const fields: (string | null)[] = [
     answers.name?.trim() ? `Nome: ${answers.name.trim()}` : null,
-    formatChoice(answers) ? `Dia e horário: ${formatChoice(answers)}` : null,
-    durationMin ? `Duração prevista: ${durationMin} min` : null,
+    horario ? `Dia e horário: ${horario}` : null,
+    horario && durationMin ? `Duração prevista: ${durationMin} min` : null,
     answers.format ? `Formato: ${cap(answers.format)}` : null,
     answers.subject?.trim() ? `Assunto: ${answers.subject.trim()}` : null,
     answers.detail?.trim() ? `Detalhe: ${answers.detail.trim()}` : null,
   ]
+  const triagem = linhasDaTriagem(answers.triagem ?? [])
   return [
-    `Olá${first ? `, ${first}` : ''}! Falei com seu assistente virtual no advoc.me e gostaria de marcar uma conversa.`,
+    `Olá${first ? `, ${first}` : ''}! Falei com seu assistente virtual no advoc.me e gostaria de ${
+      horario ? 'marcar uma conversa' : 'falar com você'
+    }.`,
     '',
     ...fields.filter((l): l is string => !!l),
+    ...(triagem.length ? ['', ...triagem] : []),
     '',
-    'Fico no aguardo da sua confirmação.',
+    horario ? 'Fico no aguardo da sua confirmação.' : 'Fico no aguardo do seu retorno.',
   ].join('\n')
 }
 

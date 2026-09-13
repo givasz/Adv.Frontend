@@ -26,6 +26,7 @@ import {
 } from './plans'
 import { resolveSchedulingMode } from './booking'
 import { resolveAssistantConfig, weeklySlotCount } from './assistant'
+import { canUseTriagem, perguntasUtilizaveis, resolveTriagem } from './triagem'
 import { getTheme, THEMES, isThemeUnlocked } from './themes'
 import { parseVideoUrl } from './video'
 import { enderecoVisivel, temEndereco } from './endereco'
@@ -38,6 +39,7 @@ export type SectionId =
   | 'bio'
   | 'redes'
   | 'agenda'
+  | 'triagem'
   | 'botao'
   | 'faq'
   | 'video'
@@ -276,6 +278,49 @@ export const SECTIONS: Record<SectionId, SectionMeta> = {
     },
   },
 
+  triagem: {
+    id: 'triagem',
+    title: 'Assistente de triagem',
+    short: 'Triagem',
+    subtitle: 'As perguntas que o assistente faz antes de encaminhar o atendimento.',
+    group: 'perfil',
+    plan: 'premium',
+    // Sem o termo exato "perguntas": ele é da seção de FAQ, que existe desde
+    // muito antes, e quem o digita quase sempre quer responder uma dúvida do
+    // perfil. "perguntas da triagem" ainda encontra esta seção, um degrau abaixo.
+    keywords: [
+      'triagem',
+      'assistente de triagem',
+      'perguntas da triagem',
+      'perguntas antes do atendimento',
+      'recepção',
+      'formulário',
+      'qualificação',
+      'pré-atendimento',
+      'questionário',
+    ],
+    campos: [],
+    resumo: (p) => {
+      if (!canUseTriagem(p.plan)) {
+        return { texto: 'Perguntas suas antes do atendimento — no Max.' }
+      }
+      const config = resolveTriagem(p)
+      const n = perguntasUtilizaveis(config.questions).length
+      if (!config.enabled) {
+        return n
+          ? { texto: `${n} ${n === 1 ? 'pergunta pronta' : 'perguntas prontas'}, triagem desligada.`, pendente: true }
+          : { texto: 'Desligada — o assistente só marca horários.', pendente: true }
+      }
+      if (!n) return { texto: 'Ligada, mas ainda sem pergunta pronta.', pendente: true }
+      // Ligada e com perguntas, mas o assistente desligado: a triagem existe e
+      // ninguém a alcança. É o único estado que engana quem montou.
+      if (resolveSchedulingMode(p) !== 'assistant') {
+        return { texto: `${n} ${n === 1 ? 'pergunta' : 'perguntas'} — mas o assistente está desligado.`, pendente: true }
+      }
+      return { texto: `${n} ${n === 1 ? 'pergunta' : 'perguntas'} antes de oferecer horários.` }
+    },
+  },
+
   botao: {
     id: 'botao',
     title: 'Botão flutuante',
@@ -444,7 +489,7 @@ export const SECTION_IDS = Object.keys(SECTIONS) as SectionId[]
 
 /** Ordem de exibição dentro de cada grupo — do mais mexido para o menos. */
 export const SECTIONS_BY_GROUP: Record<SectionGroup, SectionId[]> = {
-  perfil: ['identidade', 'bio', 'redes', 'areas', 'local', 'agenda', 'botao', 'faq', 'aparencia', 'video', 'marca'],
+  perfil: ['identidade', 'bio', 'redes', 'areas', 'local', 'agenda', 'triagem', 'botao', 'faq', 'aparencia', 'video', 'marca'],
   ferramentas: ['analytics', 'qrcode', 'cartao', 'conteudo'],
   conta: ['plano'],
 }
@@ -482,6 +527,7 @@ export const DESTINO_DO_FATOR: Record<string, string> = {
   email: editorPath('redes', 'email'),
   faq: editorPath('faq'),
   agenda: editorPath('agenda'),
+  triagem: editorPath('triagem'),
   marca: editorPath('marca'),
 }
 

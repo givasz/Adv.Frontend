@@ -116,6 +116,22 @@ export function canUseVideo(plan: Plan): boolean {
   return plan === 'premium'
 }
 
+/**
+ * Assistente de TRIAGEM: as perguntas que o advogado escolhe fazer antes de
+ * encaminhar um atendimento — exclusivo do Max. MANTER EM SINCRONIA com
+ * backend/src/plans.ts.
+ *
+ * FONTE ÚNICA da autorização. A conversa, o editor, o painel, a home e o servidor
+ * perguntam por aqui; ninguém compara `plan === 'premium'` à mão. O Pro continua
+ * com o assistente de AGENDAMENTO inteiro — a triagem é o que ele ganha por cima.
+ *
+ * O escritório herda: a sociedade opera em `premium` e os perfis dos membros
+ * ativos passam a valer nesse tier (ver backend/src/firms/firms.service.ts).
+ */
+export function canUseTriagem(plan: Plan): boolean {
+  return plan === 'premium'
+}
+
 // Tetos FIXOS (iguais em todos os planos) — sanidade/anti-abuso, não são recurso de plano.
 export const NAME_MAX = 70 // cabe qualquer nome real; evita layout/slug quebrados
 export const OAB_MAX = 20 // ex.: "OAB/SP 123.456"

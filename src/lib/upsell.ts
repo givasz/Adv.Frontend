@@ -13,6 +13,7 @@ import {
   canUseDigitalCard,
   canUsePrintCard,
   canUseScheduling,
+  canUseTriagem,
   canUseVideo,
   precoDoPlano,
   type LimitedField,
@@ -106,6 +107,7 @@ export type UpsellFeature =
   | 'qrcode'
   | 'cartao'
   | 'agenda'
+  | 'triagem'
   | 'themes'
   | 'branding'
   | 'ai'
@@ -124,6 +126,10 @@ const FEATURE_FACTORS: Record<UpsellFeature, string[]> = {
   themes: [],
   ai: [],
   contratos: [],
+  // A triagem não tem fator próprio no Índice de Confiança: ela não muda o que
+  // o perfil MOSTRA, muda o que ele PERGUNTA. Zero aqui faz o chip de pontos
+  // sumir sozinho, em vez de inventar uma pontuação que não existe.
+  triagem: [],
   agenda: ['agenda'],
   branding: ['marca'],
 }
@@ -190,6 +196,12 @@ const FEATURE_META: Record<
     title: 'Agendamento de consultas',
     subtitle: 'Receba pedidos de horário direto pelo perfil.',
     value: (p) => (canUseScheduling(p) ? 'Incluído' : '—'),
+  },
+  triagem: {
+    title: 'Assistente de triagem',
+    subtitle:
+      'Você define as perguntas que o assistente faz antes de encaminhar. As respostas chegam organizadas no seu WhatsApp.',
+    value: (p) => (canUseTriagem(p) ? 'Incluído' : canUseScheduling(p) ? 'Só o agendamento' : '—'),
   },
   themes: {
     title: 'Temas visuais',

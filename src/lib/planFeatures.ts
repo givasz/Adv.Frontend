@@ -13,6 +13,7 @@
 import type { Plan, Profile } from './types'
 import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT } from './plans'
 import { resolveSchedulingMode } from './booking'
+import { triagemAtiva } from './triagem'
 import { THEMES, isThemeUnlocked } from './themes'
 import { parseVideoUrl } from './video'
 
@@ -139,6 +140,18 @@ export const PLAN_FEATURES: PlanFeature[] = [
     to: '/editor?section=faq',
     cta: 'Adicionar perguntas',
     done: (p) => (p.faqs ?? []).length > FAQ_LIMIT.pro,
+  },
+  {
+    key: 'triagem',
+    plan: 'premium',
+    title: 'Assistente de triagem',
+    body: 'Você escreve as perguntas que o assistente faz antes de encaminhar. As respostas chegam organizadas no seu WhatsApp — e quem decide se atende continua sendo você.',
+    to: '/editor?section=triagem',
+    cta: 'Montar minha triagem',
+    // Concluído quando existe triagem LIGADA e com pergunta respondível. Perguntas
+    // escritas e deixadas desligadas não contam: elas não chegam a ninguém, e um
+    // item marcado como feito esconderia exatamente esse estado.
+    done: (p) => triagemAtiva(p),
   },
   {
     key: 'cartao',

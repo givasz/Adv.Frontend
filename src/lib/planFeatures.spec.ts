@@ -24,6 +24,9 @@ const base: Profile = {
   videoUrl: undefined,
   videoCaption: undefined,
   schedulingMode: 'off',
+  // O exemplo também passou a ter TRIAGEM (é o que a home demonstra). Aqui ela
+  // sai junto: com ela herdada, o item do Max nasceria concluído.
+  triage: undefined,
   theme: 'papel',
   plan: 'free',
   bio: 'Atuo em Direito de Família.',
@@ -89,7 +92,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       .filter((k) => !featuresPending(pro).some((f) => f.key === k))
     // Sem 'dominio': o recurso saiu do checklist enquanto a plataforma não tem
     // domínio próprio no ar (ver planFeatures.ts).
-    expect(novos.sort()).toEqual(['cartao', 'faq_max', 'marca', 'video'])
+    expect(novos.sort()).toEqual(['cartao', 'faq_max', 'marca', 'triagem', 'video'])
   })
 
   it('o FAQ começa no Free com uma, e cada plano acrescenta um degrau', () => {
@@ -128,6 +131,10 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
       ],
       branding: { brandName: 'Sales Advocacia', customDomain: 'marinasales.adv.br' },
       card: DEFAULT_CARD,
+      triage: {
+        enabled: true,
+        questions: [{ id: 't1', kind: 'sim-nao', label: 'Já possui processo?' }],
+      },
     }
     expect(featuresPending(completo)).toHaveLength(0)
     const { done, total } = featureProgress(completo)
@@ -145,7 +152,7 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
     // mostrava — e, pior, ele nem tocava em produção (o CSP barrava o iframe;
     // ver lib/csp.spec.ts).
     expect(usados).toEqual(
-      expect.arrayContaining(['agenda', 'faq', 'faq_max', 'marca', 'video']),
+      expect.arrayContaining(['agenda', 'faq', 'faq_max', 'marca', 'triagem', 'video']),
     )
   })
 

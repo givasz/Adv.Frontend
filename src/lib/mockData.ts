@@ -119,6 +119,30 @@ export const sampleProfile: Profile = {
     horizonDays: 14,
     greeting: '',
   },
+  // TRIAGEM ligada no perfil-modelo — é ela que a vitrine da home demonstra.
+  //
+  // Quatro perguntas, e nenhuma delas pede dado pessoal: é o que o recurso
+  // ensina, e a vitrine não pode ensinar o contrário. Há teste travando isso
+  // (mockData.triagem.spec.ts) — o exemplo passa pelo mesmo conferidor que
+  // qualquer pergunta escrita por um advogado de verdade.
+  //
+  // A quinta pergunta (o nome) fica de fora de propósito: sem ela a conversa
+  // termina perguntando "como posso te chamar?", que é o passo do roteiro
+  // embutido — e a demonstração mostra os dois mundos funcionando juntos.
+  triage: {
+    enabled: true,
+    questions: [
+      {
+        id: 'mt1',
+        kind: 'escolha',
+        label: 'Qual assunto você deseja tratar?',
+        options: ['Direito de Família', 'Direito do Trabalho', 'Direito do Consumidor', 'Outro assunto'],
+      },
+      { id: 'mt2', kind: 'sim-nao', label: 'Você já possui processo sobre esse assunto?' },
+      { id: 'mt3', kind: 'atendimento', label: 'Como prefere o atendimento?' },
+      { id: 'mt4', kind: 'texto-longo', label: 'Conte brevemente o que aconteceu.' },
+    ],
+  },
   // Botão no canto ligado no exemplo, com o assistente, para o recurso aparecer
   // onde a maioria o vê pela primeira vez. No produto ele nasce DESLIGADO em todo
   // perfil — quem escolhe é o advogado, em "Botão flutuante".
