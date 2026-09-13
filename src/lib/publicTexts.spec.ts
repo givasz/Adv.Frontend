@@ -19,7 +19,12 @@ const limpo = {
   triage: {
     enabled: true,
     questions: [
-      { id: 'q1', kind: 'escolha', label: 'Qual assunto você deseja tratar?', options: ['Família'] },
+      {
+        id: 'q1',
+        kind: 'escolha',
+        label: 'Qual assunto você deseja tratar?',
+        options: [{ id: 'o1', texto: 'Família' }],
+      },
     ],
   },
 }
@@ -71,10 +76,16 @@ describe('publicStatus — cada campo público bloqueia por conta própria', () 
     ['Legenda do vídeo', { videoCaption: VEDADO }],
     ['Abertura do assistente', { assistant: { greeting: VEDADO } }],
     ['Nome no rodapé do perfil', { branding: { brandName: VEDADO } }],
-    ['Pergunta da triagem', { triage: { questions: [{ label: VEDADO }] } }],
+    ['Pergunta da triagem', { triage: { questions: [{ kind: 'texto', label: VEDADO }] } }],
     [
       'Opção de resposta da triagem',
-      { triage: { questions: [{ label: 'Qual assunto?', options: ['Cível', VEDADO] }] } },
+      {
+        triage: {
+          questions: [
+            { kind: 'escolha', label: 'Qual assunto?', options: [{ texto: 'Cível' }, { texto: VEDADO }] },
+          ],
+        },
+      },
     ],
   ]
 

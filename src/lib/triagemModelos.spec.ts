@@ -27,7 +27,7 @@ describe('nenhum modelo pede dado sensível', () => {
   it.each(MODELOS.map((m) => [m.nome, m] as const))('%s', (_nome, modelo) => {
     for (const q of modelo.questions) {
       expect(conferirPergunta(q.label)).toEqual([])
-      for (const o of q.options ?? []) expect(conferirPergunta(o)).toEqual([])
+      for (const o of q.options ?? []) expect(conferirPergunta(o.texto)).toEqual([])
     }
   })
 })
@@ -36,7 +36,7 @@ describe('nenhum modelo escorrega na publicidade da OAB', () => {
   it.each(MODELOS.map((m) => [m.nome, m] as const))('%s', (_nome, modelo) => {
     for (const q of modelo.questions) {
       expect(checkCompliance(q.label)).toEqual([])
-      for (const o of q.options ?? []) expect(checkCompliance(o)).toEqual([])
+      for (const o of q.options ?? []) expect(checkCompliance(o.texto)).toEqual([])
     }
   })
 })
@@ -44,14 +44,24 @@ describe('nenhum modelo escorrega na publicidade da OAB', () => {
 describe('todo modelo cabe no que o servidor aceita', () => {
   it.each(MODELOS.map((m) => [m.nome, m] as const))('%s', (_nome, modelo) => {
     const { questions } = normalizarTriagem({ enabled: true, questions: modelo.questions })
-    // Nada é descartado nem cortado no caminho: o que a tela mostra é o que grava.
-    expect(questions).toEqual(modelo.questions)
+    // Nada é descartado nem cortado no caminho: o que a tela mostra é o que
+    // grava. Campo a campo, e não o objeto inteiro — o normalizador PREENCHE as
+    // opções fixas de "sim/não" e de atendimento, que o modelo não escreve.
+    expect(questions).toHaveLength(modelo.questions.length)
+    questions.forEach((q, i) => {
+      expect(q.id).toBe(modelo.questions[i].id)
+      expect(q.kind).toBe(modelo.questions[i].kind)
+      expect(q.label).toBe(modelo.questions[i].label)
+      for (const [j, o] of (modelo.questions[i].options ?? []).entries()) {
+        expect(q.options?.[j]).toEqual(o)
+      }
+    })
     expect(questions.length).toBeLessThanOrEqual(TRIAGEM_MAX_PERGUNTAS)
     expect(perguntasUtilizaveis(questions)).toHaveLength(questions.length)
     for (const q of questions) {
       expect(q.label.length).toBeLessThanOrEqual(TRIAGEM_LABEL_MAX)
       expect((q.options ?? []).length).toBeLessThanOrEqual(TRIAGEM_MAX_OPCOES)
-      for (const o of q.options ?? []) expect(o.length).toBeLessThanOrEqual(TRIAGEM_OPCAO_MAX)
+      for (const o of q.options ?? []) expect(o.texto.length).toBeLessThanOrEqual(TRIAGEM_OPCAO_MAX)
     }
   })
 
@@ -66,7 +76,7 @@ describe('todo modelo cabe no que o servidor aceita', () => {
 describe('o modelo geral fala dos assuntos DESTE perfil', () => {
   it('usa as áreas do advogado como opções, com “Outro assunto” no fim', () => {
     const [geral] = modelosDeTriagem(['Direito de Família', 'Direito do Trabalho'])
-    expect(geral.questions[0].options).toEqual([
+    expect(geral.questions[0].options!.map((o) => o.texto)).toEqual([
       'Direito de Família',
       'Direito do Trabalho',
       'Outro assunto',
@@ -82,7 +92,8 @@ describe('o modelo geral fala dos assuntos DESTE perfil', () => {
     const areas = Array.from({ length: 20 }, (_, i) => `Área ${i}`)
     const [geral] = modelosDeTriagem([...areas, 'Área 0'])
     expect(geral.questions[0].options!.length).toBeLessThanOrEqual(TRIAGEM_MAX_OPCOES)
-    expect(new Set(geral.questions[0].options).size).toBe(geral.questions[0].options!.length)
+    const textos = geral.questions[0].options!.map((o) => o.texto)
+    expect(new Set(textos).size).toBe(textos.length)
   })
 })
 
@@ -100,8 +111,8 @@ describe('o vocabulário do editor cobre todos os tipos', () => {
   })
 
   it('pergunta nova de escolha já nasce com linhas de opção para preencher', () => {
-    expect(novaPergunta('escolha').options).toEqual(['', ''])
-    expect(novaPergunta('multipla').options).toEqual(['', ''])
+    expect(novaPergunta('escolha').options!.map((o) => o.texto)).toEqual(['', ''])
+    expect(novaPergunta('multipla').options!.map((o) => o.texto)).toEqual(['', ''])
     expect(novaPergunta('texto').options).toBeUndefined()
   })
 

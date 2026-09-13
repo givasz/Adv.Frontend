@@ -136,7 +136,14 @@ export const sampleProfile: Profile = {
         id: 'mt1',
         kind: 'escolha',
         label: 'Qual assunto você deseja tratar?',
-        options: ['Direito de Família', 'Direito do Trabalho', 'Direito do Consumidor', 'Outro assunto'],
+        // Cada opção tem id próprio: é ele que segura o caminho que sai dela
+        // (aqui nenhuma desvia — a demonstração segue em fila).
+        options: [
+          { id: 'mo1', texto: 'Direito de Família' },
+          { id: 'mo2', texto: 'Direito do Trabalho' },
+          { id: 'mo3', texto: 'Direito do Consumidor' },
+          { id: 'mo4', texto: 'Outro assunto' },
+        ],
       },
       { id: 'mt2', kind: 'sim-nao', label: 'Você já possui processo sobre esse assunto?' },
       { id: 'mt3', kind: 'atendimento', label: 'Como prefere o atendimento?' },

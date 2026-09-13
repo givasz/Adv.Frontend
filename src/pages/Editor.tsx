@@ -96,7 +96,12 @@ const TRIAGEM_PREVIEW = {
       id: 'preview-t1',
       kind: 'escolha' as const,
       label: 'Qual assunto você deseja tratar?',
-      options: ['Família', 'Trabalhista', 'Cível', 'Outro assunto'],
+      options: [
+        { id: 'po1', texto: 'Família' },
+        { id: 'po2', texto: 'Trabalhista' },
+        { id: 'po3', texto: 'Cível' },
+        { id: 'po4', texto: 'Outro assunto' },
+      ],
     },
     { id: 'preview-t2', kind: 'sim-nao' as const, label: 'Você já possui processo sobre esse assunto?' },
     { id: 'preview-t3', kind: 'atendimento' as const, label: 'Como prefere o atendimento?' },

@@ -58,7 +58,14 @@ try {
           id: 'st1',
           kind: 'escolha',
           label: 'Qual assunto você deseja tratar?',
-          options: ['Direito de Família', 'Outro assunto'],
+          // A PRIMEIRA opção desvia: quem escolhe "Direito de Família" pula a
+          // pergunta do processo e cai direto no relato. O percurso sempre toca
+          // na primeira opção, então ele atravessa o desvio — e a conversa
+          // termina com DUAS respostas de triagem, não três.
+          options: [
+            { id: 'so1', texto: 'Direito de Família', proxima: 'st3' },
+            { id: 'so2', texto: 'Outro assunto' },
+          ],
         },
         { id: 'st2', kind: 'sim-nao', label: 'Você já possui processo sobre esse assunto?' },
         { id: 'st3', kind: 'texto-longo', label: 'Conte brevemente o que aconteceu.' },
@@ -298,6 +305,14 @@ async function conversaDoPerfil() {
     if (!href.includes('— Triagem —')) erros.push('a mensagem saiu sem o bloco da triagem')
     if (!href.includes('Qual assunto você deseja tratar?')) {
       erros.push('a mensagem saiu sem as perguntas da triagem')
+    }
+    // O DESVIO foi seguido: "Direito de Família" pula a pergunta do processo.
+    // Se o caminho fosse ignorado, ela estaria aqui.
+    if (href.includes('Você já possui processo sobre esse assunto?')) {
+      erros.push('a conversa ignorou o caminho configurado e fez a pergunta que devia pular')
+    }
+    if (!href.includes('Conte brevemente o que aconteceu.')) {
+      erros.push('o desvio não chegou à pergunta de destino')
     }
     if (!/não são análise jurídica/i.test(href)) {
       erros.push('a mensagem saiu sem a ressalva da triagem')
@@ -731,7 +746,7 @@ async function acessibilidadeDaTriagem() {
 
       // E o ROTEIRO tem de mostrar o que o visitante vai ver — as perguntas do
       // advogado E os passos que vêm depois delas.
-      const roteiro = pagina.locator('[data-roteiro] li')
+      const roteiro = pagina.locator('[data-roteiro] > ol > li')
       await roteiro.first().waitFor({ timeout: ESPERA })
       const passos = await roteiro.allInnerTexts()
       if (!passos.some((t) => /Qual assunto/i.test(t))) {
@@ -742,6 +757,20 @@ async function acessibilidadeDaTriagem() {
       }
       if (!(await pagina.getByRole('button', { name: /Testar meu assistente/ }).isEnabled())) {
         erros.push('“Testar meu assistente” ficou desabilitado com a triagem montada')
+      }
+
+      // RAMIFICAR: manda a primeira resposta encerrar a triagem e confere que o
+      // roteiro passa a dizer isso. É o desenho do caminho sendo lido de volta.
+      await itens.first().locator('button[aria-expanded]').click()
+      const paraOnde = pagina.locator('select').first()
+      await paraOnde.waitFor({ timeout: ESPERA })
+      await paraOnde.selectOption('fim')
+      await pagina.getByText(/direto para/).first().waitFor({ timeout: ESPERA })
+      // Só dá para mandar para FRENTE: nenhum destino oferecido pode ser a
+      // própria pergunta nem uma anterior — é o que torna o loop impossível.
+      const oferecidos = await paraOnde.locator('option').allInnerTexts()
+      if (oferecidos.some((t) => /^1\./.test(t.trim()))) {
+        erros.push('o seletor ofereceu um destino para trás — daria para criar um loop')
       }
 
       // O botão que abre os modelos leva o título da caixa junto no nome

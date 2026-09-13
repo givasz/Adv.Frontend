@@ -36,9 +36,8 @@ import {
   AVISO_DE_SEGURANCA,
   formatarData,
   limparResposta,
-  OPCOES_ATENDIMENTO,
-  OPCOES_SIM_NAO,
   pedeOrientacaoJuridica,
+  proximaPergunta,
   perguntasDaConversa,
   respostaLivre,
   respostaNeutra,
@@ -250,7 +249,12 @@ export function AssistantChat({
    * mesma mensagem. O enunciado continua sendo o dele — o que muda é onde a
    * resposta aparece.
    */
-  function responderTriagem(indice: number, bruto: string, antesDaProxima: string[] = []) {
+  function responderTriagem(
+    indice: number,
+    bruto: string,
+    antesDaProxima: string[] = [],
+    opcaoId?: string,
+  ) {
     const pergunta = perguntas[indice]
     if (!pergunta) return
     const resposta = limparResposta(bruto, tetoDaResposta(pergunta.kind))
@@ -273,7 +277,11 @@ export function AssistantChat({
       setPedidosDeAnalise(n)
       antes.unshift(respostaNeutra(n))
     }
-    seguirTriagem(indice + 1, antes)
+    // O CAMINHO é da resposta, não da ordem da lista: "Família" pode levar a uma
+    // pergunta e "Trabalhista" a outra. `proximaPergunta` resolve a cascata
+    // (resposta → pergunta → a próxima da lista) e só anda para frente, que é o
+    // que impede a conversa de andar em círculo.
+    seguirTriagem(proximaPergunta(perguntas, indice, opcaoId), antes)
   }
 
   /** Da pergunta `proximo` em diante — ou o agendamento, quando acabarem. */
@@ -285,7 +293,9 @@ export function AssistantChat({
     // resposta já é conhecida, e perguntar seria fingir uma escolha.
     while (perguntas[i]?.kind === 'atendimento' && !bothFormats) {
       setAnswers((a) => ({ ...a, format: a.format ?? soloFormat }))
-      i++
+      // A pergunta some, mas o caminho dela continua valendo: quem só atende
+      // online e mandou "presencial → pergunta 5" não perde o desvio.
+      i = proximaPergunta(perguntas, i)
     }
     setTriagemIdx(i)
     if (i < perguntas.length) {
@@ -934,7 +944,7 @@ function CampoDaTriagem({
   setDraft: (v: string) => void
   marcadas: string[]
   setMarcadas: (v: string[]) => void
-  onResponder: (indice: number, texto: string, antes?: string[]) => void
+  onResponder: (indice: number, texto: string, antes?: string[], opcaoId?: string) => void
   /** fala do endereço, dita quando a pessoa escolhe presencial */
   endereco: string
 }) {
@@ -945,29 +955,33 @@ function CampoDaTriagem({
     </Chip>
   ) : null
 
-  if (pergunta.kind === 'sim-nao' || pergunta.kind === 'escolha' || pergunta.kind === 'atendimento') {
-    const opcoes =
-      pergunta.kind === 'sim-nao'
-        ? OPCOES_SIM_NAO
-        : pergunta.kind === 'atendimento'
-          ? OPCOES_ATENDIMENTO
-          : (pergunta.options ?? [])
+  // Escolha, sim/não e atendimento são o MESMO gesto: uma fileira de opções.
+  // As três guardam suas opções no mesmo lugar (as duas últimas com a lista
+  // fixa, posta pelo normalizador) — é isso que faz ramificar ser um mecanismo
+  // só, e não três.
+  if (pergunta.kind !== 'multipla' && pergunta.options?.length) {
     return (
       <ChipRow label={rotulo}>
-        {opcoes.map((o) => (
+        {pergunta.options.map((o) => (
           <Chip
-            key={o}
+            key={o.id}
             onClick={() =>
               // Escolher "presencial" é a hora de dizer onde fica o escritório —
               // quem acabou de decidir sair de casa pergunta "onde?" em seguida.
               onResponder(
                 indice,
-                o,
-                pergunta.kind === 'atendimento' && o === 'Presencial' && endereco ? [endereco] : [],
+                o.texto,
+                pergunta.kind === 'atendimento' && o.id === 'presencial' && endereco
+                  ? [endereco]
+                  : [],
+                // O id da opção é o que decide o CAMINHO. O texto é o que vai na
+                // mensagem; usá-lo como chave de caminho quebraria o desvio a cada
+                // correção de digitação do advogado.
+                o.id,
               )
             }
           >
-            {o}
+            {o.texto}
           </Chip>
         ))}
         {pular}
@@ -976,14 +990,14 @@ function CampoDaTriagem({
   }
 
   if (pergunta.kind === 'multipla') {
-    const alterna = (o: string) =>
-      setMarcadas(marcadas.includes(o) ? marcadas.filter((x) => x !== o) : [...marcadas, o])
+    const alterna = (id: string) =>
+      setMarcadas(marcadas.includes(id) ? marcadas.filter((x) => x !== id) : [...marcadas, id])
     return (
       <div>
         <ChipRow label={rotulo}>
           {(pergunta.options ?? []).map((o) => (
-            <ChipToggle key={o} on={marcadas.includes(o)} onClick={() => alterna(o)}>
-              {o}
+            <ChipToggle key={o.id} on={marcadas.includes(o.id)} onClick={() => alterna(o.id)}>
+              {o.texto}
             </ChipToggle>
           ))}
         </ChipRow>
@@ -993,8 +1007,17 @@ function CampoDaTriagem({
             disabled={!marcadas.length}
             // A ordem das OPÇÕES manda, não a ordem em que foram tocadas: a
             // resposta é lida pelo advogado, e ele reconhece a própria lista.
+            // Múltipla escolha NÃO ramifica (duas respostas apontando para
+            // lugares diferentes não têm desempate honesto), então nenhum id de
+            // opção viaja daqui.
             onClick={() =>
-              onResponder(indice, (pergunta.options ?? []).filter((o) => marcadas.includes(o)).join(', '))
+              onResponder(
+                indice,
+                (pergunta.options ?? [])
+                  .filter((o) => marcadas.includes(o.id))
+                  .map((o) => o.texto)
+                  .join(', '),
+              )
             }
             className="rounded-full px-4 py-2 text-[13.5px] font-semibold transition-opacity disabled:opacity-40"
             style={{ background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }}

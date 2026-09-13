@@ -26,7 +26,15 @@ import {
 import { buildAssistantMessage } from './assistant'
 
 const PERGUNTAS: PerguntaDeTriagem[] = [
-  { id: 'q1', kind: 'escolha', label: 'Qual assunto você deseja tratar?', options: ['Família', 'Trabalhista'] },
+  {
+    id: 'q1',
+    kind: 'escolha',
+    label: 'Qual assunto você deseja tratar?',
+    options: [
+      { id: 'o1', texto: 'Família' },
+      { id: 'o2', texto: 'Trabalhista' },
+    ],
+  },
   { id: 'q2', kind: 'sim-nao', label: 'Você já possui processo relacionado a esse assunto?' },
   { id: 'q3', kind: 'texto-longo', label: 'Conte brevemente o que aconteceu.' },
 ]
@@ -144,9 +152,21 @@ describe('o formato do que o advogado monta', () => {
   it('opções vazias e repetidas somem', () => {
     const { questions } = normalizarTriagem({
       enabled: true,
-      questions: [{ id: 'a', kind: 'escolha', label: 'Qual?', options: ['Um', ' ', 'Um', 'Dois'] }],
+      questions: [
+        {
+          id: 'a',
+          kind: 'escolha',
+          label: 'Qual?',
+          options: [
+            { id: 'a1', texto: 'Um' },
+            { id: 'a2', texto: ' ' },
+            { id: 'a3', texto: 'Um' },
+            { id: 'a4', texto: 'Dois' },
+          ],
+        },
+      ],
     })
-    expect(questions[0].options).toEqual(['Um', 'Dois'])
+    expect(questions[0].options!.map((o) => o.texto)).toEqual(['Um', 'Dois'])
   })
 
   it('cada teto é respeitado', () => {
@@ -158,13 +178,16 @@ describe('o formato do que o advogado monta', () => {
         label: 'x'.repeat(400),
         // O número vem na FRENTE: no fim ele cairia fora do corte de 40 e as
         // quarenta opções virariam a mesma, deduplicadas para uma só.
-        options: Array.from({ length: 40 }, (_, j) => `${j}-${'o'.repeat(90)}`),
+        options: Array.from({ length: 40 }, (_, j) => ({
+          id: `x${j}`,
+          texto: `${j}-${'o'.repeat(90)}`,
+        })),
       })),
     })
     expect(questions).toHaveLength(TRIAGEM_MAX_PERGUNTAS)
     expect(questions[0].label).toHaveLength(TRIAGEM_LABEL_MAX)
     expect(questions[0].options).toHaveLength(TRIAGEM_MAX_OPCOES)
-    expect(questions[0].options!.every((o) => o.length <= TRIAGEM_OPCAO_MAX)).toBe(true)
+    expect(questions[0].options!.every((o) => o.texto.length <= TRIAGEM_OPCAO_MAX)).toBe(true)
   })
 
   it('id sem forma de id é substituído, e nenhum se repete', () => {
@@ -189,7 +212,7 @@ describe('o formato do que o advogado monta', () => {
   it('perguntasUtilizaveis deixa passar só o que tem resposta possível', () => {
     const lista: PerguntaDeTriagem[] = [
       { id: 'a', kind: 'escolha', label: 'Sem opção' },
-      { id: 'b', kind: 'escolha', label: 'Com opção', options: ['Sim'] },
+      { id: 'b', kind: 'escolha', label: 'Com opção', options: [{ id: 'b1', texto: 'Sim' }] },
       { id: 'c', kind: 'texto', label: 'Livre' },
       { id: 'd', kind: 'texto', label: '   ' },
     ]
@@ -213,6 +236,24 @@ describe('o que o visitante lê é publicidade como qualquer outra linha', () =>
   it('config vazia não gera texto nenhum', () => {
     expect(textosDaTriagem(null)).toEqual([])
     expect(textosDaTriagem({ enabled: true, questions: [] })).toEqual([])
+  })
+
+  // Espelho de backend/src/triagem.spec.ts: "Sim", "Não", "Presencial" e
+  // "Online" são NOSSAS, e conferi-las seria a plataforma auditando o próprio
+  // vocabulário.
+  it('as opções FIXAS não entram na checagem', () => {
+    const { questions } = normalizarTriagem({
+      enabled: true,
+      questions: [
+        { id: 'a', kind: 'sim-nao', label: 'Já tem processo?' },
+        { id: 'b', kind: 'atendimento', label: 'Como prefere?' },
+      ],
+    })
+    expect(questions[0].options).toHaveLength(2)
+    expect(textosDaTriagem({ enabled: true, questions })).toEqual([
+      'Já tem processo?',
+      'Como prefere?',
+    ])
   })
 })
 

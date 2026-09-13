@@ -15,7 +15,12 @@
 // e é por isso que o modelo é o caminho recomendado na tela. Há teste travando
 // isso (triagemModelos.spec.ts): modelo novo que peça dado sensível não passa.
 
-import { TRIAGEM_MAX_OPCOES, type PerguntaDeTriagem, type TipoDePergunta } from './triagem'
+import {
+  TRIAGEM_MAX_OPCOES,
+  type OpcaoDeTriagem,
+  type PerguntaDeTriagem,
+  type TipoDePergunta,
+} from './triagem'
 
 // ---- Vocabulário dos tipos, para o editor ----------------------------------
 
@@ -86,12 +91,20 @@ export const TIPOS_NA_ORDEM: TipoDePergunta[] = [
 let uid = 0
 const novoId = () => `tr-${Date.now().toString(36)}-${uid++}`
 
+/** Uma opção em branco, com id próprio — é o id que segura o caminho que sai dela. */
+export function novaOpcao(texto = ''): OpcaoDeTriagem {
+  return { id: novoId(), texto }
+}
+
+/** Uma lista de opções a partir de textos soltos (modelos e prévias). */
+const opcoes = (...textos: string[]): OpcaoDeTriagem[] => textos.map((t) => novaOpcao(t))
+
 /** Uma pergunta em branco do tipo pedido, pronta para o advogado escrever. */
 export function novaPergunta(kind: TipoDePergunta = 'escolha'): PerguntaDeTriagem {
   const base: PerguntaDeTriagem = { id: novoId(), kind, label: '' }
   // Escolha nasce com duas linhas de opção: uma lista com um item não é lista, e
   // começar do zero esconde que existem opções a escrever.
-  if (kind === 'escolha' || kind === 'multipla') base.options = ['', '']
+  if (kind === 'escolha' || kind === 'multipla') base.options = [novaOpcao(), novaOpcao()]
   if (kind === 'atendimento') base.label = 'Como prefere o atendimento?'
   if (kind === 'contato') base.label = 'Como posso te chamar?'
   return base
@@ -136,7 +149,7 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
   const assuntoGeral: Omit<PerguntaDeTriagem, 'id'> = {
     kind: 'escolha',
     label: 'Qual assunto você deseja tratar?',
-    options: minhasAreas.length ? [...minhasAreas, OUTRO] : ['Família', 'Trabalhista', 'Cível', OUTRO],
+    options: opcoes(...(minhasAreas.length ? [...minhasAreas, OUTRO] : ['Família', 'Trabalhista', 'Cível', OUTRO])),
   }
 
   return [
@@ -160,14 +173,7 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
         {
           kind: 'escolha',
           label: 'Sobre qual situação você quer falar?',
-          options: [
-            'Divórcio ou separação',
-            'Guarda ou convivência',
-            'Pensão alimentícia',
-            'Inventário ou herança',
-            'União estável',
-            OUTRO,
-          ],
+          options: opcoes('Divórcio ou separação', 'Guarda ou convivência', 'Pensão alimentícia', 'Inventário ou herança', 'União estável', OUTRO),
         },
         { kind: 'sim-nao', label: 'Já existe processo em andamento?' },
         FORMATO,
@@ -183,19 +189,12 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
         {
           kind: 'escolha',
           label: 'Sobre qual situação você quer falar?',
-          options: [
-            'Demissão ou rescisão',
-            'Verbas não pagas',
-            'Horas extras ou jornada',
-            'Assédio no trabalho',
-            'Acidente de trabalho',
-            OUTRO,
-          ],
+          options: opcoes('Demissão ou rescisão', 'Verbas não pagas', 'Horas extras ou jornada', 'Assédio no trabalho', 'Acidente de trabalho', OUTRO),
         },
         {
           kind: 'escolha',
           label: 'Você fala como empregado ou como empregador?',
-          options: ['Empregado', 'Empregador'],
+          options: opcoes('Empregado', 'Empregador'),
         },
         { kind: 'sim-nao', label: 'Você ainda está nesse emprego?' },
         CONTE,
@@ -210,20 +209,13 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
         {
           kind: 'escolha',
           label: 'Sobre qual benefício você quer falar?',
-          options: [
-            'Aposentadoria',
-            'Auxílio por incapacidade',
-            'BPC/LOAS',
-            'Pensão por morte',
-            'Revisão de benefício',
-            OUTRO,
-          ],
+          options: opcoes('Aposentadoria', 'Auxílio por incapacidade', 'BPC/LOAS', 'Pensão por morte', 'Revisão de benefício', OUTRO),
         },
         { kind: 'sim-nao', label: 'Você já fez esse pedido no INSS?' },
         {
           kind: 'escolha',
           label: 'Se já pediu, qual foi a resposta?',
-          options: ['Ainda sem resposta', 'Negado', 'Concedido', 'Ainda não pedi'],
+          options: opcoes('Ainda sem resposta', 'Negado', 'Concedido', 'Ainda não pedi'),
           optional: true,
         },
         { kind: 'texto-longo', label: 'Conte brevemente a sua situação, em linhas gerais.' },
@@ -238,18 +230,12 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
         {
           kind: 'escolha',
           label: 'Sobre qual assunto você quer falar?',
-          options: [
-            'Abertura ou alteração de empresa',
-            'Contratos',
-            'Cobrança ou inadimplência',
-            'Sociedade e sócios',
-            OUTRO,
-          ],
+          options: opcoes('Abertura ou alteração de empresa', 'Contratos', 'Cobrança ou inadimplência', 'Sociedade e sócios', OUTRO),
         },
         {
           kind: 'escolha',
           label: 'Você fala pela empresa ou como pessoa física?',
-          options: ['Pela empresa', 'Como pessoa física'],
+          options: opcoes('Pela empresa', 'Como pessoa física'),
         },
         FORMATO,
         { kind: 'texto-longo', label: 'Conte brevemente o que você precisa.' },
@@ -264,14 +250,7 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
         {
           kind: 'escolha',
           label: 'Sobre qual situação você quer falar?',
-          options: [
-            'Contrato não cumprido',
-            'Cobrança indevida',
-            'Problema com produto ou serviço',
-            'Imóvel ou aluguel',
-            'Vizinhança',
-            OUTRO,
-          ],
+          options: opcoes('Contrato não cumprido', 'Cobrança indevida', 'Problema com produto ou serviço', 'Imóvel ou aluguel', 'Vizinhança', OUTRO),
         },
         { kind: 'sim-nao', label: 'Você já tentou resolver diretamente com a empresa ou pessoa?' },
         FORMATO,

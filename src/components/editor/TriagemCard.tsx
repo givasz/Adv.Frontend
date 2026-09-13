@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { PerguntaDeTriagem, TipoDePergunta } from '@/lib/triagem'
+import type {
+  DestinoPossivel,
+  OpcaoDeTriagem,
+  PerguntaDeTriagem,
+  TipoDePergunta,
+} from '@/lib/triagem'
 import type { Profile } from '@/lib/types'
 import {
+  destinosPossiveis,
   LIMITES_DA_TRIAGEM,
   normalizarTriagem,
-  OPCOES_ATENDIMENTO,
-  OPCOES_SIM_NAO,
+  perguntasAlcancaveis,
   perguntasUtilizaveis,
   resolveTriagem,
   roteiroDaConversa,
@@ -18,6 +23,7 @@ import {
 import {
   AVISO_DOS_MODELOS,
   modelosDeTriagem,
+  novaOpcao,
   novaPergunta,
   TIPO_META,
   TIPOS_NA_ORDEM,
@@ -93,6 +99,10 @@ export function TriagemCard({
     () => roteiroDaConversa(perguntas, { comHorarios, dosDoisJeitos: bothFormats }),
     [perguntas, comHorarios, bothFormats],
   )
+  // Quem a conversa consegue alcançar. O defeito clássico de todo formulário com
+  // caminhos é a pergunta para a qual ninguém é mandado: ela fica na tela,
+  // parece no ar, e nunca é feita a ninguém.
+  const alcancaveis = useMemo(() => perguntasAlcancaveis(perguntas), [perguntas])
 
   const patch = (questions: PerguntaDeTriagem[], enabled = config.enabled) => {
     if (preview) return
@@ -235,6 +245,8 @@ export function TriagemCard({
                 pergunta={q}
                 indice={i}
                 total={perguntas.length}
+                destinos={destinosPossiveis(perguntas, i)}
+                alcancavel={alcancaveis.has(q.id)}
                 aberta={abertaId === q.id}
                 preview={preview}
                 onAbrir={() => setAbertaId(abertaId === q.id ? null : q.id)}
@@ -292,23 +304,51 @@ export function TriagemCard({
             <MessageIcon width={14} height={14} className="text-brass-deep" />
             Como a conversa vai ficar
           </p>
-          <ol className="mt-2.5 space-y-1.5">
+          <ol className="mt-2.5 space-y-2">
             {roteiro.map((passo, i) => (
-              <li key={`${i}-${passo.texto}`} className="flex gap-2.5 text-[12.5px] leading-snug">
-                <span
-                  className={`mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[10.5px] font-bold tabular-nums ${
-                    passo.minha
-                      ? 'bg-burgundy text-paper-soft'
-                      : 'border border-ink/15 text-ink-faint'
-                  }`}
-                  aria-hidden
-                >
-                  {i + 1}
-                </span>
-                <span className={passo.minha ? 'text-ink' : 'text-ink-faint'}>
-                  {passo.texto}
-                  {passo.minha && <span className="sr-only"> (pergunta sua)</span>}
-                </span>
+              <li key={`${i}-${passo.texto}`} className="text-[12.5px] leading-snug">
+                <div className="flex gap-2.5">
+                  <span
+                    className={`mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[10.5px] font-bold tabular-nums ${
+                      passo.minha
+                        ? 'bg-burgundy text-paper-soft'
+                        : 'border border-ink/15 text-ink-faint'
+                    }`}
+                    aria-hidden
+                  >
+                    {passo.numero ?? '·'}
+                  </span>
+                  <span className={passo.minha ? 'text-ink' : 'text-ink-faint'}>
+                    {passo.texto}
+                    {passo.minha && <span className="sr-only"> (pergunta sua)</span>}
+                    {passo.inalcancavel && (
+                      <span className="ml-1.5 rounded-full bg-brass/15 px-1.5 py-px text-[10.5px] font-semibold text-brass-deep">
+                        ninguém chega aqui
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {/* Os caminhos que saem desta pergunta. Só aparecem quando algum
+                    DESVIA: numa triagem em fila, "Sim → a próxima" seria ruído
+                    em cima da informação que importa. */}
+                {passo.ramos && (
+                  <ul className="ml-[28px] mt-1 space-y-0.5">
+                    {passo.ramos.map((r) => (
+                      <li
+                        key={r.opcao}
+                        className={`flex flex-wrap items-baseline gap-x-1.5 text-[11.5px] ${
+                          r.desvia ? 'text-ink-soft' : 'text-ink-faint'
+                        }`}
+                      >
+                        <span className="text-ink-faint" aria-hidden>
+                          └
+                        </span>
+                        <span className={r.desvia ? 'font-medium' : undefined}>{r.opcao}</span>
+                        <span className="text-ink-faint">→ {r.destino}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ol>
@@ -431,6 +471,8 @@ function PerguntaItem({
   pergunta,
   indice,
   total,
+  destinos,
+  alcancavel,
   aberta,
   preview,
   onAbrir,
@@ -441,6 +483,10 @@ function PerguntaItem({
   pergunta: PerguntaDeTriagem
   indice: number
   total: number
+  /** para onde esta pergunta pode mandar: só as seguintes, e o fim da triagem */
+  destinos: DestinoPossivel[]
+  /** a conversa consegue chegar até aqui? */
+  alcancavel: boolean
   aberta: boolean
   preview: boolean
   onAbrir: () => void
@@ -454,15 +500,19 @@ function PerguntaItem({
     () => conferirPerguntaInteira(pergunta),
     [pergunta.label, pergunta.options?.join('|')],
   )
+  const textosDaPergunta = [pergunta.label, ...(pergunta.options ?? []).map((o) => o.texto)]
   const issues = useMemo(
-    () => checkCompliance([pergunta.label, ...(pergunta.options ?? [])].join(' ')),
-    [pergunta.label, pergunta.options?.join('|')],
+    () => checkCompliance(textosDaPergunta.join(' ')),
+    [textosDaPergunta.join('|')],
   )
   const comOpcoes = pergunta.kind === 'escolha' || pergunta.kind === 'multipla'
-  const semOpcao = comOpcoes && !(pergunta.options ?? []).some((o) => o.trim())
+  const semOpcao = comOpcoes && !(pergunta.options ?? []).some((o) => o.texto.trim())
 
-  const trocarOpcao = (i: number, valor: string) =>
-    onTrocar({ options: (pergunta.options ?? []).map((o, j) => (j === i ? valor : o)) })
+  const trocarOpcao = (i: number, p: Partial<OpcaoDeTriagem>) =>
+    onTrocar({ options: (pergunta.options ?? []).map((o, j) => (j === i ? { ...o, ...p } : o)) })
+  // Ramificar não faz sentido em múltipla escolha: o visitante marca várias, e
+  // duas respostas apontando para lugares diferentes não têm desempate honesto.
+  const podeRamificar = pergunta.kind !== 'multipla' && !!pergunta.options?.length
 
   return (
     <li className="rounded-lg border border-ink/10 bg-paper-soft/60">
@@ -482,6 +532,14 @@ function PerguntaItem({
           <span className="mt-0.5 block text-[11.5px] text-ink-faint">
             {meta.label} · {semOpcao ? 'sem opções ainda' : meta.exemplo}
           </span>
+          {/* Ninguém é mandado para cá. É o defeito clássico de formulário com
+              caminhos: a pergunta está na lista, parece no ar, e nunca é feita
+              a ninguém. Avisa, não bloqueia — o caminho pode estar pela metade. */}
+          {!alcancavel && (
+            <span className="mt-1 inline-block rounded-full bg-brass/15 px-2 py-0.5 text-[11px] font-semibold text-brass-deep">
+              Ninguém chega até aqui
+            </span>
+          )}
         </button>
         {/* Setas, e não arrastar: a lista é curta, o alvo é grande no dedo e o
             gesto existe para quem navega por teclado ou leitor de tela. */}
@@ -565,7 +623,9 @@ function PerguntaItem({
                       // pergunta impossível de responder — e ela some da conversa.
                       options:
                         k === 'escolha' || k === 'multipla'
-                          ? (pergunta.options?.length ? pergunta.options : ['', ''])
+                          ? pergunta.options?.length
+                            ? pergunta.options
+                            : [novaOpcao(), novaOpcao()]
                           : undefined,
                     })
                   }
@@ -589,11 +649,11 @@ function PerguntaItem({
               </span>
               <ul className="space-y-1.5">
                 {(pergunta.options ?? []).map((o, i) => (
-                  <li key={i} className="flex items-center gap-2">
+                  <li key={o.id} className="flex items-center gap-2">
                     <TextInput
-                      value={o}
+                      value={o.texto}
                       maxLength={TRIAGEM_OPCAO_MAX}
-                      onChange={(e) => trocarOpcao(i, e.target.value)}
+                      onChange={(e) => trocarOpcao(i, { texto: e.target.value })}
                       placeholder={`Opção ${i + 1}`}
                       aria-label={`Opção ${i + 1}`}
                     />
@@ -612,7 +672,7 @@ function PerguntaItem({
               {(pergunta.options ?? []).length < TRIAGEM_MAX_OPCOES && (
                 <button
                   type="button"
-                  onClick={() => onTrocar({ options: [...(pergunta.options ?? []), ''] })}
+                  onClick={() => onTrocar({ options: [...(pergunta.options ?? []), novaOpcao()] })}
                   className="mt-2 text-[12.5px] font-semibold text-burgundy underline-offset-4 hover:underline"
                 >
                   + Adicionar opção
@@ -627,10 +687,71 @@ function PerguntaItem({
             <p className="rounded-lg bg-paper-deep/60 px-3 py-2 text-[11.5px] leading-relaxed text-ink-faint">
               As opções são fixas:{' '}
               <span className="font-medium text-ink-soft">
-                {(pergunta.kind === 'sim-nao' ? OPCOES_SIM_NAO : OPCOES_ATENDIMENTO).join(' · ')}
+                {(pergunta.options ?? []).map((o) => o.texto).join(' · ')}
               </span>
               {pergunta.kind === 'atendimento' &&
                 ' — e a resposta vai como “Formato” na sua mensagem.'}
+            </p>
+          )}
+
+          {/* ---- O CAMINHO: para onde cada resposta leva ---------------------
+              Só aparece quando HÁ para onde mandar (existe pergunta depois
+              desta). Numa triagem em fila, um seletor sem consequência em cada
+              opção seria ruído em cima do que importa. */}
+          {destinos.length > 1 && podeRamificar && (
+            <div>
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-ink">
+                Para onde cada resposta leva
+              </span>
+              <ul className="space-y-1.5">
+                {(pergunta.options ?? []).map((o) => (
+                  <li key={o.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-soft">
+                      {o.texto.trim() || <em className="text-ink-faint">opção sem texto</em>}
+                    </span>
+                    <SeletorDeDestino
+                      valor={o.proxima}
+                      destinos={destinos}
+                      label={`Para onde leva a resposta “${o.texto.trim() || 'sem texto'}”`}
+                      onChange={(proxima) =>
+                        onTrocar({
+                          options: (pergunta.options ?? []).map((x) =>
+                            x.id === o.id ? { ...x, proxima } : x,
+                          ),
+                        })
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+                Só dá para mandar para FRENTE, ou encerrar a triagem. É o que impede a conversa de
+                andar em círculo e nunca terminar.
+              </p>
+            </div>
+          )}
+
+          {/* Pergunta sem opções (texto, data, nome): o caminho é DELA, não da
+              resposta — uma linha só, em vez de uma por opção. */}
+          {destinos.length > 1 && !pergunta.options?.length && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[12.5px] font-semibold text-ink">Depois desta, ir para</span>
+              <SeletorDeDestino
+                valor={pergunta.proxima}
+                destinos={destinos}
+                label="Para onde a conversa vai depois desta pergunta"
+                onChange={(proxima) => onTrocar({ proxima })}
+              />
+            </div>
+          )}
+
+          {/* Múltipla escolha não ramifica, e é melhor dizer do que deixar o
+              advogado procurar um seletor que não existe. */}
+          {pergunta.kind === 'multipla' && destinos.length > 1 && (
+            <p className="rounded-lg bg-paper-deep/60 px-3 py-2 text-[11.5px] leading-relaxed text-ink-faint">
+              Esta pergunta não ramifica: quem responde pode marcar várias opções, e duas delas
+              apontando para lugares diferentes não teriam como ser desempatadas. A conversa segue
+              para a pergunta seguinte.
             </p>
           )}
 
@@ -642,6 +763,44 @@ function PerguntaItem({
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * Para onde uma resposta leva.
+ *
+ * `<select>` nativo, e não os botões segmentados do resto do editor: aqui a
+ * lista tem até nove itens com texto longo ("3. Você já possui processo sobre
+ * esse assunto?"), e segmentado vira uma parede de pílulas. O nativo ainda abre
+ * a roda do iOS e já vem acessível pelo teclado.
+ */
+function SeletorDeDestino({
+  valor,
+  destinos,
+  label,
+  onChange,
+}: {
+  valor?: string
+  destinos: DestinoPossivel[]
+  label: string
+  onChange: (v: string | undefined) => void
+}) {
+  return (
+    <select
+      value={valor ?? ''}
+      aria-label={label}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      // 16px no celular: abaixo disso o Safari do iPhone dá zoom na página ao
+      // focar o campo — a mesma razão do CAMPO_HORA em AssistantCard.
+      className="max-w-full rounded-lg border border-ink/15 bg-paper-soft px-2.5 py-1.5 text-[16px] text-ink focus:border-burgundy focus:outline-none sm:text-[12.5px]"
+    >
+      <option value="">A próxima pergunta</option>
+      {destinos.map((d) => (
+        <option key={d.valor} value={d.valor}>
+          {d.rotulo}
+        </option>
+      ))}
+    </select>
   )
 }
 

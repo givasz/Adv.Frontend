@@ -83,7 +83,10 @@ describe('cada apontamento sabe se explicar', () => {
 
 describe('a brecha da opção de resposta', () => {
   it('o bloqueio vale para a pergunta INTEIRA, não só para o enunciado', () => {
-    const pergunta = { label: 'Qual informação você quer enviar?', options: ['Minha senha do banco'] }
+    const pergunta = {
+      label: 'Qual informação você quer enviar?',
+      options: [{ texto: 'Minha senha do banco' }],
+    }
     expect(perguntaBloqueada({ label: pergunta.label })).toBeNull()
     expect(perguntaBloqueada(pergunta)?.tipo).toBe('credencial')
   })
@@ -91,14 +94,17 @@ describe('a brecha da opção de resposta', () => {
   it('cada tipo aparece uma vez só, mesmo repetido entre enunciado e opções', () => {
     const achados = conferirPerguntaInteira({
       label: 'Qual o seu CPF?',
-      options: ['Mando o CPF', 'Mando o RG'],
+      options: [{ texto: 'Mando o CPF' }, { texto: 'Mando o RG' }],
     })
     expect(achados.filter((a) => a.tipo === 'documento')).toHaveLength(1)
   })
 
   it('pergunta limpa com opções limpas não gera apontamento', () => {
     expect(
-      conferirPerguntaInteira({ label: 'Qual assunto?', options: ['Família', 'Cível'] }),
+      conferirPerguntaInteira({
+        label: 'Qual assunto?',
+        options: [{ texto: 'Família' }, { texto: 'Cível' }],
+      }),
     ).toEqual([])
     expect(conferirPerguntaInteira({})).toEqual([])
   })
