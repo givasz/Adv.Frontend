@@ -14,7 +14,7 @@ import {
   type Variants,
 } from 'framer-motion'
 import type { Profile } from '@/lib/types'
-import { getTheme, themeStyle, type RuleStyle } from '@/lib/themes'
+import { getTheme, profileVars, type RuleStyle } from '@/lib/themes'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { canUseFaq, canUseVideo } from '@/lib/plans'
 import { parseVideoUrl } from '@/lib/video'
@@ -70,14 +70,6 @@ interface ProfileViewProps {
   chatEnabled?: boolean
 }
 
-// Converte "#rrggbb" em "rgba(r,g,b,a)" para a variável de destaque suave.
-function hexToRgba(hex: string, alpha: number): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return `rgba(150,116,63,${alpha})`
-  const n = parseInt(m[1], 16)
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
-}
-
 export function ProfileView({
   profile,
   preview = false,
@@ -115,10 +107,6 @@ export function ProfileView({
   const video = canUseVideo(profile.plan) ? parseVideoUrl(profile.videoUrl) : null
   const s = getTheme(profile.theme).style
   const brand = profile.branding
-  // White-label: cor de destaque personalizada sobrescreve a do tema via CSS vars.
-  const brandVars = brand?.accent
-    ? ({ '--c-accent': brand.accent, '--c-accent-soft': hexToRgba(brand.accent, 0.14) } as React.CSSProperties)
-    : undefined
   const tile = s.tile === 'card' ? 't-tile' : `t-tile tv-${s.tile}`
   const left = s.header === 'editorial'
   // A entreletra do NOME vem do tema (--name-tracking), não de uma classe fixa:
@@ -219,7 +207,8 @@ export function ProfileView({
     <LazyMotion features={domAnimation}>
     <div
       className="themed w-full flex-1"
-      style={{ ...themeStyle(profile.theme), ...brandVars }}
+      // Tema + cor da marca, pela mesma fonte que o balão flutuante usa (lib/themes).
+      style={profileVars(profile)}
     >
       <m.div
         variants={container}

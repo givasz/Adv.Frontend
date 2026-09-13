@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTheme, isThemeUnlocked, LEGACY_THEME, THEMES, themeStyle, type Theme } from './themes'
+import { getTheme, isThemeUnlocked, LEGACY_THEME, profileVars, THEMES, themeStyle, tintaSobre, type Theme } from './themes'
 
 // ---- utilidades de cor ----
 
@@ -183,5 +183,49 @@ describe('temas — ids da coleção anterior', () => {
   it('chave herdada do protótipo não vira tema', () => {
     expect(getTheme('constructor').id).toBe('papel')
     expect(getTheme('__proto__').id).toBe('papel')
+  })
+})
+
+describe('profileVars — o tema mais a cor da marca', () => {
+  it('sem marca devolve exatamente as variáveis do tema', () => {
+    expect(profileVars({ theme: 'marinho' })).toBe(getTheme('marinho').vars)
+  })
+
+  it('a cor da marca substitui o acento do tema e o realce desce dela', () => {
+    const v = profileVars({ theme: 'marinho', branding: { accent: '#8a2be2' } }) as Record<string, string>
+    expect(v['--c-accent']).toBe('#8a2be2')
+    expect(v['--c-accent-soft']).toBe('rgba(138,43,226,0.14)')
+    // O resto do tema continua lá: é o Marinho de fundo, só com outro acento.
+    expect(v['--c-bg']).toBe('#0f1b2d')
+  })
+
+  it('id antigo com marca também funciona — a tradução vem antes', () => {
+    const v = profileVars({ theme: 'obsidian', branding: { accent: '#8a2be2' } }) as Record<string, string>
+    expect(v['--c-bg']).toBe(getTheme('marinho').vars['--c-bg'])
+    expect(v['--c-accent']).toBe('#8a2be2')
+  })
+})
+
+describe('tintaSobre — a tinta da cor da marca', () => {
+  it('cor escura pede tinta branca; cor clara pede tinta escura', () => {
+    expect(tintaSobre('#8a2be2')).toBe('#ffffff') // roxo
+    expect(tintaSobre('#1f3350')).toBe('#ffffff') // marinho
+    expect(tintaSobre('#d8d0bf')).toBe('#121212') // pedra
+    expect(tintaSobre('#ffd400')).toBe('#121212') // amarelo
+  })
+
+  it('profileVars leva a tinta junto com a cor da marca', () => {
+    // O caso que motivou: Marinho (tinta do tema azul-escura) com marca roxa.
+    const v = profileVars({ theme: 'marinho', branding: { accent: '#8a2be2' } }) as Record<string, string>
+    expect(v['--c-accent-ink']).toBe('#ffffff')
+    const w = profileVars({ theme: 'papel', branding: { accent: '#e6d3a3' } }) as Record<string, string>
+    expect(w['--c-accent-ink']).toBe('#121212')
+  })
+
+  it('a tinta escolhida passa em AA sobre qualquer cor de marca', () => {
+    for (const hex of ['#8a2be2', '#d8d0bf', '#808080', '#00a0e0', '#c8102e', '#f5f5f5']) {
+      const ink = tintaSobre(hex)
+      expect(contrast(ink, parseColor(hex)!), hex).toBeGreaterThanOrEqual(4.5)
+    }
   })
 })

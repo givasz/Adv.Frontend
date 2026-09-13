@@ -6,7 +6,7 @@
 // ninguém o procura e um visitante que acha que o perfil está quebrado.
 
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { comoAbrirWhatsapp, numeroWhatsapp, whatsappHref } from './whatsapp'
+import { comoAbrirWhatsapp, numeroWhatsapp, TINTA_SOBRE_O_VERDE, VERDE_WHATSAPP, whatsappHref } from './whatsapp'
 
 describe('o número vira o que o wa.me entende: só dígitos, com DDI', () => {
   it('tira a pontuação que o servidor aceita gravar', () => {
@@ -94,5 +94,28 @@ describe('como a página abre o WhatsApp', () => {
   it('navegador sem matchMedia não derruba a tela', () => {
     vi.stubGlobal('window', {})
     expect(comoAbrirWhatsapp().target).toBe('_blank')
+  })
+})
+
+describe('o verde do atalho flutuante', () => {
+  // O rótulo do balão é texto de 14 px sobre este verde: precisa de 4,5:1 (AA).
+  // O #25D366 da marca fica em 2:1 com texto branco — por isso o tom fechado.
+  const canal = (v: number) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  const lum = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16)
+    return 0.2126 * canal((n >> 16) & 255) + 0.7152 * canal((n >> 8) & 255) + 0.0722 * canal(n & 255)
+  }
+  it('a tinta passa em AA sobre o verde', () => {
+    const [a, b] = [lum(VERDE_WHATSAPP), lum(TINTA_SOBRE_O_VERDE)]
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('é verde de verdade — o canal verde domina', () => {
+    const n = parseInt(VERDE_WHATSAPP.slice(1), 16)
+    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    expect(g).toBeGreaterThan(r * 2)
+    expect(g).toBeGreaterThan(b * 1.5)
   })
 })

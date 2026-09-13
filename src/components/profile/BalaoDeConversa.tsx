@@ -7,8 +7,8 @@ import { AnimatePresence, m } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { registrarEvento } from '@/lib/eventos'
-import { themeStyle } from '@/lib/themes'
-import { comoAbrirWhatsapp } from '@/lib/whatsapp'
+import { profileVars } from '@/lib/themes'
+import { comoAbrirWhatsapp, TINTA_SOBRE_O_VERDE, VERDE_WHATSAPP } from '@/lib/whatsapp'
 import { SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import { assistantTitle } from '@/lib/assistantTitle'
 
@@ -89,6 +89,26 @@ export const BALAO_ROTULO = 'Agendar uma conversa'
  * permite botão de contato, desde que sem apelo ("Contrate pelo WhatsApp" não).
  */
 export const BALAO_ROTULO_WHATSAPP = 'Conversar no WhatsApp'
+
+/**
+ * A pintura de cada tipo de balão. Exportada para o teste conferir, sem
+ * renderizar, a decisão que segue:
+ *
+ *  • assistente → a cor de acento do PERFIL (o tema, ou a cor da marca quando o
+ *    advogado definiu uma) com a tinta que o tema declara para texto sobre o
+ *    acento. Era `text-paper` fixo, e sobre o acento claro do Marinho (pedra)
+ *    o rótulo sumia.
+ *  • WhatsApp → o verde do WhatsApp, em TODO tema. Ele é o atalho para outro
+ *    aplicativo, e o visitante o reconhece pela cor antes de ler o rótulo.
+ *    Pintado com o acento do tema virava um botão bege, preto ou sépia que
+ *    ninguém identificava — visto em 13/09/2026 no Marinho de um perfil com cor
+ *    de marca roxa: a página roxa, o balão bege.
+ */
+export function pinturaDoBalao(tipo: 'assistant' | 'whatsapp'): React.CSSProperties {
+  return tipo === 'whatsapp'
+    ? { background: VERDE_WHATSAPP, color: TINTA_SOBRE_O_VERDE }
+    : { background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }
+}
 
 export function BalaoDeConversa({
   profile,
@@ -172,8 +192,12 @@ export function BalaoDeConversa({
   const ehWhatsapp = tipo === 'whatsapp'
   const conteudo = (
     <>
+      {/* O disco do ícone é a PRÓPRIA tinta do balão, quase transparente —
+          `currentColor` — e não um branco translúcido: sobre um acento claro
+          (a pedra do Marinho) o branco simplesmente não aparecia. */}
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        style={{ background: 'color-mix(in srgb, currentColor 14%, transparent)' }}
         aria-hidden
       >
         {ehWhatsapp ? <WhatsappIcon width={18} height={18} /> : <SparkIcon width={18} height={18} />}
@@ -189,12 +213,10 @@ export function BalaoDeConversa({
     </>
   )
 
-  // Cor do tema do perfil, não um verde de WhatsApp: o balão é parte da página
-  // do advogado, e não um enxerto de outra marca.
   const classe =
     'flex items-center gap-2.5 rounded-full py-2.5 pl-2.5 pr-4 shadow-card ' +
-    'text-paper transition-transform hover:scale-[1.02] active:scale-[0.99]'
-  const estilo = { background: 'var(--c-accent)' }
+    'transition-transform hover:scale-[1.02] active:scale-[0.99]'
+  const estilo = pinturaDoBalao(tipo)
 
   // PORTAL, e não um `fixed` onde o componente é escrito.
   //
@@ -205,8 +227,10 @@ export function BalaoDeConversa({
   // dobra. Foi pelo mesmo motivo que o ShareBar é montado fora do ProfileView.
   //
   // Sair do contêiner custa o TEMA: `--c-accent` é declarado lá dentro e não
-  // alcança o destino. `themeStyle` o traz junto, como o AssistantChat já faz
-  // com a folha da conversa.
+  // alcança o destino. `profileVars` o traz junto — o tema E a cor da marca do
+  // advogado, exatamente o que o ProfileView aplica no contêiner. Só o tema
+  // (`themeStyle`) não bastava: num perfil com cor de marca, a página ficava de
+  // uma cor e o balão de outra.
   const balao = (
     <AnimatePresence>
       {visivel && (
@@ -215,9 +239,7 @@ export function BalaoDeConversa({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.96 }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
-          // `pb-[max(...)]` respeita a barra de gestos do iPhone; sem isso o
-          // balão fica sob ela e o toque não chega.
-          style={themeStyle(profile.theme)}
+          style={profileVars(profile)}
           className={`${
             naMoldura
               ? // Dentro da maquete: preso À CAIXA do telefone, e recortado por

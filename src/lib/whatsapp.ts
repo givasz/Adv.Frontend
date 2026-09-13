@@ -130,3 +130,19 @@ export function comoAbrirWhatsapp(): { target: '_self' | '_blank'; rel: string }
     ? { target: '_self', rel: 'noreferrer noopener' }
     : { target: '_blank', rel: 'noreferrer noopener' }
 }
+
+/**
+ * O verde do atalho flutuante de WhatsApp — o MESMO em todo tema do perfil.
+ *
+ * O balão do WhatsApp é um atalho para OUTRO aplicativo, e o visitante o
+ * reconhece pela cor antes de ler o rótulo. Pintado com o acento do tema ele
+ * virava um botão bege (Marinho), preto (Nanquim) ou sépia (Linho) que ninguém
+ * identificava como WhatsApp.
+ *
+ * Não é o #25D366 da marca: texto branco sobre ele fica em 2:1, e o rótulo do
+ * balão é texto de 14 px. Este verde, um tom mais fechado, passa em AA (4,8:1)
+ * com a tinta branca e continua sendo, sem dúvida, o verde do WhatsApp. Há
+ * teste que confere o contraste (whatsapp.spec.ts).
+ */
+export const VERDE_WHATSAPP = '#11843f'
+export const TINTA_SOBRE_O_VERDE = '#ffffff'

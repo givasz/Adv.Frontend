@@ -24,7 +24,8 @@
 // ---------------------------------------------------------------------------
 
 import { describe, expect, it } from 'vitest'
-import { BALAO_ROTULO, BALAO_ROTULO_WHATSAPP } from './BalaoDeConversa'
+import { BALAO_ROTULO, BALAO_ROTULO_WHATSAPP, pinturaDoBalao } from './BalaoDeConversa'
+import { TINTA_SOBRE_O_VERDE, VERDE_WHATSAPP } from '@/lib/whatsapp'
 import { botaoFlutuante, botaoFlutuanteEscolhido } from '@/lib/botaoFlutuante'
 import { checkCompliance } from '@/lib/oab'
 import type { Profile } from '@/lib/types'
@@ -139,5 +140,26 @@ describe('o balão não coleta nada', () => {
     for (const tag of ['<input', '<textarea', '<form', '<select']) {
       expect(codigo, `o balão passou a conter ${tag} — isso é captura de dado de visitante`).not.toContain(tag)
     }
+  })
+})
+
+describe('a cor do balão', () => {
+  // A cena que originou esta trava (13/09/2026): um perfil no tema Marinho com
+  // cor de marca roxa — a página roxa, e o balão de WhatsApp BEGE, a cor de
+  // acento do tema. Ninguém reconhecia aquilo como WhatsApp.
+  it('o WhatsApp é verde em todo tema, e não a cor de acento do perfil', () => {
+    const p = pinturaDoBalao('whatsapp')
+    expect(p.background).toBe(VERDE_WHATSAPP)
+    expect(p.color).toBe(TINTA_SOBRE_O_VERDE)
+    expect(String(p.background)).not.toContain('var(')
+  })
+
+  it('o assistente é parte da página: acento do perfil com a tinta do tema', () => {
+    // `--c-accent-ink` e não um branco fixo — sobre o acento claro do Marinho
+    // (pedra) o rótulo branco sumia. Todo tema garante ≥ 4,5:1 nesse par
+    // (themes.spec.ts).
+    const p = pinturaDoBalao('assistant')
+    expect(p.background).toBe('var(--c-accent)')
+    expect(p.color).toBe('var(--c-accent-ink)')
   })
 })

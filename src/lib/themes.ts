@@ -461,3 +461,59 @@ export function isThemeUnlocked(theme: Theme, plan: Tier): boolean {
 export function themeStyle(id: ThemeId | undefined): React.CSSProperties {
   return getTheme(id).vars as React.CSSProperties
 }
+
+// Converte "#rrggbb" em "rgba(r,g,b,a)" para a variável de destaque suave.
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return `rgba(150,116,63,${alpha})`
+  const n = parseInt(m[1], 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+}
+
+/**
+ * As variáveis do PERFIL: o tema, e por cima dele a cor de destaque da marca do
+ * advogado (white-label, só no Max), que substitui o acento do tema.
+ *
+ * É a fonte única do que o ProfileView aplica ao contêiner — e do que qualquer
+ * peça desenhada FORA dele (o balão flutuante, que vai por portal ao <body>)
+ * precisa levar junto. Até 13/09/2026 o balão levava só `themeStyle`, e num
+ * perfil com cor de marca a página ficava de uma cor e o balão de outra.
+ */
+export function profileVars(p: {
+  theme?: ThemeId | string
+  branding?: { accent?: string } | null
+}): React.CSSProperties {
+  const base = getTheme(p.theme).vars as React.CSSProperties
+  const accent = p.branding?.accent
+  if (!accent) return base
+  return {
+    ...base,
+    '--c-accent': accent,
+    '--c-accent-soft': hexToRgba(accent, 0.14),
+    '--c-accent-ink': tintaSobre(accent),
+  } as React.CSSProperties
+}
+
+// Luminância relativa (WCAG) de um "#rrggbb".
+function luminancia(hex: string): number {
+  const n = parseInt(hex.slice(1), 16)
+  const canal = (v: number) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  return 0.2126 * canal((n >> 16) & 255) + 0.7152 * canal((n >> 8) & 255) + 0.0722 * canal(n & 255)
+}
+
+/**
+ * A tinta para texto SOBRE a cor da marca: branca ou quase preta, a que contrasta
+ * mais. A `--c-accent-ink` do tema foi escolhida para o acento DO TEMA — o
+ * Marinho declara azul-escuro porque o acento dele é pedra clara — e não serve
+ * para uma cor que o advogado escolheu: roxo com tinta azul-escura fica em 3:1.
+ */
+export function tintaSobre(hex: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return '#ffffff'
+  const l = luminancia(hex)
+  const comBranco = 1.05 / (l + 0.05)
+  const comEscuro = (l + 0.05) / (luminancia('#121212') + 0.05)
+  return comBranco >= comEscuro ? '#ffffff' : '#121212'
+}
