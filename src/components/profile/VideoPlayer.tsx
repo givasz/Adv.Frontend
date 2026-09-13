@@ -38,12 +38,15 @@ export function VideoPlayer({
   inert = false,
   /** 'auto' deduz do link (Short = em pé) — ver orientacaoDoVideo */
   orientation,
+  /** legenda à esquerda (temas com cabeçalho editorial); centralizada nos demais */
+  alignLeft = false,
 }: {
   video: ParsedVideo
   caption?: string
   name: string
   inert?: boolean
   orientation?: VideoOrientation
+  alignLeft?: boolean
 }) {
   const emPe = orientacaoDoVideo(video, orientation) === 'vertical'
   const [playing, setPlaying] = useState(false)
@@ -165,7 +168,7 @@ export function VideoPlayer({
         )}
       </div>
       {caption?.trim() && (
-        <figcaption className="t-muted mt-2 text-center text-[13px] leading-relaxed">
+        <figcaption className={`t-muted mt-2 text-[13px] leading-relaxed ${alignLeft ? 'text-left' : 'text-center'}`}>
           {caption}
         </figcaption>
       )}

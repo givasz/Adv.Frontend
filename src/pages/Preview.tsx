@@ -10,16 +10,19 @@ import { ProfileView } from '@/components/profile/ProfileView'
 // não mostra:
 //   ?botao=whatsapp|assistant|off  → qual balão flutuante desenhar
 //   ?marca=8a2be2                  → cor de marca (white-label) por cima do tema
+//   ?nome=Maria%20Aparecida...     → outro nome (para ver um nome longo quebrar)
 export default function Preview() {
   const { themeId } = useParams()
   const [params] = useSearchParams()
   const id = (THEMES.some((t) => t.id === themeId) ? themeId : 'papel') as ThemeId
   const botao = params.get('botao')
   const marca = params.get('marca')
+  const nome = (params.get('nome') ?? '').trim().slice(0, 70)
   const profile = {
     ...sampleProfile,
     theme: id,
     plan: 'premium' as const,
+    name: nome || sampleProfile.name,
     floating:
       botao === 'whatsapp' || botao === 'assistant' || botao === 'off'
         ? botao

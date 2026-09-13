@@ -194,6 +194,7 @@ export function ProfileView({
           name={profile.name}
           compact
           aviso
+          align={left ? 'start' : 'center'}
           interactive={!preview}
           aoTocarNoExemplo={
             exemplo ? () => avisarExemplo?.(oQueAconteceria('cna', primeiroNome)) : undefined
@@ -218,7 +219,10 @@ export function ProfileView({
       >
         {/* Cabeçalho — layout varia por tema */}
         {left ? (
-          <m.header variants={item} className="flex items-center gap-4 text-left">
+          // `items-start`: a foto alinha com o TOPO do nome. Centralizada na
+          // vertical, um nome de três linhas (caixa alta do Ardósia) a deixava
+          // solta ao lado do aviso do CNA, longe do nome a que pertence.
+          <m.header variants={item} className="flex items-start gap-4 text-left">
             <Avatar src={profile.avatarUrl} name={profile.name} size={78} frame={s.avatar} priority />
             <div className="min-w-0">
               <h1 className={nameCls} style={nameStyle}>{profile.name}</h1>
@@ -527,6 +531,7 @@ export function ProfileView({
               <VideoPlayer
                 video={video}
                 caption={profile.videoCaption}
+                alignLeft={left}
                 name={profile.name}
                 orientation={profile.videoOrientation}
                 inert={preview && !chatEnabled}
@@ -549,7 +554,14 @@ export function ProfileView({
         )}
 
         {/* Marca d'água (plano gratuito) */}
-        <m.footer variants={item} className="mt-12 flex flex-col items-center gap-1">
+        {/* O rodapé segue o cabeçalho: centralizado nos temas centralizados,
+            à esquerda nos editoriais. Antes era `items-center` sem `text-center`:
+            o nome do escritório (curto) saía centralizado e os parágrafos
+            (largos) à esquerda — em TODO tema. */}
+        <m.footer
+          variants={item}
+          className={`mt-12 flex flex-col gap-1 ${left ? 'items-start text-left' : 'items-center text-center'}`}
+        >
           {profile.plan === 'free' && !brand?.hideWatermark && (
             <a
               href="/"

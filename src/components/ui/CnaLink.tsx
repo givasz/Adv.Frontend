@@ -37,6 +37,7 @@ export function CnaLink({
   interactive = true,
   aviso = false,
   aoTocarNoExemplo,
+  align = 'center',
 }: {
   /**
    * Perfil de EXEMPLO (fictício): o link não sai para o CNA. O nome buscado seria
@@ -63,9 +64,18 @@ export function CnaLink({
    * ninguém — nem eles, nem nós.
    */
   aviso?: boolean
+  /**
+   * Como o link e o aviso se alinham entre si. `center` nos cabeçalhos
+   * centralizados; `start` no cabeçalho à esquerda (Ardósia, Nanquim), onde o
+   * link centralizado sobre um aviso de duas linhas parecia deslocado.
+   */
+  align?: 'center' | 'start'
 }) {
-  const cls = `inline-flex items-center gap-1 rounded-full font-medium transition-opacity hover:opacity-70 ${
-    compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[11.5px]'
+  // Alinhado à esquerda, o link perde o preenchimento esquerdo: senão o texto
+  // nasce 6 px à direita do número da OAB logo acima, e parece recuado.
+  const pad = align === 'start' ? (compact ? 'pl-0 pr-1.5' : 'pl-0 pr-2') : compact ? 'px-1.5' : 'px-2'
+  const cls = `inline-flex items-center gap-1 rounded-full font-medium transition-opacity hover:opacity-70 ${pad} ${
+    compact ? 'py-0.5 text-[11px]' : 'py-0.5 text-[11.5px]'
   }`
 
   const link = (
@@ -96,7 +106,7 @@ export function CnaLink({
   if (!aviso) return link
 
   return (
-    <span className="inline-flex flex-col items-center gap-0.5">
+    <span className={`inline-flex flex-col gap-0.5 ${align === 'start' ? 'items-start text-left' : 'items-center'}`}>
       {link}
       <span
         className="text-[10px] leading-tight opacity-75"
