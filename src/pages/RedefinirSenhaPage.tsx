@@ -8,19 +8,19 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SubPage } from '@/components/ui/SubPage'
+import { CampoSenha } from '@/components/ui/CampoSenha'
 import { redefinirSenha } from '@/lib/auth'
 import { esquecerTokenDoLink, lerTokenDoLink } from '@/lib/linkDeEmail'
 import { passwordStrength } from '@/lib/passwordStrength'
 import { CheckIcon, LockIcon } from '@/components/ui/icons'
 
-const campo =
-  'w-full rounded-lg border border-ink/15 bg-paper-soft px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-faint/60 focus:border-burgundy focus:outline-none focus:ring-2 focus:ring-burgundy/15'
-
 export default function RedefinirSenhaPage() {
   const [token] = useState(() => lerTokenDoLink())
   const [nova, setNova] = useState('')
   const [repetir, setRepetir] = useState('')
-  const [mostrar, setMostrar] = useState(false)
+  // Um olho por campo, como na tela de entrada (ver components/ui/CampoSenha).
+  const [verNova, setVerNova] = useState(false)
+  const [verRepetir, setVerRepetir] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [pronto, setPronto] = useState(false)
@@ -82,16 +82,14 @@ export default function RedefinirSenhaPage() {
           <label htmlFor="n-senha" className="mb-1.5 block text-[13px] font-semibold text-ink">
             Senha nova
           </label>
-          <input
+          <CampoSenha
             id="n-senha"
-            type={mostrar ? 'text' : 'password'}
             value={nova}
-            onChange={(e) => setNova(e.target.value)}
+            onChange={setNova}
+            visible={verNova}
+            onToggle={() => setVerNova((v) => !v)}
             autoComplete="new-password"
-            spellCheck={false}
-            autoCapitalize="none"
-            aria-describedby="n-dica"
-            className={campo}
+            describedBy="n-dica"
           />
           <p id="n-dica" aria-live="polite" className="mt-1.5 min-h-[1.2em] text-[12px] leading-relaxed text-ink-faint">
             {nova.length > 0 &&
@@ -103,30 +101,25 @@ export default function RedefinirSenhaPage() {
           <label htmlFor="n-repetir" className="mb-1.5 mt-3 block text-[13px] font-semibold text-ink">
             Repetir a senha nova
           </label>
-          <input
+          <CampoSenha
             id="n-repetir"
-            type={mostrar ? 'text' : 'password'}
             value={repetir}
-            onChange={(e) => setRepetir(e.target.value)}
+            onChange={setRepetir}
+            visible={verRepetir}
+            onToggle={() => setVerRepetir((v) => !v)}
             autoComplete="new-password"
-            spellCheck={false}
-            autoCapitalize="none"
-            aria-invalid={diferentes}
-            className={`${campo} ${diferentes ? '!border-burgundy/60' : ''}`}
+            invalid={diferentes}
+            describedBy="n-repetir-situacao"
           />
-          <p aria-live="polite" className="mt-1.5 min-h-[1.2em] text-[12px]">
+          <p id="n-repetir-situacao" aria-live="polite" className="mt-1.5 min-h-[1.2em] text-[12px]">
             {diferentes && <span className="text-burgundy">As senhas não são iguais.</span>}
+            {!diferentes && repetir.length > 0 && (
+              <span className="inline-flex items-center gap-1 font-medium text-brass-deep">
+                <CheckIcon width={12} height={12} strokeWidth={2.6} />
+                Conferem.
+              </span>
+            )}
           </p>
-
-          <label className="mt-1 flex cursor-pointer items-center gap-2 text-[12.5px] text-ink-soft">
-            <input
-              type="checkbox"
-              checked={mostrar}
-              onChange={(e) => setMostrar(e.target.checked)}
-              className="h-4 w-4 cursor-pointer accent-burgundy"
-            />
-            Mostrar as senhas
-          </label>
 
           <p className="mt-4 rounded-lg border border-ink/10 bg-paper-soft px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-soft">
             Ao salvar, todos os aparelhos conectados saem da conta — inclusive o de quem estiver usando sem a sua

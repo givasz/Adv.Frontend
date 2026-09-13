@@ -75,7 +75,8 @@ export default function EsqueciSenhaPage() {
             em alguns minutos. Ele vale por 1 hora e funciona uma vez só.
           </p>
           <p className="mt-2 text-[12.5px] leading-relaxed text-ink-faint">
-            Não chegou? Confira o spam. Se pedir de novo, o link anterior deixa de valer.
+            Não chegou em alguns minutos? Confira o spam antes de pedir de novo. Vale sempre o link mais
+            recente, e dá para pedir até cinco por dia.
           </p>
           <button type="button" onClick={() => setPedidoPara(null)} className="btn-ghost mt-4 !py-2 text-[13px]">
             Pedir de novo
