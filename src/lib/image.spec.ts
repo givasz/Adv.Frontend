@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AVATAR_DATA_URL_MAX, codificarAvatar, type CanvasCodificavel } from './image'
+import { AVATAR_DATA_URL_MAX, codificarAvatar, ENQUADRAMENTO_PADRAO, janelaDeRecorte, ZOOM_MAX, type CanvasCodificavel } from './image'
 
 // Um canvas de mentira: devolve um data URI do formato pedido, com tamanho
 // proporcional à qualidade — o bastante para exercitar a escolha do formato e
@@ -57,5 +57,30 @@ describe('codificarAvatar — o formato da foto do perfil', () => {
   it('o teto fica abaixo do que o servidor recusa', () => {
     // AVATAR_MAX em backend/src/security/sanitize.ts é 400_000.
     expect(AVATAR_DATA_URL_MAX).toBeLessThan(400_000)
+  })
+})
+
+describe('janelaDeRecorte — o enquadramento que a prévia e o recorte compartilham', () => {
+  it('padrão: a maior janela que cabe, no centro (o recorte automático de antes)', () => {
+    expect(janelaDeRecorte(800, 500, ENQUADRAMENTO_PADRAO)).toEqual({ sx: 150, sy: 0, lado: 500 })
+    expect(janelaDeRecorte(500, 800, ENQUADRAMENTO_PADRAO)).toEqual({ sx: 0, sy: 150, lado: 500 })
+  })
+
+  it('zoom 2 reduz a janela à metade, ainda centrada', () => {
+    expect(janelaDeRecorte(800, 500, { zoom: 2, cx: 0.5, cy: 0.5 })).toEqual({ sx: 275, sy: 125, lado: 250 })
+  })
+
+  it('o centro segue o arrasto, e a janela nunca sai da foto', () => {
+    // Centro pedido no canto: a janela encosta na borda em vez de vazar.
+    expect(janelaDeRecorte(800, 500, { zoom: 1, cx: 0, cy: 0 })).toEqual({ sx: 0, sy: 0, lado: 500 })
+    expect(janelaDeRecorte(800, 500, { zoom: 1, cx: 1, cy: 1 })).toEqual({ sx: 300, sy: 0, lado: 500 })
+    // Com zoom, o centro tem para onde ir.
+    expect(janelaDeRecorte(800, 500, { zoom: 2, cx: 0.25, cy: 0.5 })).toEqual({ sx: 75, sy: 125, lado: 250 })
+  })
+
+  it('zoom fora da faixa é trazido de volta', () => {
+    expect(janelaDeRecorte(800, 500, { zoom: 0.2, cx: 0.5, cy: 0.5 }).lado).toBe(500)
+    expect(janelaDeRecorte(800, 500, { zoom: 99, cx: 0.5, cy: 0.5 }).lado).toBeCloseTo(500 / ZOOM_MAX)
+    expect(janelaDeRecorte(800, 500, { zoom: Number.NaN, cx: 0.5, cy: 0.5 }).lado).toBe(500)
   })
 })
