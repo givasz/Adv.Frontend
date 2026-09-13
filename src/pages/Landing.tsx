@@ -4,15 +4,13 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { sampleProfile } from '@/lib/mockData'
 import {
-  PLAN_COMPARE,
   PLAN_OFFERS,
   REGRAS_DE_COBRANCA,
   RESUMO_DA_COBRANCA,
-  type CompareValue,
   type PlanOffer,
 } from '@/lib/planOffer'
-import { PLAN_LABEL } from '@/lib/upsell'
 import { PhonePreview } from '@/components/editor/PhonePreview'
+import { CompararPlanos } from '@/components/landing/CompararPlanos'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { ContratosVitrine } from '@/components/landing/ContratosVitrine'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -61,7 +59,12 @@ export default function Landing() {
   }, [])
 
   return (
-    <div className="grain min-h-dvh overflow-x-hidden">
+    // overflow-x-CLIP onde o navegador conhece (hidden fica de reserva): `hidden`
+    // transforma esta raiz em contêiner de rolagem, e nada lá dentro gruda de
+    // verdade — o seletor de plano da comparação passava direto pelo topo.
+    // `clip` corta o estouro lateral sem criar scrollport. Mesmo caso do
+    // PublicProfile e do editor.
+    <div className="grain min-h-dvh overflow-x-hidden supports-[overflow:clip]:overflow-x-clip">
       {/* Nav */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <span className="flex items-center gap-2 font-display text-xl font-semibold">
@@ -452,7 +455,7 @@ export default function Landing() {
             completo para cada advogado da equipe.
           </p>
           <div className="mt-6">
-            <CompareTable />
+            <CompararPlanos />
           </div>
         </div>
 
@@ -843,107 +846,5 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
   )
 }
 
-const COMPARE_PLANS = ['free', 'pro', 'premium'] as const
-
-/**
- * A tabela comparativa. No celular ela rola na horizontal dentro da própria
- * moldura (a página nunca rola de lado), com a coluna do recurso presa à
- * esquerda para a pessoa não perder de vista o que está comparando.
- */
-function CompareTable() {
-  return (
-    <>
-      {/* No celular só a primeira coluna de plano cabe na tela; sem esta linha
-          a pessoa não sabe que Pro e Max estão logo à direita. Some a partir de
-          sm, onde a tabela inteira cabe. */}
-      <p className="mb-2 text-center text-[12px] text-ink-faint sm:hidden">
-        Deslize a tabela para o lado para ver Pro e Max
-      </p>
-      <div className="overflow-x-auto rounded-xl2 border border-ink/10 bg-paper-soft/60">
-      <table className="w-full min-w-[520px] border-collapse text-left text-[13.5px]">
-        <thead>
-          <tr className="border-b border-ink/10">
-            <th
-              scope="col"
-              className="sticky left-0 z-10 bg-paper-soft px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-ink-faint"
-            >
-              Recurso
-            </th>
-            {COMPARE_PLANS.map((p) => (
-              <th
-                key={p}
-                scope="col"
-                className={`px-3 py-3 text-center font-display text-[16px] font-semibold ${
-                  p === 'pro' ? 'bg-burgundy/[0.05] text-burgundy' : 'text-ink'
-                }`}
-              >
-                {PLAN_LABEL[p]}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        {PLAN_COMPARE.map((g) => (
-          <tbody key={g.title}>
-            <tr>
-              <th
-                scope="colgroup"
-                colSpan={1 + COMPARE_PLANS.length}
-                className="sticky left-0 bg-paper-soft px-4 pb-1.5 pt-4 text-left text-[11.5px] font-semibold uppercase tracking-[0.12em] text-brass-deep"
-              >
-                {g.title}
-              </th>
-            </tr>
-            {g.rows.map((r) => (
-              <tr key={r.label} className="border-t border-ink/[0.07]">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 bg-paper-soft px-4 py-2.5 text-left font-normal text-ink"
-                >
-                  {r.label}
-                  {r.hint && <span className="block text-[11.5px] text-ink-faint">{r.hint}</span>}
-                </th>
-                {COMPARE_PLANS.map((p) => (
-                  <td
-                    key={p}
-                    className={`px-3 py-2.5 text-center tabular-nums ${
-                      p === 'pro' ? 'bg-burgundy/[0.05]' : ''
-                    }`}
-                  >
-                    <CompareCell value={r.values[p]} emPreparo={r.emPreparo} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        ))}
-      </table>
-      </div>
-    </>
-  )
-}
-
-function CompareCell({ value, emPreparo }: { value: CompareValue; emPreparo?: boolean }) {
-  if (value === true) {
-    return (
-      <span className="inline-flex items-center justify-center text-brass-deep" aria-label="incluído">
-        <CheckIcon width={17} height={17} strokeWidth={2.6} />
-      </span>
-    )
-  }
-  if (value === false) {
-    return (
-      <span className="text-ink-faint/70" aria-label="não incluído">
-        —
-      </span>
-    )
-  }
-  if (emPreparo) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[12px] text-ink-faint">
-        <ClockIcon width={13} height={13} />
-        {value}
-      </span>
-    )
-  }
-  return <span className="text-ink-soft">{value}</span>
-}
+// A tabela comparativa mora em components/landing/CompararPlanos.tsx — com a
+// forma própria do celular, onde a tabela rolando de lado não comparava nada.

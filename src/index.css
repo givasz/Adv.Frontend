@@ -389,6 +389,12 @@
   animation: rise-in 0.18s ease-out both;
 }
 
+/* Troca de plano na comparação do celular: o valor remonta e sobe de novo, para
+   o olho ver o que mudou. Ver components/landing/CompararPlanos. */
+.troca-de-plano {
+  animation: rise-in 0.22s ease-out both;
+}
+
 /* esconde a barra de rolagem (usado no mockup de celular) */
 .no-scrollbar {
   -ms-overflow-style: none;

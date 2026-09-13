@@ -710,8 +710,52 @@ async function exemploNaoSai() {
   return erros
 }
 
+/**
+ * A comparação de planos no celular: um plano por vez, sem rolagem lateral.
+ *
+ * A tabela rolava de lado dentro de uma moldura e escondia Pro e Max atrás de
+ * um "deslize para ver"; virou um seletor (components/landing/CompararPlanos).
+ * Três coisas aqui só existem no navegador: a tabela larga sumir na tela
+ * estreita, a home não rolar de lado, e o seletor GRUDAR no topo — que depende
+ * de a raiz da home não ser contêiner de rolagem (overflow-x-clip).
+ */
+async function comparacaoNoCelular() {
+  const { contexto, pagina, erros } = await abrir('/')
+  try {
+    const abas = pagina.getByRole('tablist', { name: /Escolha um plano/ })
+    await abas.waitFor({ timeout: ESPERA })
+    if (await pagina.locator('table').isVisible()) erros.push('a tabela larga apareceu no celular')
+    const [larguraDoConteudo, larguraDaTela] = await pagina.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ])
+    if (larguraDoConteudo > larguraDaTela) {
+      erros.push(`a home rola de lado no celular (${larguraDoConteudo} > ${larguraDaTela})`)
+    }
+    await pagina.getByRole('tab', { name: /Max/ }).click()
+    const selecionada = await pagina.getByRole('tab', { selected: true }).innerText()
+    if (!selecionada.includes('Max')) erros.push(`tocar em Max selecionou "${selecionada}"`)
+    // No fim da lista, o seletor tem de continuar no topo da tela. `instant`
+    // porque a home rola suave, e medir no meio da animação mede nada.
+    await pagina
+      .getByRole('link', { name: /Assinar Max/ })
+      .last()
+      .evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    await pagina.waitForTimeout(300)
+    const caixa = await abas.boundingBox()
+    if (!caixa || caixa.y < 0 || caixa.y > 40) {
+      erros.push(`o seletor de plano não ficou grudado no topo (y=${caixa && Math.round(caixa.y)})`)
+    }
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
   ['busca do editor e portas do painel', buscaDoEditor],
+  ['comparação de planos no celular', comparacaoNoCelular],
   ['balão de conversa no celular da home', balaoNoCelular],
   ['perfil de exemplo não sai da página', exemploNaoSai],
   ['agenda do advogado (editor)', agendaDoAdvogado],
