@@ -54,6 +54,7 @@ import { MetricasCard } from '@/components/editor/MetricasCard'
 import { BrandingCard } from '@/components/editor/BrandingCard'
 import { SchedulingCard } from '@/components/editor/SchedulingCard'
 import { TriagemCard } from '@/components/editor/TriagemCard'
+import { MapaDaTriagem } from '@/components/editor/MapaDaTriagem'
 import { BotaoFlutuanteCard } from '@/components/editor/BotaoFlutuanteCard'
 import { MarginNotes } from '@/components/editor/MarginNotes'
 import { CampoUnico } from '@/components/editor/CampoUnico'
@@ -86,9 +87,11 @@ const nextId = () => `id-${Date.now()}-${uid++}`
 // seção de vídeo — nunca é salvo no perfil de ninguém.
 const PREVIEW_VIDEO_URL = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'
 
-// A triagem que o Free e o Pro veem sob o cadeado. Quatro perguntas reais, das
-// que um escritório de verdade faria — um espectro com campos vazios não vende
-// nada porque não mostra nada. Nunca é salvo em perfil nenhum.
+// A triagem que o Free e o Pro veem sob o cadeado. Perguntas reais, das que um
+// escritório de verdade faria — e uma delas só aberta para quem respondeu
+// "Trabalhista", para o fluxograma ao lado mostrar um desvio de verdade. Um
+// espectro com campos vazios não vende nada porque não mostra nada. Nunca é
+// salvo em perfil nenhum.
 const TRIAGEM_PREVIEW = {
   enabled: true,
   questions: [
@@ -102,6 +105,12 @@ const TRIAGEM_PREVIEW = {
         { id: 'po3', texto: 'Cível' },
         { id: 'po4', texto: 'Outro assunto' },
       ],
+    },
+    {
+      id: 'preview-t5',
+      kind: 'sim-nao' as const,
+      label: 'Você ainda trabalha nessa empresa?',
+      condicao: { pergunta: 'preview-t1', opcoes: ['po2'] },
     },
     { id: 'preview-t2', kind: 'sim-nao' as const, label: 'Você já possui processo sobre esse assunto?' },
     { id: 'preview-t3', kind: 'atendimento' as const, label: 'Como prefere o atendimento?' },
@@ -391,7 +400,9 @@ export default function Editor() {
         </div>
       </header>
 
-      {/* Alternância mobile edição/prévia */}
+      {/* Alternância mobile edição/prévia. Na triagem a "prévia" é o fluxograma
+          da conversa (MapaDaTriagem): o celular com o perfil não responde à
+          pergunta que se faz ali, que é "por onde a conversa passa?". */}
       <div className="sticky top-[57px] z-10 flex gap-1 border-b border-ink/10 bg-paper-deep p-2 lg:hidden">
         {(['edit', 'preview'] as const).map((t) => (
           <button
@@ -401,12 +412,19 @@ export default function Editor() {
               tab === t ? 'bg-burgundy text-paper-soft' : 'text-ink-faint'
             }`}
           >
-            {t === 'edit' ? 'Editar' : 'Prévia'}
+            {t === 'edit' ? 'Editar' : section === 'triagem' ? 'Fluxograma' : 'Prévia'}
           </button>
         ))}
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[210px_minmax(0,1fr)_360px]">
+      <div
+        className={`mx-auto grid max-w-6xl gap-6 px-4 py-6 ${
+          // O fluxograma pede um pouco mais de largura que o celular da prévia.
+          section === 'triagem'
+            ? 'lg:grid-cols-[210px_minmax(0,1fr)_400px]'
+            : 'lg:grid-cols-[210px_minmax(0,1fr)_360px]'
+        }`}
+      >
         {/* Navegação: busca + chips. No celular é a primeira coisa da coluna
             (min-w-0: sem ele o trilho de chips, que não quebra linha, vira a
             largura mínima da coluna e estoura a página inteira para o lado);
@@ -790,9 +808,23 @@ export default function Editor() {
 
         {/* Coluna de prévia */}
         <div className={`lg:sticky lg:top-[80px] lg:self-start ${tab === 'edit' ? 'hidden lg:block' : ''}`}>
-          {/* A prova de tema vive AQUI e só aqui: o objeto que vai para o save
-              continua sendo `profile`, com o tema que o plano permite. */}
-          <PhonePreview profile={tryTheme ? { ...profile, theme: tryTheme } : profile} />
+          {section === 'triagem' ? (
+            // Na triagem, no lugar do celular, o FLUXOGRAMA da conversa — que
+            // também edita: tocar numa resposta liga a ela as perguntas seguintes.
+            canUseTriagem(profile.plan) ? (
+              <MapaDaTriagem profile={profile} set={set} />
+            ) : (
+              <MapaDaTriagem
+                profile={{ ...profile, plan: 'premium', triage: TRIAGEM_PREVIEW }}
+                set={() => {}}
+                preview
+              />
+            )
+          ) : (
+            // A prova de tema vive AQUI e só aqui: o objeto que vai para o save
+            // continua sendo `profile`, com o tema que o plano permite.
+            <PhonePreview profile={tryTheme ? { ...profile, theme: tryTheme } : profile} />
+          )}
         </div>
       </div>
 

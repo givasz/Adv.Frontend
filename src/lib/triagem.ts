@@ -17,9 +17,10 @@
 // mensagem que sai do aparelho de quem respondeu direto para o WhatsApp do
 // advogado. Não há tabela, não há rota e não há coluna — ver backend/src/triagem.ts.
 //
-// ⚠️ A PARTE DE CIMA deste arquivo (tipos, tetos e `normalizarTriagem`) é ESPELHO
-// de backend/src/triagem.ts, e os dois lados passam pelos mesmos casos
-// (triagem.casos.json). A parte de baixo é da conversa e só existe aqui.
+// ⚠️ A PARTE DE CIMA deste arquivo (tipos, tetos, `normalizarTriagem` e o
+// caminho da conversa) é ESPELHO de backend/src/triagem.ts, e os dois lados
+// passam pelos mesmos casos (triagem.casos.json e triagemCaminhos.spec.ts). A
+// parte de baixo é da tela e da conversa e só existe aqui.
 
 import type { Plan, Profile } from './types'
 import { canUseTriagem } from './plans'
@@ -53,8 +54,8 @@ export const TIPOS_COM_OPCOES: TipoDePergunta[] = ['escolha', 'multipla']
 
 /**
  * Tipos cuja lista é NOSSA e não se edita — mas que têm opções do mesmo jeito,
- * para que ramificar seja um mecanismo só. "Sim" pode levar a uma pergunta e
- * "Não" a outra, exatamente como numa escolha escrita à mão.
+ * para que ligar uma resposta a uma pergunta seja um mecanismo só. "Sim" pode
+ * abrir uma pergunta e "Não" outra, exatamente como numa escolha escrita à mão.
  */
 export const OPCOES_FIXAS: Partial<Record<TipoDePergunta, { id: string; texto: string }[]>> = {
   'sim-nao': [
@@ -74,24 +75,30 @@ export const OPCOES_FIXAS: Partial<Record<TipoDePergunta, { id: string; texto: s
  */
 export const TIPOS_UNICOS: TipoDePergunta[] = ['atendimento', 'contato']
 
-/**
- * Destino que encerra a triagem: a conversa pula para o agendamento (ou para o
- * envio, quando não há grade). É o "não preciso saber mais nada" do advogado.
- */
-export const FIM_DA_TRIAGEM = 'fim'
-
 export interface OpcaoDeTriagem {
   id: string
   /** o texto que o visitante lê e toca */
   texto: string
   /**
-   * Para onde ESTA resposta leva: o id de uma pergunta seguinte, ou
-   * `FIM_DA_TRIAGEM`. Ausente = a próxima pergunta da lista, que é como toda
-   * triagem começa e como a maioria vai continuar.
-   *
-   * Só aponta para FRENTE — ver a segunda passagem de `normalizarTriagem`.
+   * Quem dá esta resposta encerra a triagem ali: a conversa pula para o
+   * agendamento (ou para o envio, quando não há grade). É o "não preciso saber
+   * mais nada" do advogado. Múltipla escolha não encerra — ver o normalizador.
    */
-  proxima?: string
+  encerra?: true
+}
+
+/**
+ * "Esta pergunta só é feita a quem respondeu ASSIM numa pergunta anterior."
+ *
+ * É a forma de ramificar, e a única: o advogado liga uma resposta a uma
+ * pergunta, e quem não deu aquela resposta nunca a vê. Sem condição, a pergunta
+ * é feita a todo mundo que chegar até ela — que é como toda triagem começa.
+ */
+export interface CondicaoDaPergunta {
+  /** o id de uma pergunta ANTERIOR, que tenha opções */
+  pergunta: string
+  /** as respostas dela que abrem esta pergunta — basta uma */
+  opcoes: string[]
 }
 
 export interface PerguntaDeTriagem {
@@ -103,12 +110,8 @@ export interface PerguntaDeTriagem {
   options?: OpcaoDeTriagem[]
   /** o visitante pode seguir sem responder */
   optional?: boolean
-  /**
-   * Para onde a conversa vai DEPOIS desta pergunta, quando a resposta não
-   * escolhe o caminho (pergunta escrita à mão, data, nome) ou quando a opção
-   * respondida não tem destino próprio.
-   */
-  proxima?: string
+  /** só é feita a quem deu uma destas respostas — ausente = feita a todos */
+  condicao?: CondicaoDaPergunta
 }
 
 export interface TriagemConfig {
@@ -123,8 +126,8 @@ export interface TriagemConfig {
 // também é a proteção mais barata contra coleta excessiva: quem tem oito
 // perguntas escolhe as oito que importam.
 //
-// Com ramificação o teto conta ainda mais a favor: oito perguntas com caminhos
-// diferentes cobrem muito mais casos do que oito perguntas em fila.
+// Com perguntas condicionais o teto conta ainda mais a favor: oito perguntas que
+// só abrem para quem precisa cobrem muito mais casos do que oito em fila.
 
 /** Perguntas por perfil. */
 export const TRIAGEM_MAX_PERGUNTAS = 8
@@ -159,29 +162,39 @@ function opcoesEscritas(raw: unknown): OpcaoDeTriagem[] {
     if (!valor || out.some((x) => x.texto === valor)) continue
     const idBruto = String(bruta.id ?? '')
     // Id próprio, e não o texto como chave: o advogado renomeia uma opção o
-    // tempo todo, e com chave de texto o caminho que sai dela se perderia
+    // tempo todo, e com chave de texto a pergunta ligada a ela se soltaria
     // silenciosamente a cada correção de digitação.
     const id = ID_OK.test(idBruto) && !idsUsados.has(idBruto) ? idBruto : `o${out.length + 1}`
     idsUsados.add(id)
     const opcao: OpcaoDeTriagem = { id, texto: valor }
-    const destino = String(bruta.proxima ?? '')
-    if (destino) opcao.proxima = destino
+    if (bruta.encerra === true) opcao.encerra = true
     out.push(opcao)
   }
   return out
 }
 
-/** As opções fixas de um tipo, preservando o caminho que cada uma já levava. */
+/** As opções fixas de um tipo, preservando as que já encerravam a triagem. */
 function opcoesFixas(kind: TipoDePergunta, raw: unknown): OpcaoDeTriagem[] {
-  const anteriores = new Map(
+  const encerravam = new Set(
     (Array.isArray(raw) ? raw : [])
-      .filter((o): o is OpcaoDeTriagem => !!o && typeof o === 'object')
-      .map((o) => [String(o.id ?? ''), String(o.proxima ?? '')]),
+      .filter((o): o is OpcaoDeTriagem => !!o && typeof o === 'object' && o.encerra === true)
+      .map((o) => String(o.id ?? '')),
   )
-  return (OPCOES_FIXAS[kind] ?? []).map((o) => {
-    const destino = anteriores.get(o.id)
-    return destino ? { ...o, proxima: destino } : { ...o }
-  })
+  return (OPCOES_FIXAS[kind] ?? []).map((o) =>
+    encerravam.has(o.id) ? { ...o, encerra: true as const } : { ...o },
+  )
+}
+
+/** A condição como veio, só com a FORMA conferida — o sentido é da 2ª passagem. */
+function condicaoBruta(raw: unknown): CondicaoDaPergunta | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const c = raw as Partial<CondicaoDaPergunta>
+  const pergunta = String(c.pergunta ?? '')
+  if (!ID_OK.test(pergunta)) return undefined
+  const opcoes = [
+    ...new Set((Array.isArray(c.opcoes) ? c.opcoes : []).map(String).filter((id) => ID_OK.test(id))),
+  ].slice(0, TRIAGEM_MAX_OPCOES)
+  return { pergunta, opcoes }
 }
 
 /**
@@ -196,8 +209,9 @@ function opcoesFixas(kind: TipoDePergunta, raw: unknown): OpcaoDeTriagem[] {
  *   • tipo desconhecido — vira 'texto', que é o tipo que responde qualquer coisa;
  *   • a segunda pergunta de nome ou de formato de atendimento (ver TIPOS_UNICOS);
  *   • opção repetida ou vazia;
- *   • caminho que aponta para trás, para a própria pergunta ou para o nada —
- *     ver a segunda passagem, que é o que garante que a conversa termina.
+ *   • condição que depende de pergunta POSTERIOR, da própria pergunta, do nada,
+ *     de pergunta sem opções ou de resposta que não existe — ver a segunda
+ *     passagem, que é o que garante que a conversa termina.
  *
  * O que é MANTIDO mesmo estando pela metade: pergunta ainda sem enunciado e
  * pergunta de escolha ainda sem opções. Nenhuma das duas vai à conversa (ver
@@ -237,109 +251,158 @@ export function normalizarTriagem(raw: unknown): TriagemConfig {
     if (TIPOS_COM_OPCOES.includes(kind)) pergunta.options = opcoesEscritas(bruta.options)
     else if (OPCOES_FIXAS[kind]) pergunta.options = opcoesFixas(kind, bruta.options)
     if (bruta.optional === true) pergunta.optional = true
-    const destino = String(bruta.proxima ?? '')
-    if (destino) pergunta.proxima = destino
+    const condicao = condicaoBruta(bruta.condicao)
+    if (condicao) pergunta.condicao = condicao
     questions.push(pergunta)
   }
 
-  // ---- Segunda passagem: os caminhos -----------------------------------------
+  // ---- Segunda passagem: as ligações -----------------------------------------
   //
-  // Um destino só vale se aponta para uma pergunta que vem DEPOIS, ou para o fim
-  // da triagem. É essa regra — e não um detector de ciclos — que garante que a
-  // conversa termina: sem ela, "pergunta 2 → pergunta 1" deixaria o visitante
-  // rodando em círculo, e quem descobriria seria ele.
+  // Uma condição só vale se depende de uma pergunta que vem ANTES. É essa regra
+  // — e não um detector de ciclos — que garante que a conversa termina: a
+  // conversa só anda para frente, e uma pergunta nunca espera por uma resposta
+  // que ainda não foi dada.
   //
-  // Caminho inválido some em silêncio, e é de propósito: ele aparece quando o
-  // advogado MOVE uma pergunta para cima, e o roteiro desenhado no editor mostra
-  // na hora o caminho novo. Segurar um destino quebrado seria pior.
-  const indicePorId = new Map(questions.map((q, i) => [q.id, i]))
-  const valido = (destino: string | undefined, i: number): string | undefined => {
-    if (!destino) return undefined
-    if (destino === FIM_DA_TRIAGEM) return FIM_DA_TRIAGEM
-    const alvo = indicePorId.get(destino)
-    return alvo !== undefined && alvo > i ? destino : undefined
-  }
-  questions.forEach((q, i) => {
-    const daPergunta = valido(q.proxima, i)
-    if (daPergunta) q.proxima = daPergunta
-    else delete q.proxima
-    for (const o of q.options ?? []) {
-      // Múltipla escolha não ramifica: o visitante marca várias, e duas respostas
-      // apontando para lugares diferentes não têm desempate honesto. O caminho
-      // dela é sempre o da pergunta.
-      const daOpcao = q.kind === 'multipla' ? undefined : valido(o.proxima, i)
-      if (daOpcao) o.proxima = daOpcao
-      else delete o.proxima
-    }
-  })
+  // Ligação inválida some em silêncio, e é de propósito: ela aparece quando o
+  // advogado apaga a pergunta de que outra dependia, ou troca o tipo dela, e o
+  // fluxograma do editor mostra na hora o desenho novo. Segurar uma condição
+  // impossível deixaria uma pergunta no ar que nunca é feita a ninguém.
+  limparLigacoes(questions, false)
 
   return { enabled: bruto.enabled === true, questions }
+}
+
+/**
+ * As ligações que fazem sentido, aplicadas NO LUGAR. É a mesma regra no
+ * servidor e no editor; a única diferença é o que acontece com a condição que
+ * ficou sem nenhuma resposta escolhida — o editor a segura (é o advogado no meio
+ * do gesto de escolher), a conversa não.
+ */
+function limparLigacoes(questions: PerguntaDeTriagem[], manterVazia: boolean) {
+  const indicePorId = new Map(questions.map((q, i) => [q.id, i]))
+  questions.forEach((q, i) => {
+    for (const o of q.options ?? []) {
+      // Múltipla escolha não encerra: quem marca "encerra" junto com outra
+      // resposta que abre uma pergunta não tem desempate honesto.
+      if (q.kind === 'multipla' || o.encerra !== true) delete o.encerra
+    }
+    if (!q.condicao) return
+    const fonte = indicePorId.get(q.condicao.pergunta)
+    const origem = fonte !== undefined && fonte < i ? questions[fonte] : undefined
+    const ids = new Set((origem?.options ?? []).map((o) => o.id))
+    const opcoes = q.condicao.opcoes.filter((id) => ids.has(id))
+    if (!origem || !ids.size || (!opcoes.length && !manterVazia)) delete q.condicao
+    else q.condicao = { pergunta: origem.id, opcoes }
+  })
 }
 
 /**
  * As perguntas que a CONVERSA pode de fato fazer.
  *
  * Uma pergunta de escolha sem nenhuma opção não tem como ser respondida: mostrá-la
- * deixaria o visitante parado numa tela sem saída. Ela fica guardada no editor,
- * onde o advogado termina de escrevê-la, e simplesmente não entra em cena.
+ * deixaria o visitante parado numa tela sem saída. E uma pergunta que depende de
+ * outra que ficou de fora nunca teria a resposta de que precisa. As duas ficam
+ * guardadas no editor, onde o advogado termina de escrevê-las, e simplesmente
+ * não entram em cena.
  */
 export function perguntasUtilizaveis(questions: PerguntaDeTriagem[]): PerguntaDeTriagem[] {
-  return questions.filter(
-    (q) => !!q.label.trim() && (!TIPOS_COM_OPCOES.includes(q.kind) || !!q.options?.length),
-  )
+  const ficaram = new Set<string>()
+  return questions.filter((q) => {
+    const pronta =
+      !!q.label.trim() &&
+      (!TIPOS_COM_OPCOES.includes(q.kind) || !!q.options?.length) &&
+      (!q.condicao || ficaram.has(q.condicao.pergunta))
+    if (pronta) ficaram.add(q.id)
+    return pronta
+  })
 }
 
 /**
- * O índice da próxima pergunta, depois de `indice` ser respondido com `opcaoId`.
+ * O que o visitante já respondeu, do jeito que o CAMINHO precisa: o id da
+ * pergunta e os ids das respostas tocadas (lista vazia quando a resposta foi
+ * escrita). Pergunta pulada não entra — e por isso não abre nada.
+ */
+export type RespostasDoCaminho = Record<string, string[]>
+
+/** Esta pergunta deve ser feita, dado o que já foi respondido? */
+export function condicaoAtendida(
+  pergunta: PerguntaDeTriagem,
+  respostas: RespostasDoCaminho,
+): boolean {
+  const c = pergunta.condicao
+  if (!c) return true
+  return (respostas[c.pergunta] ?? []).some((id) => c.opcoes.includes(id))
+}
+
+/**
+ * O índice da próxima pergunta, depois de `indice` ter sido respondido.
  *
- * A cascata é: o caminho da RESPOSTA, depois o caminho da PERGUNTA, depois a
- * próxima da lista. Devolver `perguntas.length` significa "acabou a triagem" —
- * daí em diante é o agendamento de sempre.
+ * Primeiro, se a resposta dada ENCERRA a triagem, acabou. Senão, é a primeira
+ * pergunta seguinte cuja condição foi atendida — as que dependem de uma
+ * resposta que não foi dada são puladas. Devolver `perguntas.length` significa
+ * "acabou a triagem": daí em diante é o agendamento de sempre.
+ *
+ * O índice só cresce, então a conversa termina em no máximo N passos, para
+ * qualquer configuração. `indice` -1 dá a primeira pergunta.
  *
  * `perguntas` aqui é a lista que a conversa percorre (`perguntasUtilizaveis`),
- * porque é nela que os índices fazem sentido. Um destino que não existe mais
- * nessa lista volta a ser "a próxima": o normalizador já derrubou os inválidos,
- * e esta é a segunda rede.
+ * porque é nela que os índices fazem sentido.
  */
 export function proximaPergunta(
   perguntas: PerguntaDeTriagem[],
   indice: number,
-  opcaoId?: string,
+  respostas: RespostasDoCaminho = {},
 ): number {
   const atual = perguntas[indice]
-  if (!atual) return perguntas.length
-  const daOpcao = opcaoId ? atual.options?.find((o) => o.id === opcaoId)?.proxima : undefined
-  const destino = daOpcao ?? atual.proxima
-  if (!destino) return indice + 1
-  if (destino === FIM_DA_TRIAGEM) return perguntas.length
-  const alvo = perguntas.findIndex((q) => q.id === destino)
-  return alvo > indice ? alvo : indice + 1
+  if (atual && atual.kind !== 'multipla') {
+    const tocadas = respostas[atual.id] ?? []
+    if (atual.options?.some((o) => o.encerra && tocadas.includes(o.id))) return perguntas.length
+  }
+  let j = Math.max(indice + 1, 0)
+  while (j < perguntas.length && !condicaoAtendida(perguntas[j], respostas)) j++
+  return Math.min(j, perguntas.length)
 }
 
 /**
- * Os ids das perguntas que a conversa CONSEGUE alcançar, partindo da primeira.
+ * Os ids das perguntas que a conversa CONSEGUE alcançar, por algum caminho.
  *
  * Existe por causa do defeito clássico de todo formulário com caminhos: uma
- * pergunta para a qual ninguém é mandado. Ela fica na tela do advogado, parece
- * que está no ar, e nunca é feita a ninguém. O editor avisa — não bloqueia: o
- * advogado pode estar no meio de montar o caminho.
+ * pergunta que ninguém consegue receber — porque depende de uma resposta que
+ * encerra a triagem, ou vem depois de uma pergunta em que toda resposta encerra.
+ * Ela fica na tela do advogado, parece que está no ar, e nunca é feita a
+ * ninguém. O editor avisa — não bloqueia: o desenho pode estar pela metade.
+ *
+ * Anda por todos os caminhos, tocando uma resposta de cada vez (numa múltipla
+ * escolha, marcar uma só já abre tudo o que aquela resposta abre). Guarda os
+ * estados já vistos, e tem um teto: numa configuração absurda o bastante para
+ * estourá-lo, devolve todas — não avisar é melhor do que avisar errado.
  */
 export function perguntasAlcancaveis(questions: PerguntaDeTriagem[]): Set<string> {
   const uteis = perguntasUtilizaveis(questions)
   const vistos = new Set<string>()
-  const fila: number[] = uteis.length ? [0] : []
-  while (fila.length) {
-    const i = fila.shift() as number
+  const fontes = [...new Set(uteis.flatMap((q) => (q.condicao ? [q.condicao.pergunta] : [])))]
+  const estados = new Set<string>()
+  let orcamento = 20000
+
+  const andar = (i: number, respostas: RespostasDoCaminho): void => {
+    if (i >= uteis.length) return
+    const estado = `${i}|${fontes.map((f) => respostas[f]?.join(',') ?? '-').join(';')}`
+    if (estados.has(estado)) return
+    estados.add(estado)
+    if (--orcamento < 0) throw new Error('teto')
     const q = uteis[i]
-    if (!q || vistos.has(q.id)) continue
     vistos.add(q.id)
-    const saidas = q.options?.length
-      ? q.options.map((o) => proximaPergunta(uteis, i, o.id))
-      : [proximaPergunta(uteis, i)]
-    // Pergunta que dá para pular tem uma saída a mais: o caminho de quem não
-    // respondeu, que é sempre o da própria pergunta.
-    if (q.optional) saidas.push(proximaPergunta(uteis, i))
-    for (const j of saidas) if (j < uteis.length) fila.push(j)
+    const saidas: RespostasDoCaminho[] = q.options?.length
+      ? q.options.map((o) => ({ ...respostas, [q.id]: [o.id] }))
+      : [{ ...respostas, [q.id]: [] }]
+    if (q.optional) saidas.push(respostas)
+    for (const r of saidas) andar(proximaPergunta(uteis, i, r), r)
+  }
+
+  try {
+    andar(proximaPergunta(uteis, -1), {})
+  } catch {
+    return new Set(uteis.map((q) => q.id))
   }
   return vistos
 }
@@ -383,8 +446,9 @@ export function resolveTriagem(profile: Pick<Profile, 'triage'>): TriagemConfig 
  * O servidor continua limpando tudo ao gravar, e a conversa continua lendo a
  * forma limpa. Aqui só se garante o que a TELA precisa para não quebrar: tipo
  * válido, opções como objetos, as listas fixas de "sim/não" e de atendimento, e
- * os caminhos só para frente — esses, sim, com a mesma regra do servidor, para
- * que mover uma pergunta nunca deixe um loop desenhado na tela nem por um instante.
+ * as ligações só com pergunta anterior — essas, sim, com a mesma regra do
+ * servidor, para que mover uma pergunta nunca deixe na tela uma ligação que a
+ * conversa não vai seguir.
  *
  * Aplicar duas vezes dá o mesmo resultado, e é isso que permite usá-la em toda
  * alteração sem acumular efeito.
@@ -415,45 +479,21 @@ export function triagemEmEdicao(raw: unknown): TriagemConfig {
           id: String(bruta.id ?? `o${j + 1}`),
           texto: typeof bruta.texto === 'string' ? bruta.texto.slice(0, TRIAGEM_OPCAO_MAX) : '',
         }
-        if (bruta.proxima) opcao.proxima = String(bruta.proxima)
+        if (bruta.encerra === true) opcao.encerra = true
         return opcao
       })
     } else if (OPCOES_FIXAS[kind]) {
       // Trocar o tipo para "sim/não" já traz as duas opções — sem elas não
-      // haveria de onde puxar o caminho de cada resposta.
-      const anteriores = new Map(
-        opcoesBrutas
-          .filter((o): o is OpcaoDeTriagem => !!o && typeof o === 'object')
-          .map((o) => [String(o.id ?? ''), o.proxima]),
-      )
-      pergunta.options = (OPCOES_FIXAS[kind] ?? []).map((o) => {
-        const destino = anteriores.get(o.id)
-        return destino ? { ...o, proxima: destino } : { ...o }
-      })
+      // haveria resposta a que ligar uma pergunta.
+      pergunta.options = opcoesFixas(kind, opcoesBrutas)
     }
     if (q.optional === true) pergunta.optional = true
-    if (q.proxima) pergunta.proxima = String(q.proxima)
+    const condicao = condicaoBruta(q.condicao)
+    if (condicao) pergunta.condicao = condicao
     questions.push(pergunta)
   }
 
-  const indicePorId = new Map(questions.map((x, i) => [x.id, i]))
-  const valido = (destino: string | undefined, i: number): string | undefined => {
-    if (!destino) return undefined
-    if (destino === FIM_DA_TRIAGEM) return FIM_DA_TRIAGEM
-    const alvo = indicePorId.get(destino)
-    return alvo !== undefined && alvo > i ? destino : undefined
-  }
-  questions.forEach((x, i) => {
-    const daPergunta = valido(x.proxima, i)
-    if (daPergunta) x.proxima = daPergunta
-    else delete x.proxima
-    for (const o of x.options ?? []) {
-      const daOpcao = x.kind === 'multipla' ? undefined : valido(o.proxima, i)
-      if (daOpcao) o.proxima = daOpcao
-      else delete o.proxima
-    }
-  })
-
+  limparLigacoes(questions, true)
   return { enabled: bruto.enabled === true, questions }
 }
 
@@ -560,57 +600,78 @@ export function linhasDaTriagem(respostas: RespostaDeTriagem[]): string[] {
   return out
 }
 
-// ---- O roteiro inteiro, para o advogado conferir ---------------------------
+// ---- O fluxograma, para o advogado conferir ---------------------------------
 //
 // A lista de perguntas do editor não responde à pergunta que ele realmente faz
-// ("como vai ficar a conversa?"), porque o roteiro não é só o que ele escreveu:
-// tem a abertura, tem o aviso de segurança e tem o que vem DEPOIS da triagem —
-// dia, horário, formato e nome. Sem ver isso junto, ele publica sem saber o
-// tamanho do que montou.
+// ("por onde a conversa passa?"): quem vê qual pergunta depende das respostas, e
+// o roteiro inteiro tem a abertura, o aviso de segurança e o que vem DEPOIS da
+// triagem — dia, horário, formato e nome.
 //
 // Cada passo estrutural aqui é decidido pela MESMA condição que a conversa usa
 // (ver AssistantChat): é por isso que as condições chegam de fora, em vez de
 // serem recalculadas aqui com outro critério.
 
-export interface RamoDoRoteiro {
-  /** o texto da resposta */
-  opcao: string
-  /** para onde ela leva, em palavras ("Pergunta 3", "Direto para o agendamento") */
-  destino: string
-  /** `true` quando esta resposta desvia do caminho normal */
-  desvia: boolean
+/** Uma resposta dentro de um bloco do fluxograma. */
+export interface RespostaNoMapa {
+  id: string
+  texto: string
+  encerra: boolean
+  /** os números (na lista do editor) das perguntas que esta resposta abre */
+  abre: number[]
 }
 
-export interface PassoDoRoteiro {
-  /** o que acontece nesse passo, na voz do produto */
+/** Uma pergunta do advogado, como caixa do fluxograma. */
+export interface PerguntaNoMapa {
+  tipo: 'pergunta'
+  id: string
+  /** a posição na lista do editor (1, 2, 3…) */
+  numero: number
   texto: string
-  /** `true` quando o passo é uma pergunta ESCRITA pelo advogado */
-  minha: boolean
-  /** a posição dela na lista do editor (1, 2, 3…) — só nas perguntas do advogado */
-  numero?: number
-  /**
-   * Os caminhos que saem desta pergunta. Só vem preenchido quando ALGUM deles
-   * desvia: numa triagem em fila, mostrar "Sim → a próxima / Não → a próxima"
-   * seria ruído em cima da informação que importa.
-   */
-  ramos?: RamoDoRoteiro[]
-  /**
-   * Ninguém chega até aqui. É o defeito clássico de todo formulário com
-   * caminhos, e é invisível na lista de perguntas — a pergunta está lá, parece
-   * no ar, e nunca é feita a ninguém.
-   */
-  inalcancavel?: boolean
+  kind: TipoDePergunta
+  opcional: boolean
+  respostas: RespostaNoMapa[]
+  /** ninguém chega até aqui — ver `perguntasAlcancaveis` */
+  inalcancavel: boolean
 }
 
 /**
- * O roteiro inteiro, do jeito que o visitante vai percorrer.
+ * Um desvio: as perguntas de dentro só são feitas a quem deu uma das respostas.
  *
- * Devolve uma LISTA, e não uma árvore, de propósito: a coluna do editor é
- * estreita e um fluxograma ali vira desenho ilegível. Cada pergunta aparece uma
- * vez, na ordem do editor, com os caminhos que saem dela escritos ao lado — que
- * é como se lê um roteiro, e não como se desenha um grafo.
+ * Os ramos se ANINHAM quando a pergunta de dentro depende de outra que já está
+ * no ramo — ela só pode ser feita se a de fora foi, então desenhá-la dentro é
+ * dizer a verdade sobre o caminho, não uma escolha de layout.
  */
-export function roteiroDaConversa(
+export interface RamoNoMapa {
+  tipo: 'ramo'
+  /** número da pergunta de que o ramo depende */
+  numero: number
+  /** o id dela e das respostas que abrem o ramo — é o que dá a cor da ligação */
+  pergunta: string
+  opcoes: { id: string; texto: string }[]
+  itens: ItemDoMapa[]
+}
+
+export type ItemDoMapa = PerguntaNoMapa | RamoNoMapa
+
+/** Um passo que o assistente faz sozinho, antes ou depois das perguntas. */
+export interface PassoFixo {
+  texto: string
+}
+
+export interface MapaDaTriagem {
+  inicio: PassoFixo
+  itens: ItemDoMapa[]
+  depois: PassoFixo[]
+}
+
+/**
+ * O fluxograma inteiro, do jeito que o visitante vai percorrer.
+ *
+ * `perguntas` é a lista do EDITOR (a numeração sai dela, para bater com
+ * "Editar a pergunta 3"); as contas de caminho usam a forma normalizada, que é a
+ * que a conversa lê.
+ */
+export function mapaDaTriagem(
   perguntas: PerguntaDeTriagem[],
   contexto: {
     /** a grade tem horário para oferecer daqui para a frente */
@@ -618,91 +679,162 @@ export function roteiroDaConversa(
     /** o perfil atende presencial E online */
     dosDoisJeitos: boolean
   },
-): PassoDoRoteiro[] {
-  const uteis = perguntasUtilizaveis(perguntas)
-  const alcancaveis = perguntasAlcancaveis(perguntas)
-  const depoisDaTriagem = contexto.comHorarios
-    ? 'direto para os horários'
-    : 'direto para o envio'
+): MapaDaTriagem {
+  const numeroPorId = new Map(perguntas.map((q, i) => [q.id, i + 1]))
+  const normalizadas = normalizarTriagem({ enabled: true, questions: perguntas }).questions
+  const uteis = perguntasUtilizaveis(normalizadas)
+  const alcancaveis = perguntasAlcancaveis(normalizadas)
+  const numero = (id: string) => numeroPorId.get(id) ?? 0
 
-  const passos: PassoDoRoteiro[] = [
-    { texto: 'Abertura, com o aviso para não enviar documentos nem senhas', minha: false },
-  ]
+  const itens: ItemDoMapa[] = []
+  /** os ramos abertos, de fora para dentro, com quem já está em cada um */
+  const pilha: { ramo: RamoNoMapa; membros: Set<string> }[] = []
+  const mesmaCondicao = (ramo: RamoNoMapa, c: CondicaoDaPergunta) =>
+    ramo.pergunta === c.pergunta &&
+    ramo.opcoes.length === c.opcoes.length &&
+    ramo.opcoes.every((o) => c.opcoes.includes(o.id))
 
-  uteis.forEach((q, i) => {
-    const passo: PassoDoRoteiro = { texto: q.label, minha: true, numero: i + 1 }
-    if (!alcancaveis.has(q.id)) passo.inalcancavel = true
-    const ramos = (q.options ?? []).map((o) => {
-      const alvo = proximaPergunta(uteis, i, o.id)
-      const desvia = alvo !== i + 1
-      return {
-        opcao: o.texto,
-        destino:
-          alvo >= uteis.length
-            ? depoisDaTriagem
-            : `pergunta ${alvo + 1}${uteis[alvo].label ? ` · ${uteis[alvo].label}` : ''}`,
-        desvia,
-      }
-    })
-    // Pergunta sem opções também pode desviar (o caminho é dela, não da
-    // resposta) — e aí o desvio vira uma linha só.
-    if (!ramos.length) {
-      const alvo = proximaPergunta(uteis, i)
-      if (alvo !== i + 1) {
-        ramos.push({
-          opcao: 'Depois desta',
-          destino:
-            alvo >= uteis.length
-              ? depoisDaTriagem
-              : `pergunta ${alvo + 1}${uteis[alvo].label ? ` · ${uteis[alvo].label}` : ''}`,
-          desvia: true,
-        })
-      }
+  for (const q of uteis) {
+    const caixa: PerguntaNoMapa = {
+      tipo: 'pergunta',
+      id: q.id,
+      numero: numero(q.id),
+      texto: q.label,
+      kind: q.kind,
+      opcional: !!q.optional,
+      respostas: (q.options ?? []).map((o) => ({
+        id: o.id,
+        texto: o.texto,
+        encerra: !!o.encerra,
+        abre: uteis
+          .filter((x) => x.condicao?.pergunta === q.id && x.condicao.opcoes.includes(o.id))
+          .map((x) => numero(x.id)),
+      })),
+      inalcancavel: !alcancaveis.has(q.id),
     }
-    if (ramos.some((r) => r.desvia)) passo.ramos = ramos
-    passos.push(passo)
-  })
 
-  if (contexto.comHorarios) {
-    passos.push({ texto: 'Escolher o dia e o horário na sua grade', minha: false })
+    const c = q.condicao
+    // Fecha os ramos a que esta pergunta não pertence: sem condição ela é feita
+    // a todos; com condição, pertence ao ramo se depende de alguém de dentro
+    // dele, ou se depende exatamente das mesmas respostas.
+    while (pilha.length) {
+      const topo = pilha[pilha.length - 1]
+      if (c && (topo.membros.has(c.pergunta) || mesmaCondicao(topo.ramo, c))) break
+      pilha.pop()
+    }
+    const destino = () => (pilha.length ? pilha[pilha.length - 1].ramo.itens : itens)
+
+    if (c && !(pilha.length && mesmaCondicao(pilha[pilha.length - 1].ramo, c))) {
+      const origem = uteis.find((x) => x.id === c.pergunta)
+      const ramo: RamoNoMapa = {
+        tipo: 'ramo',
+        numero: numero(c.pergunta),
+        pergunta: c.pergunta,
+        opcoes: (origem?.options ?? [])
+          .filter((o) => c.opcoes.includes(o.id))
+          .map((o) => ({ id: o.id, texto: o.texto })),
+        itens: [],
+      }
+      destino().push(ramo)
+      pilha.push({ ramo, membros: new Set() })
+    }
+    destino().push(caixa)
+    for (const p of pilha) p.membros.add(q.id)
   }
+
+  const depois: PassoFixo[] = []
+  if (contexto.comHorarios) depois.push({ texto: 'Escolher o dia e o horário na sua grade' })
   if (contexto.dosDoisJeitos && !uteis.some((q) => q.kind === 'atendimento')) {
-    passos.push({ texto: 'Presencial ou online', minha: false })
+    depois.push({ texto: 'Presencial ou online' })
   }
-  if (!uteis.some((q) => q.kind === 'contato')) {
-    passos.push({ texto: 'Como posso te chamar?', minha: false })
-  }
-  passos.push({
+  if (!uteis.some((q) => q.kind === 'contato')) depois.push({ texto: 'Como posso te chamar?' })
+  depois.push({
     texto: contexto.comHorarios
       ? 'Enviar tudo no seu WhatsApp — o horário só vale depois de você confirmar'
       : 'Enviar tudo no seu WhatsApp — você analisa e responde',
-    minha: false,
   })
-  return passos
+
+  return {
+    inicio: { texto: 'Abertura, com o aviso para não enviar documentos nem senhas' },
+    itens,
+    depois,
+  }
 }
 
-/** Os destinos que o editor pode oferecer para uma pergunta na posição `indice`. */
-export interface DestinoPossivel {
-  /** valor gravado: o id de uma pergunta, ou FIM_DA_TRIAGEM */
-  valor: string
+// ---- Ligar uma resposta a uma pergunta --------------------------------------
+//
+// Os dois gestos do editor — "esta pergunta só abre se…" na pergunta, e "esta
+// resposta abre…" no fluxograma — mexem no MESMO dado: a condição da pergunta de
+// destino. Uma função só para os dois, para que não haja dois jeitos de
+// discordar.
+
+/** As perguntas anteriores de que a pergunta na posição `indice` pode depender. */
+export interface FontePossivel {
+  id: string
+  numero: number
   rotulo: string
+  opcoes: { id: string; texto: string }[]
 }
 
-export function destinosPossiveis(
-  perguntas: PerguntaDeTriagem[],
-  indice: number,
-): DestinoPossivel[] {
-  // Só para FRENTE: é a regra que torna o loop impossível, e a tela não deve
-  // sequer oferecer o que o servidor vai derrubar.
-  const out: DestinoPossivel[] = perguntas
+export function fontesPossiveis(perguntas: PerguntaDeTriagem[], indice: number): FontePossivel[] {
+  // Só para TRÁS, e só quem tem resposta para escolher: é a regra que torna a
+  // espera por uma resposta futura impossível, e a tela não deve sequer
+  // oferecer o que o servidor vai derrubar.
+  return perguntas
+    .slice(0, Math.max(indice, 0))
     .map((q, i) => ({ q, i }))
-    .filter(({ i }) => i > indice)
+    .filter(({ q }) => (q.options ?? []).some((o) => o.texto.trim()))
     .map(({ q, i }) => ({
-      valor: q.id,
+      id: q.id,
+      numero: i + 1,
       rotulo: `${i + 1}. ${q.label.trim() || 'Pergunta sem enunciado'}`,
+      opcoes: (q.options ?? [])
+        .filter((o) => o.texto.trim())
+        .map((o) => ({ id: o.id, texto: o.texto.trim() })),
     }))
-  out.push({ valor: FIM_DA_TRIAGEM, rotulo: 'Encerrar a triagem' })
-  return out
+}
+
+/**
+ * Liga (ou desliga) "quem responder `opcaoId` na pergunta `fonteId` vê a
+ * pergunta `alvoId`".
+ *
+ * Uma pergunta depende de UMA pergunta só. Ligar a ela uma resposta de outra
+ * pergunta TROCA a dependência — a tela diz isso antes do toque. Desligar a
+ * última resposta devolve a pergunta a todo mundo.
+ */
+export function ligarResposta(
+  perguntas: PerguntaDeTriagem[],
+  fonteId: string,
+  opcaoId: string,
+  alvoId: string,
+  ligar: boolean,
+): PerguntaDeTriagem[] {
+  const fonte = perguntas.findIndex((q) => q.id === fonteId)
+  const alvo = perguntas.findIndex((q) => q.id === alvoId)
+  if (fonte < 0 || alvo <= fonte) return perguntas
+  return perguntas.map((q) => {
+    if (q.id !== alvoId) return q
+    const c = q.condicao
+    if (ligar) {
+      const opcoes = c?.pergunta === fonteId ? [...new Set([...c.opcoes, opcaoId])] : [opcaoId]
+      return { ...q, condicao: { pergunta: fonteId, opcoes } }
+    }
+    if (c?.pergunta !== fonteId) return q
+    const opcoes = c.opcoes.filter((id) => id !== opcaoId)
+    const { condicao: _fora, ...resto } = q
+    return opcoes.length ? { ...q, condicao: { pergunta: fonteId, opcoes } } : resto
+  })
+}
+
+/**
+ * Dá para trocar a pergunta `i` de lugar com a de baixo sem soltar uma ligação?
+ * Não, quando a de baixo depende dela: subir a dependente acima da pergunta de
+ * que ela precisa desfaria o desenho em silêncio.
+ */
+export function podeTrocarComAProxima(perguntas: PerguntaDeTriagem[], i: number): boolean {
+  const de = perguntas[i]
+  const para = perguntas[i + 1]
+  return !!de && !!para && para.condicao?.pergunta !== de.id
 }
 
 // ---- Quando o visitante pede orientação jurídica ---------------------------

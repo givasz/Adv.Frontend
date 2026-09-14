@@ -115,6 +115,20 @@ function comIds(questions: Omit<PerguntaDeTriagem, 'id'>[]): PerguntaDeTriagem[]
   return questions.map((q) => ({ ...q, id: novoId() }))
 }
 
+/**
+ * Liga uma pergunta do modelo a respostas de outra, pelas POSIÇÕES — os ids só
+ * existem depois de `comIds`, e são novos a cada vez que o modelo é aplicado.
+ */
+function ligada(
+  questions: PerguntaDeTriagem[],
+  ligacao: { alvo: number; fonte: number; opcoes: string[] },
+): PerguntaDeTriagem[] {
+  const fonte = questions[ligacao.fonte]
+  return questions.map((q, i) =>
+    i === ligacao.alvo && fonte ? { ...q, condicao: { pergunta: fonte.id, opcoes: ligacao.opcoes } } : q,
+  )
+}
+
 // ---- Modelos ---------------------------------------------------------------
 
 export interface ModeloDeTriagem {
@@ -205,22 +219,27 @@ export function modelosDeTriagem(areas: string[] = []): ModeloDeTriagem[] {
       id: 'previdenciario',
       nome: 'Direito Previdenciário',
       resumo: 'Benefícios do INSS e revisões.',
-      questions: comIds([
-        {
-          kind: 'escolha',
-          label: 'Sobre qual benefício você quer falar?',
-          options: opcoes('Aposentadoria', 'Auxílio por incapacidade', 'BPC/LOAS', 'Pensão por morte', 'Revisão de benefício', OUTRO),
-        },
-        { kind: 'sim-nao', label: 'Você já fez esse pedido no INSS?' },
-        {
-          kind: 'escolha',
-          label: 'Se já pediu, qual foi a resposta?',
-          options: opcoes('Ainda sem resposta', 'Negado', 'Concedido', 'Ainda não pedi'),
-          optional: true,
-        },
-        { kind: 'texto-longo', label: 'Conte brevemente a sua situação, em linhas gerais.' },
-        NOME,
-      ]),
+      // A terceira pergunta só é feita a quem respondeu "Sim" na segunda: é o
+      // modelo que MOSTRA a ligação entre resposta e pergunta, em vez de
+      // perguntar "qual foi a resposta do INSS?" a quem nunca fez o pedido.
+      questions: ligada(
+        comIds([
+          {
+            kind: 'escolha',
+            label: 'Sobre qual benefício você quer falar?',
+            options: opcoes('Aposentadoria', 'Auxílio por incapacidade', 'BPC/LOAS', 'Pensão por morte', 'Revisão de benefício', OUTRO),
+          },
+          { kind: 'sim-nao', label: 'Você já fez esse pedido no INSS?' },
+          {
+            kind: 'escolha',
+            label: 'Qual foi a resposta do INSS?',
+            options: opcoes('Ainda sem resposta', 'Negado', 'Concedido'),
+          },
+          { kind: 'texto-longo', label: 'Conte brevemente a sua situação, em linhas gerais.' },
+          NOME,
+        ]),
+        { alvo: 2, fonte: 1, opcoes: ['sim'] },
+      ),
     },
     {
       id: 'empresarial',

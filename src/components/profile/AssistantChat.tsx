@@ -44,6 +44,7 @@ import {
   tetoDaResposta,
   type PerguntaDeTriagem,
   type RespostaDeTriagem,
+  type RespostasDoCaminho,
 } from '@/lib/triagem'
 
 // Assistente virtual: uma conversa GUIADA (não é IA, não interpreta texto livre) que
@@ -169,6 +170,8 @@ export function AssistantChat({
   const nomeNaTriagem = perguntas.some((q) => q.kind === 'contato')
   const [triagemIdx, setTriagemIdx] = useState(0)
   const [triagem, setTriagem] = useState<RespostaDeTriagem[]>([])
+  /** Os ids das respostas tocadas, por pergunta — é o que decide quem recebe qual pergunta. */
+  const [caminho, setCaminho] = useState<RespostasDoCaminho>({})
   /** Opções já marcadas numa pergunta de múltipla escolha, antes de confirmar. */
   const [marcadas, setMarcadas] = useState<string[]>([])
   /** Quantas vezes o visitante já pediu uma análise do caso (ver respostaNeutra). */
@@ -200,6 +203,7 @@ export function AssistantChat({
     setAvisouExemplo(false)
     setTriagemIdx(0)
     setTriagem([])
+    setCaminho({})
     setMarcadas([])
     setPedidosDeAnalise(0)
     setStep('boot')
@@ -253,7 +257,7 @@ export function AssistantChat({
     indice: number,
     bruto: string,
     antesDaProxima: string[] = [],
-    opcaoId?: string,
+    opcoesTocadas?: string[],
   ) {
     const pergunta = perguntas[indice]
     if (!pergunta) return
@@ -277,26 +281,34 @@ export function AssistantChat({
       setPedidosDeAnalise(n)
       antes.unshift(respostaNeutra(n))
     }
-    // O CAMINHO é da resposta, não da ordem da lista: "Família" pode levar a uma
-    // pergunta e "Trabalhista" a outra. `proximaPergunta` resolve a cascata
-    // (resposta → pergunta → a próxima da lista) e só anda para frente, que é o
+    // O CAMINHO depende das RESPOSTAS: a pergunta de Família só é feita a quem
+    // respondeu "Família". Guardamos os ids das respostas tocadas — nunca o
+    // texto, que o advogado corrige a qualquer hora. Pergunta pulada não entra,
+    // e por isso não abre nada. `proximaPergunta` só anda para frente, que é o
     // que impede a conversa de andar em círculo.
-    seguirTriagem(proximaPergunta(perguntas, indice, opcaoId), antes)
+    const respondeu = !!resposta || !!opcoesTocadas?.length
+    const novo: RespostasDoCaminho = respondeu
+      ? { ...caminho, [pergunta.id]: opcoesTocadas ?? [] }
+      : caminho
+    seguirTriagem(proximaPergunta(perguntas, indice, novo), antes, novo)
   }
 
   /** Da pergunta `proximo` em diante — ou o agendamento, quando acabarem. */
-  function seguirTriagem(proximo: number, antes: string[] = []) {
+  function seguirTriagem(proximo: number, antes: string[], respostas: RespostasDoCaminho) {
     setDraft('')
     setMarcadas([])
     let i = proximo
+    let r = respostas
     // Perfil que atende de um jeito só não tem o que perguntar sobre formato: a
     // resposta já é conhecida, e perguntar seria fingir uma escolha.
     while (perguntas[i]?.kind === 'atendimento' && !bothFormats) {
       setAnswers((a) => ({ ...a, format: a.format ?? soloFormat }))
-      // A pergunta some, mas o caminho dela continua valendo: quem só atende
-      // online e mandou "presencial → pergunta 5" não perde o desvio.
-      i = proximaPergunta(perguntas, i)
+      // A pergunta some, mas a resposta dela vale: quem só atende online e
+      // ligou "Online → pergunta 5" continua recebendo a pergunta 5.
+      r = { ...r, [perguntas[i].id]: [soloFormat] }
+      i = proximaPergunta(perguntas, i, r)
     }
+    setCaminho(r)
     setTriagemIdx(i)
     if (i < perguntas.length) {
       void say([...antes, perguntas[i].label], 'triagem')
@@ -944,7 +956,7 @@ function CampoDaTriagem({
   setDraft: (v: string) => void
   marcadas: string[]
   setMarcadas: (v: string[]) => void
-  onResponder: (indice: number, texto: string, antes?: string[], opcaoId?: string) => void
+  onResponder: (indice: number, texto: string, antes?: string[], opcoes?: string[]) => void
   /** fala do endereço, dita quando a pessoa escolhe presencial */
   endereco: string
 }) {
@@ -975,9 +987,9 @@ function CampoDaTriagem({
                   ? [endereco]
                   : [],
                 // O id da opção é o que decide o CAMINHO. O texto é o que vai na
-                // mensagem; usá-lo como chave de caminho quebraria o desvio a cada
+                // mensagem; usá-lo como chave soltaria a pergunta ligada a cada
                 // correção de digitação do advogado.
-                o.id,
+                [o.id],
               )
             }
           >
@@ -1007,18 +1019,17 @@ function CampoDaTriagem({
             disabled={!marcadas.length}
             // A ordem das OPÇÕES manda, não a ordem em que foram tocadas: a
             // resposta é lida pelo advogado, e ele reconhece a própria lista.
-            // Múltipla escolha NÃO ramifica (duas respostas apontando para
-            // lugares diferentes não têm desempate honesto), então nenhum id de
-            // opção viaja daqui.
-            onClick={() =>
+            // Os ids marcados viajam juntos: basta UM deles para abrir a
+            // pergunta ligada a ele (múltipla escolha só não ENCERRA a triagem).
+            onClick={() => {
+              const escolhidas = (pergunta.options ?? []).filter((o) => marcadas.includes(o.id))
               onResponder(
                 indice,
-                (pergunta.options ?? [])
-                  .filter((o) => marcadas.includes(o.id))
-                  .map((o) => o.texto)
-                  .join(', '),
+                escolhidas.map((o) => o.texto).join(', '),
+                [],
+                escolhidas.map((o) => o.id),
               )
-            }
+            }}
             className="rounded-full px-4 py-2 text-[13.5px] font-semibold transition-opacity disabled:opacity-40"
             style={{ background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }}
           >

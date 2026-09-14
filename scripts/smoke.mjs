@@ -58,16 +58,20 @@ try {
           id: 'st1',
           kind: 'escolha',
           label: 'Qual assunto você deseja tratar?',
-          // A PRIMEIRA opção desvia: quem escolhe "Direito de Família" pula a
-          // pergunta do processo e cai direto no relato. O percurso sempre toca
-          // na primeira opção, então ele atravessa o desvio — e a conversa
-          // termina com DUAS respostas de triagem, não três.
           options: [
-            { id: 'so1', texto: 'Direito de Família', proxima: 'st3' },
+            { id: 'so1', texto: 'Direito de Família' },
             { id: 'so2', texto: 'Outro assunto' },
           ],
         },
-        { id: 'st2', kind: 'sim-nao', label: 'Você já possui processo sobre esse assunto?' },
+        // A pergunta do processo só é feita a quem respondeu "Outro assunto". O
+        // percurso sempre toca na primeira opção ("Direito de Família"), então a
+        // conversa tem de PULAR esta — e termina com DUAS respostas, não três.
+        {
+          id: 'st2',
+          kind: 'sim-nao',
+          label: 'Você já possui processo sobre esse assunto?',
+          condicao: { pergunta: 'st1', opcoes: ['so2'] },
+        },
         { id: 'st3', kind: 'texto-longo', label: 'Conte brevemente o que aconteceu.' },
       ],
     },
@@ -780,33 +784,54 @@ async function acessibilidadeDaTriagem() {
       await itens.nth(1).waitFor({ timeout: ESPERA })
       if ((await itens.count()) < 3) erros.push('o modelo de um toque não montou a triagem')
 
-      // E o ROTEIRO tem de mostrar o que o visitante vai ver — as perguntas do
-      // advogado E os passos que vêm depois delas.
-      const roteiro = pagina.locator('[data-roteiro] > ol > li')
-      await roteiro.first().waitFor({ timeout: ESPERA })
-      const passos = await roteiro.allInnerTexts()
-      if (!passos.some((t) => /Qual assunto/i.test(t))) {
-        erros.push('o roteiro não mostra as perguntas do advogado')
-      }
-      if (!passos.some((t) => /WhatsApp/i.test(t))) {
-        erros.push('o roteiro não mostra o fim da conversa')
-      }
       if (!(await pagina.getByRole('button', { name: /Testar meu assistente/ }).isEnabled())) {
         erros.push('“Testar meu assistente” ficou desabilitado com a triagem montada')
       }
 
-      // RAMIFICAR: manda a primeira resposta encerrar a triagem e confere que o
-      // roteiro passa a dizer isso. É o desenho do caminho sendo lido de volta.
-      await pagina.getByRole('button', { name: 'Editar a pergunta 1' }).click()
-      const paraOnde = pagina.locator('select').first()
-      await paraOnde.waitFor({ timeout: ESPERA })
-      await paraOnde.selectOption('fim')
-      await pagina.getByText(/direto para/).first().waitFor({ timeout: ESPERA })
-      // Só dá para mandar para FRENTE: nenhum destino oferecido pode ser a
+      // O FLUXOGRAMA mora no lugar da prévia do celular — aqui, a 390px, na aba
+      // "Fluxograma". Ele tem de mostrar as perguntas do advogado E o fim da
+      // conversa.
+      await pagina.getByRole('button', { name: 'Fluxograma', exact: true }).click()
+      const mapa = pagina.locator('[data-mapa]')
+      await mapa.waitFor({ timeout: ESPERA })
+      const textoDoMapa = await mapa.innerText()
+      if (!/Qual assunto/i.test(textoDoMapa)) {
+        erros.push('o fluxograma não mostra as perguntas do advogado')
+      }
+      if (!/WhatsApp/i.test(textoDoMapa)) erros.push('o fluxograma não mostra o fim da conversa')
+
+      // LIGAR, pelo próprio fluxograma: toca na primeira resposta da pergunta 1
+      // e marca a pergunta 2. O trecho "Só para quem respondeu" tem de aparecer
+      // — é o desenho sendo lido de volta.
+      await mapa.locator('button[aria-expanded]').first().click()
+      // Só dá para ligar a perguntas SEGUINTES: nenhuma oferecida pode ser a
       // própria pergunta nem uma anterior — é o que torna o loop impossível.
-      const oferecidos = await paraOnde.locator('option').allInnerTexts()
-      if (oferecidos.some((t) => /^1\./.test(t.trim()))) {
-        erros.push('o seletor ofereceu um destino para trás — daria para criar um loop')
+      const oferecidas = await mapa.locator('fieldset li').allInnerTexts()
+      if (!oferecidas.length) erros.push('o fluxograma não ofereceu pergunta nenhuma para ligar')
+      if (oferecidas.some((t) => /^1\./.test(t.trim()))) {
+        erros.push('o fluxograma ofereceu ligar a resposta à própria pergunta ou a uma anterior')
+      }
+      await mapa.getByRole('checkbox', { name: /^2\./ }).check()
+      await mapa.getByText(/Só para quem respondeu/).first().waitFor({ timeout: ESPERA })
+      const mudosNoMapa = await semNome(pagina, '[data-mapa]')
+      if (mudosNoMapa.length) {
+        erros.push(`controles sem nome acessível no fluxograma: ${mudosNoMapa.join(', ')}`)
+      }
+      await mapa.getByRole('button', { name: 'Pronto', exact: true }).click()
+
+      // A MESMA ligação, vista da pergunta de destino: a pergunta 2 diz "Só quem
+      // deu uma resposta", e não sobe acima da pergunta de que depende.
+      await pagina.getByRole('button', { name: 'Editar', exact: true }).click()
+      await pagina.getByRole('button', { name: 'Editar a pergunta 2' }).click()
+      const soQuem = pagina
+        .getByRole('group', { name: 'Quem recebe esta pergunta' })
+        .getByRole('button', { name: 'Só quem deu uma resposta' })
+      await soQuem.waitFor({ timeout: ESPERA })
+      if ((await soQuem.getAttribute('aria-pressed')) !== 'true') {
+        erros.push('a ligação feita no fluxograma não aparece na pergunta de destino')
+      }
+      if (await pagina.getByRole('button', { name: 'Mover a pergunta 2 para cima' }).isEnabled()) {
+        erros.push('dá para subir a pergunta acima daquela de que ela depende')
       }
 
       // O botão que abre os modelos leva o título da caixa junto no nome

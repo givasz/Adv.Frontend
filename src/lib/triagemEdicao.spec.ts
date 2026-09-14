@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FIM_DA_TRIAGEM, normalizarTriagem, triagemEmEdicao, type PerguntaDeTriagem } from './triagem'
+import { normalizarTriagem, triagemEmEdicao, type PerguntaDeTriagem } from './triagem'
 import { novaPergunta } from './triagemModelos'
 
 // O EDITOR TRABALHA COM O TEXTO CRU.
@@ -60,39 +60,55 @@ describe('as opções de uma pergunta nova', () => {
     expect(texto).toBe('Belo Horizonte')
   })
 
-  it('trocar o tipo para "sim ou não" já traz as duas opções, com o caminho que tinham', () => {
+  it('trocar o tipo para "sim ou não" já traz as duas opções, com a que encerrava', () => {
     const [q] = triagemEmEdicao({
       enabled: true,
       questions: [
-        { id: 'a', kind: 'sim-nao', label: 'Já tem processo?', options: [{ id: 'sim', texto: 'x', proxima: 'b' }] },
-        { id: 'b', kind: 'texto', label: 'Conte' },
+        { id: 'a', kind: 'sim-nao', label: 'Já resolveu?', options: [{ id: 'sim', texto: 'x', encerra: true }] },
       ],
     }).questions
     expect(q.options).toEqual([
-      { id: 'sim', texto: 'Sim', proxima: 'b' },
+      { id: 'sim', texto: 'Sim', encerra: true },
       { id: 'nao', texto: 'Não' },
     ])
   })
 })
 
-describe('os caminhos continuam só para frente, mesmo no editor', () => {
-  it('um caminho para trás some — nenhum loop fica desenhado na tela', () => {
+describe('as ligações seguem a regra do servidor, mesmo no editor', () => {
+  const origem: PerguntaDeTriagem = {
+    id: 'a',
+    kind: 'escolha',
+    label: 'Assunto',
+    options: [{ id: 'o1', texto: '' }],
+  }
+
+  it('depender de uma pergunta que vem depois some — nenhuma espera impossível fica na tela', () => {
     const questions: PerguntaDeTriagem[] = [
-      { id: 'a', kind: 'texto', label: 'Primeira' },
-      { id: 'b', kind: 'texto', label: 'Segunda', proxima: 'a' },
+      { id: 'b', kind: 'texto', label: 'Primeira', condicao: { pergunta: 'a', opcoes: ['o1'] } },
+      origem,
     ]
-    expect(triagemEmEdicao({ enabled: true, questions }).questions[1].proxima).toBeUndefined()
+    expect(triagemEmEdicao({ enabled: true, questions }).questions[0].condicao).toBeUndefined()
   })
 
-  it('para frente e para o fim ficam', () => {
+  it('a ligação a uma opção ainda sem texto fica — ela está sendo escrita', () => {
     const questions: PerguntaDeTriagem[] = [
-      { id: 'a', kind: 'texto', label: 'Primeira', proxima: 'c' },
-      { id: 'b', kind: 'texto', label: 'Segunda', proxima: FIM_DA_TRIAGEM },
-      { id: 'c', kind: 'texto', label: 'Terceira' },
+      origem,
+      { id: 'b', kind: 'texto', label: 'Segunda', condicao: { pergunta: 'a', opcoes: ['o1'] } },
     ]
-    const [a, b] = triagemEmEdicao({ enabled: true, questions }).questions
-    expect(a.proxima).toBe('c')
-    expect(b.proxima).toBe(FIM_DA_TRIAGEM)
+    expect(triagemEmEdicao({ enabled: true, questions }).questions[1].condicao).toEqual({
+      pergunta: 'a',
+      opcoes: ['o1'],
+    })
+  })
+
+  it('"só para quem respondeu…" sem resposta escolhida fica no editor e cai ao gravar', () => {
+    const questions: PerguntaDeTriagem[] = [
+      { ...origem, options: [{ id: 'o1', texto: 'Um' }] },
+      { id: 'b', kind: 'texto', label: 'Segunda', condicao: { pergunta: 'a', opcoes: [] } },
+    ]
+    const emEdicao = triagemEmEdicao({ enabled: true, questions })
+    expect(emEdicao.questions[1].condicao).toEqual({ pergunta: 'a', opcoes: [] })
+    expect(normalizarTriagem(emEdicao).questions[1].condicao).toBeUndefined()
   })
 })
 

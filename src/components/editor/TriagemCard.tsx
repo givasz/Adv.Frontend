@@ -1,19 +1,19 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type {
-  DestinoPossivel,
+  FontePossivel,
   OpcaoDeTriagem,
   PerguntaDeTriagem,
   TipoDePergunta,
 } from '@/lib/triagem'
 import type { Profile } from '@/lib/types'
 import {
-  destinosPossiveis,
+  fontesPossiveis,
   LIMITES_DA_TRIAGEM,
   normalizarTriagem,
   perguntasAlcancaveis,
   perguntasUtilizaveis,
-  roteiroDaConversa,
+  podeTrocarComAProxima,
   TRIAGEM_LABEL_MAX,
   TRIAGEM_MAX_OPCOES,
   TRIAGEM_MAX_PERGUNTAS,
@@ -33,7 +33,6 @@ import {
 import { conferirPerguntaInteira } from '@/lib/triagemDados'
 import { checkCompliance } from '@/lib/oab'
 import { resolveSchedulingMode } from '@/lib/booking'
-import { buildAssistantDays, resolveAssistantConfig } from '@/lib/assistant'
 import { AvisoDaPergunta } from './AvisoDaPergunta'
 import { Field, TextInput, Toggle } from './fields'
 import { InfoTip } from './InfoTip'
@@ -58,6 +57,11 @@ import {
 // PERGUNTAR, depois como testar, e só então a letra do que a plataforma promete.
 // Não há campo de "resposta automática" em lugar nenhum, e isso é a arquitetura
 // falando: o assistente pergunta e encaminha; quem responde é o advogado.
+//
+// O CAMINHO da conversa não é desenhado aqui, e sim no fluxograma que ocupa o
+// lugar da prévia do celular nesta seção (MapaDaTriagem). Aqui cada pergunta
+// diz QUEM a recebe ("todo mundo" ou "só quem respondeu…"); lá se vê o todo e se
+// liga uma resposta às perguntas seguintes. Os dois mexem no mesmo dado.
 //
 // A parte mais importante não é um controle, é o que a tela ENSINA. O pedido de
 // dado pessoal desnecessário não nasce de má-fé — nasce de ninguém ter dito que
@@ -88,8 +92,8 @@ export function TriagemCard({
     [profile.triage],
   )
   const perguntas = config.questions
-  // As contas de CAMINHO (roteiro, quem é alcançável) usam a forma que a
-  // conversa vai ler: texto limpo, perguntas incompletas de fora.
+  // As contas de CAMINHO (quem é alcançável) usam a forma que a conversa vai
+  // ler: texto limpo, perguntas incompletas de fora.
   const normalizadas = useMemo(() => normalizarTriagem(config).questions, [config])
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [verModelos, setVerModelos] = useState(false)
@@ -102,20 +106,8 @@ export function TriagemCard({
   const bothFormats = profile.serviceMode.inPerson && profile.serviceMode.online
   const temAtendimento = perguntas.some((q) => q.kind === 'atendimento')
   const temContato = perguntas.some((q) => q.kind === 'contato')
-  // A grade tem horário para oferecer daqui para a frente? É a MESMA conta da
-  // conversa (buildAssistantDays), e não "tem dia marcado na semana" — uma grade
-  // cheia pode não ter nenhum horário dentro da antecedência mínima.
-  const comHorarios = useMemo(
-    () =>
-      assistenteLigado && buildAssistantDays(resolveAssistantConfig(profile.assistant)).length > 0,
-    [assistenteLigado, profile.assistant],
-  )
-  const roteiro = useMemo(
-    () => roteiroDaConversa(normalizadas, { comHorarios, dosDoisJeitos: bothFormats }),
-    [normalizadas, comHorarios, bothFormats],
-  )
   // Quem a conversa consegue alcançar. O defeito clássico de todo formulário com
-  // caminhos é a pergunta para a qual ninguém é mandado: ela fica na tela,
+  // caminhos é a pergunta que ninguém consegue receber: ela fica na tela,
   // parece no ar, e nunca é feita a ninguém.
   const alcancaveis = useMemo(() => perguntasAlcancaveis(normalizadas), [normalizadas])
 
@@ -136,6 +128,9 @@ export function TriagemCard({
   const mover = (i: number, passo: -1 | 1) => {
     const j = i + passo
     if (j < 0 || j >= perguntas.length) return
+    // Uma pergunta nunca passa para cima daquela de que depende: a ligação se
+    // soltaria em silêncio. O botão já vem apagado; esta é a segunda rede.
+    if (!podeTrocarComAProxima(perguntas, Math.min(i, j))) return
     const lista = [...perguntas]
     ;[lista[i], lista[j]] = [lista[j], lista[i]]
     patch(lista)
@@ -182,7 +177,7 @@ export function TriagemCard({
         <p className="mt-1.5 pl-[50px] text-[11.5px] leading-relaxed text-ink-faint">
           {config.enabled
             ? utilizaveis.length
-              ? `O assistente faz ${utilizaveis.length} ${utilizaveis.length === 1 ? 'pergunta' : 'perguntas'} antes de oferecer horários.`
+              ? `O assistente pode fazer até ${utilizaveis.length} ${utilizaveis.length === 1 ? 'pergunta' : 'perguntas'} antes de oferecer horários.`
               : 'Sem nenhuma pergunta pronta, o assistente segue só com o agendamento.'
             : 'Desligado, o assistente continua marcando horários como sempre fez.'}
         </p>
@@ -260,7 +255,9 @@ export function TriagemCard({
                 pergunta={q}
                 indice={i}
                 total={perguntas.length}
-                destinos={destinosPossiveis(perguntas, i)}
+                fontes={fontesPossiveis(perguntas, i)}
+                podeSubir={i > 0 && podeTrocarComAProxima(perguntas, i - 1)}
+                podeDescer={podeTrocarComAProxima(perguntas, i)}
                 // Pergunta INCOMPLETA não é órfã: ela já diz o que falta ("sem
                 // opções ainda"), e o selo de "ninguém chega" só confundiria.
                 alcancavel={!idsUtilizaveis.has(q.id) || alcancaveis.has(q.id)}
@@ -311,68 +308,23 @@ export function TriagemCard({
         />
       )}
 
-      {/* 4 — o roteiro inteiro, e o ensaio.
-          A lista de cima é o que ele EDITA; esta é o que o visitante VAI VER —
-          e são coisas diferentes, porque o roteiro tem a abertura, o aviso de
-          segurança e os passos que vêm depois da triagem (dia, horário, nome).
-          Sem ver isso junto, ele publica sem saber o tamanho do que montou. */}
+      {/* 4 — o ensaio. O caminho inteiro está no fluxograma (ao lado no
+          computador; na aba "Fluxograma" no celular). Ver o desenho responde "por
+          onde passa"; conversar com o próprio assistente responde "como fica". */}
       {utilizaveis.length > 0 && (
-        <div data-roteiro className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">
-          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-            <MessageIcon width={14} height={14} className="text-brass-deep" />
-            Como a conversa vai ficar
-          </p>
-          <ol className="mt-2.5 space-y-2">
-            {roteiro.map((passo, i) => (
-              <li key={`${i}-${passo.texto}`} className="text-[12.5px] leading-snug">
-                <div className="flex gap-2.5">
-                  <span
-                    className={`mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[10.5px] font-bold tabular-nums ${
-                      passo.minha
-                        ? 'bg-burgundy text-paper-soft'
-                        : 'border border-ink/15 text-ink-faint'
-                    }`}
-                    aria-hidden
-                  >
-                    {passo.numero ?? '·'}
-                  </span>
-                  <span className={passo.minha ? 'text-ink' : 'text-ink-faint'}>
-                    {passo.texto}
-                    {passo.minha && <span className="sr-only"> (pergunta sua)</span>}
-                    {passo.inalcancavel && (
-                      <span className="ml-1.5 rounded-full bg-brass/15 px-1.5 py-px text-[10.5px] font-semibold text-brass-deep">
-                        ninguém chega aqui
-                      </span>
-                    )}
-                  </span>
-                </div>
-                {/* Os caminhos que saem desta pergunta. Só aparecem quando algum
-                    DESVIA: numa triagem em fila, "Sim → a próxima" seria ruído
-                    em cima da informação que importa. */}
-                {passo.ramos && (
-                  <ul className="ml-[28px] mt-1 space-y-0.5">
-                    {passo.ramos.map((r) => (
-                      <li
-                        key={r.opcao}
-                        className={`flex flex-wrap items-baseline gap-x-1.5 text-[11.5px] ${
-                          r.desvia ? 'text-ink-soft' : 'text-ink-faint'
-                        }`}
-                      >
-                        <span className="text-ink-faint" aria-hidden>
-                          └
-                        </span>
-                        <span className={r.desvia ? 'font-medium' : undefined}>{r.opcao}</span>
-                        <span className="text-ink-faint">→ {r.destino}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ol>
-          <p className="mt-2.5 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink-faint">
-            <CheckIcon width={13} height={13} strokeWidth={2.2} className="mt-0.5 shrink-0 text-brass-deep" />
-            Em vinho, as suas perguntas. As demais o assistente já faz sozinho.
+        <div data-testar className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">
+          <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-ink-soft">
+            <MessageIcon width={14} height={14} className="mt-0.5 shrink-0 text-brass-deep" />
+            <span>
+              <span className="lg:hidden">
+                O caminho completo da conversa está na aba{' '}
+                <span className="font-semibold text-ink">Fluxograma</span>, no alto da tela.
+              </span>
+              <span className="hidden lg:inline">
+                O caminho completo da conversa está no fluxograma, ao lado.
+              </span>{' '}
+              Para sentir como fica, converse com o seu assistente.
+            </span>
           </p>
           <button
             type="button"
@@ -483,13 +435,21 @@ function Lembrete({
   )
 }
 
+/** "“A”, “B” ou “C”" — as respostas como se diz em voz alta. */
+function emPalavras(textos: string[]): string {
+  const aspas = textos.map((t) => `“${t}”`)
+  return aspas.length > 1 ? `${aspas.slice(0, -1).join(', ')} ou ${aspas[aspas.length - 1]}` : aspas[0] ?? ''
+}
+
 // ---- Uma pergunta na lista -------------------------------------------------
 
 function PerguntaItem({
   pergunta,
   indice,
   total,
-  destinos,
+  fontes,
+  podeSubir,
+  podeDescer,
   alcancavel,
   tiposOcupados,
   aberta,
@@ -502,8 +462,12 @@ function PerguntaItem({
   pergunta: PerguntaDeTriagem
   indice: number
   total: number
-  /** para onde esta pergunta pode mandar: só as seguintes, e o fim da triagem */
-  destinos: DestinoPossivel[]
+  /** as perguntas anteriores de que esta pode depender */
+  fontes: FontePossivel[]
+  /** subir não passa esta pergunta para cima daquela de que ela depende */
+  podeSubir: boolean
+  /** descer não passa esta pergunta para baixo de uma que depende dela */
+  podeDescer: boolean
   /** a conversa consegue chegar até aqui? */
   alcancavel: boolean
   /** tipos já usados por OUTRAS perguntas — nome e formato só cabem uma vez */
@@ -533,9 +497,33 @@ function PerguntaItem({
 
   const trocarOpcao = (i: number, p: Partial<OpcaoDeTriagem>) =>
     onTrocar({ options: (pergunta.options ?? []).map((o, j) => (j === i ? { ...o, ...p } : o)) })
-  // Ramificar não faz sentido em múltipla escolha: o visitante marca várias, e
-  // duas respostas apontando para lugares diferentes não têm desempate honesto.
-  const podeRamificar = pergunta.kind !== 'multipla' && !!pergunta.options?.length
+
+  // QUEM RECEBE esta pergunta. A condição fica com a pergunta de destino, e é
+  // nela que a tela pergunta — "só abrir esta pergunta se…" é a frase que o
+  // advogado pensa.
+  const condicao = pergunta.condicao
+  const fonte = condicao ? fontes.find((f) => f.id === condicao.pergunta) : undefined
+  const resumoDaCondicao =
+    fonte && condicao?.opcoes.length
+      ? `Só para quem respondeu ${emPalavras(
+          fonte.opcoes.filter((o) => condicao.opcoes.includes(o.id)).map((o) => o.texto),
+        )} na ${fonte.numero}`
+      : null
+
+  // ENCERRAR numa resposta. Múltipla escolha não encerra (a pessoa pode ter
+  // marcado junto outra que abre uma pergunta), e opção sem texto não aparece —
+  // não há o que reconhecer nela.
+  const opcoesComTexto = (pergunta.options ?? []).filter((o) => o.texto.trim())
+  const podeEncerrar = pergunta.kind !== 'multipla' && opcoesComTexto.length > 0
+  const alternarEncerra = (id: string) =>
+    onTrocar({
+      options: (pergunta.options ?? []).map((o): OpcaoDeTriagem => {
+        if (o.id !== id) return o
+        if (!o.encerra) return { ...o, encerra: true }
+        const { encerra: _fora, ...resto } = o
+        return resto
+      }),
+    })
 
   // CONFIRMAR não grava nada — o editor já salva enquanto se escreve (é o "Tudo
   // salvo" do topo). O que o botão faz é dizer "terminei esta": fecha o painel
@@ -572,9 +560,14 @@ function PerguntaItem({
           <span className="mt-0.5 block text-[11.5px] text-ink-faint">
             {meta.label} · {semOpcao ? 'sem opções ainda' : meta.exemplo}
           </span>
-          {/* Ninguém é mandado para cá. É o defeito clássico de formulário com
-              caminhos: a pergunta está na lista, parece no ar, e nunca é feita
-              a ninguém. Avisa, não bloqueia — o caminho pode estar pela metade. */}
+          {resumoDaCondicao && (
+            <span className="mt-1 block text-[11.5px] font-medium text-burgundy [overflow-wrap:anywhere]">
+              {resumoDaCondicao}
+            </span>
+          )}
+          {/* Ninguém consegue receber esta pergunta. É o defeito clássico de
+              formulário com caminhos: a pergunta está na lista, parece no ar, e
+              nunca é feita a ninguém. Avisa, não bloqueia. */}
           {!alcancavel && (
             <span className="mt-1 inline-block rounded-full bg-brass/15 px-2 py-0.5 text-[11px] font-semibold text-brass-deep">
               Ninguém chega até aqui
@@ -608,14 +601,16 @@ function PerguntaItem({
         <div className="flex shrink-0 items-center gap-0.5">
           <IconeBotao
             label={`Mover a pergunta ${indice + 1} para cima`}
-            disabled={preview || indice === 0}
+            disabled={preview || indice === 0 || !podeSubir}
+            dica={indice > 0 && !podeSubir ? 'Ela depende da pergunta de cima' : undefined}
             onClick={() => onMover(-1)}
           >
             <ArrowUpIcon width={15} height={15} />
           </IconeBotao>
           <IconeBotao
             label={`Mover a pergunta ${indice + 1} para baixo`}
-            disabled={preview || indice === total - 1}
+            disabled={preview || indice === total - 1 || !podeDescer}
+            dica={indice < total - 1 && !podeDescer ? 'A pergunta de baixo depende desta' : undefined}
             onClick={() => onMover(1)}
           >
             <ArrowDownIcon width={15} height={15} />
@@ -684,10 +679,9 @@ function PerguntaItem({
             </span>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tipo de resposta">
               {TIPOS_NA_ORDEM.map((k) => (
-                <button
+                <Pilula
                   key={k}
-                  type="button"
-                  aria-pressed={pergunta.kind === k}
+                  ativa={pergunta.kind === k}
                   // Nome e formato alimentam campos únicos da mensagem: uma
                   // segunda pergunta desse tipo seria descartada ao gravar.
                   // Melhor não deixar escolher do que deixar sumir.
@@ -707,14 +701,9 @@ function PerguntaItem({
                           : undefined,
                     })
                   }
-                  className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                    pergunta.kind === k
-                      ? 'border-burgundy bg-burgundy/[0.07] text-burgundy'
-                      : 'border-ink/15 text-ink-soft hover:border-brass/50'
-                  }`}
                 >
                   {TIPO_META[k].label}
-                </button>
+                </Pilula>
               ))}
             </div>
             <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">{meta.hint}</p>
@@ -772,64 +761,114 @@ function PerguntaItem({
             </p>
           )}
 
-          {/* ---- O CAMINHO: para onde cada resposta leva ---------------------
-              Só aparece quando HÁ para onde mandar (existe pergunta depois
-              desta). Numa triagem em fila, um seletor sem consequência em cada
-              opção seria ruído em cima do que importa. */}
-          {destinos.length > 1 && podeRamificar && (
+          {/* ---- QUEM RECEBE esta pergunta -----------------------------------
+              Só aparece quando há de quem depender: uma pergunta anterior com
+              respostas para escolher. A primeira pergunta é sempre de todos. */}
+          {fontes.length > 0 && (
             <div>
               <span className="mb-1.5 block text-[12.5px] font-semibold text-ink">
-                Para onde cada resposta leva
+                Quem recebe esta pergunta
               </span>
-              <ul className="space-y-1.5">
-                {(pergunta.options ?? []).map((o) => (
-                  <li key={o.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-soft">
-                      {o.texto.trim() || <em className="text-ink-faint">opção sem texto</em>}
-                    </span>
-                    <SeletorDeDestino
-                      valor={o.proxima}
-                      destinos={destinos}
-                      label={`Para onde leva a resposta “${o.texto.trim() || 'sem texto'}”`}
-                      onChange={(proxima) =>
-                        onTrocar({
-                          options: (pergunta.options ?? []).map((x) =>
-                            x.id === o.id ? { ...x, proxima } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </li>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quem recebe esta pergunta">
+                <Pilula ativa={!condicao} onClick={() => onTrocar({ condicao: undefined })}>
+                  Todo mundo
+                </Pilula>
+                <Pilula
+                  ativa={!!condicao}
+                  onClick={() => {
+                    // Começa pela pergunta logo acima que tem respostas — é quase
+                    // sempre dela que a pergunta nova depende.
+                    if (!condicao) {
+                      onTrocar({ condicao: { pergunta: fontes[fontes.length - 1].id, opcoes: [] } })
+                    }
+                  }}
+                >
+                  Só quem deu uma resposta
+                </Pilula>
+              </div>
+              {condicao && (
+                <div className="mt-2 space-y-2 rounded-lg bg-paper-deep/60 px-3 py-2.5">
+                  <label className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-soft">
+                    Na pergunta
+                    <select
+                      value={fonte?.id ?? ''}
+                      onChange={(e) => onTrocar({ condicao: { pergunta: e.target.value, opcoes: [] } })}
+                      // 16px no celular: abaixo disso o Safari do iPhone dá zoom
+                      // na página ao focar o campo.
+                      className="min-w-0 max-w-full rounded-lg border border-ink/15 bg-paper-soft px-2.5 py-1.5 text-[16px] text-ink focus:border-burgundy focus:outline-none sm:text-[12.5px]"
+                    >
+                      {!fonte && <option value="">Escolha a pergunta</option>}
+                      {fontes.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.rotulo}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {fonte && (
+                    <div>
+                      <span className="mb-1 block text-[12px] text-ink-soft">quem respondeu</span>
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Respostas que abrem esta pergunta">
+                        {fonte.opcoes.map((o) => {
+                          const marcada = condicao.opcoes.includes(o.id)
+                          return (
+                            <Pilula
+                              key={o.id}
+                              ativa={marcada}
+                              onClick={() =>
+                                onTrocar({
+                                  condicao: {
+                                    pergunta: fonte.id,
+                                    opcoes: marcada
+                                      ? condicao.opcoes.filter((x) => x !== o.id)
+                                      : [...condicao.opcoes, o.id],
+                                  },
+                                })
+                              }
+                            >
+                              {marcada && <CheckIcon width={12} height={12} strokeWidth={2.6} aria-hidden />}
+                              {o.texto}
+                            </Pilula>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[11.5px] leading-relaxed text-ink-faint" aria-live="polite">
+                    {condicao.opcoes.length
+                      ? 'Quem der outra resposta — ou pular aquela pergunta — não vê esta e segue para a seguinte.'
+                      : 'Escolha ao menos uma resposta. Enquanto isso, a pergunta vale para todo mundo.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {podeEncerrar && (
+            <div>
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-ink">
+                Respostas que encerram a triagem
+              </span>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Respostas que encerram a triagem">
+                {opcoesComTexto.map((o) => (
+                  <Pilula key={o.id} ativa={!!o.encerra} onClick={() => alternarEncerra(o.id)}>
+                    {o.encerra && <CheckIcon width={12} height={12} strokeWidth={2.6} aria-hidden />}
+                    {o.texto.trim()}
+                  </Pilula>
                 ))}
-              </ul>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-                Só dá para mandar para FRENTE, ou encerrar a triagem. É o que impede a conversa de
-                andar em círculo e nunca terminar.
+              </div>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
+                Quem der uma resposta marcada não recebe as perguntas seguintes: a conversa vai
+                direto para o fim. Para ligar uma resposta a uma pergunta, toque nela no fluxograma.
               </p>
             </div>
           )}
 
-          {/* Pergunta sem opções (texto, data, nome): o caminho é DELA, não da
-              resposta — uma linha só, em vez de uma por opção. */}
-          {destinos.length > 1 && !pergunta.options?.length && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-[12.5px] font-semibold text-ink">Depois desta, ir para</span>
-              <SeletorDeDestino
-                valor={pergunta.proxima}
-                destinos={destinos}
-                label="Para onde a conversa vai depois desta pergunta"
-                onChange={(proxima) => onTrocar({ proxima })}
-              />
-            </div>
-          )}
-
-          {/* Múltipla escolha não ramifica, e é melhor dizer do que deixar o
-              advogado procurar um seletor que não existe. */}
-          {pergunta.kind === 'multipla' && destinos.length > 1 && (
+          {pergunta.kind === 'multipla' && opcoesComTexto.length > 0 && (
             <p className="rounded-lg bg-paper-deep/60 px-3 py-2 text-[11.5px] leading-relaxed text-ink-faint">
-              Esta pergunta não ramifica: quem responde pode marcar várias opções, e duas delas
-              apontando para lugares diferentes não teriam como ser desempatadas. A conversa segue
-              para a pergunta seguinte.
+              Numa pergunta de várias respostas, nenhuma encerra a triagem — quem marca pode ter
+              marcado junto outra que abre uma pergunta. Ligar uma resposta a uma pergunta
+              seguinte funciona normalmente: basta uma das marcadas.
             </p>
           )}
 
@@ -863,41 +902,32 @@ function PerguntaItem({
   )
 }
 
-/**
- * Para onde uma resposta leva.
- *
- * `<select>` nativo, e não os botões segmentados do resto do editor: aqui a
- * lista tem até nove itens com texto longo ("3. Você já possui processo sobre
- * esse assunto?"), e segmentado vira uma parede de pílulas. O nativo ainda abre
- * a roda do iOS e já vem acessível pelo teclado.
- */
-function SeletorDeDestino({
-  valor,
-  destinos,
-  label,
-  onChange,
+/** Botão de escolha em pílula — o mesmo desenho para tipo, destinatário e encerrar. */
+function Pilula({
+  ativa,
+  onClick,
+  disabled,
+  children,
 }: {
-  valor?: string
-  destinos: DestinoPossivel[]
-  label: string
-  onChange: (v: string | undefined) => void
+  ativa: boolean
+  onClick: () => void
+  disabled?: boolean
+  children: React.ReactNode
 }) {
   return (
-    <select
-      value={valor ?? ''}
-      aria-label={label}
-      onChange={(e) => onChange(e.target.value || undefined)}
-      // 16px no celular: abaixo disso o Safari do iPhone dá zoom na página ao
-      // focar o campo — a mesma razão do CAMPO_HORA em AssistantCard.
-      className="max-w-full rounded-lg border border-ink/15 bg-paper-soft px-2.5 py-1.5 text-[16px] text-ink focus:border-burgundy focus:outline-none sm:text-[12.5px]"
+    <button
+      type="button"
+      aria-pressed={ativa}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        ativa
+          ? 'border-burgundy bg-burgundy/[0.07] text-burgundy'
+          : 'border-ink/15 text-ink-soft hover:border-brass/50'
+      }`}
     >
-      <option value="">A próxima pergunta</option>
-      {destinos.map((d) => (
-        <option key={d.valor} value={d.valor}>
-          {d.rotulo}
-        </option>
-      ))}
-    </select>
+      {children}
+    </button>
   )
 }
 
@@ -906,12 +936,15 @@ function IconeBotao({
   onClick,
   disabled,
   perigo,
+  dica,
   children,
 }: {
   label: string
   onClick: () => void
   disabled?: boolean
   perigo?: boolean
+  /** por que o botão está apagado, quando não é óbvio */
+  dica?: string
   children: React.ReactNode
 }) {
   return (
@@ -920,6 +953,7 @@ function IconeBotao({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
+      title={dica}
       className={`shrink-0 rounded-lg p-2 text-ink-faint transition-colors disabled:opacity-30 ${
         perigo ? 'hover:bg-ink/[0.05] hover:text-burgundy' : 'hover:bg-ink/[0.05] hover:text-ink'
       }`}
