@@ -59,6 +59,19 @@ describe('compatibilidade com navegadores', () => {
     expect(comClone).toEqual([])
   })
 
+  // Link de bio abre dentro do Instagram, cujo navegador embutido descarta
+  // `target="_blank"` em silêncio: o visitante toca e nada acontece. Quem sai do
+  // site pelo perfil ou pelo escritório passa por comoAbrirFora (lib/abrirFora.ts).
+  it('nenhum target="_blank" fixo no que o visitante do perfil toca', () => {
+    const fixos = fontes()
+      .filter(({ arquivo }) =>
+        /^components[\\/](profile|escritorio)[\\/]|^components[\\/]ui[\\/]CnaLink\.tsx$/.test(arquivo),
+      )
+      .filter(({ texto }) => /target=["']_blank["']|target:\s*["']_blank["']/.test(texto))
+      .map(({ arquivo }) => arquivo)
+    expect(fixos).toEqual([])
+  })
+
   it('copiaDeDados devolve uma cópia que não mexe no original', () => {
     const original = { dias: [{ dia: 1, horas: ['09:00'] }], saudacao: '' }
     const copia = copiaDeDados(original)

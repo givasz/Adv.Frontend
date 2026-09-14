@@ -1,5 +1,6 @@
 import { ExternalLinkIcon } from './icons'
 import { HREF_DE_EXEMPLO } from '@/lib/exemplo'
+import { comoAbrirFora } from '@/lib/abrirFora'
 
 // Consulta pública do Cadastro Nacional dos Advogados (CNA) — base OFICIAL e aberta
 // da OAB, onde QUALQUER pessoa confere uma inscrição.
@@ -83,7 +84,7 @@ export function CnaLink({
       href={aoTocarNoExemplo ? HREF_DE_EXEMPLO : cnaSearchUrl(name)}
       title={TOOLTIP}
       aria-label="Conferir esta inscrição na consulta pública do CNA, da OAB."
-      target="_blank"
+      target={comoAbrirFora().target}
       rel="noreferrer noopener nofollow"
       onClick={
         aoTocarNoExemplo

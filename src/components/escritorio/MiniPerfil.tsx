@@ -5,6 +5,7 @@ import { ArrowRight, LinkedinIcon } from '@/components/ui/icons'
 import { CnaLink } from '@/components/ui/CnaLink'
 import { PainelContato } from './PainelContato'
 import { safeHref } from '@/lib/safeUrl'
+import { comoAbrirFora } from '@/lib/abrirFora'
 
 // Mini-perfil do advogado exibido DENTRO da página do escritório (sem sair de domínio).
 // Foto, nome, OAB, área, bio curta, LinkedIn pessoal, "Solicitar contato" e "Voltar".
@@ -40,8 +41,7 @@ export function MiniPerfil({ lawyer, onBack }: { lawyer: FirmLawyer; onBack: () 
         {safeHref(lawyer.linkedin) && (
           <a
             href={safeHref(lawyer.linkedin)}
-            target="_blank"
-            rel="noreferrer noopener"
+            {...comoAbrirFora()}
             className="link-tile !py-3 text-sm font-medium"
           >
             <LinkedinIcon width={18} height={18} className="text-ink-faint" />

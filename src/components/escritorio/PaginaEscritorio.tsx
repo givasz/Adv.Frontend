@@ -18,6 +18,7 @@ import { PainelEmLinha } from './PainelEmLinha'
 import { AssistenteEscritorio } from './AssistenteEscritorio'
 import { safeHref } from '@/lib/safeUrl'
 import { enderecoCurto, enderecoVisivel, linkDoMapa } from '@/lib/endereco'
+import { comoAbrirFora } from '@/lib/abrirFora'
 
 // Página institucional standalone do escritório (sociedade de advogados). Estilo próprio
 // baseado na paleta "Papel & Tinta" (bege/grafite/dourado) — NÃO usa o sistema de temas
@@ -75,8 +76,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
           {enderecoVisivel(firm.address) && (
             <a
               href={linkDoMapa(firm.address, firm.city, firm.state)}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...comoAbrirFora()}
               className="mt-1 inline text-[12px] leading-snug text-ink-faint hover:underline"
             >
               {enderecoCurto(firm.address)}{' '}
@@ -259,8 +259,7 @@ function SocialDot({
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer noopener"
+      {...comoAbrirFora()}
       aria-label={label}
       className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/12 bg-paper-soft text-ink-soft transition-colors hover:border-brass/50 hover:text-burgundy"
     >

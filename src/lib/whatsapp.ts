@@ -42,6 +42,8 @@
 // para trás. No computador ela continua fazendo sentido: preserva o perfil aberto
 // enquanto o WhatsApp Web carrega ao lado.
 
+import { comoAbrirFora } from './abrirFora'
+
 /** Teto do E.164 — nenhum número de telefone do mundo passa de 15 dígitos. */
 const MAX_DIGITOS = 15
 /** Piso: DDD + número, o menor telefone brasileiro utilizável (10 dígitos). */
@@ -95,25 +97,6 @@ export function whatsappHref(
 }
 
 /**
- * É um dedo numa tela pequena?
- *
- * `(hover: none) and (pointer: coarse)` é a mesma pergunta que o CSS faz, e é
- * respondida pelo próprio navegador — não por uma lista de nomes de aplicativos
- * que envelhece. Todo navegador embutido de rede social é, por construção, um
- * navegador de celular, então esta única pergunta cobre o caso que quebrava.
- */
-function noDedo(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-  try {
-    return window.matchMedia('(hover: none) and (pointer: coarse)').matches
-  } catch {
-    // Navegador antigo sem suporte à consulta: cai no comportamento de
-    // computador, que é o que ele provavelmente é.
-    return false
-  }
-}
-
-/**
  * Como abrir o link do WhatsApp: os atributos prontos para espalhar na âncora.
  *
  * No celular, MESMA ABA — o WhatsApp abre por cima e o "voltar" devolve ao
@@ -122,13 +105,11 @@ function noDedo(): boolean {
  *
  * No computador, aba nova: o perfil continua aberto atrás do WhatsApp Web.
  *
- * `rel` fica nos dois casos. Ele é inofensivo na mesma aba e, na aba nova, é o
- * que impede a página de destino de alcançar a nossa pelo `window.opener`.
+ * É a mesma regra de todo link que sai do site (ver abrirFora.ts) — o nome
+ * próprio fica porque é o caminho mais importante de todos.
  */
 export function comoAbrirWhatsapp(): { target: '_self' | '_blank'; rel: string } {
-  return noDedo()
-    ? { target: '_self', rel: 'noreferrer noopener' }
-    : { target: '_blank', rel: 'noreferrer noopener' }
+  return comoAbrirFora()
 }
 
 /**

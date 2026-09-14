@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/icons'
 import { safeHref } from '@/lib/safeUrl'
 import { comoAbrirWhatsapp, whatsappHref } from '@/lib/whatsapp'
+import { comoAbrirFora } from '@/lib/abrirFora'
 import { cliqueDoPerfil, registrarEvento } from '@/lib/eventos'
 import { enderecoCurto, enderecoVisivel, linkDoMapa } from '@/lib/endereco'
 import { Marca } from '@/components/ui/Marca'
@@ -146,6 +147,9 @@ export function ProfileView({
   // Como a âncora abre: mesma aba no celular (o navegador embutido do Instagram
   // descarta `_blank` em silêncio), aba nova no computador. Ver lib/whatsapp.ts.
   const waAlvo = comoAbrirWhatsapp()
+  // Redes, mapa e agenda externa: a mesma regra do WhatsApp — o navegador do
+  // Instagram descarta `_blank` em silêncio (ver lib/abrirFora.ts).
+  const foraAlvo = comoAbrirFora()
 
   // Para os links que não são ação de contato (a marca d'água do rodapé): na
   // prévia do editor eles não navegam, e não há nada a medir neles.
@@ -311,8 +315,7 @@ export function ProfileView({
             <a
               href={destino(linkDoMapa(profile.address, profile.city, profile.state))}
               onClick={clique('endereco')}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...foraAlvo}
               className="inline hover:underline"
             >
               {enderecoCurto(profile.address)}{' '}
@@ -347,8 +350,7 @@ export function ProfileView({
               variants={item}
               href={destino(safeHref(profile.contact.scheduling))}
               onClick={clique('agendamento')}
-              target="_blank"
-              rel="noreferrer noopener"
+              {...foraAlvo}
               className={`${tile} justify-center !py-3.5 font-semibold`}
             >
               <CalendarIcon width={19} height={19} className="t-accent" />
@@ -436,8 +438,7 @@ export function ProfileView({
                     key={soc.kind + soc.url}
                     href={destino(href)}
                     onClick={clique(`rede:${soc.kind}`, meta.label)}
-                    target="_blank"
-                    rel="noreferrer noopener"
+                    {...foraAlvo}
                     className={`${tile} redes-item !py-3 text-sm font-medium`}
                   >
                     {/* cor da marca SÓ na logo; "Site" (neutro) segue o tema */}
