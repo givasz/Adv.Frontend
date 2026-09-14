@@ -203,6 +203,30 @@
     }
   }
 
+  /* Sem consulta de contêiner (Safari/iOS < 16 — os iPhones 6s, 7 e SE de 1ª
+     geração param no 15), as regras acima são ignoradas e o "Instagram" volta a
+     sair cortado. A reserva usa a largura da TELA como aproximação: abaixo de
+     400px o perfil ocupa a tela toda, e a lista fica abaixo dos 342px. */
+  @supports not (container-type: inline-size) {
+    @media (max-width: 400px) {
+      .redes-grade > .redes-colunas {
+        gap: 0.5rem;
+      }
+      .redes-grade .redes-item {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        gap: 0.5rem;
+      }
+      .redes-grade .redes-logo {
+        width: 20px;
+        height: 20px;
+      }
+      .redes-grade .redes-seta {
+        display: none;
+      }
+    }
+  }
+
   .t-tile {
     @apply relative flex items-center gap-3 w-full border px-4 py-3.5
       text-left duration-300 hover:-translate-y-0.5 active:translate-y-0;
@@ -374,4 +398,68 @@
     animation: none;
     box-shadow: 0 0 0 6px rgba(176, 141, 87, 0.4);
   }
+}
+
+/* COMPATIBILIDADE — reservas para navegador antigo (levantamento de 13/09/2026).
+   Cada bloco só vale onde o recurso moderno falta; no resto, não muda nada. */
+
+/* dvh (Safari/iOS < 15.4): sem ele a altura mínima caía e a conversa do
+   assistente perdia a altura da tela — os botões desciam a cada fala. */
+@supports not (height: 1dvh) {
+  .h-dvh {
+    height: 100vh;
+  }
+  .min-h-dvh {
+    min-height: 100vh;
+  }
+}
+
+/* color-mix (Safari < 16.2). Com var() dentro, a declaração não cai na leitura:
+   ela fica vazia na hora de aplicar — por isso a reserva vem num @supports, e
+   não numa linha antes. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .t-tile:hover {
+    border-color: var(--c-accent);
+  }
+  .tv-outline:hover {
+    background: var(--c-accent-soft, rgba(176, 141, 87, 0.14));
+  }
+}
+
+/* O disco atrás do ícone do balão (a tinta do próprio botão, quase
+   transparente) e o do assistente do escritório. Sem color-mix, um cinza
+   translúcido — antes o disco simplesmente sumia. */
+.disco-da-tinta {
+  background: rgba(127, 127, 127, 0.16);
+}
+.disco-do-escritorio {
+  background: rgba(127, 127, 127, 0.12);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .disco-da-tinta {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+  .disco-do-escritorio {
+    background: color-mix(in srgb, var(--firm-accent) 10%, transparent);
+  }
+}
+
+/* aspect-ratio (Safari/iOS < 15): a caixa do vídeo ficava com altura zero e o
+   vídeo do perfil sumia. A reserva é o preenchimento, proporcional à largura do
+   PAI — por isso o vídeo em pé (máx. 300px de largura) usa min(). */
+@supports not (aspect-ratio: 1) {
+  .proporcao-video {
+    height: 0;
+    padding-top: 56.25%;
+  }
+  .proporcao-video-em-pe {
+    height: 0;
+    padding-top: min(177.78%, 533px);
+  }
+}
+
+/* A seta nativa do <summary> no Safari antigo: `list-none` não a esconde, e o
+   FAQ mostrava duas setas. */
+summary.list-none::-webkit-details-marker {
+  display: none;
 }

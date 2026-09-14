@@ -59,7 +59,7 @@ export function VideoPlayer({
   return (
     <figure className="m-0">
       <div
-        className="relative w-full overflow-hidden rounded-xl2"
+        className={`relative w-full overflow-hidden rounded-xl2 ${emPe ? 'proporcao-video-em-pe' : 'proporcao-video'}`}
         style={{
           aspectRatio: emPe ? '9 / 16' : '16 / 9',
           background: 'var(--c-accent-soft)',

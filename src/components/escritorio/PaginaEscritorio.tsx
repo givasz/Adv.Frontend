@@ -124,8 +124,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
                 className="flex w-full items-center gap-3 rounded-xl2 border border-ink/10 bg-paper-soft p-3.5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
               >
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: 'color-mix(in srgb, var(--firm-accent) 10%, transparent)' }}
+                  className="disco-do-escritorio flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                   aria-hidden
                 >
                   <SparkIcon width={17} height={17} style={{ color: 'var(--firm-accent)' }} />

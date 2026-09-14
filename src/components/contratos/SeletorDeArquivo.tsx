@@ -39,7 +39,7 @@ export function SeletorDeArquivo({
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={soltar}
-      className={`flex min-h-[132px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed px-5 py-6 text-center transition-[border-color,background-color] duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-burgundy/30 ${
+      className={`flex min-h-[132px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed px-5 py-6 text-center transition-[border-color,background-color] duration-200 focus-within:ring-2 focus-within:ring-burgundy/30 ${
         arrastando ? 'border-burgundy/60 bg-burgundy/[0.04]' : 'border-ink/15 bg-paper-soft hover:border-brass/60'
       } ${ocupado ? 'pointer-events-none opacity-60' : ''}`}
     >

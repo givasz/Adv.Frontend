@@ -401,7 +401,7 @@ export default function ModeloProprioPage() {
                 {QUEM_ASSINA_OPCOES.map((o) => (
                   <label
                     key={o.valor}
-                    className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border px-3.5 py-2 text-[14px] transition-[border-color,background-color] duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-burgundy/30 ${
+                    className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-lg border px-3.5 py-2 text-[14px] transition-[border-color,background-color] duration-200 focus-within:ring-2 focus-within:ring-burgundy/30 ${
                       estado.quemAssina === o.valor
                         ? 'border-burgundy bg-burgundy/[0.06] font-semibold text-ink'
                         : 'border-ink/15 bg-paper-soft font-medium text-ink-soft hover:border-ink/35'

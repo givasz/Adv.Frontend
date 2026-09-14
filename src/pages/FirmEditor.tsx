@@ -170,7 +170,9 @@ export default function FirmEditor() {
   const price = gestao.monthlyPrice ?? firmMonthlyPrice(seatsPurchased)
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-paper-deep">
+    // overflow-x-CLIP onde há suporte: `hidden` cria contêiner de rolagem, e o
+    // cabeçalho sticky logo abaixo nunca grudava — o mesmo caso da home.
+    <div className="min-h-dvh overflow-x-hidden bg-paper-deep supports-[overflow:clip]:overflow-x-clip">
       <h1 className="sr-only">Editor do escritório — advoc.me</h1>
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">

@@ -226,10 +226,10 @@ export function BalaoDeConversa({
     <>
       {/* O disco do ícone é a PRÓPRIA tinta do balão, quase transparente —
           `currentColor` — e não um branco translúcido: sobre um acento claro
-          (a pedra do Marinho) o branco simplesmente não aparecia. */}
+          (a pedra do Marinho) o branco simplesmente não aparecia. A cor mora em
+          .disco-da-tinta (index.css), com reserva para navegador sem color-mix. */}
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-        style={{ background: 'color-mix(in srgb, currentColor 14%, transparent)' }}
+        className="disco-da-tinta flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
         aria-hidden
       >
         {ehWhatsapp ? <WhatsappIcon width={18} height={18} /> : <SparkIcon width={18} height={18} />}

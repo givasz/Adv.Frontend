@@ -66,7 +66,7 @@ export function CampoDoModelo({
             return (
               <label
                 key={o.valor}
-                className={`relative inline-flex min-h-[44px] cursor-pointer select-none flex-col justify-center rounded-lg border px-3.5 py-2 text-[14px] transition-[border-color,background-color,box-shadow] duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-burgundy/30 ${
+                className={`relative inline-flex min-h-[44px] cursor-pointer select-none flex-col justify-center rounded-lg border px-3.5 py-2 text-[14px] transition-[border-color,background-color,box-shadow] duration-200 focus-within:ring-2 focus-within:ring-burgundy/30 ${
                   marcado
                     ? 'border-burgundy bg-burgundy/[0.06] text-ink shadow-[inset_0_0_0_1px_theme(colors.burgundy.DEFAULT)]'
                     : `border-ink/15 bg-paper-soft text-ink-soft hover:border-ink/35 ${borda}`
