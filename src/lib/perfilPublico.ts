@@ -35,8 +35,14 @@ export async function getPublicProfile(slug: string): Promise<Profile | null> {
   // O que não tem cara de slug não existe — decidido aqui, sem gastar rede.
   if (!SLUG_RE.test(slug)) return null
   if (!TEM_BACKEND || isExampleSlug(slug)) {
-    const { api } = await import('./api')
-    return api.getProfile(slug)
+    // Pedaço que não carregou (rede, deploy) não pode deixar o carregador girando
+    // para sempre: sem resposta é "não encontrado", como na rede fora abaixo.
+    try {
+      const { api } = await import('./api')
+      return await api.getProfile(slug)
+    } catch {
+      return null
+    }
   }
   try {
     const res = await fetch(`${API_BASE}/api/profiles/${encodeURIComponent(slug)}`)

@@ -238,7 +238,11 @@ async function entregarArquivo(blob: Blob, nome: string): Promise<void> {
     canShare?: (d: { files: File[] }) => boolean
     share?: (d: { files: File[]; title?: string }) => Promise<void>
   }
-  const podeCompartilhar = typeof File !== 'undefined' && !!nav.canShare && !!nav.share
+  // Só no toque: no Windows, o Chrome e o Edge também sabem compartilhar arquivo,
+  // e abriam a folha do sistema em vez de baixar o PNG. Mesma regra de
+  // lib/contratos/entrega.ts.
+  const toque = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  const podeCompartilhar = toque && typeof File !== 'undefined' && !!nav.canShare && !!nav.share
   if (podeCompartilhar) {
     try {
       const file = new File([blob], nome, { type: blob.type })
@@ -246,8 +250,10 @@ async function entregarArquivo(blob: Blob, nome: string): Promise<void> {
         await nav.share!({ files: [file], title: nome })
         return
       }
-    } catch {
-      // cancelou ou o navegador recusou — segue para o download normal
+    } catch (e) {
+      // Cancelar a folha é a pessoa desistindo — baixar mesmo assim ignoraria o
+      // gesto. Qualquer outra recusa segue para o download normal.
+      if ((e as { name?: string } | null)?.name === 'AbortError') return
     }
   }
   downloadFile(blob, nome)

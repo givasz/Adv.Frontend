@@ -166,12 +166,21 @@ function codificaWebp(canvas: CanvasCodificavel): boolean {
   }
 }
 
+// HEIC é o formato de foto do iPhone. O Safari lê; o Chrome, o Firefox e o Edge
+// no computador — e o Chrome do Android — não. Sem isto a pessoa lia "não foi
+// possível ler essa imagem" sem saber por quê nem o que fazer.
+const MENSAGEM_HEIC =
+  'Essa foto está em HEIC, o formato do iPhone, que este navegador não abre. Envie pelo próprio iPhone ou salve a foto como JPG.'
+const ehHeic = (file: File) => /\.hei[cf]$/i.test(file.name) || /image\/hei[cf]/i.test(file.type)
+
 /**
  * Lê o arquivo escolhido como imagem decodificada, já com a orientação EXIF
  * aplicada (foto de celular deitada). Confere tipo e tamanho ANTES de decodificar.
  */
 export async function carregarImagem(file: File): Promise<FonteDeImagem> {
-  if (!file.type.startsWith('image/')) throw new Error('Selecione um arquivo de imagem (JPG ou PNG).')
+  if (!file.type.startsWith('image/')) {
+    throw new Error(ehHeic(file) ? MENSAGEM_HEIC : 'Selecione um arquivo de imagem (JPG ou PNG).')
+  }
   if (file.size > MAX_UPLOAD_BYTES) throw new Error('Imagem muito grande — escolha uma até 12 MB.')
 
   // Caminho moderno: respeita a orientação EXIF (fotos de celular deitadas).
@@ -191,7 +200,7 @@ export async function carregarImagem(file: File): Promise<FonteDeImagem> {
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('Não foi possível ler essa imagem. Tente outra.'))
+      reject(new Error(ehHeic(file) ? MENSAGEM_HEIC : 'Não foi possível ler essa imagem. Tente outra.'))
     }
     img.src = url
   })

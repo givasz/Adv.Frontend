@@ -167,6 +167,18 @@ async function firmFetch(path: string, init: RequestInit = {}): Promise<Firm> {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * O navegador só aceita `keepalive` com corpo de até 64 KiB (somando os envios em
+ * voo) — acima disso o fetch lança TypeError na hora, sem nem tentar. O perfil de
+ * quem tem foto passa disso com folga (a foto vai como data URI), e o "salvar ao
+ * sair" falhava justamente para essas pessoas. Sem keepalive o envio ainda sai
+ * quando o app só foi para o fundo; se a página morrer, vale a cópia de reserva
+ * de lib/salvarAntesDeSair.
+ */
+function cabeKeepalive(corpo: string): boolean {
+  return new TextEncoder().encode(corpo).length < 60_000
+}
+
 // Rascunho novo nasce VAZIO — o perfil só mostra o que o advogado preencher.
 // Nunca clonar o perfil-modelo (Marina): isso vazava áreas/experiência/contato dela.
 function emptyDraft(): Profile {
@@ -371,11 +383,12 @@ export const api = {
       if (!(await contaAtivaConferida())) throw sessaoCaiu(firmErrorMessage(401, ''))
       // Erro do servidor (401 sem sessão, 400 de conformidade) não pode virar
       // "Tudo salvo": o corpo de erro não é um Firm.
+      const corpo = JSON.stringify(firm)
       return firmFetch('/api/firms/me', {
         method: 'PUT',
-        keepalive: !!opts.keepalive,
+        keepalive: !!opts.keepalive && cabeKeepalive(corpo),
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(firm),
+        body: corpo,
       })
     }
     await wait(200)
@@ -565,13 +578,14 @@ export const api = {
       throw sessaoCaiu('Entre na sua conta para salvar o perfil.')
     }
     if (contaAtiva()) {
+      const corpo = JSON.stringify({ ...profile, truthDeclared })
       const res = await escrever('/api/profiles/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...profile, truthDeclared }),
+        body: corpo,
         // A página pode estar indo embora (ver lib/salvarAntesDeSair): keepalive
-        // deixa o envio completar mesmo depois que ela morreu.
-        keepalive: !!opts.keepalive,
+        // deixa o envio completar mesmo depois que ela morreu — até 64 KiB.
+        keepalive: !!opts.keepalive && cabeKeepalive(corpo),
       })
       // Sem esta checagem, uma recusa do servidor (texto fora das normas, limite de
       // caracteres, sessão expirada) virava um objeto de erro tratado como perfil
