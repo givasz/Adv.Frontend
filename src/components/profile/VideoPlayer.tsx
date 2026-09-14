@@ -38,15 +38,12 @@ export function VideoPlayer({
   inert = false,
   /** 'auto' deduz do link (Short = em pé) — ver orientacaoDoVideo */
   orientation,
-  /** legenda à esquerda (temas com cabeçalho editorial); centralizada nos demais */
-  alignLeft = false,
 }: {
   video: ParsedVideo
   caption?: string
   name: string
   inert?: boolean
   orientation?: VideoOrientation
-  alignLeft?: boolean
 }) {
   const emPe = orientacaoDoVideo(video, orientation) === 'vertical'
   const [playing, setPlaying] = useState(false)
@@ -167,8 +164,11 @@ export function VideoPlayer({
           </button>
         )}
       </div>
+      {/* Legenda sempre centralizada, mesmo nos temas com cabeçalho à esquerda:
+          é uma linha curta sob um vídeo de largura cheia, e à esquerda ficava
+          solta debaixo de um título centralizado (Nanquim, 13/09/2026). */}
       {caption?.trim() && (
-        <figcaption className={`t-muted mt-2 text-[13px] leading-relaxed ${alignLeft ? 'text-left' : 'text-center'}`}>
+        <figcaption className="t-muted mt-2 text-center text-[13px] leading-relaxed">
           {caption}
         </figcaption>
       )}

@@ -531,7 +531,6 @@ export function ProfileView({
               <VideoPlayer
                 video={video}
                 caption={profile.videoCaption}
-                alignLeft={left}
                 name={profile.name}
                 orientation={profile.videoOrientation}
                 inert={preview && !chatEnabled}
