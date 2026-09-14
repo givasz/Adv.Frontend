@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildIcs,
+  ehSafari,
   emUmBloco,
   linkGoogleAgenda,
   linkOutlook,
@@ -143,7 +144,10 @@ describe('linkOutlook', () => {
   it('abre a tela de novo evento com o instante em UTC, calculado no relógio do aparelho', () => {
     const url = new URL(linkOutlook(compromisso({ titulo: 'Reunião — João', local: 'Rua X, 100' })))
     expect(url.hostname).toBe('outlook.live.com')
-    expect(url.pathname).toBe('/calendar/0/action/compose')
+    // deeplink: o /calendar/0/action/compose abre em branco no celular.
+    expect(url.pathname).toBe('/calendar/deeplink/compose')
+    expect(url.searchParams.get('path')).toBe('/calendar/action/compose')
+    expect(url.searchParams.get('rru')).toBe('addevent')
     expect(url.searchParams.get('subject')).toBe('Reunião — João')
     expect(url.searchParams.get('location')).toBe('Rua X, 100')
     expect(url.searchParams.get('startdt')).toBe(
@@ -162,6 +166,30 @@ describe('linkOutlook', () => {
 
   it('a conta do trabalho mora no endereço do Microsoft 365', () => {
     expect(new URL(linkOutlook(compromisso(), 'trabalho')).hostname).toBe('outlook.office.com')
+  })
+})
+
+describe('ehSafari', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+  const com = (userAgent: string) => {
+    vi.stubGlobal('navigator', { userAgent })
+    return ehSafari()
+  }
+
+  it('só o Safari de verdade recebe o Calendário da Apple no iPhone', () => {
+    expect(
+      com('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'),
+    ).toBe(true)
+    // Navegador do Instagram: sem "Version/… Safari/" na identificação.
+    expect(
+      com('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0.0.0.0'),
+    ).toBe(false)
+    // Chrome do iPhone.
+    expect(
+      com('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0.6478.54 Mobile/15E148 Safari/604.1'),
+    ).toBe(false)
   })
 })
 

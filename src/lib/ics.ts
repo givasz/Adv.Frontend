@@ -214,11 +214,26 @@ export function ehApple(): boolean {
 }
 
 /**
+ * Safari de verdade — e não o Chrome, o Firefox ou o Edge do iPhone, nem o
+ * navegador embutido do Instagram ou do WhatsApp.
+ *
+ * No iPhone o Calendário da Apple só recebe o compromisso pelo Safari (ver
+ * abrirNoCalendarioDaApple): nos outros o toque não fazia nada, e o assistente
+ * ainda dizia que tinha aberto. O navegador embutido se denuncia por não trazer
+ * `Version/… Safari/` na identificação; os outros, pelo próprio nome.
+ */
+export function ehSafari(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  return /Version\/[\d.]+.*Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua)
+}
+
+/**
  * O Calendário da Apple não aceita evento por link, só por arquivo. No iPhone,
  * baixar o arquivo é justamente o que não queremos (vai para "Arquivos" e para
  * ali); ABRIR o mesmo conteúdo como endereço `data:` numa aba faz o Safari
  * mostrar a tela do evento com "Adicionar". No Mac, o download abre o
- * Calendário direto.
+ * Calendário direto. No iPhone, só é oferecido no Safari (ver ehSafari).
  */
 export function abrirNoCalendarioDaApple(compromissos: Compromisso[], dono: string) {
   if (!ehIos()) {
@@ -270,6 +285,12 @@ export type ContaMicrosoft = 'pessoal' | 'trabalho'
  * O Outlook não tem parâmetro de fuso: a hora vai como INSTANTE em UTC (com `Z`),
  * calculada no relógio do aparelho — o mesmo em que o advogado disse "14h".
  * E o espaço vai como `%20`, não `+`: o Outlook mostra o `+` literal no título.
+ *
+ * O endereço é o `deeplink/compose` (com `path=/calendar/action/compose`), e não
+ * `/calendar/0/action/compose`: este abre em branco ou só a agenda no celular,
+ * sem o evento (relatado no Microsoft Q&A). A Microsoft não documenta nenhum dos
+ * dois oficialmente — o deeplink é o formato que os geradores de "adicionar à
+ * agenda" usam.
  */
 export function linkOutlook(c: Compromisso, conta: ContaMicrosoft = 'pessoal'): string {
   const host = conta === 'trabalho' ? 'outlook.office.com' : 'outlook.live.com'
@@ -284,5 +305,5 @@ export function linkOutlook(c: Compromisso, conta: ContaMicrosoft = 'pessoal'): 
   if (c.descricao) params.set('body', c.descricao)
   if (c.local) params.set('location', c.local)
   // URLSearchParams já codificou todo `+` do texto como %2B; o `+` que sobra é espaço.
-  return `https://${host}/calendar/0/action/compose?${params.toString().replace(/\+/g, '%20')}`
+  return `https://${host}/calendar/deeplink/compose?path=/calendar/action/compose&${params.toString().replace(/\+/g, '%20')}`
 }

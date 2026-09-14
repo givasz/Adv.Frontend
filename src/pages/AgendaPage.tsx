@@ -10,6 +10,7 @@ import {
   baixarIcs,
   ehApple,
   ehIos,
+  ehSafari,
   emUmBloco,
   linkGoogleAgenda,
   linkOutlook,
@@ -223,7 +224,9 @@ function Conversa({
   // O compromisso montado (nome + horário), à espera de ele escolher a agenda — e
   // guardado depois, para "Não abriu? Escolher outra agenda" não pedir tudo de novo.
   const [agendado, setAgendado] = useState<Compromisso | null>(null)
-  const naApple = useMemo(ehApple, [])
+  // No iPhone, só o Safari entrega o compromisso ao Calendário da Apple (ver
+  // ehSafari); no Mac qualquer navegador baixa o arquivo, que o Calendário abre.
+  const naApple = useMemo(() => (ehIos() ? ehSafari() : ehApple()), [])
   const [gravando, setGravando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   // Sessão vencida não se resolve tentando de novo: o aviso troca o botão pelo login.
@@ -506,6 +509,9 @@ function Conversa({
       [
         'Qual agenda você usa?',
         'Eu abro o compromisso nela já com dia, hora e nome — lá é só confirmar.',
+        ...(ehIos() && !ehSafari()
+          ? ['O Calendário do iPhone só recebe o compromisso pelo Safari. Por aqui, use o Google ou o Outlook.']
+          : []),
       ],
       'qual',
     )
@@ -525,14 +531,18 @@ function Conversa({
     // Apple e "outra" saem daqui, ainda dentro do gesto do toque.
     if (destino === 'apple') abrirNoCalendarioDaApple([agendado], profile.slug)
     if (destino === 'arquivo') baixarIcs([agendado], profile.slug)
+    // "Deve abrir", e não "abri": o assistente não tem como saber se a agenda
+    // abriu — o navegador embutido de app engole aba nova e download em silêncio.
+    // Para esse caso há o "Não abriu?" logo abaixo.
     const comoConfirmar: Record<Destino, string> = {
-      google: 'Abri o Google Agenda com tudo preenchido. Confira e toque em Salvar.',
-      outlook: 'Abri o Outlook com tudo preenchido. Confira e toque em Salvar.',
-      outlook365: 'Abri o Outlook com tudo preenchido. Confira e toque em Salvar.',
+      google: 'O Google Agenda deve abrir com tudo preenchido. Confira e toque em Salvar.',
+      outlook: 'O Outlook deve abrir com tudo preenchido. Confira e toque em Salvar.',
+      outlook365: 'O Outlook deve abrir com tudo preenchido. Confira e toque em Salvar.',
       apple: ehIos()
-        ? 'Abri o compromisso no calendário. Toque em Adicionar.'
+        ? 'O Calendário deve abrir o compromisso. Toque em Adicionar.'
         : 'Baixei o compromisso — abra o arquivo e o Calendário adiciona.',
-      arquivo: 'Baixei o arquivo do compromisso. Abra-o e o telefone pergunta em qual agenda salvar.',
+      arquivo:
+        'Baixei o arquivo do compromisso (.ics). Abra-o e escolha a agenda — se a sua não aceitar arquivo, toque em "Não abriu?".',
     }
     void say(
       [
