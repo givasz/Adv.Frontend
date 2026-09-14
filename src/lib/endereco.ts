@@ -20,6 +20,8 @@
 //    terceiro (e cookie de terceiro) na página de todo visitante, para mostrar
 //    um mapa que quase ninguém olha.
 
+import { semMeiaLetra } from './textLimit'
+
 /** Endereço do escritório. Todo campo é opcional — o perfil mostra o que houver. */
 export interface Endereco {
   /** CEP com 8 dígitos, guardado só com dígitos ("01310100"). */
@@ -141,7 +143,7 @@ export function linkDoMapa(
 ): string | undefined {
   if (!e?.rua?.trim()) return undefined
   const busca = [enderecoEmLinha(e, cidade, uf), 'Brasil'].filter(Boolean).join(', ')
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(busca)}`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(semMeiaLetra(busca))}`
 }
 
 /**

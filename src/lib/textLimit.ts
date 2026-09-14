@@ -11,11 +11,47 @@
 //   3) sem frase completa, termina na última palavra inteira.
 // ⚠️ MANTER EM SINCRONIA com fitToLimit em backend/src/ai/ai.service.ts.
 
+/**
+ * Corta em `max` unidades sem partir um emoji ao meio.
+ *
+ * `String.slice` conta unidades UTF-16, e um emoji ocupa duas. Cortar entre elas
+ * deixa meia letra solta — e meia letra solta faz o `encodeURIComponent` lançar
+ * URIError: a conversa do assistente caía inteira ao montar o link do WhatsApp.
+ * No iPhone isso acontece de verdade, porque o `maxlength` do WebKit conta o que
+ * a pessoa vê (um emoji = 1) e o texto chega aqui maior do que o limite.
+ */
+export function cortarSemPartir(texto: string, max: number): string {
+  if (texto.length <= max) return texto
+  const corte = texto.slice(0, Math.max(max, 0))
+  const ultima = corte.charCodeAt(corte.length - 1)
+  return ultima >= 0xd800 && ultima <= 0xdbff ? corte.slice(0, -1) : corte
+}
+
+/**
+ * Tira a meia letra solta (metade de emoji sem o par) de um texto que alguém
+ * cortou no meio em outro lugar. É o que vai antes de todo `encodeURIComponent`
+ * de texto digitado — ele lança URIError com ela, e derruba a tela junto.
+ */
+export function semMeiaLetra(texto: string): string {
+  let saida = ''
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto.charCodeAt(i)
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const par = texto.charCodeAt(i + 1)
+      if (par >= 0xdc00 && par <= 0xdfff) saida += texto[i]! + texto[++i]!
+      continue
+    }
+    if (c >= 0xdc00 && c <= 0xdfff) continue
+    saida += texto[i]!
+  }
+  return saida
+}
+
 export function fitToLimit(text: string, limit: number): string {
   const clean = text.trim()
   if (!limit || clean.length <= limit) return clean
 
-  const cut = clean.slice(0, limit)
+  const cut = cortarSemPartir(clean, limit)
   // Última pontuação de fim de frase dentro do limite.
   const lastSentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '))
   const endsClean = /[.!?]$/.test(cut)

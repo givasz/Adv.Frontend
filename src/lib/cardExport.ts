@@ -22,6 +22,7 @@ import {
 import type { Profile } from './types'
 import { downloadFile } from './vcard'
 import { slugify } from './brFormat'
+import { semMeiaLetra } from './textLimit'
 
 /** As mesmas fontes que o index.html carrega — a folha de impressão precisa delas. */
 const GOOGLE_FONTS_HREF =
@@ -163,7 +164,7 @@ function withPixelSize(svg: string, w: number, h: number): string {
   return svg.replace(/width="[^"]*"\s+height="[^"]*"/, `width="${w}" height="${h}"`)
 }
 
-const svgToUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+const svgToUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(semMeiaLetra(svg))}`
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

@@ -43,6 +43,7 @@
 // enquanto o WhatsApp Web carrega ao lado.
 
 import { comoAbrirFora } from './abrirFora'
+import { semMeiaLetra } from './textLimit'
 
 /** Teto do E.164 — nenhum número de telefone do mundo passa de 15 dígitos. */
 const MAX_DIGITOS = 15
@@ -92,7 +93,9 @@ export function whatsappHref(
 ): string | undefined {
   const wa = numeroWhatsapp(numero)
   if (!wa) return undefined
-  const texto = (mensagem ?? '').trim()
+  // Meia letra de emoji (texto cortado no meio) faz o encodeURIComponent lançar
+  // URIError e derrubar a tela que monta o link.
+  const texto = semMeiaLetra(mensagem ?? '').trim()
   return `https://wa.me/${wa}${texto ? `?text=${encodeURIComponent(texto)}` : ''}`
 }
 

@@ -24,6 +24,7 @@
 
 import type { Plan, Profile } from './types'
 import { canUseTriagem } from './plans'
+import { cortarSemPartir } from './textLimit'
 
 // ---- Espelho do servidor ----------------------------------------------------
 
@@ -165,7 +166,7 @@ export const TRIAGEM_RESPOSTA_LONGA_MAX = 400
 const ID_OK = /^[A-Za-z0-9_-]{1,40}$/
 
 const texto = (v: unknown, max: number): string =>
-  typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : ''
+  typeof v === 'string' ? cortarSemPartir(v.replace(/\s+/g, ' ').trim(), max) : ''
 
 /** Opções ESCRITAS pelo advogado, já limpas, sem repetição e com id estável. */
 function opcoesEscritas(raw: unknown): OpcaoDeTriagem[] {
@@ -490,7 +491,7 @@ export function triagemEmEdicao(raw: unknown): TriagemConfig {
       id: String(q.id ?? `t${questions.length + 1}`),
       kind,
       // Sem trim e sem juntar espaços: é o texto sendo digitado.
-      label: typeof q.label === 'string' ? q.label.slice(0, TRIAGEM_LABEL_MAX) : '',
+      label: typeof q.label === 'string' ? cortarSemPartir(q.label, TRIAGEM_LABEL_MAX) : '',
     }
     const opcoesBrutas: unknown[] = Array.isArray(q.options) ? q.options : []
     if (TIPOS_COM_OPCOES.includes(kind)) {
@@ -499,7 +500,7 @@ export function triagemEmEdicao(raw: unknown): TriagemConfig {
         const bruta = (typeof o === 'string' ? { texto: o } : (o ?? {})) as Partial<OpcaoDeTriagem>
         const opcao: OpcaoDeTriagem = {
           id: String(bruta.id ?? `o${j + 1}`),
-          texto: typeof bruta.texto === 'string' ? bruta.texto.slice(0, TRIAGEM_OPCAO_MAX) : '',
+          texto: typeof bruta.texto === 'string' ? cortarSemPartir(bruta.texto, TRIAGEM_OPCAO_MAX) : '',
         }
         if (bruta.encerra === true) opcao.encerra = true
         return opcao
@@ -598,12 +599,14 @@ export const AVISO_DE_SEGURANCA =
  * como qualquer outra frase — não existe instrução a ignorar (ver os testes).
  */
 export function limparResposta(bruto: string, max = TRIAGEM_RESPOSTA_MAX): string {
-  return String(bruto ?? '')
+  // O corte não parte emoji: meia letra solta derrubava a conversa ao montar o
+  // link do WhatsApp — e no iPhone o maxlength deixa passar do limite (ver textLimit).
+  const limpo = String(bruto ?? '')
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, max)
+  return cortarSemPartir(limpo, max)
 }
 
 /** Uma pergunta respondida, pronta para o resumo e para a mensagem. */

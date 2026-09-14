@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest'
 import { checkCompliance } from './oab'
 import { conferirPergunta } from './triagemDados'
 import { copiaDeDados } from './copiaDeDados'
+import { cortarSemPartir, semMeiaLetra } from './textLimit'
+import { limparResposta } from './triagem'
+import { whatsappHref } from './whatsapp'
 
 // Travas do que já quebrou em navegador de verdade — e que nenhum teste em Node
 // pegaria sozinho, porque o Node entende tudo isto.
@@ -78,5 +81,25 @@ describe('compatibilidade com navegadores', () => {
     copia.dias[0]!.horas.push('10:00')
     expect(copia).not.toBe(original)
     expect(original.dias[0]!.horas).toEqual(['09:00'])
+  })
+
+  // O maxlength do WebKit conta o que a pessoa vê (um emoji = 1): no iPhone a
+  // resposta chega maior que o limite e o corte caía no meio do emoji. Meia letra
+  // solta faz o encodeURIComponent lançar URIError — e a conversa inteira caía ao
+  // montar o link do WhatsApp.
+  it('corte de texto nunca deixa meia letra de emoji', () => {
+    expect(cortarSemPartir('Oi 😀', 4)).toBe('Oi ')
+    expect(cortarSemPartir('Oi 😀', 5)).toBe('Oi 😀')
+    const resposta = limparResposta(`${'a'.repeat(139)}😀`, 140)
+    expect(resposta).toBe('a'.repeat(139))
+    expect(() => encodeURIComponent(resposta)).not.toThrow()
+  })
+
+  it('o link do WhatsApp aguenta texto já partido no meio de um emoji', () => {
+    expect(semMeiaLetra('Oi \uD83D fim \uDE00')).toBe('Oi  fim ')
+    expect(semMeiaLetra('Oi 😀')).toBe('Oi 😀')
+    expect(whatsappHref('11987654321', 'Olá \uD83D')).toBe(
+      `https://wa.me/5511987654321?text=${encodeURIComponent('Olá')}`,
+    )
   })
 })

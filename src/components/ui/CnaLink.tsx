@@ -1,6 +1,7 @@
 import { ExternalLinkIcon } from './icons'
 import { HREF_DE_EXEMPLO } from '@/lib/exemplo'
 import { comoAbrirFora } from '@/lib/abrirFora'
+import { semMeiaLetra } from '@/lib/textLimit'
 
 // Consulta pública do Cadastro Nacional dos Advogados (CNA) — base OFICIAL e aberta
 // da OAB, onde QUALQUER pessoa confere uma inscrição.
@@ -9,7 +10,7 @@ const CNA_BASE = 'https://cna.oab.org.br/'
 /** Endereço da consulta do CNA já com o nome preenchido (busca pública por nome). */
 export function cnaSearchUrl(name?: string): string {
   const n = (name ?? '').trim()
-  return n ? `${CNA_BASE}?nome=${encodeURIComponent(n)}` : CNA_BASE
+  return n ? `${CNA_BASE}?nome=${encodeURIComponent(semMeiaLetra(n))}` : CNA_BASE
 }
 
 const TOOLTIP =

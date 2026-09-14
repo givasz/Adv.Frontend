@@ -29,6 +29,7 @@
 // hora — ver lib/assistant.ts, "Horários ocupados".
 
 import { downloadFile } from './vcard'
+import { semMeiaLetra } from './textLimit'
 
 export interface Compromisso {
   /** início em hora local, "AAAA-MM-DDTHH:MM" (a mesma chave dos ocupados) */
@@ -225,7 +226,7 @@ export function abrirNoCalendarioDaApple(compromissos: Compromisso[], dono: stri
     return
   }
   const a = document.createElement('a')
-  a.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(buildIcs(compromissos, dono))}`
+  a.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(semMeiaLetra(buildIcs(compromissos, dono)))}`
   a.target = '_blank'
   a.rel = 'noopener'
   a.style.display = 'none'
