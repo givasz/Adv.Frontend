@@ -5,6 +5,7 @@ import { api, SessaoExpirada } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { canUseContratos } from '@/lib/plans'
 import { hostLabel } from '@/lib/publicUrl'
+import { copiaDeDados } from '@/lib/copiaDeDados'
 import { modeloDoRascunho } from '@/lib/contratos/proprio'
 import {
   camposVisiveis,
@@ -374,7 +375,7 @@ export default function ContratoPage() {
       modeloVersao: rascunho.modeloVersao,
       proprio: rascunho.proprio,
       dados: { ...rascunho.dados },
-      documento: structuredClone(doc),
+      documento: copiaDeDados(doc),
       etapa: 'revisao',
       criadoEm: agora,
       atualizadoEm: agora,

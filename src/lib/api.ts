@@ -23,6 +23,7 @@ import { DEFAULT_BOOKING_CONFIG } from './booking'
 import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { getTheme, isThemeUnlocked } from './themes'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
+import { copiaDeDados } from './copiaDeDados'
 import type {
   GenerateRequest,
   GenerateResult,
@@ -184,7 +185,7 @@ function emptyDraft(): Profile {
     contact: {},
     schedulingMode: 'off',
     booking: { ...DEFAULT_BOOKING_CONFIG },
-    assistant: structuredClone(DEFAULT_ASSISTANT_CONFIG),
+    assistant: copiaDeDados(DEFAULT_ASSISTANT_CONFIG),
     plan: 'free',
     theme: 'papel',
     views: 0,
@@ -226,7 +227,7 @@ function loadDraft(): Profile {
       if (!draft.theme) draft.theme = 'papel'
       if (!draft.schedulingMode) draft.schedulingMode = draft.contact?.scheduling ? 'external' : 'off'
       if (!draft.booking) draft.booking = { ...DEFAULT_BOOKING_CONFIG }
-      if (!draft.assistant) draft.assistant = structuredClone(DEFAULT_ASSISTANT_CONFIG)
+      if (!draft.assistant) draft.assistant = copiaDeDados(DEFAULT_ASSISTANT_CONFIG)
       return stripSampleLeftovers(draft)
     }
   } catch {
