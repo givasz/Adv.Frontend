@@ -114,9 +114,28 @@ export interface PerguntaDeTriagem {
   condicao?: CondicaoDaPergunta
 }
 
+/**
+ * As perguntas que o assistente faz SOZINHO depois da triagem — e que o advogado
+ * pode tirar da conversa: o dia e o horário, a preferência presencial/online e o
+ * "como posso te chamar?". A abertura (com o aviso para não mandar documentos) e
+ * o envio não saem: sem a primeira a pessoa escreve sem saber o que não mandar,
+ * e sem o segundo nada chega a ninguém.
+ */
+export type EtapaFixa = 'horario' | 'formato' | 'nome'
+
+export const ETAPAS_FIXAS: EtapaFixa[] = ['horario', 'formato', 'nome']
+
 export interface TriagemConfig {
   enabled: boolean
   questions: PerguntaDeTriagem[]
+  /** etapas embutidas que o advogado tirou da conversa — ausente = nenhuma */
+  semEtapas?: EtapaFixa[]
+}
+
+/** As etapas tiradas, limpas e na ordem da conversa. */
+function etapasTiradas(raw: unknown): EtapaFixa[] {
+  const lista: unknown[] = Array.isArray(raw) ? raw : []
+  return ETAPAS_FIXAS.filter((e) => lista.includes(e))
 }
 
 // ---- Tetos ------------------------------------------------------------------
@@ -269,7 +288,10 @@ export function normalizarTriagem(raw: unknown): TriagemConfig {
   // impossível deixaria uma pergunta no ar que nunca é feita a ninguém.
   limparLigacoes(questions, false)
 
-  return { enabled: bruto.enabled === true, questions }
+  // Só aparece quando há alguma: a triagem que nunca tirou nada continua com
+  // exatamente a forma de antes.
+  const semEtapas = etapasTiradas(bruto.semEtapas)
+  return { enabled: bruto.enabled === true, questions, ...(semEtapas.length ? { semEtapas } : {}) }
 }
 
 /**
@@ -494,7 +516,8 @@ export function triagemEmEdicao(raw: unknown): TriagemConfig {
   }
 
   limparLigacoes(questions, true)
-  return { enabled: bruto.enabled === true, questions }
+  const semEtapas = etapasTiradas(bruto.semEtapas)
+  return { enabled: bruto.enabled === true, questions, ...(semEtapas.length ? { semEtapas } : {}) }
 }
 
 /**
@@ -517,6 +540,20 @@ export function perguntasDaConversa(
 ): PerguntaDeTriagem[] {
   if (!triagemAtiva(profile)) return []
   return perguntasUtilizaveis(resolveTriagem(profile).questions)
+}
+
+/**
+ * A conversa ainda faz esta pergunta embutida (dia e horário, formato, nome)?
+ *
+ * Só a triagem ATIVA tira alguma: sem ela o assistente é um agendador, e um
+ * agendador sem dia e horário não teria o que agendar.
+ */
+export function etapaNaConversa(
+  profile: Pick<Profile, 'triage' | 'plan'>,
+  etapa: EtapaFixa,
+): boolean {
+  if (!triagemAtiva(profile)) return true
+  return !(resolveTriagem(profile).semEtapas ?? []).includes(etapa)
 }
 
 /** Teto de caracteres da resposta, por tipo de pergunta. */
@@ -656,6 +693,10 @@ export type ItemDoMapa = PerguntaNoMapa | RamoNoMapa
 /** Um passo que o assistente faz sozinho, antes ou depois das perguntas. */
 export interface PassoFixo {
   texto: string
+  /** a pergunta embutida que este passo é — só as que o advogado pode tirar */
+  etapa?: EtapaFixa
+  /** o advogado tirou este passo da conversa */
+  removida?: boolean
 }
 
 export interface MapaDaTriagem {
@@ -678,6 +719,8 @@ export function mapaDaTriagem(
     comHorarios: boolean
     /** o perfil atende presencial E online */
     dosDoisJeitos: boolean
+    /** as perguntas embutidas que o advogado tirou da conversa */
+    semEtapas?: EtapaFixa[]
   },
 ): MapaDaTriagem {
   const numeroPorId = new Map(perguntas.map((q, i) => [q.id, i + 1]))
@@ -742,14 +785,22 @@ export function mapaDaTriagem(
     for (const p of pilha) p.membros.add(q.id)
   }
 
+  // Os passos que o assistente faz sozinho. Os que o advogado TIROU continuam na
+  // lista, marcados — é de onde a tela tira o "Devolver". Cada um só entra quando
+  // de fato seria feito (mesmas condições da conversa).
+  const tiradas = new Set(contexto.semEtapas ?? [])
+  const etapa = (e: EtapaFixa, texto: string): PassoFixo =>
+    tiradas.has(e) ? { texto, etapa: e, removida: true } : { texto, etapa: e }
   const depois: PassoFixo[] = []
-  if (contexto.comHorarios) depois.push({ texto: 'Escolher o dia e o horário na sua grade' })
+  if (contexto.comHorarios) depois.push(etapa('horario', 'Escolher o dia e o horário na sua grade'))
   if (contexto.dosDoisJeitos && !uteis.some((q) => q.kind === 'atendimento')) {
-    depois.push({ texto: 'Presencial ou online' })
+    depois.push(etapa('formato', 'Presencial ou online'))
   }
-  if (!uteis.some((q) => q.kind === 'contato')) depois.push({ texto: 'Como posso te chamar?' })
+  if (!uteis.some((q) => q.kind === 'contato')) depois.push(etapa('nome', 'Como posso te chamar?'))
+  // Sem a etapa de horário, o fecho é o de pedido de contato — como na conversa.
+  const pedeHorario = contexto.comHorarios && !tiradas.has('horario')
   depois.push({
-    texto: contexto.comHorarios
+    texto: pedeHorario
       ? 'Enviar tudo no seu WhatsApp — o horário só vale depois de você confirmar'
       : 'Enviar tudo no seu WhatsApp — você analisa e responde',
   })

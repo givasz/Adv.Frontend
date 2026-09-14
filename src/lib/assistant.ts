@@ -615,12 +615,14 @@ export function buildAssistantMessage(
     answers.detail?.trim() ? `Detalhe: ${answers.detail.trim()}` : null,
   ]
   const triagem = linhasDaTriagem(answers.triagem ?? [])
+  const campos = fields.filter((l): l is string => !!l)
   return [
     `Olá${first ? `, ${first}` : ''}! Falei com seu assistente virtual no advoc.me e gostaria de ${
       horario ? 'marcar uma conversa' : 'falar com você'
     }.`,
-    '',
-    ...fields.filter((l): l is string => !!l),
+    // Cada bloco traz a própria linha em branco: com a triagem sem nenhum campo
+    // (o advogado tirou nome, formato e horário), sobravam duas seguidas.
+    ...(campos.length ? ['', ...campos] : []),
     ...(triagem.length ? ['', ...triagem] : []),
     '',
     horario ? 'Fico no aguardo da sua confirmação.' : 'Fico no aguardo do seu retorno.',

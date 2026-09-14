@@ -819,6 +819,25 @@ async function acessibilidadeDaTriagem() {
       }
       await mapa.getByRole('button', { name: 'Pronto', exact: true }).click()
 
+      // TIRAR uma pergunta que o assistente faz sozinho, e DEVOLVER: o passo sai
+      // do fluxo, aparece riscado com "Devolver", e volta. A abertura, com o
+      // aviso de segurança, não pode ter botão de tirar.
+      const tirar = mapa.getByRole('button', { name: /^Tirar “/ }).first()
+      if (!(await tirar.count())) {
+        erros.push('o fluxograma não oferece tirar nenhuma pergunta que o assistente faz sozinho')
+      } else {
+        const nomeDoBotao = (await tirar.getAttribute('aria-label')) ?? ''
+        const passo = nomeDoBotao.replace(/^Tirar “/, '').replace(/” da conversa$/, '')
+        await tirar.click()
+        const devolver = mapa.getByRole('button', { name: `Devolver “${passo}” à conversa` })
+        await devolver.waitFor({ timeout: ESPERA })
+        await devolver.click()
+        await mapa.getByRole('button', { name: nomeDoBotao, exact: true }).waitFor({ timeout: ESPERA })
+      }
+      if (await mapa.getByRole('button', { name: /^Tirar “Abertura/ }).count()) {
+        erros.push('a abertura com o aviso de segurança pode ser tirada da conversa')
+      }
+
       // A MESMA ligação, vista da pergunta de destino: a pergunta 2 diz "Só quem
       // deu uma resposta", e não sobe acima da pergunta de que depende.
       await pagina.getByRole('button', { name: 'Editar', exact: true }).click()

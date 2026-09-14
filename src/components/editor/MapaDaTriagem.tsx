@@ -5,6 +5,7 @@ import {
   mapaDaTriagem,
   TRIAGEM_VAZIA,
   triagemEmEdicao,
+  type EtapaFixa,
   type ItemDoMapa,
   type OpcaoDeTriagem,
   type PerguntaDeTriagem,
@@ -84,9 +85,11 @@ export function MapaDaTriagem({
   )
   const dosDoisJeitos = profile.serviceMode.inPerson && profile.serviceMode.online
   const mapa = useMemo(
-    () => mapaDaTriagem(perguntas, { comHorarios, dosDoisJeitos }),
-    [perguntas, comHorarios, dosDoisJeitos],
+    () => mapaDaTriagem(perguntas, { comHorarios, dosDoisJeitos, semEtapas: config.semEtapas }),
+    [perguntas, comHorarios, dosDoisJeitos, config.semEtapas],
   )
+  const fixosAtivos = mapa.depois.filter((p) => !p.removida)
+  const fixosTirados = mapa.depois.filter((p) => p.removida)
   const [aberta, setAberta] = useState<Contexto['aberta']>(null)
 
   // Uma cor por resposta que abre alguma coisa, na ordem em que aparecem.
@@ -125,7 +128,16 @@ export function MapaDaTriagem({
 
   const gravar = (questions: PerguntaDeTriagem[]) => {
     if (preview) return
-    set({ triage: triagemEmEdicao({ enabled: config.enabled, questions }) })
+    set({ triage: triagemEmEdicao({ ...config, questions }) })
+  }
+
+  /** Tira da conversa (ou devolve) uma pergunta que o assistente faz sozinho. */
+  const alternarEtapa = (etapa: EtapaFixa) => {
+    if (preview) return
+    const tiradas = new Set(config.semEtapas ?? [])
+    if (tiradas.has(etapa)) tiradas.delete(etapa)
+    else tiradas.add(etapa)
+    set({ triage: triagemEmEdicao({ ...config, semEtapas: [...tiradas] }) })
   }
 
   const encerrar = (perguntaId: string, respostaId: string, ligar: boolean) =>
@@ -254,7 +266,8 @@ export function MapaDaTriagem({
       </h3>
       <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
         O caminho de quem visita, pergunta por pergunta.
-        {!preview && ' Toque numa resposta para escolher quais perguntas ela abre.'}
+        {!preview &&
+          ' Toque numa resposta para escolher quais perguntas ela abre, e no × para tirar uma pergunta que o assistente faz sozinho. A abertura, com o aviso para não enviar documentos, fica sempre.'}
       </p>
       {avisoDeEstado && (
         <p className="mt-2.5 rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2 text-[12px] leading-relaxed text-brass-deep">
@@ -273,13 +286,43 @@ export function MapaDaTriagem({
             conversa.
           </div>
         )}
-        {mapa.depois.map((p) => (
+        {fixosAtivos.map((p) => (
           <Fragment key={p.texto}>
             <Seta />
-            <PassoFixo texto={p.texto} />
+            <PassoFixo
+              texto={p.texto}
+              // As perguntas que o assistente faz sozinho saem com um toque. A
+              // abertura (aviso de segurança) e o envio não têm etapa: ficam.
+              onTirar={p.etapa && !preview ? () => alternarEtapa(p.etapa as EtapaFixa) : undefined}
+            />
           </Fragment>
         ))}
       </div>
+
+      {/* O que foi tirado não some da tela: fica aqui, riscado, com o caminho de
+          volta e o efeito dito em uma linha — tirar o nome ou o horário muda a
+          mensagem que chega ao advogado, e ele precisa saber como. */}
+      {fixosTirados.length > 0 && (
+        <div className="mt-3 rounded-lg border border-ink/10 bg-paper-soft/60 px-3 py-2.5">
+          <p className="text-[11.5px] font-semibold text-ink-soft">Tiradas da conversa</p>
+          <ul className="mt-1.5 space-y-1.5">
+            {fixosTirados.map((p) => (
+              <li key={p.texto} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <span className="min-w-0 text-[12px] text-ink-faint line-through decoration-ink/30">{p.texto}</span>
+                <button
+                  type="button"
+                  onClick={() => alternarEtapa(p.etapa as EtapaFixa)}
+                  aria-label={`Devolver “${p.texto}” à conversa`}
+                  className="shrink-0 rounded-full border border-burgundy/30 px-2.5 py-0.5 text-[12px] font-semibold text-burgundy transition-colors hover:bg-burgundy/[0.06]"
+                >
+                  Devolver
+                </button>
+                <span className="w-full text-[11px] leading-relaxed text-ink-faint">{EFEITO_DE_TIRAR[p.etapa as EtapaFixa]}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ul className="mt-4 space-y-1.5 border-t border-ink/10 pt-3 text-[11px] leading-relaxed text-ink-faint">
         <li className="flex items-start gap-2">
@@ -446,11 +489,35 @@ function Caixa({ no, ctx }: { no: PerguntaNoMapa; ctx: Contexto }) {
   )
 }
 
-/** Um passo que o assistente faz sozinho. */
-function PassoFixo({ texto }: { texto: string }) {
+/** O que muda na mensagem quando cada pergunta embutida sai da conversa. */
+const EFEITO_DE_TIRAR: Record<EtapaFixa, string> = {
+  horario: 'Sem dia e horário, o pedido chega como pedido de contato: você responde e combina o horário.',
+  formato: 'A mensagem chega sem “Formato”, a menos que uma pergunta sua peça a preferência.',
+  nome: 'A mensagem chega sem “Nome”, a menos que uma pergunta sua peça.',
+}
+
+/** Um passo que o assistente faz sozinho — com o × quando dá para tirar. */
+function PassoFixo({ texto, onTirar }: { texto: string; onTirar?: () => void }) {
   return (
-    <div className="rounded-full border border-dashed border-ink/20 px-3.5 py-1.5 text-center text-[11.5px] leading-snug text-ink-faint">
+    <div
+      className={`relative rounded-full border border-dashed border-ink/20 py-1.5 text-center text-[11.5px] leading-snug text-ink-faint ${
+        onTirar ? 'pl-9 pr-9' : 'px-3.5'
+      }`}
+    >
       {texto}
+      {onTirar && (
+        <button
+          type="button"
+          onClick={onTirar}
+          aria-label={`Tirar “${texto}” da conversa`}
+          title="Tirar da conversa"
+          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-burgundy/[0.08] hover:text-burgundy"
+        >
+          <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
+          </svg>
+        </button>
+      )}
     </div>
   )
 }

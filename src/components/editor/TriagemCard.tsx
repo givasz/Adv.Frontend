@@ -106,6 +106,8 @@ export function TriagemCard({
   const bothFormats = profile.serviceMode.inPerson && profile.serviceMode.online
   const temAtendimento = perguntas.some((q) => q.kind === 'atendimento')
   const temContato = perguntas.some((q) => q.kind === 'contato')
+  /** Perguntas que o assistente faz sozinho e que o advogado tirou no fluxograma. */
+  const tiradas = new Set(config.semEtapas ?? [])
   // Quem a conversa consegue alcançar. O defeito clássico de todo formulário com
   // caminhos é a pergunta que ninguém consegue receber: ela fica na tela,
   // parece no ar, e nunca é feita a ninguém.
@@ -113,7 +115,9 @@ export function TriagemCard({
 
   const patch = (questions: PerguntaDeTriagem[], enabled = config.enabled) => {
     if (preview) return
-    set({ triage: triagemEmEdicao({ enabled, questions }) })
+    // `...config`: as etapas tiradas da conversa (ver MapaDaTriagem) viajam junto
+    // — remontar só com `enabled` e `questions` as apagaria a cada tecla.
+    set({ triage: triagemEmEdicao({ ...config, enabled, questions }) })
   }
 
   const trocar = (id: string, p: Partial<PerguntaDeTriagem>) =>
@@ -177,7 +181,7 @@ export function TriagemCard({
         <p className="mt-1.5 pl-[50px] text-[11.5px] leading-relaxed text-ink-faint">
           {config.enabled
             ? utilizaveis.length
-              ? `O assistente pode fazer até ${utilizaveis.length} ${utilizaveis.length === 1 ? 'pergunta' : 'perguntas'} antes de oferecer horários.`
+              ? `O assistente pode fazer até ${utilizaveis.length} ${utilizaveis.length === 1 ? 'pergunta' : 'perguntas'} antes de ${tiradas.has('horario') ? 'encaminhar o pedido' : 'oferecer horários'}.`
               : 'Sem nenhuma pergunta pronta, o assistente segue só com o agendamento.'
             : 'Desligado, o assistente continua marcando horários como sempre fez.'}
         </p>
@@ -291,7 +295,9 @@ export function TriagemCard({
       </div>
 
       {/* Dois lembretes que só aparecem quando fazem falta de verdade. */}
-      {config.enabled && utilizaveis.length > 0 && bothFormats && !temAtendimento && (
+      {/* Quem tirou a etapa da conversa (no fluxograma) já decidiu não saber
+          aquilo — lembrar de novo seria discutir a decisão. */}
+      {config.enabled && utilizaveis.length > 0 && bothFormats && !temAtendimento && !tiradas.has('formato') && (
         <Lembrete
           texto="Você atende presencial e online, mas não pergunta a preferência. Sem isso, o assistente pergunta por conta depois dos horários."
           acao="Adicionar a pergunta"
@@ -299,7 +305,7 @@ export function TriagemCard({
           desabilitado={preview || perguntas.length >= TRIAGEM_MAX_PERGUNTAS}
         />
       )}
-      {config.enabled && utilizaveis.length > 0 && !temContato && (
+      {config.enabled && utilizaveis.length > 0 && !temContato && !tiradas.has('nome') && (
         <Lembrete
           texto="Nenhuma pergunta pede o nome de quem escreve. Sem isso, o assistente pergunta por conta no fim da conversa."
           acao="Adicionar a pergunta"

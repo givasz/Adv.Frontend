@@ -45,6 +45,7 @@ import {
   type PerguntaDeTriagem,
   type RespostaDeTriagem,
   type RespostasDoCaminho,
+  etapaNaConversa,
 } from '@/lib/triagem'
 
 // Assistente virtual: uma conversa GUIADA (não é IA, não interpreta texto livre) que
@@ -168,6 +169,14 @@ export function AssistantChat({
   // seguidas é o defeito mais visível que um assistente pode ter.
   const formatoNaTriagem = perguntas.some((q) => q.kind === 'atendimento')
   const nomeNaTriagem = perguntas.some((q) => q.kind === 'contato')
+  // As perguntas que o assistente faz SOZINHO — dia e horário, formato, nome — o
+  // advogado pode tirar da conversa (só com a triagem ativa; fora dela o roteiro
+  // de agendamento é o de sempre). A abertura com o aviso de segurança não sai.
+  const pedeHorario = etapaNaConversa(profile, 'horario')
+  const pedeFormatoEmbutido = etapaNaConversa(profile, 'formato')
+  const pedeNomeEmbutido = etapaNaConversa(profile, 'nome')
+  /** O pedido já foi fechado uma vez — trocar um horário que expirou não refaz o resto. */
+  const [pedidoFechado, setPedidoFechado] = useState(false)
   const [triagemIdx, setTriagemIdx] = useState(0)
   const [triagem, setTriagem] = useState<RespostaDeTriagem[]>([])
   /** Os ids das respostas tocadas, por pergunta — é o que decide quem recebe qual pergunta. */
@@ -204,6 +213,7 @@ export function AssistantChat({
     setTriagemIdx(0)
     setTriagem([])
     setCaminho({})
+    setPedidoFechado(false)
     setMarcadas([])
     setPedidosDeAnalise(0)
     setStep('boot')
@@ -316,7 +326,9 @@ export function AssistantChat({
     }
     // Acabaram as perguntas do advogado. Daqui para a frente é o agendamento de
     // sempre — e, sem grade, o pedido é de contato.
-    if (diasVisiveis.length) {
+    // Sem a etapa de dia e horário (tirada pelo advogado), também é pedido de
+    // contato: ele responde e combina o horário.
+    if (diasVisiveis.length && pedeHorario) {
       void say([...antes, 'Obrigado. Agora, qual dia fica melhor para você?'], 'day')
       return
     }
@@ -345,7 +357,7 @@ export function AssistantChat({
     setAnswers((a) => ({ ...a, time }))
     // Voltou só para trocar um horário que expirou: o resto do pedido já está
     // respondido, e perguntar tudo de novo seria castigo por esperar.
-    if (answers.name) {
+    if (answers.name || pedidoFechado) {
       void say(
         [
           `Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`,
@@ -357,12 +369,14 @@ export function AssistantChat({
     }
     // Com a preferência de atendimento já perguntada DENTRO da triagem, repetir
     // a pergunta aqui seria o assistente não tendo escutado a própria conversa.
-    if (bothFormats && !formatoNaTriagem) {
+    if (bothFormats && !formatoNaTriagem && pedeFormatoEmbutido) {
       void say(['Anotado. A conversa seria presencial ou online?'], 'format')
       return
     }
-    const escolhido = answers.format ?? soloFormat
-    setAnswers((a) => ({ ...a, time, format: a.format ?? soloFormat }))
+    // Quem atende dos dois jeitos e tirou a pergunta de formato fica sem formato
+    // na mensagem — adivinhar um seria a mensagem dizendo o que ninguém escolheu.
+    const escolhido = answers.format ?? (bothFormats ? undefined : soloFormat)
+    setAnswers((a) => ({ ...a, time, format: a.format ?? (bothFormats ? undefined : soloFormat) }))
     // Perfil que só atende presencial nunca chega à pergunta de formato — mas o
     // endereço faz a mesma falta. Ele entra aqui, no mesmo ponto do roteiro.
     // (Na triagem o endereço já foi dito ao responder a pergunta de atendimento.)
@@ -399,10 +413,18 @@ export function AssistantChat({
     void say([...abre, 'Sobre qual assunto seria a conversa?'], 'subject')
   }
 
-  /** O nome fecha a conversa — a menos que a triagem já o tenha perguntado. */
+  /**
+   * O nome fecha a conversa — a menos que a triagem já o tenha perguntado, ou
+   * que o advogado tenha tirado a pergunta. Sem ela, é aqui que o horário
+   * escolhido é reconferido (o que `sendName` faria).
+   */
   function pedirNomeOuFechar(abre: string[], comHorario: boolean) {
-    if (!nomeNaTriagem) {
+    if (!nomeNaTriagem && pedeNomeEmbutido) {
       void say([...abre, 'Por último: como posso te chamar?'], 'name')
+      return
+    }
+    if (answers.time && !horarioAindaVale(answers)) {
+      horarioSaiu(abre)
       return
     }
     encerrar(abre, comHorario)
@@ -415,6 +437,7 @@ export function AssistantChat({
    * que ninguém marcou seria a conversa mentindo no último balão.
    */
   function encerrar(abre: string[], comHorario: boolean) {
+    setPedidoFechado(true)
     void say(
       comHorario
         ? [
@@ -533,9 +556,9 @@ export function AssistantChat({
         step,
         respondidas: triagemIdx,
         perguntas: perguntas.length,
-        comDias: diasVisiveis.length > 0,
-        pedeFormato: bothFormats && !formatoNaTriagem,
-        pedeNome: !nomeNaTriagem,
+        comDias: diasVisiveis.length > 0 && pedeHorario,
+        pedeFormato: bothFormats && !formatoNaTriagem && pedeFormatoEmbutido,
+        pedeNome: !nomeNaTriagem && pedeNomeEmbutido,
         answers,
       })
     : step === 'boot'

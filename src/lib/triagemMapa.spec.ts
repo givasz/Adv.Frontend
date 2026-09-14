@@ -83,6 +83,35 @@ describe('o começo e o fim do fluxograma', () => {
   })
 })
 
+describe('as perguntas que o assistente faz sozinho, tiradas pelo advogado', () => {
+  const CHEIO = { comHorarios: true, dosDoisJeitos: true }
+
+  it('cada uma diz que etapa é; a abertura e o envio não são etapa nenhuma', () => {
+    const m = mapaDaTriagem(MINHAS, CHEIO)
+    expect(m.depois.map((p) => p.etapa)).toEqual(['horario', 'formato', 'nome', undefined])
+    expect(m.inicio).not.toHaveProperty('etapa')
+  })
+
+  it('a tirada continua na lista, marcada — é de lá que sai o "Devolver"', () => {
+    const m = mapaDaTriagem(MINHAS, { ...CHEIO, semEtapas: ['formato', 'nome'] })
+    expect(m.depois.filter((p) => p.removida).map((p) => p.texto)).toEqual([
+      'Presencial ou online',
+      'Como posso te chamar?',
+    ])
+    expect(m.depois.filter((p) => !p.removida).map((p) => p.etapa)).toEqual(['horario', undefined])
+  })
+
+  it('sem dia e horário, o fecho é o de pedido de contato', () => {
+    const m = mapaDaTriagem(MINHAS, { ...CHEIO, semEtapas: ['horario'] })
+    expect(m.depois[m.depois.length - 1].texto).toMatch(/analisa e responde/i)
+  })
+
+  it('tirar uma etapa que nem seria feita não inventa passo', () => {
+    const m = mapaDaTriagem(MINHAS, { comHorarios: false, dosDoisJeitos: false, semEtapas: ['horario', 'formato'] })
+    expect(m.depois.map((p) => p.etapa)).toEqual(['nome', undefined])
+  })
+})
+
 describe('as perguntas no fluxograma', () => {
   it('numa triagem em fila, nenhum ramo', () => {
     expect(desenho(mapaDaTriagem(MINHAS, CTX).itens)).toBe('1 2')
