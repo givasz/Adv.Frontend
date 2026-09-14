@@ -138,7 +138,8 @@ describe('regras — nenhuma vedação desligada pelo \\b ASCII', () => {
       expect(
         ramosQuebrados(rule.test.source),
         `a regra "${rule.id}" tem ramo acentuado ancorado em \\b — ele nunca vai casar. ` +
-          `Troque o \\b por (?<![\\p{L}]) / (?![\\p{L}]) e ligue a flag u.`,
+          `Troque o \\b por (?:^|[^\\p{L}]) / (?![\\p{L}]) e ligue a flag u ` +
+          `(lookbehind não: o Safari/iOS só o entende a partir do 16.4).`,
       ).toEqual([])
     },
   )

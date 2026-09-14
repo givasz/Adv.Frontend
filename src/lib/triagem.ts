@@ -600,7 +600,7 @@ export const AVISO_DE_SEGURANCA =
 export function limparResposta(bruto: string, max = TRIAGEM_RESPOSTA_MAX): string {
   return String(bruto ?? '')
     // eslint-disable-next-line no-control-regex
-    .replace(/[ -​-‏‪-‮⁦-⁩]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max)
@@ -903,20 +903,24 @@ export function podeTrocarComAProxima(perguntas: PerguntaDeTriagem[], i: number)
 // A detecção é de PEDIDO DE ANÁLISE, não de assunto jurídico: "fui demitido sem
 // justa causa" é fato e passa reto; "fui demitido, posso processar?" dispara.
 
+// Fronteira à esquerda com `(?:^|[^\p{L}])`, e não lookbehind: o Safari/iOS só
+// entende lookbehind a partir do 16.4, e nos iPhones anteriores esta lista
+// derrubava a conversa inteira. Aqui só importa SE casou (`.test`), então o
+// separador que o prefixo consome não faz diferença.
 const PEDIDOS_DE_ANALISE: RegExp[] = [
-  /(?<![\p{L}])(tenho|teria|tenh|temos)\s+(algum\s+)?direito(?![\p{L}])/iu,
-  /(?<![\p{L}])(posso|poderia|d[áa]\s+p(?:a|ra)ra?|cabe|caberia)\s+(eu\s+)?(process\w+|entrar\s+com|acionar|exigir|cobrar|pedir\s+indeniza\w+|recorrer|denunciar)(?![\p{L}])/iu,
-  /(?<![\p{L}])(cabe|caberia)\s+(alguma\s+)?(a[çc][ãa]o|processo|recurso|medida)(?![\p{L}])/iu,
-  /(?<![\p{L}])qual\s+(a[çc][ãa]o|processo|medida|recurso)\s+(eu\s+)?(devo|posso|teria)(?![\p{L}])/iu,
-  /(?<![\p{L}])o\s+que\s+(eu\s+)?(devo|posso|fa[çc]o|faria)\s*(fazer)?(?![\p{L}])/iu,
-  /(?<![\p{L}])(qual|quais|quanta?)\s+(a\s+|as\s+)?(minhas?\s+|nossas?\s+)?chances?(?![\p{L}])/iu,
-  /(?<![\p{L}])(tenho|temos|teria)\s+chances?(?![\p{L}])/iu,
-  /(?<![\p{L}])(vou|vamos|consigo|d[áa]\s+p(?:a|ra)ra?)\s+ganhar(?![\p{L}])/iu,
-  /(?<![\p{L}])isso\s+([ée]|seria)\s+(crime|ilegal|legal|abusiv\w+|justo|correto|permitido)(?![\p{L}])/iu,
-  /(?<![\p{L}])quanto\s+(eu\s+)?(vou|posso|d[áa]\s+p(?:a|ra)ra?|consigo)\s+(receber|ganhar)(?![\p{L}])/iu,
-  /(?<![\p{L}])vale\s+a\s+pena\s+(process\w+|entrar|recorrer|brigar)(?![\p{L}])/iu,
-  /(?<![\p{L}])(voc[êe]|tu)\s+acha\s+que(?![\p{L}])/iu,
-  /(?<![\p{L}])me\s+(diga|diz|fala|explica)\s+se(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(tenho|teria|tenh|temos)\s+(algum\s+)?direito(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(posso|poderia|d[áa]\s+p(?:a|ra)ra?|cabe|caberia)\s+(eu\s+)?(process\w+|entrar\s+com|acionar|exigir|cobrar|pedir\s+indeniza\w+|recorrer|denunciar)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(cabe|caberia)\s+(alguma\s+)?(a[çc][ãa]o|processo|recurso|medida)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])qual\s+(a[çc][ãa]o|processo|medida|recurso)\s+(eu\s+)?(devo|posso|teria)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])o\s+que\s+(eu\s+)?(devo|posso|fa[çc]o|faria)\s*(fazer)?(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(qual|quais|quanta?)\s+(a\s+|as\s+)?(minhas?\s+|nossas?\s+)?chances?(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(tenho|temos|teria)\s+chances?(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(vou|vamos|consigo|d[áa]\s+p(?:a|ra)ra?)\s+ganhar(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])isso\s+([ée]|seria)\s+(crime|ilegal|legal|abusiv\w+|justo|correto|permitido)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])quanto\s+(eu\s+)?(vou|posso|d[áa]\s+p(?:a|ra)ra?|consigo)\s+(receber|ganhar)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])vale\s+a\s+pena\s+(process\w+|entrar|recorrer|brigar)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(voc[êe]|tu)\s+acha\s+que(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])me\s+(diga|diz|fala|explica)\s+se(?![\p{L}])/iu,
 ]
 
 /** O visitante está pedindo uma análise do caso — e não descrevendo um fato? */

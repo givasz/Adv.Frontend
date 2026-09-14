@@ -63,12 +63,25 @@ function toIssue(rule: Rule, matchedText: string): ComplianceIssue {
   }
 }
 
+/**
+ * O trecho que a regra achou, sem o separador que a fronteira à esquerda engole.
+ *
+ * As regras marcam "sem letra antes" com `(?:^|[^\p{L}])`, e não com lookbehind,
+ * que o Safari/iOS só entende a partir do 16.4 (ver oab.rules.ts). O prefixo casa
+ * o espaço ou a pontuação de antes da palavra — sem este corte, o aviso mostraria
+ * "(de graça" em vez de "de graça". Espelhado em backend/src/oab/compliance.ts.
+ */
+export function trechoCasado(regra: RegExp, casado: string): string {
+  if (!regra.source.includes('(?:^|[^\\p{L}])')) return casado
+  return casado.replace(/^[^\p{L}\p{N}](?=\p{L})/u, '')
+}
+
 export function checkCompliance(text: string): ComplianceIssue[] {
   const issues: ComplianceIssue[] = []
   if (!text) return issues
   for (const rule of RULES) {
     const match = text.match(rule.test)
-    if (match) issues.push(toIssue(rule, match[0]))
+    if (match) issues.push(toIssue(rule, trechoCasado(rule.test, match[0])))
   }
   return issues
 }
