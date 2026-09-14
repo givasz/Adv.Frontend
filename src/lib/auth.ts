@@ -645,6 +645,34 @@ export async function reenviarConfirmacaoDeEmail(): Promise<{ jaConfirmado: bool
   return { jaConfirmado: !!jaConfirmado }
 }
 
+/**
+ * Corrige o e-mail de uma conta que ainda não confirmou o endereço — o erro de
+ * digitação do cadastro. O servidor confere a senha e manda o link de
+ * confirmação para o endereço novo; o retrato local sai com o e-mail corrigido.
+ */
+export async function corrigirEmailDaConta(emailRaw: string, senha: string): Promise<void> {
+  const email = emailRaw.trim().toLowerCase()
+  if (!EMAIL_RE.test(email)) throw new Error('Informe um e-mail válido.')
+  if (!senha) throw new Error('Digite sua senha para confirmar que é você.')
+  if (!useReal) throw new Error('Corrigir o e-mail precisa do servidor.')
+  const res = await apiFetch('/api/auth/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, senha }),
+  })
+  // 404 = a tela nova chegou antes da API nova (o Netlify publica sozinho a cada
+  // push; a VPS, não). Melhor dizer isso que mostrar o "Cannot POST" do Nest.
+  if (res.status === 404) {
+    throw new Error('A correção de e-mail ainda não está disponível. Tente de novo mais tarde.')
+  }
+  if (!res.ok) {
+    throw new Error(mensagemDeErro(await res.text().catch(() => ''), 'Não foi possível corrigir o e-mail agora.'))
+  }
+  const { user } = (await res.json()) as { user?: AuthUser }
+  const atual = estado.session
+  if (atual && user?.id) setSession({ ...atual, user: { ...atual.user, ...user } })
+}
+
 function marcarEmailConfirmadoLocal() {
   const atual = estado.session
   if (!atual) return

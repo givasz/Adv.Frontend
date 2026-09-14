@@ -27,6 +27,7 @@ import { CidadeUfCampos } from '@/components/editor/CidadeInput'
 import { SparkIcon, ArrowLeft, ArrowRight, CheckIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 import { DeclaracaoDeVeracidade } from '@/components/ui/DeclaracaoDeVeracidade'
+import { ConferirEmailDaConta, ConfirmarEmailCartao } from '@/components/auth/EmailDaConta'
 
 let uid = 0
 const nextId = () => `id-${Date.now()}-${uid++}`
@@ -224,6 +225,10 @@ export default function Onboarding() {
       if (!saved?.published) throw new Error('O servidor não confirmou a publicação.')
       setProfile(saved)
       setPublished(true)
+      // O botão fica no fim de uma página longa, e a tela de conclusão herdava a
+      // rolagem: no celular a pessoa caía no meio dela, sem ver "Seu perfil está
+      // no ar." — só o que vem depois.
+      window.scrollTo(0, 0)
     } catch (e) {
       // Falhou: o perfil NÃO está no ar, e a tela tem de dizer isso.
       setProfile((p) => (p ? { ...p, published: false } : p))
@@ -425,6 +430,11 @@ export default function Onboarding() {
                 </div>
                 {/* Desktop: a prévia já está na coluna ao lado — aqui vai o resumo. */}
                 <ReviewSummary profile={profile} area={area} />
+                {/* O e-mail da CONTA (não o de contato do perfil), para conferir
+                    antes de publicar. Não trava nada: pega o erro de digitação,
+                    que é o que faz os avisos da conta não chegarem. Some quando o
+                    e-mail já está confirmado. Ver auth/EmailDaConta. */}
+                <ConferirEmailDaConta />
                 {/* Fica ANTES do upsell de propósito: a última coisa que a pessoa
                     lê antes de publicar tem de ser o que ela está declarando, não
                     o que ela poderia comprar. */}
@@ -674,6 +684,11 @@ function DoneScreen({
             <ArrowRight width={16} height={16} />
           </Link>
         </div>
+
+        {/* Confirmar o e-mail, logo depois de publicar: é o momento de maior boa
+            vontade, e o endereço é o que a assinatura vai pedir. Não trava nada
+            aqui — o perfil já está no ar. */}
+        <ConfirmarEmailCartao contexto="publicado" className="mt-4" />
 
         {/* Estatística: quão completo + como melhorar */}
         <div className="mt-4 rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">

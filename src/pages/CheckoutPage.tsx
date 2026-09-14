@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
+import { ConfirmarEmailCartao } from '@/components/auth/EmailDaConta'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { precoDoPlano } from '@/lib/plans'
 import { PAGAMENTO_ONLINE_DISPONIVEL, REGRAS_DE_COBRANCA, offerOf } from '@/lib/planOffer'
@@ -42,6 +44,9 @@ export default function CheckoutPage() {
   const voltar = useVoltar('/painel')
   const [phase, setPhase] = useState<Phase>('checkout')
   const [error, setError] = useState<string | null>(null)
+  // Assinar pede o e-mail confirmado (o servidor recusa sem ele — ver
+  // ProfilesService.setPlan): é por ele que chegam a cobrança e os avisos do plano.
+  const { emailPending } = useAuth()
 
   const plan = (plano === 'pro' || plano === 'premium' ? plano : null) as Exclude<Plan, 'free'> | null
   // Tema que o advogado estava PROVANDO quando decidiu assinar. Quem assina
@@ -184,6 +189,11 @@ export default function CheckoutPage() {
           ))}
         </ul>
 
+        {/* Entre a pessoa e o botão, no lugar em que ela decide. Some sozinho quando
+            o servidor diz que o e-mail foi confirmado (inclusive ao voltar do
+            aplicativo de e-mail para esta aba). */}
+        <ConfirmarEmailCartao contexto="assinar" className="mt-4" />
+
         {error && (
           <p
             role="alert"
@@ -196,7 +206,8 @@ export default function CheckoutPage() {
         <button
           type="button"
           onClick={() => setPhase('processing')}
-          className="btn-primary mt-4 w-full !py-3"
+          disabled={emailPending}
+          className="btn-primary mt-4 w-full !py-3 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Confirmar assinatura {label}
         </button>
