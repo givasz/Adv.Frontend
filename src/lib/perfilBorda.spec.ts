@@ -106,7 +106,7 @@ describe('a home', () => {
     expect(html).toContain(`content="${ORIGEM}/og-padrao.jpg"`)
     expect(html).not.toContain('content="/og-padrao.jpg"')
     expect(html).toContain(`<link rel="canonical" href="${ORIGEM}/"`)
-    expect(html).toContain('<h1>Presença digital profissional, dentro das regras.</h1>')
+    expect(html).toContain('<h1>Seu escritório começa aqui.</h1>')
   })
 })
 

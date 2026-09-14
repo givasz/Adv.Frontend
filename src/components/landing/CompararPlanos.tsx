@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import {
   PLAN_COMPARE,
+  PLANO_EM_DESTAQUE,
   RESUMO_DA_COBRANCA,
   offerOf,
   type CompareRow,
@@ -66,9 +67,9 @@ function precoInteiro(preco: string): string {
 // ---- Celular ----------------------------------------------------------------
 
 function CompararNoCelular() {
-  // Abre no Pro: é o plano em destaque nos cartões logo acima, e o que tem mais
-  // a mostrar contra o Free — abrir no Free começaria pela lista sem novidade.
-  const [plano, setPlano] = useState<Plan>('pro')
+  // Abre no plano em destaque nos cartões logo acima (lib/planOffer.ts): é o que
+  // tem mais a mostrar — abrir no Free começaria pela lista sem novidade.
+  const [plano, setPlano] = useState<Plan>(PLANO_EM_DESTAQUE)
   const [soOQueMuda, setSoOQueMuda] = useState(false)
   const abas = useRef<(HTMLButtonElement | null)[]>([])
   const id = useId()
@@ -390,7 +391,7 @@ function TabelaComparativa() {
                 key={p}
                 scope="col"
                 className={`px-3 py-3 text-center font-display text-[16px] font-semibold ${
-                  p === 'pro' ? 'bg-burgundy/[0.05] text-burgundy' : 'text-ink'
+                  p === PLANO_EM_DESTAQUE ? 'bg-burgundy/[0.05] text-burgundy' : 'text-ink'
                 }`}
               >
                 {offerOf(p).name}
@@ -421,7 +422,9 @@ function TabelaComparativa() {
                 {PLANOS_COMPARADOS.map((p) => (
                   <td
                     key={p}
-                    className={`px-3 py-2.5 text-center tabular-nums ${p === 'pro' ? 'bg-burgundy/[0.05]' : ''}`}
+                    className={`px-3 py-2.5 text-center tabular-nums ${
+                      p === PLANO_EM_DESTAQUE ? 'bg-burgundy/[0.05]' : ''
+                    }`}
                   >
                     <CelulaDaTabela value={r.values[p]} emPreparo={r.emPreparo} />
                   </td>

@@ -181,9 +181,13 @@ export function seoDescriptionEscritorio(e: EscritorioCompartilhavel): string {
  */
 export const HOME = {
   title: 'advoc.me — link na bio e página profissional para advogados',
+  // A descrição vende o que a home vende (desde 14/09/2026): a presença
+  // profissional e o primeiro contato organizado — a OAB entra como cuidado, no
+  // fim, e não como o motivo de entrar.
   description:
-    'Crie sua página profissional em minutos: áreas de atuação, contato pelo WhatsApp, ' +
-    'assistente de agendamento e cartão digital. Conferida antes de ir ao ar, dentro das normas da OAB.',
+    'Sua página profissional para apresentar a sua advocacia e organizar o primeiro contato: ' +
+    'áreas, apresentação, WhatsApp e um assistente que faz as suas perguntas antes de encaminhar. ' +
+    'Grátis para começar, pensada para as regras de publicidade da advocacia.',
 } as const
 
 function rotulos(areas: { label: string }[]): string[] {
@@ -928,16 +932,18 @@ export function corpoDoEscritorio(esc: EscritorioCompartilhavel): string {
 export function corpoDaHome(): string {
   return (
     `${estilo()}<main ${SNAPSHOT}>` +
-    `<section><h1>Presença digital profissional, dentro das regras.</h1>` +
-    `<p>Tenha um perfil profissional sem decorar as regras da OAB. A gente confere seu conteúdo antes de publicar — e mostra o que ajustar.</p>` +
-    `<p><a href="/criar-conta">Criar meu perfil</a> · <a href="/${EXAMPLE_SLUGS[0]}">Ver um exemplo</a></p></section>` +
-    `<section id="problema"><h2>O problema</h2><p>Divulgar-se como advogado tem regra — e risco. O Provimento 205/2021 da OAB diz o que pode e o que não pode na publicidade da advocacia, e o advoc.me confere cada texto do perfil antes de ele ir ao ar.</p></section>` +
-    `<section id="assistente"><h2>Assistente virtual</h2><p>Quem chega ao seu perfil conversa com o seu assistente virtual: ele oferece apenas os dias e horários que você marcou, pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Quem confirma é você.</p></section>` +
+    `<section><h1>Seu escritório começa aqui.</h1>` +
+    `<p>Uma página profissional para apresentar a sua advocacia e organizar o primeiro contato de quem chega até você — pelo Instagram, pelo WhatsApp ou pelo cartão. Grátis para começar, sem cartão, pensada para as regras de publicidade da advocacia.</p>` +
+    `<p><a href="/criar-conta">Criar meu advoc.me</a> · <a href="/${EXAMPLE_SLUGS[0]}">Ver um exemplo</a></p></section>` +
+    `<section id="problema"><h2>Por que não só o Instagram e o WhatsApp?</h2><p>O Instagram mostra o seu conteúdo. O WhatsApp começa a conversa. O advoc.me reúne, num endereço só, quem você é, com o que trabalha e como falar com você — e organiza o primeiro contato, que chega pronto no seu WhatsApp.</p></section>` +
+    `<section id="como-funciona"><h2>Como funciona</h2><ol><li>O que o seu cliente encontra: um endereço com o seu nome — foto, OAB, áreas de atuação, apresentação e os seus canais.</li><li>O que acontece quando ele quer falar com você: ele responde às perguntas que você definiu e escolhe um horário que você deixou aberto.</li><li>O que chega para você: uma mensagem só, no seu WhatsApp, com nome, dia, horário, formato e as respostas. Você lê, avalia e confirma.</li></ol><p>Para montar o seu: nome, OAB, cidade, áreas e contato. A IA escreve a apresentação; você revisa e publica.</p></section>` +
+    `<section id="assistente"><h2>Assistente de triagem</h2><p>Seu advoc.me continua recebendo os primeiros contatos enquanto você trabalha: quem chega ao seu perfil responde às perguntas que você definiu, escolhe um horário livre na sua grade e o pedido chega organizado no seu WhatsApp. No Pro, o assistente oferece só os seus horários; no Max, ele faz as suas perguntas antes. Ele se identifica como automático e não presta orientação jurídica — a avaliação do caso e a decisão de atender continuam sendo suas.</p></section>` +
     `<section id="contratos"><h2>Contratos e procurações</h2><p>Modelos de contrato de honorários e procuração preenchidos no seu aparelho, com registro de autenticidade conferível pelo cliente.</p></section>` +
-    `<section id="como-funciona"><h2>Como funciona</h2><ol><li>Crie a conta e escolha o seu endereço advoc.me/seu-nome.</li><li>Preencha áreas de atuação, cidade, contato e a sua apresentação.</li><li>O conteúdo é conferido com as normas da OAB antes de publicar.</li><li>Publique e coloque o link na bio do Instagram, no WhatsApp e no cartão.</li></ol></section>` +
-    `<section id="planos"><h2>Planos</h2><p>Planos claros, sem letra miúda. Comece no Free; os planos Pro, Max e Escritório abrem perguntas frequentes, assistente de agendamento, vídeo de apresentação, cartão de visita e página da sociedade. Preço por mês, sem fidelidade.</p></section>` +
-    `<section><h2>Uma presença digital que respeita a profissão</h2><p>Comece no Free. Um perfil sóbrio, claro e conferido antes de ir ao ar.</p>` +
-    `<p><a href="/criar-conta">Criar meu perfil agora</a> · <a href="/legal/termos">Termos de uso</a> · <a href="/legal/privacidade">Privacidade</a></p></section>` +
+    `<section><h2>O que mais vem com o seu perfil</h2><p>A IA escreve a apresentação, perguntas frequentes respondidas, cartão digital com QR Code, relatório do perfil, endereço só com o seu nome, vídeo de apresentação, cartão de visita para a gráfica e a sua cor e marca — cada um a partir do plano que o inclui.</p></section>` +
+    `<section id="planos"><h2>Planos</h2><p>Comece grátis e suba quando fizer sentido. Free: comece a sua presença profissional. Pro: apresente o seu trabalho por inteiro e receba pedidos de horário prontos. Max: organize também o primeiro atendimento, com a triagem e os contratos. Escritório: leve o advoc.me para toda a equipe. Preço por mês, sem fidelidade.</p></section>` +
+    `<section><h2>Feito para a realidade de quem advoga</h2><p>O editor sinaliza possíveis pontos de atenção nas regras de publicidade da advocacia enquanto você escreve; o assistente conhece o próprio limite; não há selo, ranking nem dado de visitante guardado; todo perfil leva à consulta pública do CNA. A responsabilidade pelo conteúdo é do profissional.</p></section>` +
+    `<section><h2>Um endereço só seu, pronto em minutos</h2><p>Comece no Free, sem cartão. Suba de plano quando quiser — e volte quando quiser, sem perder nada do que escreveu.</p>` +
+    `<p><a href="/criar-conta">Criar meu advoc.me</a> · <a href="/legal/termos">Termos de uso</a> · <a href="/legal/privacidade">Privacidade</a></p></section>` +
     `</main>`
   )
 }

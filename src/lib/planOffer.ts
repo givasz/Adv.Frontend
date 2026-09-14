@@ -132,13 +132,27 @@ const ENDERECO = 'Endereço com o seu nome, sem o número que o Free carimba no 
 const TRIAGEM =
   'Assistente de triagem: você escreve as perguntas que ele faz antes de encaminhar, e recebe tudo organizado no WhatsApp'
 
+// ---- O pitch de cada plano é uma ETAPA, não uma lista ------------------------
+//
+// Desde 14/09/2026 os quatro pitches formam uma escada que se lê de cima a
+// baixo: começar a presença → apresentar o trabalho por inteiro → organizar o
+// primeiro atendimento → levar para a equipe. Quem compara os cartões deve
+// entender em uma linha POR QUE o degrau seguinte existe, antes de ler nove
+// itens de cada um. A lista de itens continua sendo o que o plano entrega.
+//
+// O destaque visual passou do Pro para o Max no mesmo dia: a triagem (as
+// perguntas do próprio advogado antes do encaminhamento) é o recurso que mais
+// muda o dia de quem advoga, e é ela que a home demonstra. O selo diz "mais
+// completo" — algo que a tabela comprova — e nunca "mais escolhido", que ninguém
+// mediu.
+
 export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'free',
     name: 'Free',
     price: precoDoPlano('free'),
     period: 'para sempre',
-    pitch: 'Um perfil profissional, no ar em minutos.',
+    pitch: 'Comece a sua presença profissional.',
     items: [
       { text: 'Perfil público conferido antes de publicar' },
       { text: 'Uma área de atuação — a principal' },
@@ -162,8 +176,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
     name: 'Pro',
     price: precoDoPlano('pro'),
     period: '/mês',
-    pitch: 'Agendamento e respostas às dúvidas de sempre.',
-    featured: true,
+    pitch: 'Apresente o seu trabalho por inteiro.',
     items: [
       { text: ASSISTENTE },
       { text: BALAO },
@@ -194,23 +207,24 @@ export const PLAN_OFFERS: PlanOffer[] = [
     name: 'Max',
     price: precoDoPlano('premium'),
     period: '/mês',
-    pitch: 'O perfil com a sua identidade — e contratos e procurações prontos para revisar.',
+    pitch: 'Organize também o primeiro atendimento.',
+    featured: true,
     items: [
       { text: 'Tudo do Pro, e mais:' },
-      // Primeiro da lista desde 11/09/2026: é o único recurso do Max que serve
-      // ao escritório, e não só ao perfil. "Registrada" é a palavra exata:
-      // guardamos a impressão digital do arquivo — não assinamos, não validamos e
-      // não guardamos o contrato. Enviar para assinatura daqui ainda não existe e
-      // por isso não está na frase.
+      // Primeiro da lista desde 14/09/2026: a triagem é o que mais muda o DIA
+      // do advogado — o contato chega triado —, enquanto os demais itens mudam a
+      // página. É o recurso que a home demonstra e o motivo do destaque do Max.
+      { text: TRIAGEM },
+      // Os contratos vêm logo depois (foram os primeiros de 11/09 a 14/09): é o
+      // único recurso do Max que serve ao escritório, e não só ao perfil.
+      // "Registrada" é a palavra exata: guardamos a impressão digital do arquivo
+      // — não assinamos, não validamos e não guardamos o contrato. Enviar para
+      // assinatura daqui ainda não existe e por isso não está na frase.
       { text: 'Contratos de honorários, procurações e declarações a partir de modelos, com o PDF registrado' },
       // "Só com texto" é a promessa E a regra: o servidor recusa modelo com CPF,
       // e-mail, telefone… (ver lib/contratos/proprio.ts). Não dizer isso aqui
       // venderia um cofre de contratos que o produto se recusa a ser.
       { text: `Até ${MODELOS_PROPRIOS_LIMITE} modelos escritos por você, só com texto — os dados do cliente entram a cada documento` },
-      // Logo depois dos contratos (que seguem em primeiro desde 11/09/2026, por
-      // decisão própria): a triagem é o que mais muda o DIA do advogado — o
-      // contato chega triado —, enquanto os demais mudam a página.
-      { text: TRIAGEM },
       { text: 'Vídeo de apresentação no fim do perfil' },
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
@@ -229,7 +243,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
     name: 'Escritório',
     price: `R$ ${FIRM_PRICING.basePrice}`,
     period: '/mês',
-    pitch: 'Toda a equipe reunida numa página.',
+    pitch: 'Leve o advoc.me para toda a equipe.',
     items: [
       { text: 'Página institucional da sociedade' },
       { text: `${FIRM_PRICING.includedSeats} advogados inclusos` },
@@ -251,6 +265,17 @@ export function offerOf(id: PlanOffer['id']): PlanOffer {
   if (!o) throw new Error(`Plano sem oferta: ${id}`)
   return o
 }
+
+/**
+ * O plano individual em destaque — o mesmo nos cartões da home, na comparação
+ * (coluna realçada e aba aberta no celular) e na vitrine do editor. Lido daqui
+ * para que trocar o destaque seja mexer numa linha só, e não em quatro telas.
+ */
+export const PLANO_EM_DESTAQUE: Plan =
+  (PLAN_OFFERS.find((o) => o.featured && o.id !== 'firm')?.id as Plan | undefined) ?? 'pro'
+
+/** O selo do plano em destaque. Descreve algo que a tabela comprova. */
+export const SELO_DO_DESTAQUE = 'Mais completo'
 
 // ---- A tabela comparativa ---------------------------------------------------
 //

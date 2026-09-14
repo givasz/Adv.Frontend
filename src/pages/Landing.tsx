@@ -7,10 +7,13 @@ import {
   PLAN_OFFERS,
   REGRAS_DE_COBRANCA,
   RESUMO_DA_COBRANCA,
+  SELO_DO_DESTAQUE,
   type PlanOffer,
 } from '@/lib/planOffer'
+import { FAQ_LIMIT } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { CompararPlanos } from '@/components/landing/CompararPlanos'
+import { PrimeiroContato } from '@/components/landing/PrimeiroContato'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { ContratosVitrine } from '@/components/landing/ContratosVitrine'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -19,19 +22,42 @@ import { LEGAL_DOCS } from '@/lib/legalContent'
 import { OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
 import {
   ArrowRight,
+  CardIcon,
+  ChartIcon,
   CheckIcon,
   CalendarIcon,
-  ClockIcon,
   ChevronDown,
-  InfoIcon,
-  LockIcon,
+  ClockIcon,
+  InstagramIcon,
   MessageIcon,
+  PaletteIcon,
+  PenIcon,
+  PlayIcon,
+  QrIcon,
   ScaleIcon,
   ShieldIcon,
   SparkIcon,
   WhatsappIcon,
 } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
+
+// A HOME vende, nesta ordem (revisão de 14/09/2026):
+//
+//   1. o DESEJO — uma presença profissional, num endereço só seu;
+//   2. o BENEFÍCIO — apresentar o trabalho e organizar o primeiro contato;
+//   3. o DIFERENCIAL — feito para a advocacia, e demonstrado (não descrito);
+//   4. os RECURSOS — perfil, triagem, agenda, contratos, cartão…;
+//   5. a SEGURANÇA — pensado para as regras de publicidade da advocacia.
+//
+// Até essa data a página abria por "dentro das regras da OAB" e seguia com o
+// risco disciplinar. Ninguém acorda querendo cumprir o Provimento 205; a
+// conformidade é o motivo para CONFIAR no produto, não para querê-lo. Ela
+// continua aqui — na seção própria, na FAQ e no rodapé —, mas depois de a pessoa
+// ter entendido o que ganha.
+//
+// O que a página NÃO diz, por escolha e por norma: que o advogado consegue mais
+// clientes, que o conteúdo sai "aprovado" pela OAB, que um plano é "o mais
+// escolhido". Há teste travando o vocabulário (lib/landingCopy.spec.ts).
 
 const fade = {
   hidden: { opacity: 0, y: 24 },
@@ -52,6 +78,11 @@ export default function Landing() {
   // Convidar a "criar meu perfil" quem já tem um (e está logado, com o nome ali
   // do lado no menu de conta) faz o produto parecer que não sabe quem você é.
   const meu = useMyProfileLink()
+  // Para quem ainda não tem: "meu advoc.me" — o produto vira uma coisa que a
+  // pessoa passa a ter, e não um cadastro que ela faz. Quem já tem vê o próprio
+  // destino (painel ou continuar).
+  const criar = meu.label === 'Criar meu perfil'
+  const rotuloPrincipal = criar ? 'Criar meu advoc.me' : meu.label
 
   useEffect(() => {
     // O mesmo título do index.html e da borda — um título só para a home.
@@ -72,6 +103,9 @@ export default function Landing() {
           advoc.me
         </span>
         <div className="flex items-center gap-2 sm:gap-4">
+          <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
+            Como funciona
+          </a>
           <a href="#assistente" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Assistente
           </a>
@@ -79,9 +113,6 @@ export default function Landing() {
               menu da conta e o botão principal. */}
           <a href="#contratos" className="hidden text-sm font-medium text-ink-soft hover:text-ink md:block">
             Contratos
-          </a>
-          <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
-            Como funciona
           </a>
           {/* Quem chega decidido a comparar preço não devia ter de adivinhar que
               precisa rolar até o fim. O link aparece a partir de 480px porque
@@ -113,7 +144,7 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* Hero — a promessa em uma frase, e o produto de verdade ao lado */}
       <header className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 pt-8 lg:grid-cols-2 lg:pt-16">
         <div>
           <motion.span
@@ -123,8 +154,8 @@ export default function Landing() {
             animate="show"
             className="inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[12.5px] font-semibold text-brass-deep"
           >
-            <CheckIcon width={14} height={14} />
-            Dentro das regras da OAB
+            <ScaleIcon width={14} height={14} />
+            Presença profissional para a advocacia
           </motion.span>
 
           <motion.h1
@@ -132,13 +163,11 @@ export default function Landing() {
             variants={fade}
             initial="hidden"
             animate="show"
-            className="mt-5 font-display text-[34px] font-semibold leading-[1.04] tracking-tight min-[380px]:text-[42px] sm:text-[56px]"
+            className="mt-5 font-display text-[36px] font-semibold leading-[1.04] tracking-tight min-[380px]:text-[44px] sm:text-[58px]"
           >
-            Presença digital
+            Seu escritório
             <br />
-            profissional,
-            <br />
-            <span className="italic text-burgundy">dentro das regras.</span>
+            <span className="italic text-burgundy">começa aqui.</span>
           </motion.h1>
 
           <motion.p
@@ -148,8 +177,8 @@ export default function Landing() {
             animate="show"
             className="mt-5 max-w-md text-[17px] leading-relaxed text-ink-soft"
           >
-            Tenha um perfil profissional sem decorar as regras da OAB. A gente confere seu conteúdo
-            antes de publicar — e mostra o que ajustar.
+            Uma página profissional para apresentar a sua advocacia e organizar o primeiro contato de
+            quem chega até você — pelo Instagram, pelo WhatsApp ou pelo cartão.
           </motion.p>
 
           <motion.div
@@ -164,12 +193,12 @@ export default function Landing() {
               {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
               className="btn-primary"
             >
-              {meu.label}
+              {rotuloPrincipal}
               <ArrowRight width={18} height={18} />
             </Link>
-            <Link to={`/${sampleProfile.slug}`} className="btn-ghost">
-              Ver um exemplo
-            </Link>
+            <a href="#como-funciona" className="btn-ghost">
+              Ver como funciona
+            </a>
           </motion.div>
 
           <motion.p
@@ -177,10 +206,10 @@ export default function Landing() {
             variants={fade}
             initial="hidden"
             animate="show"
-            className="mt-4 text-[13.5px] text-ink-faint"
+            className="mt-4 max-w-md text-[13.5px] leading-relaxed text-ink-faint"
           >
-            <span className="font-semibold text-ink">Pronto em minutos</span> · comece no Free, sem
-            cartão · não é aconselhamento jurídico
+            <span className="font-semibold text-ink">Grátis para começar</span>, sem cartão · pronto em
+            minutos · pensado para as regras de publicidade da advocacia
           </motion.p>
         </div>
 
@@ -194,74 +223,100 @@ export default function Landing() {
         </motion.div>
       </header>
 
-      {/* Problema */}
-      <Section id="problema" eyebrow="O problema" title="Divulgar-se como advogado tem regra — e risco.">
-        <p className="mx-auto mb-10 max-w-2xl text-center text-[15.5px] leading-relaxed text-ink-soft">
-          A publicidade na advocacia tem regras próprias. Um descuido de linguagem pode virar uma
-          questão disciplinar — e as ferramentas genéricas de “link na bio” não foram pensadas para isso.
-        </p>
-        <div className="grid gap-6 sm:grid-cols-3">
+      {/* A objeção que todo advogado tem antes de ler qualquer outra coisa:
+          "eu já tenho Instagram e WhatsApp". Respondida sem atacar ninguém —
+          cada um faz uma parte, e o advoc.me é a parte que faltava. */}
+      <Section
+        id="problema"
+        eyebrow="Por que não só o Instagram e o WhatsApp?"
+        title="Hoje, a sua presença está espalhada."
+        intro="O Instagram mostra o seu conteúdo. O WhatsApp começa a conversa. Falta o lugar que reúne quem você é, com o que trabalha e como falar com você — e que organiza esse primeiro contato."
+      >
+        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-3">
           {[
             {
-              title: 'Regras extensas',
-              body: 'Promessa de resultado, preços, superlativos, captação, sigilo… são muitas vedações para memorizar a cada texto.',
+              icon: <InstagramIcon width={20} height={20} />,
+              nome: 'Instagram',
+              faz: 'Mostra o seu conteúdo.',
+              mas: 'Bom para ser lembrado. Mas a bio tem um link só, e o feed não explica em que você atua nem como marcar uma conversa.',
             },
             {
-              title: 'Risco disciplinar',
-              body: 'Um anúncio fora das normas pode levar a advertência, censura ou suspensão. A responsabilidade é do advogado.',
+              icon: <WhatsappIcon width={20} height={20} />,
+              nome: 'WhatsApp',
+              faz: 'Começa a conversa.',
+              mas: 'Direto, mas desorganizado: a mesma pergunta chega dez vezes, sem assunto, sem horário — e no meio da audiência.',
             },
             {
-              title: 'Ferramentas genéricas',
-              body: 'Linktrees e criadores de site tratam advocacia como qualquer negócio — incentivam justamente o que a OAB veda.',
+              icon: <Marca size={20} />,
+              nome: 'advoc.me',
+              faz: 'Reúne e organiza.',
+              mas: 'Um endereço só, com apresentação, áreas, contato, horários e as suas perguntas de triagem. É o link que você manda — e o primeiro contato chega pronto no seu WhatsApp.',
+              destaque: true,
             },
           ].map((c) => (
-            <Panel key={c.title}>
-              <h3 className="font-display text-lg font-semibold text-ink">{c.title}</h3>
-              <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">{c.body}</p>
-            </Panel>
+            <div
+              key={c.nome}
+              className={`flex flex-col rounded-xl2 border p-6 ${
+                c.destaque
+                  ? 'border-burgundy/30 bg-burgundy/[0.05] shadow-card'
+                  : 'border-ink/10 bg-paper-soft/60'
+              }`}
+            >
+              <span
+                className={`flex h-10 w-10 items-center justify-center rounded-xl2 ${
+                  c.destaque ? 'bg-burgundy text-paper' : 'bg-ink/[0.05] text-ink-soft'
+                }`}
+              >
+                {c.icon}
+              </span>
+              <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-faint">{c.nome}</p>
+              <h3 className="mt-1 font-display text-[21px] font-semibold leading-tight text-ink">{c.faz}</h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{c.mas}</p>
+            </div>
           ))}
         </div>
       </Section>
 
-      {/* Solução */}
+      {/* Como funciona — mostrado, não descrito: o perfil, a triagem e o que
+          chega no WhatsApp, em três quadros. Ver PrimeiroContato. */}
       <Section
-        eyebrow="A solução"
-        title="A conformidade vira uma funcionalidade do produto."
+        id="como-funciona"
+        eyebrow="Como funciona"
+        title="Veja o que o seu cliente encontra — e o que chega para você."
+        intro="Três quadros, com um perfil de exemplo e dados fictícios. A mensagem do terceiro é montada pelo mesmo assistente do produto."
+        wide
       >
-        <p className="mx-auto mb-10 max-w-2xl text-center text-[15.5px] leading-relaxed text-ink-soft">
-          Em vez de você aprender todas as regras, o advoc.me as embute. Você escreve; a plataforma
-          confere e explica. Sóbrio por padrão, seguro por construção.
-        </p>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[
-            {
-              icon: <ScaleIcon width={22} height={22} />,
-              title: 'Conformidade embutida',
-              body: 'Um revisor mostra, enquanto você digita, quando um texto fere as normas — promessa de resultado, mercantilismo, sigilo — e sugere como ajustar.',
-            },
-            {
-              icon: <CheckIcon width={22} height={22} />,
-              title: 'Inscrição conferível na fonte',
-              body: 'Ao lado do seu número, o perfil leva à consulta pública do CNA, base oficial da OAB. Quem quiser confere na fonte — sem selo nosso, sem plano, sem intermediário.',
-            },
-            {
-              icon: <SparkIcon width={22} height={22} />,
-              title: 'Bio escrita por IA',
-              body: 'Descreva sua atuação em palavras-chave; a IA redige um texto sóbrio, que passa pela mesma checagem e depende sempre da sua aprovação.',
-            },
-          ].map((f) => (
-            <Panel key={f.title}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
-                {f.icon}
-              </div>
-              <h3 className="mt-4 font-display text-xl font-semibold">{f.title}</h3>
-              <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">{f.body}</p>
-            </Panel>
-          ))}
+        <PrimeiroContato />
+
+        {/* O fim de uma seção forte tem de dizer o próximo passo. Para MONTAR o
+            seu são minutos — e o exemplo inteiro está a um toque. */}
+        <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-5 rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6 text-center sm:flex-row sm:text-left">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-[19px] font-semibold leading-tight text-ink">
+              Para montar o seu: nome, OAB, cidade, áreas e contato.
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">
+              A IA escreve a apresentação a partir das suas palavras-chave; você revisa, ajusta e
+              publica. Não precisa saber programar nem contratar ninguém.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-center gap-3">
+            <Link
+              to={meu.to}
+              {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+              className="btn-primary !py-2.5 text-[14px]"
+            >
+              {rotuloPrincipal}
+            </Link>
+            <Link to={`/${sampleProfile.slug}`} className="btn-ghost !py-2.5 text-[14px]">
+              Ver um exemplo
+            </Link>
+          </div>
         </div>
       </Section>
 
-      {/* Assistente virtual — demonstração funcional */}
+      {/* Assistente de triagem — o grande argumento do Max, com a conversa de
+          verdade funcionando ao lado. */}
       <motion.section
         id="assistente"
         variants={rise}
@@ -273,61 +328,65 @@ export default function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
           <div>
             <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
-              Assistente virtual · planos Pro e Max
+              Assistente de triagem · plano Max
             </p>
-            <h2 className="mt-2 max-w-lg font-display text-3xl font-semibold leading-tight sm:text-4xl">
-              Um assistente organiza a conversa
-              <span className="italic text-burgundy"> enquanto você atua.</span>
+            <h2 className="mt-2 max-w-xl font-display text-3xl font-semibold leading-tight sm:text-4xl">
+              Seu advoc.me continua recebendo os primeiros contatos
+              <span className="italic text-burgundy"> enquanto você trabalha.</span>
             </h2>
-            <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
-              Quem chega ao seu perfil conversa com o seu assistente virtual: ele oferece{' '}
-              <span className="font-medium text-ink">apenas os dias e horários que você marcou</span>,
-              pergunta o assunto e entrega o pedido pronto no seu WhatsApp. Quem confirma é você.
+            <p className="mt-5 max-w-lg text-[15.5px] leading-relaxed text-ink-soft">
+              Em audiência, em reunião ou fora do escritório: quem chega ao seu perfil responde às
+              perguntas que você definiu, escolhe um horário livre na sua grade e o pedido chega
+              organizado no seu WhatsApp.{' '}
+              <span className="font-medium text-ink">
+                A avaliação do caso e a decisão de atender continuam sendo suas.
+              </span>
             </p>
 
-            {/* A triagem entra AQUI, dentro do bloco que já vende o assistente, e
-                não numa seção própria: ela é o degrau seguinte do mesmo recurso —
-                o Pro marca horário, o Max faz as perguntas do advogado antes.
-                A segunda frase é a que impede a linha de virar "deixe a IA
-                atender seus clientes": quem decide continua sendo ele. */}
-            <div className="mt-6 max-w-md rounded-xl2 border border-brass/30 bg-brass/[0.06] p-5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-burgundy px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-paper">
-                Max
-              </span>
-              <h3 className="mt-2.5 font-display text-[19px] font-semibold leading-tight text-ink">
-                E você escolhe o que ele pergunta antes.
-              </h3>
-              <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
-                Monte a sua triagem: assunto, se já existe processo, forma de atendimento, um relato
-                em poucas linhas — as perguntas são suas, na sua ordem. O assistente coleta,
-                organiza e encaminha.{' '}
-                <span className="font-medium text-ink">
-                  A avaliação do caso e a decisão de atender continuam sendo suas.
+            {/* A escada Pro → Max, dita em duas frases: o Pro marca horário, o
+                Max pergunta antes. É a linha que explica por que o Max existe. */}
+            <div className="mt-6 max-w-lg rounded-xl2 border border-brass/30 bg-brass/[0.06] p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-ink/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-ink-soft">
+                  Pro
                 </span>
-              </p>
+                <p className="text-[14px] leading-snug text-ink-soft">
+                  O assistente oferece só os seus horários e entrega o pedido pronto no WhatsApp.
+                </p>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-burgundy px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-paper">
+                  Max
+                </span>
+                <p className="text-[14px] leading-snug text-ink">
+                  <span className="font-semibold">Ele faz as suas perguntas antes:</span> assunto, se já
+                  existe processo, forma de atendimento, um relato curto — as perguntas são suas, na sua
+                  ordem.
+                </p>
+              </div>
             </div>
 
             <ul className="mt-7 grid gap-4 sm:grid-cols-2">
               {[
                 {
-                  icon: <CalendarIcon width={18} height={18} />,
-                  title: 'Sua grade, suas regras',
-                  body: 'Você escolhe os dias da semana, os horários e a antecedência mínima. Fora disso, nada é oferecido.',
+                  icon: <PenIcon width={18} height={18} />,
+                  title: 'As perguntas são suas',
+                  body: 'Você escreve, ordena e liga uma pergunta à resposta de outra. Há modelos por área para começar — nenhum pede CPF ou documento.',
                 },
                 {
-                  icon: <MessageIcon width={18} height={18} />,
-                  title: 'Conversa, não formulário',
-                  body: 'Perguntas curtas, respostas em um toque. O visitante só escreve o assunto e o nome.',
+                  icon: <CalendarIcon width={18} height={18} />,
+                  title: 'Sua grade, suas regras',
+                  body: 'Dias, horários, duração e antecedência mínima. Marcou algo por fora? Você fecha o horário e ele some das opções.',
                 },
                 {
                   icon: <WhatsappIcon width={18} height={18} />,
-                  title: 'Cai no seu WhatsApp',
-                  body: 'Dia, horário, formato e assunto chegam organizados em uma única mensagem — direto do aparelho de quem pediu, sem passar por nós.',
+                  title: 'Cai no seu WhatsApp, pronto',
+                  body: 'Nome, dia, horário, formato e as respostas chegam numa mensagem só — direto do aparelho de quem pediu, sem passar por nós.',
                 },
                 {
                   icon: <ScaleIcon width={18} height={18} />,
                   title: 'Sem passar do limite',
-                  body: 'O assistente se identifica como automático e não dá orientação jurídica. Se perguntarem “tenho direito?”, ele diz que quem avalia é você — e segue.',
+                  body: 'Ele se identifica como automático e não dá orientação jurídica. Se perguntarem “tenho direito?”, ele diz que quem avalia é você — e segue.',
                 },
               ].map((f) => (
                 <li key={f.title} className="flex gap-3">
@@ -341,6 +400,14 @@ export default function Landing() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <a href="#planos" className="btn-primary">
+                Conhecer o Max
+                <ArrowRight width={17} height={17} aria-hidden />
+              </a>
+              <p className="text-[13px] text-ink-faint">Experimente a conversa ao lado — é um exemplo.</p>
+            </div>
           </div>
 
           <div className="justify-self-center lg:justify-self-end">
@@ -353,111 +420,53 @@ export default function Landing() {
           registro desenhados na mesma linguagem das telas de verdade. */}
       <ContratosVitrine />
 
-      {/* Como funciona */}
-      <Section id="como-funciona" eyebrow="Como funciona" title="Do zero ao perfil publicado, em quatro passos.">
-        <ol className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
-          {[
-            {
-              n: 1,
-              title: 'Monte o essencial',
-              body: 'Nome, OAB, cidade, área principal. O necessário para um perfil útil — em poucos minutos.',
-            },
-            {
-              n: 2,
-              title: 'Escreva com apoio da IA',
-              body: 'Gere uma bio sóbria a partir de palavras-chave, ou escreva você mesmo. Você sempre revisa e aprova.',
-            },
-            {
-              n: 3,
-              title: 'O revisor confere',
-              body: 'A checagem de conformidade aponta o que precisa de ajuste e explica o porquê, com a base normativa.',
-            },
-            {
-              n: 4,
-              title: 'Publique e compartilhe',
-              body: 'Um endereço só seu e um QR Code para reunir seus canais com sobriedade.',
-            },
-          ].map((s) => (
-            <li key={s.n} className="flex gap-4 rounded-xl2 border border-ink/10 bg-paper-soft/60 p-5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-burgundy font-display text-[15px] font-semibold text-paper-soft">
-                {s.n}
+      {/* Os recursos que não têm seção própria, em uma lista editorial — cada um
+          com o plano a partir do qual existe. É o "por que pagar" dito por
+          ganho, antes da tabela. */}
+      <Section
+        eyebrow="O que mais vem com o seu perfil"
+        title="Cada recurso resolve uma parte da rotina."
+      >
+        <ul className="mx-auto grid max-w-5xl gap-x-10 sm:grid-cols-2">
+          {RECURSOS.map((r) => (
+            <li key={r.title} className="flex gap-4 border-t border-ink/10 py-5">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
+                {r.icon}
               </span>
-              <div>
-                <h3 className="font-display text-lg font-semibold text-ink">{s.title}</h3>
-                <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">{s.body}</p>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3 className="font-display text-[17px] font-semibold leading-tight text-ink">{r.title}</h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      r.plano === 'Max'
+                        ? 'bg-burgundy text-paper'
+                        : r.plano === 'Pro'
+                          ? 'border border-ink/15 text-ink-soft'
+                          : 'bg-ink/[0.06] text-ink-faint'
+                    }`}
+                  >
+                    {r.plano}
+                  </span>
+                </div>
+                <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">{r.body}</p>
               </div>
             </li>
           ))}
-        </ol>
+        </ul>
       </Section>
 
-      {/* Conformidade OAB */}
-      <Section eyebrow="Conformidade OAB" title="O que o revisor observa por você.">
-        <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-xl2 border border-ink/10 bg-paper-soft/60 p-6">
-            <p className="mb-4 text-[14.5px] leading-relaxed text-ink-soft">
-              Codificamos as regras da OAB. Antes de publicar, a própria plataforma confere de novo —
-              é a fonte da verdade, não só um aviso visual.
-            </p>
-            <ul className="grid gap-2.5 sm:grid-cols-2">
-              {[
-                'Promessa de resultado',
-                'Preços, honorários e descontos',
-                'Superlativos e comparações',
-                'Chamadas de contratação',
-                'Depoimentos e lista de clientes',
-                'Exposição de casos (sigilo)',
-                'Selos ou símbolos oficiais da OAB',
-                'Apelos de urgência e brindes',
-              ].map((v) => (
-                <li key={v} className="flex items-start gap-2 text-[13.5px] text-ink-soft">
-                  <CheckIcon
-                    width={16}
-                    height={16}
-                    strokeWidth={2.2}
-                    className="mt-0.5 shrink-0 text-brass-deep"
-                  />
-                  {v}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="flex flex-col justify-center gap-4">
-            <div className="flex items-start gap-3">
-              <LockIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
-              <p className="text-[14px] leading-relaxed text-ink-soft">
-                <span className="font-semibold text-ink">Trilha de auditoria.</span> Cada versão
-                registra a data e a política vigente — no Max, exportável em PDF como comprovante de
-                conformidade.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <InfoIcon width={20} height={20} className="mt-0.5 shrink-0 text-burgundy" />
-              <p className="text-[14px] leading-relaxed text-ink-soft">
-                <span className="font-semibold text-ink">A palavra final é sua.</span> A IA e o
-                revisor auxiliam; a decisão de publicar e a responsabilidade pelo conteúdo continuam
-                do advogado.
-              </p>
-            </div>
-            <p className="text-[12px] leading-relaxed text-ink-faint">
-              O advoc.me não constitui aconselhamento jurídico e não é filiado à OAB. Não conferimos,
-              não validamos e não endossamos inscrições — apontamos para a consulta pública do CNA.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* Planos */}
+      {/* Planos — cada cartão vende uma etapa; a tabela responde o resto */}
       <section id="planos" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-12">
         <p className="text-center text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
           Planos
         </p>
         <h2 className="mx-auto mt-2 max-w-2xl text-center font-display text-3xl font-semibold leading-tight sm:text-4xl">
-          Planos claros, sem letra miúda.
+          Comece grátis. Suba quando fizer sentido.
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-center text-[15px] leading-relaxed text-ink-soft">
-          O que cada plano inclui — e o que não inclui — está escrito abaixo, e é o mesmo que você
-          encontra no editor depois. Preço por mês, sem fidelidade.
+        <p className="mx-auto mt-4 max-w-2xl text-center text-[15px] leading-relaxed text-ink-soft">
+          Cada plano resolve uma etapa: presença, apresentação completa, primeiro atendimento
+          organizado, equipe inteira. Preço por mês, sem fidelidade — e o que cada um não inclui está
+          escrito no próprio cartão.
         </p>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {PLAN_OFFERS.map((oferta) => (
@@ -511,49 +520,49 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* O que não fazemos — transparência como argumento, não como rodapé */}
-      <Section eyebrow="Transparência" title="O que o advoc.me não faz.">
-        <p className="mx-auto mb-8 max-w-2xl text-center text-[15px] leading-relaxed text-ink-soft">
-          Numa profissão em que a divulgação tem regra, o que a plataforma se recusa a fazer diz tanto
-          quanto o que ela faz.
-        </p>
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
+      {/* A segurança — por último entre os argumentos, e sem virar manual. A OAB
+          é o motivo para confiar: uma checagem que sinaliza, um assistente que
+          conhece o próprio limite e uma plataforma que não vende destaque. */}
+      <Section
+        eyebrow="Publicidade na advocacia"
+        title="Feito para a realidade de quem advoga."
+        intro="A publicidade na advocacia tem regras próprias, e as ferramentas genéricas não foram pensadas para elas. Aqui o cuidado está embutido — sem você precisar decorar nada."
+      >
+        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-3">
           {[
             {
-              title: 'Não vendemos destaque',
-              body: 'Não há ranking, busca paga, selo ou posição comprada. Plano nenhum coloca um advogado na frente de outro.',
+              icon: <ScaleIcon width={20} height={20} />,
+              title: 'Checagem enquanto você escreve',
+              body: 'O editor sinaliza possíveis pontos de atenção nas regras de publicidade da advocacia — promessa de resultado, honorários, captação — e sugere como ajustar. A responsabilidade pelo conteúdo continua sendo sua.',
             },
             {
-              title: 'Não guardamos dado de visitante',
-              body: 'Quem escreve para você pelo perfil — inclusive quem responde a uma triagem inteira — manda a mensagem do próprio aparelho para o seu WhatsApp. Ela não passa por nós, e não sabemos quem foi.',
+              icon: <MessageIcon width={20} height={20} />,
+              title: 'Um assistente que conhece o limite',
+              body: 'Ele se identifica como automático, não dá orientação jurídica e não confirma nada. Organiza o primeiro contato; a advocacia é sua. Não há IA nessa conversa — é um roteiro fechado.',
             },
             {
-              title: 'Não fingimos verificar',
-              body: 'Nenhum selo de “verificado”. Todo perfil, de qualquer plano, leva à consulta pública do CNA — quem quiser confere na fonte.',
-            },
-            {
-              title: 'Não vendemos dados nem rastreamos',
-              body: 'Sem cookies de publicidade, sem perfil de comportamento, sem venda de dados. Você baixa e exclui o que guardamos, quando quiser.',
-            },
-            // Ocupa as duas colunas: é a frase que separa este produto de um
-            // "chatbot jurídico", e ela merece fechar a seção em vez de ficar
-            // órfã numa metade de linha.
-            {
-              title: 'Não respondemos consultas por você',
-              largo: true,
-              body: 'O assistente coleta e organiza — ele não interpreta o caso, não diz que alguém tem direito a algo, não estima chances e não fala de honorários. Perguntado sobre o caso, ele responde que a avaliação é do advogado. A pessoalidade da prestação é sua, e é assim que o Provimento 205/2021 trata a diferença entre um chatbot e uma consulta automatizada.',
+              icon: <ShieldIcon width={20} height={20} />,
+              title: 'Sem selo, sem ranking, sem dado de visitante',
+              body: 'Nenhum “verificado”, nenhum destaque pago, nenhuma busca. As mensagens vão do aparelho do visitante direto para o seu WhatsApp — não passam por nós. Todo perfil leva à consulta pública do CNA.',
             },
           ].map((c) => (
-            <Panel key={c.title} className={c.largo ? 'sm:col-span-2' : undefined}>
-              <h3 className="font-display text-lg font-semibold text-ink">{c.title}</h3>
+            <Panel key={c.title}>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl2 bg-burgundy/10 text-burgundy">
+                {c.icon}
+              </div>
+              <h3 className="mt-4 font-display text-[19px] font-semibold leading-tight text-ink">{c.title}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{c.body}</p>
             </Panel>
           ))}
         </div>
+        <p className="mx-auto mt-6 max-w-2xl text-center text-[12.5px] leading-relaxed text-ink-faint">
+          O advoc.me é uma plataforma independente: não é filiado à OAB, não constitui aconselhamento
+          jurídico e não confere, valida ou endossa inscrições — aponta para a consulta pública do CNA.
+        </p>
       </Section>
 
-      {/* FAQ */}
-      <Section eyebrow="Dúvidas frequentes" title="Perguntas frequentes">
+      {/* FAQ — as perguntas que travam a decisão, e não só as jurídicas */}
+      <Section eyebrow="Dúvidas frequentes" title="O que perguntam antes de assinar">
         <div className="mx-auto max-w-2xl divide-y divide-ink/10 rounded-xl2 border border-ink/10 bg-paper-soft/60">
           {FAQ.map((item) => (
             <FaqItem key={item.q} {...item} />
@@ -565,21 +574,27 @@ export default function Landing() {
       <section className="mx-auto max-w-4xl px-5 py-20 text-center">
         <div className="rule-brass mx-auto mb-8 max-w-xs" />
         <h2 className="font-display text-3xl font-semibold sm:text-5xl">
-          Uma presença digital
+          Um endereço só seu,
           <br />
-          <span className="italic text-burgundy">que respeita a profissão.</span>
+          <span className="italic text-burgundy">pronto em minutos.</span>
         </h2>
         <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
-          Comece no Free. Um perfil sóbrio, claro e conferido antes de ir ao ar.
+          Comece no Free, sem cartão. Suba de plano quando quiser — e volte quando quiser, sem perder
+          nada do que escreveu.
         </p>
-        <Link
-          to={meu.to}
-          {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-          className="btn-primary mt-8"
-        >
-          {meu.label === 'Criar meu perfil' ? 'Criar meu perfil agora' : meu.label}
-          <ArrowRight width={18} height={18} />
-        </Link>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to={meu.to}
+            {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+            className="btn-primary"
+          >
+            {rotuloPrincipal}
+            <ArrowRight width={18} height={18} />
+          </Link>
+          <a href="#planos" className="btn-ghost">
+            Ver os planos
+          </a>
+        </div>
       </section>
 
       <footer className="border-t border-ink/10 py-10 text-center text-[13px] text-ink-faint">
@@ -619,16 +634,21 @@ export default function Landing() {
   )
 }
 
-// Seção padrão da landing — eyebrow (rótulo), título e conteúdo, com animação sóbria.
+// Seção padrão da landing — eyebrow (rótulo), título, uma introdução opcional e
+// o conteúdo, com animação sóbria. `wide` solta a largura para quadros lado a lado.
 function Section({
   id,
   eyebrow,
   title,
+  intro,
+  wide = false,
   children,
 }: {
   id?: string
   eyebrow: string
   title: string
+  intro?: string
+  wide?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -643,9 +663,18 @@ function Section({
       <p className="text-center text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep">
         {eyebrow}
       </p>
-      <h2 className="mx-auto mt-2 max-w-2xl text-center font-display text-3xl font-semibold leading-tight sm:text-4xl">
+      <h2
+        className={`mx-auto mt-2 text-center font-display text-3xl font-semibold leading-tight sm:text-4xl ${
+          wide ? 'max-w-3xl' : 'max-w-2xl'
+        }`}
+      >
         {title}
       </h2>
+      {intro && (
+        <p className="mx-auto mt-4 max-w-2xl text-center text-[15.5px] leading-relaxed text-ink-soft">
+          {intro}
+        </p>
+      )}
       <div className="mt-10">{children}</div>
     </motion.section>
   )
@@ -676,66 +705,113 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   )
 }
 
+// Os recursos sem seção própria. O plano é o MENOR em que o recurso existe —
+// conferido contra lib/plans.ts e lib/aiFeatures.ts: vídeo, gráfica e marca são
+// do Max; QR, relatório e endereço limpo, do Pro; a IA da bio e a primeira
+// pergunta frequente já vêm no Free.
+const RECURSOS: { icon: React.ReactNode; title: string; body: string; plano: 'Free' | 'Pro' | 'Max' }[] = [
+  {
+    icon: <SparkIcon width={18} height={18} />,
+    title: 'A IA escreve a sua apresentação',
+    body: 'Descreva a sua atuação em palavras-chave; o texto sai sóbrio, passa pela checagem e só vai ao ar depois da sua aprovação.',
+    plano: 'Free',
+  },
+  {
+    icon: <MessageIcon width={18} height={18} />,
+    title: 'Perguntas frequentes respondidas',
+    body: `As dúvidas de sempre, respondidas uma vez no perfil — ${FAQ_LIMIT.free} no Free, ${FAQ_LIMIT.pro} no Pro, ${FAQ_LIMIT.premium} no Max. Menos mensagens repetidas.`,
+    plano: 'Free',
+  },
+  {
+    icon: <QrIcon width={18} height={18} />,
+    title: 'Cartão digital com QR Code',
+    body: 'QR em alta resolução e o seu contato em vCard, para o cartão, a vitrine do escritório e a assinatura de e-mail.',
+    plano: 'Pro',
+  },
+  {
+    icon: <ChartIcon width={18} height={18} />,
+    title: 'Relatório do perfil',
+    body: 'Visitas, botões usados e horários de maior procura. Contamos acontecimentos, nunca pessoas.',
+    plano: 'Pro',
+  },
+  {
+    icon: <ClockIcon width={18} height={18} />,
+    title: 'Endereço só com o seu nome',
+    body: 'No Free, o endereço leva um número no fim. Nos planos pagos, só o seu nome — o link que cabe num cartão.',
+    plano: 'Pro',
+  },
+  {
+    icon: <PlayIcon width={18} height={18} />,
+    title: 'Vídeo de apresentação',
+    body: 'Um vídeo curto no fim do perfil, para a pessoa saber com quem vai falar antes de escrever.',
+    plano: 'Max',
+  },
+  {
+    icon: <CardIcon width={18} height={18} />,
+    title: 'Cartão de visita para a gráfica',
+    body: 'Frente, verso, sangria e marcas de corte em PDF, com a sua identidade — pronto para imprimir.',
+    plano: 'Max',
+  },
+  {
+    icon: <PaletteIcon width={18} height={18} />,
+    title: 'Sua cor e sua marca',
+    body: 'Cor de destaque, nome do escritório no rodapé e o “criado com advoc.me” some.',
+    plano: 'Max',
+  },
+]
+
 const FAQ: { q: string; a: string }[] = [
   {
-    q: 'O advoc.me é filiado à OAB?',
-    a: 'Não. Somos uma plataforma independente e não exibimos selo, chancela ou endosso da OAB — as regras vedam isso. Quem quiser conferir uma inscrição usa o link para o CNA que fica no próprio perfil.',
+    q: 'Preciso saber programar ou contratar alguém para montar?',
+    a: 'Não. Você preenche nome, OAB, cidade, áreas e contato; a IA escreve a apresentação a partir das suas palavras-chave, e você revisa. O perfil fica no ar em minutos, e cada seção se edita no painel quando quiser.',
   },
   {
-    q: 'A checagem de conformidade substitui um advogado ou a OAB?',
-    a: 'Não. É um guarda-corpo que reduz violações óbvias e explica o porquê, mas não é aconselhamento jurídico. A decisão de publicar e a responsabilidade pelo conteúdo são sempre suas.',
+    q: 'Meu perfil é público? Onde eu uso o link?',
+    a: 'Sim — é uma página com endereço próprio. Coloque na bio do Instagram, mande pelo WhatsApp quando alguém pedir o seu contato, use na assinatura de e-mail e no QR Code do cartão. Nos planos pagos o endereço leva só o seu nome; no Free, um número no fim.',
   },
   {
-    q: 'A bio gerada por IA já sai dentro das regras?',
-    a: 'A IA é orientada pelas normas e o texto passa pela mesma checagem de conformidade. Ainda assim, nada é publicado sem a sua revisão e aprovação.',
+    q: 'O que acontece quando alguém entra em contato pelo perfil?',
+    a: 'No Free, a pessoa toca em WhatsApp ou e-mail e fala com você. No Pro, o assistente oferece só os dias e horários que você deixou abertos e monta o pedido. No Max, ele faz antes as perguntas que você definiu. Em todos os casos a mensagem sai do aparelho do visitante direto para o seu WhatsApp — nada passa por nós.',
   },
   {
-    q: 'Vocês verificam se a pessoa é mesmo advogada?',
-    a: 'Não fazemos essa verificação — e não fingimos que fazemos. Todo perfil traz, ao lado do número, um link para o Cadastro Nacional dos Advogados (CNA), a base pública da OAB, onde qualquer pessoa confere em segundos. Perfis com registro falso podem ser denunciados pelo próprio perfil e são retirados do ar.',
+    q: 'Quem configura as perguntas da triagem?',
+    a: 'Você, no plano Max. Há modelos por área para começar — nenhum pede CPF, documento ou dado de saúde —, e você escreve, reordena e liga uma pergunta à resposta de outra. O assistente faz exatamente essas perguntas, na sua ordem, sem inventar nenhuma. Dá para testar a conversa no seu próprio perfil antes de publicar.',
   },
   {
-    q: 'O assistente virtual dá orientação jurídica aos visitantes?',
-    a: 'Não. Ele é um roteiro fechado: oferece os dias e horários que você marcou, faz as perguntas que você escolheu e monta a mensagem para o seu WhatsApp. Ele se identifica como automático, não avalia casos, não fala de honorários e não confirma nada — a confirmação é sempre sua. Não há IA nesse caminho: o assistente não interpreta o que é escrito, apenas repassa.',
-  },
-  {
-    q: 'Posso escolher as perguntas que o assistente faz?',
-    a: 'Sim, no plano Max. Você monta a sua triagem — assunto, se já existe processo, forma de atendimento, um relato curto — e o assistente faz exatamente essas perguntas, na sua ordem, sem inventar nenhuma. As respostas chegam organizadas no seu WhatsApp. A plataforma orienta a não pedir CPF, documentos, dados bancários ou informação de saúde nessa primeira conversa, e avisa o visitante a não enviar nada disso; a configuração e a responsabilidade pelo conteúdo continuam sendo suas.',
+    q: 'O assistente substitui o advogado?',
+    a: 'Não, e não tenta. Ele é um roteiro fechado: faz as perguntas, oferece os horários e monta a mensagem. Se alguém perguntar “tenho direito?”, ele responde que quem avalia é você e segue. Não há IA nessa conversa — ele não interpreta o que é escrito, só organiza e repassa. A avaliação, a decisão de atender e a confirmação são suas.',
   },
   {
     q: 'As respostas da triagem ficam guardadas no advoc.me?',
-    a: 'Não. Elas existem só na conversa aberta no aparelho de quem responde e viram uma mensagem que sai dali direto para o seu WhatsApp. Não há tela, banco ou relatório nosso com essas respostas — o histórico do atendimento é o seu WhatsApp.',
+    a: 'Não. Elas existem só na conversa aberta no aparelho de quem responde e viram uma mensagem que vai dali para o seu WhatsApp. Não há tela, banco ou relatório nosso com essas respostas — o histórico do atendimento é o seu WhatsApp.',
   },
   {
-    q: 'Os contratos que eu monto ficam guardados no advoc.me?',
-    a: 'Não. O texto, os dados do cliente e os valores ficam no seu aparelho e no PDF que você baixa. O que registramos é só a impressão digital do arquivo, o código impresso no rodapé e a data em que você confirmou a revisão — o bastante para qualquer pessoa conferir depois se o PDF mudou. Montar e registrar documentos é do plano Max.',
+    q: 'Posso começar de graça? O Free é grátis mesmo?',
+    a: 'Sim, e para sempre: publica um perfil completo, sem cartão. O que ele não tem está escrito no próprio cartão do plano — agendamento pelo perfil, mais áreas e perguntas, e o endereço sem número são dos planos pagos.',
   },
   {
-    q: 'O advoc.me assina ou valida o contrato?',
-    a: 'Não. Você assina o PDF com a sua conta gov.br, com o seu certificado digital ou pela plataforma de assinatura que já usa. O registro confirma que o arquivo é o mesmo; ele não atesta o conteúdo nem a validade do documento, que continuam sob a sua responsabilidade.',
-  },
-  {
-    q: 'O plano Free é grátis mesmo?',
-    a: 'Sim, e para sempre: publica um perfil completo e em conformidade, sem cartão. O que ele não tem está escrito no próprio cartão do plano — agendamento pelo perfil, perguntas frequentes e o endereço sem número são dos planos pagos.',
-  },
-  {
-    q: 'Como funciona a cobrança dos planos pagos?',
-    a: 'Cobrança mensal, sem fidelidade, no valor que está na tabela. Você cancela quando quiser e o mês já pago vale até o fim. Em até 7 dias da primeira contratação, o valor é devolvido integralmente se você se arrepender.',
-  },
-  {
-    q: 'O que acontece com meus textos se eu descer de plano ou cancelar?',
-    a: 'Nada é apagado. O que exceder o novo plano — áreas, perguntas, vídeo, marca — sai da página mas fica guardado, e volta se você voltar.',
+    q: 'Posso cancelar quando quiser? Tem fidelidade?',
+    a: 'Cobrança mensal, sem fidelidade. Cancele quando quiser: o mês já pago vale até o fim, e em até 7 dias da primeira contratação o valor é devolvido integralmente. Descer de plano ou voltar ao Free não apaga nada — o que exceder o novo plano fica guardado e volta se você voltar.',
   },
   {
     q: 'E o endereço do meu perfil, se eu voltar ao Free?',
     a: 'O endereço sem número é dos planos pagos, então ele volta a ter um número no fim — mas só 7 dias depois, com a data avisada no painel desde o primeiro dia. É tempo para atualizar cartão, QR e links. Passado o prazo, o endereço anterior deixa de abrir. Trocar entre Pro e Max não muda nada nele.',
   },
   {
-    q: 'Vocês guardam dados de quem visita o meu perfil?',
-    a: 'Não. A mensagem de contato ou o pedido de horário sai do aparelho do visitante direto para o seu WhatsApp; não passa por nós. Contamos apenas quantas vezes o perfil foi aberto e quais botões foram usados — acontecimentos, nunca pessoas.',
+    q: 'O advoc.me garante que meu conteúdo está de acordo com a OAB?',
+    a: 'Não — e nenhuma ferramenta poderia. O que fazemos: enquanto você escreve, o editor sinaliza possíveis pontos de atenção nas regras de publicidade da advocacia, explica a vedação e sugere um ajuste; o que configura violação clara trava a publicação até ser corrigido. É apoio, não garantia: a responsabilidade pelo conteúdo publicado continua sendo do profissional.',
   },
   {
-    q: 'O que acontece se eu escrever algo fora das normas?',
-    a: 'O editor sinaliza o trecho, explica a vedação e sugere um ajuste. Termos que bloqueiam a publicação impedem o envio até serem corrigidos — a mesma checagem roda de novo antes de publicar.',
+    q: 'O advoc.me é filiado à OAB ou verifica se sou advogado?',
+    a: 'Não. Somos uma plataforma independente, sem selo, chancela ou endosso da OAB — as regras vedam isso. Também não verificamos inscrições, e não fingimos que verificamos: todo perfil traz, ao lado do número, um link para a consulta pública do CNA, onde qualquer pessoa confere em segundos.',
+  },
+  {
+    q: 'A apresentação escrita pela IA já sai dentro das regras?',
+    a: 'A IA é orientada pelas normas e o texto passa pela mesma checagem de qualquer conteúdo. Ainda assim, nada é publicado sem a sua revisão e aprovação — e ela não inventa formação, anos de atuação ou cargo que você não informou.',
+  },
+  {
+    q: 'Os contratos que eu monto ficam guardados no advoc.me?',
+    a: 'Não. O texto, os dados do cliente e os valores ficam no seu aparelho e no PDF que você baixa. O que registramos é só a impressão digital do arquivo, o código impresso no rodapé e a data em que você confirmou a revisão — o bastante para qualquer pessoa conferir depois se o PDF mudou. Montar e registrar documentos é do plano Max.',
   },
 ]
 
@@ -743,6 +819,9 @@ const FAQ: { q: string; a: string }[] = [
  * Cartão de um plano na home. Todo o conteúdo vem de `lib/planOffer.ts` — este
  * componente não sabe o nome de recurso nenhum, e é de propósito: enquanto a
  * lista de benefícios morava aqui dentro, ela divergiu do que o produto fazia.
+ *
+ * O pitch é a manchete do cartão (a etapa que o plano resolve), e o preço vem
+ * logo abaixo: quem compara quatro cartões lê primeiro o PORQUÊ de cada um.
  */
 function PlanCard({ oferta }: { oferta: PlanOffer }) {
   const { name, price, period, pitch, items, falta, featured, ctaTo, ctaLabel } = oferta
@@ -758,11 +837,21 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
     >
       {featured && (
         <span className="absolute -top-3 left-6 rounded-full bg-brass px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ink">
-          Mais escolhido
+          {SELO_DO_DESTAQUE}
         </span>
       )}
-      <h3 className="font-display text-2xl font-semibold">{name}</h3>
-      <p className="mt-2 flex items-baseline gap-1">
+      <p
+        className={`text-[12px] font-semibold uppercase tracking-[0.14em] ${
+          featured ? 'text-brass-light' : 'text-brass-deep'
+        }`}
+      >
+        {name}
+      </p>
+      {/* Altura mínima de três linhas a partir do md: os quatro pitches têm
+          tamanhos diferentes, e sem isso o preço de cada cartão ficava numa
+          altura — a comparação de preço é a primeira coisa que o olho faz. */}
+      <h3 className="mt-2 font-display text-[22px] font-semibold leading-tight md:min-h-[3.45em]">{pitch}</h3>
+      <p className="mt-4 flex items-baseline gap-1">
         <span className="font-display text-4xl font-semibold">{price}</span>
         <span className={`text-[14px] ${featured ? 'text-paper/70' : 'text-ink-faint'}`}>
           {period}
@@ -774,13 +863,6 @@ function PlanCard({ oferta }: { oferta: PlanOffer }) {
           {RESUMO_DA_COBRANCA}
         </p>
       )}
-      <p
-        className={`mt-2 text-[13.5px] font-medium leading-snug ${
-          featured ? 'text-paper-soft/95' : 'text-burgundy'
-        }`}
-      >
-        {pitch}
-      </p>
 
       <ul className="mt-6 space-y-2.5 text-[14px] leading-snug">
         {items.map((item) => (

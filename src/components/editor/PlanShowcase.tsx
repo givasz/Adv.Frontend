@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import { PLAN_LABEL } from '@/lib/upsell'
-import { offerOf, RESUMO_DA_COBRANCA } from '@/lib/planOffer'
+import { offerOf, PLANO_EM_DESTAQUE, RESUMO_DA_COBRANCA, SELO_DO_DESTAQUE } from '@/lib/planOffer'
 import { CheckIcon, ClockIcon } from '@/components/ui/icons'
 
 // Vitrine de planos. O CTA leva à PÁGINA de assinatura (/assinar/:plano), sem
@@ -39,7 +39,9 @@ export function PlanShowcase({
       <div className="grid gap-3 sm:grid-cols-3 sm:items-stretch">
         {ORDER.map((p) => {
           const current = p === plan
-          const recommended = p === 'pro'
+          // O mesmo plano que a home destaca — e o selo diz o que a tabela
+          // comprova ("mais completo"), não uma popularidade que ninguém mediu.
+          const recommended = p === PLANO_EM_DESTAQUE
           const oferta = offerOf(p)
           return (
             <div
@@ -52,7 +54,7 @@ export function PlanShowcase({
             >
               {recommended && (
                 <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brass px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink shadow-card">
-                  Mais popular
+                  {SELO_DO_DESTAQUE}
                 </span>
               )}
               <div className={`flex items-baseline justify-between gap-2 ${recommended ? 'mt-1.5' : ''}`}>
