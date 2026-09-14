@@ -192,6 +192,9 @@ for (const [rota, nome] of ROTAS) {
     // Tela branca não emite erro sozinha: conferimos que sobrou conteúdo visível.
     const texto = (await pagina.locator('body').innerText()).trim()
     if (texto.length < 20) erros.push(`tela em branco (${texto.length} caracteres visíveis)`)
+    // A rede de proteção troca a tela branca por uma tela COM texto, que passaria
+    // na conferência acima. Cair nela é quebra do mesmo jeito.
+    if (await pagina.locator('[data-falha-na-tela]').count()) erros.push('a tela quebrou e caiu na FalhaNaTela')
     const destino = new URL(pagina.url()).pathname
     if (EXIGEM_CONTA.test(rota) && /^\/(entrar|criar-conta)/.test(destino)) {
       erros.push(`desviou para ${destino} — a sessão semeada não foi reconhecida`)

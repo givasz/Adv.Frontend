@@ -1,42 +1,48 @@
-import { lazy, Suspense, useEffect, type ReactElement } from 'react'
+import { Suspense, useEffect, type ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
+import { sobDemanda } from '@/lib/sobDemanda'
 import { AvisoDeTermos } from '@/components/ui/AvisoDeTermos'
 import { AvisoDeEmail } from '@/components/ui/AvisoDeEmail'
+import { FalhaNaTela } from '@/components/ui/FalhaNaTela'
 // O perfil público é o produto — um minisite que abre por link compartilhado,
 // quase sempre num celular em rede ruim. Só ele entra no pacote inicial; todo
 // o resto (editor, painel, onboarding, admin…) chega sob demanda, para que o
 // visitante do minisite nunca pague pelo código do dono do perfil.
+//
+// `sobDemanda`, e não `lazy`: um deploy troca o nome dos pedaços, e a aba aberta
+// antes dele ficava com a tela vazia ao abrir a próxima página. Ver
+// lib/sobDemanda.ts.
 import PublicProfile from './pages/PublicProfile'
-const Landing = lazy(() => import('./pages/Landing'))
-const AuthPage = lazy(() => import('./pages/AuthPage'))
-const EntrarComGooglePage = lazy(() => import('./pages/EntrarComGooglePage'))
-const EsqueciSenhaPage = lazy(() => import('./pages/EsqueciSenhaPage'))
-const RedefinirSenhaPage = lazy(() => import('./pages/RedefinirSenhaPage'))
-const ConfirmarEmailPage = lazy(() => import('./pages/ConfirmarEmailPage'))
-const Onboarding = lazy(() => import('./pages/Onboarding'))
-const Painel = lazy(() => import('./pages/Painel'))
-const Editor = lazy(() => import('./pages/Editor'))
-const AgendaPage = lazy(() => import('./pages/AgendaPage'))
-const TestarAssistentePage = lazy(() => import('./pages/TestarAssistentePage'))
-const Preview = lazy(() => import('./pages/Preview'))
-const AdminPanel = lazy(() => import('./pages/AdminPanel'))
-const Escritorio = lazy(() => import('./pages/Escritorio'))
-const FirmEditor = lazy(() => import('./pages/FirmEditor'))
-const LegalPage = lazy(() => import('./pages/LegalPage'))
-const ReportPage = lazy(() => import('./pages/ReportPage'))
-const SchedulePage = lazy(() => import('./pages/SchedulePage'))
-const SharePage = lazy(() => import('./pages/SharePage'))
-const SupportPage = lazy(() => import('./pages/SupportPage'))
-const ContestarPage = lazy(() => import('./pages/ContestarPage'))
-const DadosPage = lazy(() => import('./pages/DadosPage'))
-const PlansPage = lazy(() => import('./pages/PlansPage'))
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
-const MudarPlanoPage = lazy(() => import('./pages/MudarPlanoPage'))
-const ContratosPage = lazy(() => import('./pages/ContratosPage'))
-const ContratoPage = lazy(() => import('./pages/ContratoPage'))
-const ModeloProprioPage = lazy(() => import('./pages/ModeloProprioPage'))
-const ConferirDocumentoPage = lazy(() => import('./pages/ConferirDocumentoPage'))
+const Landing = sobDemanda(() => import('./pages/Landing'))
+const AuthPage = sobDemanda(() => import('./pages/AuthPage'))
+const EntrarComGooglePage = sobDemanda(() => import('./pages/EntrarComGooglePage'))
+const EsqueciSenhaPage = sobDemanda(() => import('./pages/EsqueciSenhaPage'))
+const RedefinirSenhaPage = sobDemanda(() => import('./pages/RedefinirSenhaPage'))
+const ConfirmarEmailPage = sobDemanda(() => import('./pages/ConfirmarEmailPage'))
+const Onboarding = sobDemanda(() => import('./pages/Onboarding'))
+const Painel = sobDemanda(() => import('./pages/Painel'))
+const Editor = sobDemanda(() => import('./pages/Editor'))
+const AgendaPage = sobDemanda(() => import('./pages/AgendaPage'))
+const TestarAssistentePage = sobDemanda(() => import('./pages/TestarAssistentePage'))
+const Preview = sobDemanda(() => import('./pages/Preview'))
+const AdminPanel = sobDemanda(() => import('./pages/AdminPanel'))
+const Escritorio = sobDemanda(() => import('./pages/Escritorio'))
+const FirmEditor = sobDemanda(() => import('./pages/FirmEditor'))
+const LegalPage = sobDemanda(() => import('./pages/LegalPage'))
+const ReportPage = sobDemanda(() => import('./pages/ReportPage'))
+const SchedulePage = sobDemanda(() => import('./pages/SchedulePage'))
+const SharePage = sobDemanda(() => import('./pages/SharePage'))
+const SupportPage = sobDemanda(() => import('./pages/SupportPage'))
+const ContestarPage = sobDemanda(() => import('./pages/ContestarPage'))
+const DadosPage = sobDemanda(() => import('./pages/DadosPage'))
+const PlansPage = sobDemanda(() => import('./pages/PlansPage'))
+const CheckoutPage = sobDemanda(() => import('./pages/CheckoutPage'))
+const MudarPlanoPage = sobDemanda(() => import('./pages/MudarPlanoPage'))
+const ContratosPage = sobDemanda(() => import('./pages/ContratosPage'))
+const ContratoPage = sobDemanda(() => import('./pages/ContratoPage'))
+const ModeloProprioPage = sobDemanda(() => import('./pages/ModeloProprioPage'))
+const ConferirDocumentoPage = sobDemanda(() => import('./pages/ConferirDocumentoPage'))
 
 // Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
 // Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
@@ -88,6 +94,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      {/* Por fora de tudo, a rede de proteção: erro ao desenhar qualquer tela vira
+          uma tela que diz o que fazer, e não o fundo vazio (ver FalhaNaTela). */}
+      <FalhaNaTela>
       {/* Fora do <Suspense> de propósito: o aviso de Termos não pode ficar
           esperando um pedaço lazy carregar — a faixa é justamente o que precisa
           aparecer ANTES de a pessoa continuar usando. Ela mesma decide em quais
@@ -158,6 +167,7 @@ export default function App() {
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
       </Suspense>
+      </FalhaNaTela>
     </BrowserRouter>
   )
 }

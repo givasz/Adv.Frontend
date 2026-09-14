@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
+import { Suspense, useState } from 'react'
+import { sobDemanda } from '@/lib/sobDemanda'
 import { Link } from 'react-router-dom'
 // LazyMotion + `m` no lugar de `motion`: o perfil publico so usa variants,
 // animate e exit — o subconjunto domAnimation. O `motion` completo arrastaria
@@ -27,7 +28,7 @@ import { botaoFlutuante } from '@/lib/botaoFlutuante'
 // components/assistant) so abre na DEMONSTRACAO da home — no perfil de verdade
 // agendar e uma pagina propria (/:slug/agendar). Lazy para que o minisite de
 // quem chega pelo link nao baixe uma conversa que nunca vai abrir aqui.
-const AssistantChat = lazy(() =>
+const AssistantChat = sobDemanda(() =>
   import('@/components/profile/AssistantChat').then((mod) => ({ default: mod.AssistantChat })),
 )
 import { assistantTitle } from '@/lib/assistantTitle'
