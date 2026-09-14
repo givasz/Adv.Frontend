@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { profileUrl, profileUrlLabel } from '@/lib/publicUrl'
+import { copiarTexto } from '@/lib/copiar'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { editorPath } from '@/lib/editorSections'
 import { comVolta } from '@/components/ui/SubPage'
@@ -19,13 +20,9 @@ export function PainelHero({ profile }: { profile: Profile }) {
   const firstName = profile.name.split(' ')[0] || 'você'
 
   async function copiar() {
-    try {
-      await navigator.clipboard.writeText(profileUrl(profile.slug))
-      setCopiado(true)
-      setTimeout(() => setCopiado(false), 1600)
-    } catch {
-      /* área de transferência indisponível (http, permissão negada) */
-    }
+    if (!(await copiarTexto(profileUrl(profile.slug)))) return
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 1600)
   }
 
   return (

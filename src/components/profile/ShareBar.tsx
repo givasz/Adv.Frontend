@@ -41,8 +41,11 @@ export function ShareBar({
       try {
         await navigator.share({ title: `${name} · advoc.me`, url })
         return
-      } catch {
-        /* usuário cancelou ou o navegador recusou — cai para a página */
+      } catch (e) {
+        // Fechar a folha do sistema é resposta, não falha: a pessoa desistiu, e
+        // levá-la a outra página ignoraria o gesto. Só a RECUSA do navegador (sem
+        // permissão, sem suporte ao que foi pedido) cai para a página.
+        if ((e as { name?: string } | null)?.name === 'AbortError') return
       }
     }
     navigate(`/${slug}/compartilhar`)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { hashEmBlocos } from '@/lib/contratos/codigo'
 import { dataEHora } from '@/lib/contratos/entrega'
+import { copiarTexto } from '@/lib/copiar'
 import { CheckIcon, CopyIcon, FingerprintIcon } from '@/components/ui/icons'
 
 // O comprovante do registro, desenhado como um canhoto de protocolo: picotado
@@ -25,13 +26,10 @@ export function ReciboDeRegistro({
 }) {
   const [copiado, setCopiado] = useState<'codigo' | 'hash' | null>(null)
   const copiar = async (o: 'codigo' | 'hash') => {
-    try {
-      await navigator.clipboard.writeText(o === 'codigo' ? codigo : hash)
-      setCopiado(o)
-      setTimeout(() => setCopiado(null), 2000)
-    } catch {
-      /* sem permissão de área de transferência — o texto continua selecionável */
-    }
+    // Sem cópia possível, o texto continua selecionável na tela.
+    if (!(await copiarTexto(o === 'codigo' ? codigo : hash))) return
+    setCopiado(o)
+    setTimeout(() => setCopiado(null), 2000)
   }
 
   return (

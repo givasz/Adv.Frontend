@@ -6,12 +6,16 @@
 
 import type { Profile } from './types'
 import { adrDoVCard } from './endereco'
+import { numeroWhatsapp } from './whatsapp'
 
 export function buildVCard(profile: Profile, url: string): string {
   const lines = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${profile.name}`, `N:${profile.name};;;;`]
   lines.push(`TITLE:Advogado(a) — ${profile.oabNumber}`)
   if (profile.headline) lines.push(`ROLE:${profile.headline}`)
-  if (profile.contact.whatsapp) lines.push(`TEL;TYPE=CELL:+${profile.contact.whatsapp}`)
+  // Número normalizado como o do botão do WhatsApp: com pontuação ou sem DDI, o
+  // contato salvo não liga para lugar nenhum.
+  const tel = numeroWhatsapp(profile.contact.whatsapp)
+  if (tel) lines.push(`TEL;TYPE=CELL:+${tel}`)
   if (profile.contact.email) lines.push(`EMAIL;TYPE=WORK:${profile.contact.email}`)
   const site = profile.socials.find((s) => s.kind === 'website')?.url
   if (site) lines.push(`URL:${site}`)

@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { api } from '@/lib/api'
 import { slugify } from '@/lib/brFormat'
 import { buildVCard, dataUrlToBlob, downloadFile } from '@/lib/vcard'
+import { copiarTexto } from '@/lib/copiar'
 import { registrarEvento } from '@/lib/eventos'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { CopyIcon, QrIcon } from '@/components/ui/icons'
@@ -21,6 +22,8 @@ export default function SharePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [copied, setCopied] = useState(false)
+  // O navegador recusou as duas formas de copiar: o endereço fica à vista.
+  const [naoCopiou, setNaoCopiou] = useState(false)
   const url = `${window.location.origin}/${slug}`
 
   useEffect(() => {
@@ -45,12 +48,12 @@ export default function SharePage() {
   }, [url])
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url)
+    if (await copiarTexto(url)) {
+      setNaoCopiou(false)
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* área de transferência indisponível (http, permissão negada) */
+    } else {
+      setNaoCopiou(true)
     }
   }
 
@@ -88,6 +91,14 @@ export default function SharePage() {
         <span className="sr-only" aria-live="polite">
           {copied ? 'Link copiado para a área de transferência' : ''}
         </span>
+        {naoCopiou && (
+          // Navegador de aplicativo que recusa copiar: em vez de nada acontecer,
+          // o endereço fica à vista, pronto para o toque longo.
+          <p role="status" className="mt-2 text-[12px] leading-relaxed text-ink-soft">
+            Não deu para copiar por aqui. Toque e segure o endereço para copiar:{' '}
+            <span className="select-all break-all font-medium text-ink">{url}</span>
+          </p>
+        )}
 
         {/* Material para levar a evento: o QR em imagem e o contato em vCard. */}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -108,7 +119,7 @@ export default function SharePage() {
                 // Salvar o contato na agenda é uma intenção de falar depois —
                 // conta junto com WhatsApp e agendamento (ver lib/eventos.ts).
                 registrarEvento(slug ?? '', 'cartao')
-                downloadFile(buildVCard(profile, url), `${slugify(profile.name)}.vcf`)
+                downloadFile(buildVCard(profile, url), `${slugify(profile.name)}.vcf`, 'text/vcard')
               }}
               className="btn-ghost flex-1 !text-[13px]"
             >
@@ -116,6 +127,11 @@ export default function SharePage() {
             </button>
           )}
         </div>
+        {/* Navegador de aplicativo (Instagram, Facebook) muitas vezes não baixa
+            arquivo nenhum — e não avisa. A linha diz o caminho que funciona. */}
+        <p className="mt-3 text-[11.5px] leading-relaxed text-ink-faint">
+          Se o arquivo não baixar, abra esta página no navegador do celular.
+        </p>
       </div>
     </SubPage>
   )

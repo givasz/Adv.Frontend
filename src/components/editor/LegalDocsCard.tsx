@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Profile } from '@/lib/types'
 import { generateLegalDocs, type LegalDoc } from '@/lib/legalDocs'
+import { copiarTexto } from '@/lib/copiar'
 import { Card } from './fields'
 import { CopyIcon, LockIcon } from '@/components/ui/icons'
 
@@ -30,13 +31,9 @@ export function LegalDocsCard({ profile }: { profile: Profile }) {
   const doc = docs[tab]
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(doc.body)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* área de transferência indisponível */
-    }
+    if (!(await copiarTexto(doc.body))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
   }
 
   return (

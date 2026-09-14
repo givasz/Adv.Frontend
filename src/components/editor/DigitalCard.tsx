@@ -4,6 +4,7 @@ import type { Profile } from '@/lib/types'
 import { slugify } from '@/lib/brFormat'
 import { profileUrl, profileUrlLabel } from '@/lib/publicUrl'
 import { buildVCard, dataUrlToBlob, downloadFile } from '@/lib/vcard'
+import { copiarTexto } from '@/lib/copiar'
 import { Card } from './fields'
 import { CopyIcon } from '@/components/ui/icons'
 
@@ -34,14 +35,10 @@ export function DigitalCard({ profile }: { profile: Profile }) {
     })
   }, [url])
 
-  const copy = () => {
-    navigator.clipboard?.writeText(url).then(
-      () => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1600)
-      },
-      () => {},
-    )
+  const copy = async () => {
+    if (!(await copiarTexto(url))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
   }
 
   // Gera o PNG em alta resolução na hora do download (a prévia fica pequena na tela).
@@ -83,7 +80,7 @@ export function DigitalCard({ profile }: { profile: Profile }) {
             </button>
             <button
               type="button"
-              onClick={() => downloadFile(buildVCard(profile, url), `${slugify(profile.name) || 'contato'}.vcf`)}
+              onClick={() => downloadFile(buildVCard(profile, url), `${slugify(profile.name) || 'contato'}.vcf`, 'text/vcard')}
               className="btn-ghost !py-2 !px-3 !text-[13px]"
             >
               Baixar contato (vCard)

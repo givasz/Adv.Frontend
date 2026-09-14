@@ -75,6 +75,16 @@ describe('compatibilidade com navegadores', () => {
     expect(fixos).toEqual([])
   })
 
+  // O navegador embutido do Android recusa navigator.clipboard, e o botão
+  // "Copiar" ficava mudo. copiarTexto tenta a API e cai no jeito antigo.
+  it('toda cópia para a área de transferência passa por copiarTexto', () => {
+    const diretas = fontes()
+      .filter(({ arquivo }) => !/^lib[\\/]copiar\.ts$/.test(arquivo))
+      .filter(({ texto }) => /navigator\.clipboard/.test(texto))
+      .map(({ arquivo }) => arquivo)
+    expect(diretas).toEqual([])
+  })
+
   it('copiaDeDados devolve uma cópia que não mexe no original', () => {
     const original = { dias: [{ dia: 1, horas: ['09:00'] }], saudacao: '' }
     const copia = copiaDeDados(original)
