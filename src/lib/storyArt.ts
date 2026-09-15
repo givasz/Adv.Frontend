@@ -11,10 +11,18 @@
 // é enorme, e há poucas peças além disso. Três decisões regem o arquivo:
 //
 // 1. A FOTO É O FUNDO. No modelo principal ela cobre a tela inteira, desfocada e
-//    sob um véu escuro na cor do tema, e o retrato nítido sai por cima, morrendo
-//    em degradê na tinta escura — é onde o nome entra. A foto do perfil tem 512
-//    px de lado (lib/image.ts): esticada nítida a 1920 ela viria borrada, e é por
-//    isso que o fundo é DESFOCADO de propósito e o retrato nítido fica em ~700 px.
+//    sob um véu escuro na cor do tema, e a mesma foto nítida ocupa a LARGURA
+//    TODA em cima, morrendo em degradê na própria versão desfocada — é onde o
+//    nome entra. A foto do perfil tem 512 px de lado (lib/image.ts): esticada
+//    nítida a 1920 ela viria borrada, e é por isso que o fundo é DESFOCADO de
+//    propósito e a nítida para em ~1000 px, com o grão por cima disfarçando o
+//    resto.
+//
+//    SEM ARCO E SEM MOLDURA (15/09/2026, à noite): a primeira versão recortava
+//    o retrato num arco com um filete em volta, e o usuário viu "a janela de
+//    uma igreja". Retrato em arco é o gesto do PERFIL (tema Oliva); no story,
+//    solto sobre um fundo escuro, vira vitral. Aqui a foto é reta e sangra
+//    pelas bordas, como um pôster — nenhuma forma recorta rosto no story.
 //
 // 2. O STORY É O TEMA DO PERFIL. Papel, tinta, fonte e o formato da foto vêm de
 //    lib/themes.ts (com a cor da marca por cima, no Max). O escuro de cada tema é
@@ -87,8 +95,8 @@ export const DEFAULT_STORY: StoryConfig = {
 }
 
 export const STORY_TEMPLATES: { id: StoryTemplate; name: string; blurb: string }[] = [
-  { id: 'retrato', name: 'Retrato', blurb: 'Sua foto toma a tela, sob um véu escuro; o nome entra em serifa clara.' },
-  { id: 'capa', name: 'Capa', blurb: 'Papel claro, foto à direita e o nome enorme, como capa de revista.' },
+  { id: 'retrato', name: 'Retrato', blurb: 'Sua foto de borda a borda, dissolvendo no escuro do tema; o nome entra em serifa clara.' },
+  { id: 'capa', name: 'Capa', blurb: 'Papel claro, foto reta à direita e o nome enorme, como capa de revista.' },
   { id: 'noturno', name: 'Noturno', blurb: 'Fundo escuro chapado, moldura dupla e as áreas em coluna — papel timbrado à noite.' },
 ]
 
@@ -292,8 +300,12 @@ export interface StoryInk {
   upper: boolean
   /** entreletra do nome, em em */
   nameTracking: number
-  /** formato da foto: arco para os temas de retrato redondo/arco, reto para os quadrados */
-  forma: 'arch' | 'rect'
+  /**
+   * Formato do retrato pequeno (só o Noturno usa): redondo, ou quadrado nos
+   * temas de foto quadrada. Nenhum modelo recorta a foto em arco — ver o
+   * cabeçalho do arquivo.
+   */
+  forma: 'circle' | 'rect'
 }
 
 export function storyInk(profile: Profile): StoryInk {
@@ -314,7 +326,7 @@ export function storyInk(profile: Profile): StoryInk {
     body: v['--font-body'],
     upper: tema.style.nameCase === 'upper',
     nameTracking: parseFloat(v['--name-tracking'] ?? '0') || 0,
-    forma: tema.style.avatar === 'square' ? 'rect' : 'arch',
+    forma: tema.style.avatar === 'square' ? 'rect' : 'circle',
   }
 }
 
@@ -369,15 +381,15 @@ function texto(x: number, y: number, conteudo: string, o: Estilo): string {
 const linha = (x1: number, y1: number, x2: number, y2: number, cor: string, w = 2) =>
   `<line x1="${r(x1)}" y1="${r(y1)}" x2="${r(x2)}" y2="${r(y2)}" stroke="${cor}" stroke-width="${w}"/>`
 
-type Forma = 'arch' | 'rect' | 'circle'
+/** `bleed` é o retângulo sem canto arredondado — a foto que sangra pela borda. */
+type Forma = 'bleed' | 'rect' | 'circle'
 
 /** O contorno de uma forma, como elemento SVG sem atributos de pintura. */
 function contorno(forma: Forma, x: number, y: number, w: number, h: number, extra = ''): string {
   if (forma === 'circle') {
     return `<circle cx="${r(x + w / 2)}" cy="${r(y + h / 2)}" r="${r(Math.min(w, h) / 2)}"${extra}/>`
   }
-  if (forma === 'rect') return `<rect x="${r(x)}" y="${r(y)}" width="${r(w)}" height="${r(h)}" rx="10"${extra}/>`
-  return `<path d="M${r(x)} ${r(y + h)}V${r(y + w / 2)}A${r(w / 2)} ${r(w / 2)} 0 0 1 ${r(x + w)} ${r(y + w / 2)}V${r(y + h)}Z"${extra}/>`
+  return `<rect x="${r(x)}" y="${r(y)}" width="${r(w)}" height="${r(h)}" rx="${forma === 'rect' ? 10 : 0}"${extra}/>`
 }
 
 /**
@@ -426,7 +438,7 @@ function monograma(
   font: string,
 ): string {
   const tamanho = Math.min(w, h) * 0.36
-  const cy = forma === 'arch' ? y + h * 0.56 : y + h / 2
+  const cy = y + h / 2
   return (
     contorno(forma, x, y, w, h, ` fill="none" stroke="${anel}" stroke-width="2"`) +
     texto(x + w / 2, cy + tamanho * 0.34, iniciais, {
@@ -701,33 +713,36 @@ function escolher<T>(variantes: T[], montar: (v: T) => Peca[], disponivel: (v: T
 // ---- Os modelos -------------------------------------------------------------------
 
 /**
- * RETRATO — a foto toma a tela. Fundo desfocado sob o véu escuro do tema; o
- * retrato nítido em cima, com moldura fina, dissolvendo na tinta onde o nome
- * começa. Sem foto, o monograma no mesmo arco sobre o escuro chapado.
+ * RETRATO — a foto toma a tela. Fundo desfocado sob o véu escuro do tema; a
+ * mesma foto nítida de borda a borda em cima, dissolvendo na versão desfocada
+ * onde o nome começa — a emenda é invisível porque é a mesma imagem dos dois
+ * lados. Sem foto, o monograma num círculo sobre o escuro chapado.
  */
 function modeloRetrato(c: Contexto, id: string): string {
   const cx = STORY_W / 2
   const maxW = STORY_W - M * 2
   const { l, k } = c
-  const forma: Forma = k.forma
   let out = `<rect x="0" y="0" width="${STORY_W}" height="${STORY_H}" fill="${k.deep}"/>`
   if (l.photo) out += fundoDeFoto(id, l.photo, k.deep)
 
   type V = { h: number; frase: boolean; areas: number }
+  // A foto é quadrada (512 × 512): a 1080 de largura, 1080 de altura mostra
+  // ela INTEIRA, sem corte — é a primeira variante. As mais altas cortam um
+  // pouco das laterais; as mais baixas, do alto e do pé.
   const variantes: V[] = [
-    { h: 900, frase: true, areas: 3 },
-    { h: 820, frase: true, areas: 3 },
-    { h: 740, frase: true, areas: 3 },
-    { h: 660, frase: true, areas: 3 },
-    { h: 740, frase: false, areas: 3 },
-    { h: 660, frase: false, areas: 3 },
-    { h: 620, frase: false, areas: 2 },
-    { h: 580, frase: false, areas: 1 },
+    { h: 1160, frase: true, areas: 3 },
+    { h: 1080, frase: true, areas: 3 },
+    { h: 1000, frase: true, areas: 3 },
+    { h: 920, frase: true, areas: 3 },
+    { h: 1000, frase: false, areas: 3 },
+    { h: 920, frase: false, areas: 3 },
+    { h: 860, frase: false, areas: 2 },
+    { h: 800, frase: false, areas: 1 },
   ]
-  const yFoto = 170
-  // A pilha começa no pé do degradê da foto, onde ela já virou tinta: é o que
-  // costura retrato e nome sem o rótulo pousar em cima do rosto.
-  const topoDaPilha = (v: V) => yFoto + v.h - (l.photo ? 60 : 0)
+  const yFoto = 0
+  // A pilha começa no pé do degradê da foto, onde ela já virou fundo: é o que
+  // costura foto e nome sem o rótulo pousar em cima do rosto.
+  const topoDaPilha = (v: V) => (l.photo ? yFoto + v.h - 110 : SAFE_TOP + 560)
 
   const { v, pecas } = escolher(
     variantes,
@@ -752,13 +767,11 @@ function modeloRetrato(c: Contexto, id: string): string {
     (v) => LIMITE_DA_PILHA - topoDaPilha(v),
   )
 
-  const w = forma === 'arch' ? v.h * 0.86 : v.h * 0.9
   if (l.photo) {
-    out += retrato(id, forma, cx - w / 2, yFoto, w, v.h, l.photo, { fade: 0.42, moldura: misturar(k.onDeep, k.deep, 0.55) })
+    out += retrato(id, 'bleed', 0, yFoto, STORY_W, v.h, l.photo, { fade: 0.36 })
   } else {
-    const hm = Math.min(v.h * 0.62, 520)
-    const wm = forma === 'arch' ? hm * 0.82 : hm * 0.9
-    out += monograma(forma, cx - wm / 2, topoDaPilha(v) - hm - 64, wm, hm, l.iniciais, k.accentLight, misturar(k.onDeep, k.deep, 0.5), c.fontes.display)
+    const s = 400
+    out += monograma('circle', cx - s / 2, topoDaPilha(v) - s - 72, s, s, l.iniciais, k.accentLight, misturar(k.onDeep, k.deep, 0.5), c.fontes.display)
   }
   out += empilhar(pecas, topoDaPilha(v))
   out += rodape(c, cx, 'middle', maxW)
@@ -766,15 +779,15 @@ function modeloRetrato(c: Contexto, id: string): string {
 }
 
 /**
- * CAPA — papel claro do tema, a foto alta à direita dissolvendo no papel e o
- * nome em duas linhas enormes logo abaixo, como capa de revista. "ADVOCACIA"
- * corre na vertical pela margem esquerda; as áreas viram um sumário numerado.
+ * CAPA — papel claro do tema, a foto alta e reta à direita dissolvendo no papel
+ * e o nome em duas linhas enormes logo abaixo, como capa de revista.
+ * "ADVOCACIA" corre na vertical pela margem esquerda; as áreas viram um
+ * sumário numerado.
  */
 function modeloCapa(c: Contexto, id: string): string {
   const x0 = M
   const maxW = STORY_W - M * 2
   const { l, k } = c
-  const forma: Forma = k.forma
   let out = `<rect x="0" y="0" width="${STORY_W}" height="${STORY_H}" fill="${k.bg}"/>`
 
   const xFoto = 300
@@ -835,10 +848,10 @@ function modeloCapa(c: Contexto, id: string): string {
   )
 
   if (l.photo) {
-    out += retrato(id, forma, xFoto, yFoto, wFoto, v.h, l.photo, { fade: 0.26 })
+    out += retrato(id, 'bleed', xFoto, yFoto, wFoto, v.h, l.photo, { fade: 0.26 })
   } else {
     const hm = Math.min(v.h, 560)
-    out += monograma(forma, xFoto + (wFoto - hm * 0.8) / 2, yFoto + v.h - hm, hm * 0.8, hm, l.iniciais, k.accent, c.p.rule, c.fontes.display)
+    out += monograma('bleed', xFoto + (wFoto - hm * 0.8) / 2, yFoto + v.h - hm, hm * 0.8, hm, l.iniciais, k.accent, c.p.rule, c.fontes.display)
   }
 
   // "ADVOCACIA" na vertical, subindo pela margem esquerda ao lado da foto. O
@@ -878,7 +891,7 @@ function modeloNoturno(c: Contexto, id: string): string {
     `<rect x="52" y="52" width="${STORY_W - 104}" height="${STORY_H - 104}" fill="none" stroke="${moldura}" stroke-width="2"/>` +
     `<rect x="70" y="70" width="${STORY_W - 140}" height="${STORY_H - 140}" fill="none" stroke="${molduraFina}" stroke-width="1.5"/>`
 
-  const forma: Forma = k.forma === 'rect' ? 'rect' : 'circle'
+  const forma: Forma = k.forma
   type V = { foto: number; frase: boolean; areas: number }
   const variantes: V[] = [
     { foto: 440, frase: true, areas: 3 },
