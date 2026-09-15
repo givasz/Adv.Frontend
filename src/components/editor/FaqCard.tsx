@@ -13,7 +13,7 @@ import { AiButton } from './AiGenerator'
 import { SparkIcon, TrashIcon } from '@/components/ui/icons'
 
 // Perguntas frequentes do perfil — o advogado responde as dúvidas que mais ouve.
-// 1 no Free, 2 no Pro, 5 no Max (ver lib/plans.ts). Os TETOS DE TEXTO também são
+// A cota de cada plano está em FAQ_LIMIT (lib/plans.ts). Os TETOS DE TEXTO também são
 // do plano: no Free a pergunta cabe em 80 caracteres e a resposta em 160, porque
 // com cota de uma um campo largo vira convite a empilhar duas perguntas numa.
 //

@@ -55,9 +55,9 @@ export const sampleProfile: Profile = {
         'Aposentadorias, auxílios e revisões de benefícios junto ao INSS, com explicação clara de requisitos e prazos.',
     },
   ],
-  // Perfil-modelo (Max): 5 perguntas frequentes, no limite do plano. Respostas
-  // curtas, educativas e com o lembrete de análise individual — o exemplo que o
-  // advogado vê é o padrão que ele vai copiar.
+  // Perfil-modelo (Max): perguntas frequentes no limite do plano (FAQ_LIMIT —
+  // faq.spec trava). Respostas curtas, educativas e com o lembrete de análise
+  // individual — o exemplo que o advogado vê é o padrão que ele vai copiar.
   faqs: [
     {
       id: 'fq1',
@@ -88,6 +88,24 @@ export const sampleProfile: Profile = {
       question: 'Quais documentos levar na primeira conversa?',
       answer:
         'Documento de identidade, certidões relacionadas ao tema (casamento, nascimento, óbito) e o que existir por escrito sobre a situação. Com isso já é possível entender o cenário e indicar os caminhos.',
+    },
+    {
+      id: 'fq6',
+      question: 'Quais valores entram na rescisão do contrato de trabalho?',
+      answer:
+        'Depende da forma de desligamento. Em regra entram saldo de salário, férias e 13º proporcionais e, conforme o caso, aviso prévio e FGTS. Conferir o termo de rescisão é o primeiro passo.',
+    },
+    {
+      id: 'fq7',
+      question: 'O que fazer diante de uma cobrança indevida?',
+      answer:
+        'Guarde faturas, protocolos e conversas e registre a contestação com a empresa. O que foi pago sem ser devido pode ser discutido, e cada situação pede a leitura dos documentos.',
+    },
+    {
+      id: 'fq8',
+      question: 'Quando cabe pedir a revisão de uma aposentadoria?',
+      answer:
+        'Quando há indício de erro no cálculo ou de período não considerado pelo INSS. O pedido tem prazo, contado a partir do primeiro pagamento, e cada benefício precisa de análise própria.',
     },
   ],
   socials: [

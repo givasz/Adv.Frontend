@@ -46,6 +46,7 @@ export type SectionId =
   | 'aparencia'
   | 'marca'
   | 'analytics'
+  | 'story'
   | 'qrcode'
   | 'cartao'
   | 'conteudo'
@@ -430,6 +431,22 @@ export const SECTIONS: Record<SectionId, SectionMeta> = {
     resumo: () => ({ texto: 'Visitas e cliques dos últimos 30 dias.' }),
   },
 
+  // Aberta em TODOS os planos: cada story postado leva gente ao perfil, e o
+  // visual já sobe de degrau sozinho com os temas de cada plano.
+  story: {
+    id: 'story',
+    title: 'Story para as redes',
+    short: 'Story',
+    subtitle: 'Uma imagem do seu perfil pronta para os stories do Instagram e o status do WhatsApp.',
+    group: 'ferramentas',
+    keywords: ['story', 'stories', 'instagram stories', 'status', 'status do whatsapp', 'divulgar', 'postar', 'redes sociais'],
+    campos: [],
+    resumo: (p) =>
+      p.oabNumber.trim()
+        ? { texto: 'Imagem com o visual do perfil, pronta para postar.' }
+        : { texto: 'Falta o número da OAB para gerar a imagem.', pendente: true },
+  },
+
   qrcode: {
     id: 'qrcode',
     title: 'Seu cartão digital',
@@ -490,7 +507,7 @@ export const SECTION_IDS = Object.keys(SECTIONS) as SectionId[]
 /** Ordem de exibição dentro de cada grupo — do mais mexido para o menos. */
 export const SECTIONS_BY_GROUP: Record<SectionGroup, SectionId[]> = {
   perfil: ['identidade', 'bio', 'redes', 'areas', 'local', 'agenda', 'triagem', 'botao', 'faq', 'aparencia', 'video', 'marca'],
-  ferramentas: ['analytics', 'qrcode', 'cartao', 'conteudo'],
+  ferramentas: ['analytics', 'story', 'qrcode', 'cartao', 'conteudo'],
   conta: ['plano'],
 }
 

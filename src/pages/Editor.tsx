@@ -61,6 +61,7 @@ import { CampoUnico } from '@/components/editor/CampoUnico'
 import { AvatarUpload } from '@/components/editor/AvatarUpload'
 import { DigitalCard } from '@/components/editor/DigitalCard'
 import { CARD_PREVIEW, CardStudio } from '@/components/editor/CardStudio'
+import { StoryStudio } from '@/components/editor/StoryStudio'
 import { UpsellCard } from '@/components/editor/UpsellCard'
 import { GhostSlot, LockedFeature, QuotaCounter } from '@/components/editor/upsellBits'
 import { OabNumberInput, WhatsappInput } from '@/components/editor/inputs'
@@ -684,6 +685,8 @@ export default function Editor() {
               )}
 
               {section === 'analytics' && <MetricasCard />}
+
+              {section === 'story' && <StoryStudio profile={profile} />}
 
               {section === 'qrcode' &&
                 (canUseDigitalCard(profile.plan) ? (

@@ -30,13 +30,17 @@ export function charLimit(plan: Plan, field: LimitedField): number {
 // Pro 6 → 4 e Max 20 → 12 em 04/09/2026. Vinte áreas nunca foi generosidade: um
 // perfil que lista vinte assuntos não diz a quem chega o que aquele advogado faz,
 // diz que ele faz tudo — e "faz tudo" é o que se lê como "não é de nada". A
-// escada continua clara (1 → 4 → 12) e cada degrau ainda vale o que cobra.
-export const AREA_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 12 }
+// escada continua clara (1 → 5 → 12) e cada degrau ainda vale o que cobra.
+//
+// Pro 4 → 5 em 15/09/2026: quatro deixava de fora a quinta área de quem atua em
+// família, sucessões, cível, consumidor e trabalho — o arranjo mais comum.
+export const AREA_LIMIT: Record<Plan, number> = { free: 1, pro: 5, premium: 12 }
 
-// Perguntas frequentes respondidas no perfil: 1 no Free, 2 no Pro, 5 no Max.
+// Perguntas frequentes respondidas no perfil: 1 no Free, 4 no Pro, 8 no Max.
 // O Free tinha ZERO até 04/09/2026 — uma pergunta é o suficiente para o recurso
 // existir e ser entendido, e é o que dá sentido ao teto dos planos pagos.
-export const FAQ_LIMIT: Record<Plan, number> = { free: 1, pro: 2, premium: 5 }
+// Pro 2 → 4 e Max 5 → 8 em 15/09/2026: cada degrau passou a dobrar o anterior.
+export const FAQ_LIMIT: Record<Plan, number> = { free: 1, pro: 4, premium: 8 }
 
 // ---- Tetos de TEXTO dos campos de cota ------------------------------------
 //

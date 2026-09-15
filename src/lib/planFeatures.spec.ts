@@ -97,8 +97,8 @@ describe('planFeatures — checklist do que ainda não foi usado', () => {
 
   it('o FAQ começa no Free com uma, e cada plano acrescenta um degrau', () => {
     expect(FAQ_LIMIT.free).toBe(1)
-    expect(FAQ_LIMIT.pro).toBe(2)
-    expect(FAQ_LIMIT.premium).toBe(5)
+    expect(FAQ_LIMIT.pro).toBeGreaterThan(FAQ_LIMIT.free)
+    expect(FAQ_LIMIT.premium).toBeGreaterThan(FAQ_LIMIT.pro)
     // O item do Pro é a SEGUNDA pergunta: quem já respondeu a primeira no Free
     // não pode encontrá-lo nascido como concluído.
     expect(

@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Profile } from './types'
 import { mudancasAoDescer } from './rebaixamento'
+import { FAQ_LIMIT } from './plans'
 
 function perfil(p: Partial<Profile> = {}): Profile {
   return {
@@ -101,9 +102,10 @@ describe('a lista fala do perfil real', () => {
   })
 
   it('do Max para o Pro, diz quantas perguntas sobrevivem', () => {
-    const faqs = Array.from({ length: 5 }, (_, i) => ({ id: `f${i}`, question: `q${i}?`, answer: 'a' }))
+    const total = FAQ_LIMIT.premium
+    const faqs = Array.from({ length: total }, (_, i) => ({ id: `f${i}`, question: `q${i}?`, answer: 'a' }))
     const { perde } = mudancasAoDescer(perfil({ plan: 'premium', faqs }), 'pro')
-    expect(juntos(perde)).toMatch(/das suas 5 perguntas.*2 continuam aparecendo/i)
+    expect(juntos(perde)).toMatch(new RegExp(`das suas ${total} perguntas.*${FAQ_LIMIT.pro} continuam aparecendo`, 'i'))
   })
 
   it('o assistente virtual é nomeado pelo que é, não como "agendamento"', () => {

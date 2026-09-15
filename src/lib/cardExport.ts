@@ -49,6 +49,12 @@ const fontCache = new Map<string, string>()
 const COM_OPSZ = new Set(['Fraunces', 'Newsreader', 'Source Serif 4'])
 
 /**
+ * Teto do eixo óptico de cada família — pedir acima dele faz o Google responder
+ * erro e a face não vem. O cartão pede 24 (cabe em todas); o story pede mais.
+ */
+const OPSZ_MAX: Record<string, number> = { Fraunces: 144, Newsreader: 72, 'Source Serif 4': 60 }
+
+/**
  * Nome com que a fonte entra no arquivo exportado. NÃO é o nome real da família,
  * e isso é de propósito: o rasterizador do WebKit (o do Safari) erra ao escolher
  * entre duas faces declaradas com o MESMO nome dentro de uma SVG desenhada em
@@ -81,17 +87,18 @@ const toBase64 = (buf: ArrayBuffer): string => {
  * Só o subconjunto `latin` é baixado — ele já cobre todo o português (á, ç, õ
  * estão abaixo de U+00FF).
  */
-async function faceEmbutida(stack: string, alias: string, peso: number): Promise<string> {
+async function faceEmbutida(stack: string, alias: string, peso: number, opsz = DISPLAY_OPSZ): Promise<string> {
   const familia = familyName(stack)
   if (!familia) return ''
-  const chave = `${familia}|${peso}|${alias}`
+  const optico = Math.min(opsz, OPSZ_MAX[familia] ?? opsz)
+  const chave = `${familia}|${peso}|${alias}|${optico}`
   const emCache = fontCache.get(chave)
   if (emCache !== undefined) return emCache
 
   let face = ''
   try {
     const nome = familia.replace(/ /g, '+')
-    const eixo = COM_OPSZ.has(familia) ? `opsz,wght@${DISPLAY_OPSZ},${peso}` : `wght@${peso}`
+    const eixo = COM_OPSZ.has(familia) ? `opsz,wght@${optico},${peso}` : `wght@${peso}`
     const css = await fetch(`https://fonts.googleapis.com/css2?family=${nome}:${eixo}&display=swap`).then((r) =>
       r.ok ? r.text() : Promise.reject(new Error('css')),
     )
@@ -130,9 +137,12 @@ async function faceEmbutida(stack: string, alias: string, peso: number): Promise
  * da página — em nenhum navegador. Sem isto o PNG sairia com a fonte de reserva
  * e a prévia teria mentido. Falhando a rede, `completo` vem false e a tela avisa.
  */
-async function fontesEmbutidas(ink: { display: string; body: string }) {
+export async function fontesEmbutidas(
+  ink: { display: string; body: string },
+  { opsz = DISPLAY_OPSZ, pesoDisplay = PESO.display }: { opsz?: number; pesoDisplay?: number } = {},
+) {
   const [d, b] = await Promise.all([
-    faceEmbutida(ink.display, ALIAS.display, PESO.display),
+    faceEmbutida(ink.display, ALIAS.display, pesoDisplay, opsz),
     faceEmbutida(ink.body, ALIAS.body, PESO.body),
   ])
   return {
@@ -148,7 +158,7 @@ async function fontesEmbutidas(ink: { display: string; body: string }) {
 }
 
 /** Enfia o `<style>` das fontes logo depois da abertura do <svg>. */
-function withFonts(svg: string, style: string): string {
+export function withFonts(svg: string, style: string): string {
   if (!style) return svg
   return svg.replace(/>/, `><defs><style type="text/css">${style}</style></defs>`)
 }
@@ -164,9 +174,9 @@ function withPixelSize(svg: string, w: number, h: number): string {
   return svg.replace(/width="[^"]*"\s+height="[^"]*"/, `width="${w}" height="${h}"`)
 }
 
-const svgToUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(semMeiaLetra(svg))}`
+export const svgToUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(semMeiaLetra(svg))}`
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
@@ -175,7 +185,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     // toBlob não existe em navegador antigo — cai no toDataURL, que existe desde sempre.
     if (!canvas.toBlob) {
@@ -233,7 +243,7 @@ export async function baixarSvg(profile: Profile, card: CardConfig, side: CardSi
  * numa aba em vez de salvar — quando o aparelho tem compartilhamento de arquivo,
  * usamos a folha do sistema, que é o gesto que a pessoa conhece.
  */
-async function entregarArquivo(blob: Blob, nome: string): Promise<void> {
+export async function entregarArquivo(blob: Blob, nome: string): Promise<void> {
   const nav = navigator as Navigator & {
     canShare?: (d: { files: File[] }) => boolean
     share?: (d: { files: File[]; title?: string }) => Promise<void>

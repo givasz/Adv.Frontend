@@ -62,7 +62,7 @@ export interface PracticeArea {
 
 /**
  * Pergunta frequente respondida pelo advogado no perfil (seção "Perguntas
- * frequentes"). Recurso dos planos pagos: 2 no Pro, 5 no Max.
+ * frequentes"). A cota de cada plano está em FAQ_LIMIT (lib/plans.ts).
  *
  * Prov. 205/2021: responder dúvidas de forma EDUCATIVA e geral é informação
  * permitida — a resposta não pode virar captação, promessa de resultado, oferta

@@ -9,6 +9,7 @@ import { copiarTexto } from '@/lib/copiar'
 import { registrarEvento } from '@/lib/eventos'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { CopyIcon, QrIcon } from '@/components/ui/icons'
+import { StoryStudio } from '@/components/editor/StoryStudio'
 
 // Compartilhar um perfil — /:slug/compartilhar.
 //
@@ -133,6 +134,14 @@ export default function SharePage() {
           Se o arquivo não baixar, abra esta página no navegador do celular.
         </p>
       </div>
+
+      {/* A imagem pronta para stories e status — mesma peça da seção "Story" do
+          editor, com os ajustes padrão. */}
+      {profile && (
+        <div className="mt-5">
+          <StoryStudio profile={profile} compacto />
+        </div>
+      )}
     </SubPage>
   )
 }

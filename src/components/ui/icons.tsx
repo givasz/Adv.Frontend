@@ -303,6 +303,16 @@ export const CardIcon = (p: IconProps) => (
   </svg>
 )
 
+// Story: a tela em pé do celular com o retrato e duas linhas de texto — precisa
+// não se confundir com o cartão deitado nem com o QR ao lado na grade.
+export const StoryIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+    <circle cx="12" cy="9" r="2.5" />
+    <path d="M9.5 14.5h5M10.5 17.5h3" />
+  </svg>
+)
+
 export const MedalIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="9" r="5.5" />

@@ -9,12 +9,13 @@ import { sampleProfile } from './mockData'
 import { hasBlockingIssue } from './oab'
 
 describe('limites do FAQ por plano', () => {
-  it('Free tem 1; Pro tem 2; Max tem 5 — e o portão lê a tabela', () => {
+  it('Free tem 1; Pro tem 4; Max tem 8 — e o portão lê a tabela', () => {
     // O Free tinha ZERO até 04/09/2026. Uma pergunta basta para o recurso existir
-    // e ser entendido, e é o que dá sentido ao teto dos planos pagos.
+    // e ser entendido, e é o que dá sentido ao teto dos planos pagos. Pro e Max
+    // subiram de 2 e 5 para 4 e 8 em 15/09/2026.
     expect(FAQ_LIMIT.free).toBe(1)
-    expect(FAQ_LIMIT.pro).toBe(2)
-    expect(FAQ_LIMIT.premium).toBe(5)
+    expect(FAQ_LIMIT.pro).toBe(4)
+    expect(FAQ_LIMIT.premium).toBe(8)
     // `canUseFaq` deixou de perguntar o nome do plano e passou a ler a cota —
     // assim o portão nunca discorda do número anunciado.
     for (const p of ['free', 'pro', 'premium'] as const) {
@@ -44,12 +45,12 @@ describe('limites do FAQ por plano', () => {
     expect(faqQuota('free', 0).atLimit).toBe(false)
     expect(faqQuota('free', 1).atLimit).toBe(true)
     expect(faqQuota('free', 1).unlockPlan).toBe('pro')
-    expect(faqQuota('pro', 1).atLimit).toBe(false)
-    expect(faqQuota('pro', 2).atLimit).toBe(true)
-    expect(faqQuota('pro', 2).unlockPlan).toBe('premium')
+    expect(faqQuota('pro', FAQ_LIMIT.pro - 1).atLimit).toBe(false)
+    expect(faqQuota('pro', FAQ_LIMIT.pro).atLimit).toBe(true)
+    expect(faqQuota('pro', FAQ_LIMIT.pro).unlockPlan).toBe('premium')
     // No maior plano não há para onde subir: o slot fantasma some.
-    expect(faqQuota('premium', 5).atLimit).toBe(true)
-    expect(faqQuota('premium', 5).unlockPlan).toBeFalsy()
+    expect(faqQuota('premium', FAQ_LIMIT.premium).atLimit).toBe(true)
+    expect(faqQuota('premium', FAQ_LIMIT.premium).unlockPlan).toBeFalsy()
   })
 })
 

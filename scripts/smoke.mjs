@@ -138,6 +138,7 @@ const ROTAS = [
   // O ensaio do próprio assistente — percorrido em conversaDeTeste.
   ['/assistente/testar', 'testar meu assistente'],
   ['/editor?section=botao', 'editor · botão flutuante'],
+  ['/editor?section=story', 'editor · story para as redes'],
   // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
   ['/agenda', 'sua agenda (conversa do advogado)'],
   // Contratos: a mesa de documentos e a conferência PÚBLICA — o documento em

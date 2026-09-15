@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
-import { precoDoPlano } from '@/lib/plans'
+import { AREA_LIMIT, CHAR_LIMITS, FAQ_LIMIT, precoDoPlano } from '@/lib/plans'
 import { ArrowRight, CheckIcon, SparkIcon } from '@/components/ui/icons'
 
 // Upsell "positivo": os planos pagos não desbloqueiam recursos abstratos — eles
 // dão MAIS ITENS para o advogado colocar no perfil. Cada bullet é uma coisa a
 // mais que aparece no perfil, não um jargão de assinatura. Usado enquanto o
 // perfil é montado (onboarding) e no painel de evolução.
+//
+// Os números vêm de lib/plans.ts. Até 15/09/2026 estavam escritos à mão aqui e
+// ainda diziam 6 e 20 áreas, onze dias depois de a tabela ter mudado.
 
 type PaidPlan = Exclude<Plan, 'free'>
 type Tier = { id: PaidPlan; tier: string; price: string; pitch: string; items: string[] }
@@ -19,10 +22,10 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     pitch: 'Mais espaço e recursos no seu perfil.',
     items: [
       'Assistente virtual que marca horários',
-      '2 perguntas frequentes no perfil',
+      `${FAQ_LIMIT.pro} perguntas frequentes no perfil`,
       'Endereço com o seu nome, sem número',
       'QR Code e cartão de contato',
-      'Até 6 áreas de atuação',
+      `Até ${AREA_LIMIT.pro} áreas de atuação`,
       'Bio e textos mais longos',
       'Mais temas visuais',
     ],
@@ -33,12 +36,13 @@ const TIER_UNLOCKS: Record<PaidPlan, Tier> = {
     price: precoDoPlano('premium'),
     pitch: 'Vídeo, marca própria e o perfil por inteiro.',
     items: [
-      'Até 5 perguntas frequentes no perfil',
+      'Assistente de triagem antes do atendimento',
+      `Até ${FAQ_LIMIT.premium} perguntas frequentes no perfil`,
       'Vídeo de apresentação',
       'Cartão de visita pronto para a gráfica',
       'Sem a marca advoc.me',
       'Cor de destaque própria',
-      'Até 20 áreas e bio de 1000 caracteres',
+      `Até ${AREA_LIMIT.premium} áreas e bio de ${CHAR_LIMITS.premium.bio} caracteres`,
     ],
   },
 }

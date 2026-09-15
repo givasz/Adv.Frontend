@@ -239,6 +239,7 @@ export default function Painel() {
         <PanelHeading>Ferramentas</PanelHeading>
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
           <VisitasTile />
+          <SecaoTile id="story" profile={profile} />
           <SecaoTile id="qrcode" profile={profile} />
           <SecaoTile id="cartao" profile={profile} />
           <Tile
