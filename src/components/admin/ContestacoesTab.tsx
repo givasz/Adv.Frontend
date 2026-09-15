@@ -1,22 +1,39 @@
 // A fila de contestações.
 //
 // É uma fila com relógio, não um mural: o que vence primeiro vem na frente, e o
-// que está perto de vencer aparece em bordô. O motivo é duro — **se a plataforma
-// não responder no prazo, a medida cai sozinha**. Não é ameaça de tela; é como o
-// prazo foi implementado (o `moderationUntil` da medida foi encurtado na
-// abertura da contestação), e é o que torna o contraditório real em vez de
-// decorativo. Ver docs/politica-de-sancoes.md § 5.
+// que está perto de vencer aparece em vermelho. O motivo é duro — **se a
+// plataforma não responder no prazo, a medida cai sozinha**. Não é ameaça de
+// tela; é como o prazo foi implementado (o `moderationUntil` da medida foi
+// encurtado na abertura da contestação), e é o que torna o contraditório real
+// em vez de decorativo. Ver docs/politica-de-sancoes.md § 5.
 
 import { useEffect, useState } from 'react'
+import { decidirContestacao, listarContestacoes, type AdminAppeal } from '@/lib/adminApi'
+import { CheckIcon, XIcon } from '@/components/ui/icons'
 import {
-  decidirContestacao,
-  listarContestacoes,
-  type AdminAppeal,
-} from '@/lib/adminApi'
-import { Aviso, Motivo, fmtData } from './pecas'
+  Aviso,
+  Botao,
+  Cartao,
+  Carregando,
+  Chip,
+  LinhaClicavel,
+  Motivo,
+  Rotulo,
+  Segmentos,
+  Tabela,
+  Td,
+  Th,
+  TituloDaPagina,
+  Vazio,
+  fmtData,
+  useTelaLarga,
+  type Tom,
+} from './pecas'
 import { Rodape } from './Paginacao'
 import { usePaginado } from './usePaginado'
-import { CheckIcon, XIcon } from '@/components/ui/icons'
+import { useContadores } from './contadores'
+import { SECOES } from './Console'
+import { FragmentoDeLinha } from './DenunciasTab'
 
 const MEDIDA: Record<string, string> = {
   warn: 'aviso',
@@ -26,11 +43,11 @@ const MEDIDA: Record<string, string> = {
   close: 'conta encerrada',
 }
 
-const SITUACAO: Record<string, { label: string; cls: string }> = {
-  open: { label: 'aguardando', cls: 'bg-burgundy/10 text-burgundy-deep' },
-  accepted: { label: 'medida derrubada', cls: 'bg-brass/20 text-brass-deep' },
-  rejected: { label: 'medida mantida', cls: 'bg-ink/[0.07] text-ink-soft' },
-  expired: { label: 'venceu sem resposta', cls: 'bg-burgundy/15 text-burgundy-deep' },
+const SITUACAO: Record<string, { label: string; tom: Tom }> = {
+  open: { label: 'Aguardando', tom: 'aviso' },
+  accepted: { label: 'Medida derrubada', tom: 'ok' },
+  rejected: { label: 'Medida mantida', tom: 'neutro' },
+  expired: { label: 'Venceu sem resposta', tom: 'perigo' },
 }
 
 const FILTROS = [
@@ -46,116 +63,163 @@ function faltam(iso: string): number {
 export default function ContestacoesTab({ podeDecidir }: { podeDecidir: boolean }) {
   const [filtro, setFiltro] = useState<string>('open')
   const [aberta, setAberta] = useState<string | null>(null)
+  const { contadores, atualizar } = useContadores()
+  const larga = useTelaLarga()
+  const secao = SECOES.find((s) => s.id === 'contestacoes')!
 
   const lista = usePaginado<AdminAppeal>(
     (offset) => listarContestacoes(filtro, offset),
     'Falha ao carregar as contestações.',
   )
-  const { itens, erro } = lista
-  const recarregar = lista.recomecar
+  const { itens, erro, recomecar } = lista
 
   useEffect(() => {
-    void recarregar()
+    void recomecar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro])
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {FILTROS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFiltro(f.id)}
-            className={`rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-              filtro === f.id
-                ? 'bg-burgundy text-paper-soft'
-                : 'border border-ink/15 text-ink-faint hover:border-ink/40 hover:text-ink'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <TituloDaPagina
+        titulo={secao.label}
+        descricao={secao.descricao}
+        acoes={
+          <Botao tamanho="sm" onClick={() => void recomecar()}>
+            Atualizar
+          </Botao>
+        }
+      />
 
-      {erro && <Aviso>{erro}</Aviso>}
-      {!itens && !erro && <p className="py-10 text-center text-[13px] text-ink-faint">Carregando…</p>}
-      {itens?.length === 0 && (
-        <p className="rounded-xl2 border border-dashed border-ink/15 px-4 py-10 text-center text-[13px] text-ink-faint">
-          Nenhuma contestação {filtro === 'open' ? 'aguardando resposta' : 'registrada'}.
-        </p>
+      {contadores.contestacoesVencendo > 0 && (
+        <Aviso tom="erro">
+          <strong>
+            {contadores.contestacoesVencendo === 1
+              ? '1 contestação vence'
+              : `${contadores.contestacoesVencendo} contestações vencem`}{' '}
+            em até 2 dias.
+          </strong>{' '}
+          Sem resposta, a medida cai sozinha.
+        </Aviso>
       )}
 
-      <ul className="space-y-2.5">
-        {(itens ?? []).map((c) => {
-          const dias = faltam(c.respondeAte)
-          const urgente = c.status === 'open' && dias <= 2
-          return (
-            <li
-              key={c.id}
-              className={`overflow-hidden rounded-xl2 border bg-paper ${
-                urgente ? 'border-burgundy/50' : 'border-ink/10'
-              }`}
-            >
-              <button
-                onClick={() => setAberta((v) => (v === c.id ? null : c.id))}
-                className="w-full px-4 py-3 text-left transition-colors hover:bg-paper-soft"
-              >
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-ink">
-                    {c.user.profile?.name || c.user.email}
-                  </span>
-                  <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-ink-faint">
-                    {MEDIDA[c.medida] ?? c.medida}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${SITUACAO[c.status]?.cls ?? ''}`}
-                  >
-                    {SITUACAO[c.status]?.label ?? c.status}
-                  </span>
-                  {c.status === 'open' && (
-                    <span
-                      className={`ml-auto shrink-0 font-mono text-[11.5px] ${
-                        urgente ? 'font-semibold text-burgundy-deep' : 'text-ink-faint'
-                      }`}
+      <Cartao
+        semPreenchimento
+        titulo="Fila"
+        acoes={
+          <Segmentos
+            rotulo="Recorte das contestações"
+            opcoes={FILTROS.map((f) => (f.id === 'open' ? { ...f, contagem: contadores.contestacoes } : f))}
+            valor={filtro}
+            onChange={setFiltro}
+          />
+        }
+      >
+        {erro && (
+          <div className="px-4 pt-4">
+            <Aviso>{erro}</Aviso>
+          </div>
+        )}
+        {!itens && !erro && (
+          <div className="px-4">
+            <Carregando />
+          </div>
+        )}
+        {itens?.length === 0 && (
+          <div className="p-4">
+            <Vazio>Nenhuma contestação {filtro === 'open' ? 'aguardando resposta' : 'registrada'}.</Vazio>
+          </div>
+        )}
+
+        {itens && itens.length > 0 && (
+          <Tabela minima="md:min-w-[720px]">
+            <thead>
+              <tr>
+                <Th>Quem contestou</Th>
+                <Th largura="11rem" oculta>
+                  Medida
+                </Th>
+                <Th largura="10rem" oculta>
+                  Situação
+                </Th>
+                <Th largura="9rem" className="text-right">
+                  Prazo
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {itens.map((c) => {
+                const dias = faltam(c.respondeAte)
+                const urgente = c.status === 'open' && dias <= 2
+                const estaAberta = aberta === c.id
+                const sit = SITUACAO[c.status] ?? { label: c.status, tom: 'neutro' as Tom }
+                return (
+                  <FragmentoDeLinha key={c.id}>
+                    <LinhaClicavel
+                      aberta={estaAberta}
+                      destaque={urgente}
+                      onClick={() => setAberta(estaAberta ? null : c.id)}
                     >
-                      {dias < 0
-                        ? `venceu há ${Math.abs(dias)}d`
-                        : dias === 0
-                          ? 'vence hoje'
-                          : `${dias}d para responder`}
-                    </span>
-                  )}
-                </span>
-                <span className="mt-0.5 block truncate text-[12px] text-ink-faint">
-                  {c.user.profile ? `advoc.me/${c.user.profile.slug} · ` : ''}
-                  {c.user.email} · contestou em {fmtData(c.createdAt)}
-                </span>
-              </button>
+                      <Td>
+                        <span className="block truncate font-medium text-adm-ink">
+                          {c.user.profile?.name || c.user.email}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[12px] text-adm-muted">
+                          {c.user.profile ? `advoc.me/${c.user.profile.slug} · ` : ''}
+                          {c.user.email} · contestou em {fmtData(c.createdAt)}
+                        </span>
+                      </Td>
+                      <Td className="text-adm-soft" oculta>
+                        {MEDIDA[c.medida] ?? c.medida}
+                      </Td>
+                      <Td oculta>
+                        <Chip tom={sit.tom}>{sit.label}</Chip>
+                      </Td>
+                      <Td className="text-right tabular-nums">
+                        {c.status === 'open' ? (
+                          <span className={`text-[12.5px] ${urgente ? 'font-semibold text-adm-danger' : 'text-adm-soft'}`}>
+                            {dias < 0
+                              ? `venceu há ${Math.abs(dias)}d`
+                              : dias === 0
+                                ? 'vence hoje'
+                                : `${dias}d para responder`}
+                          </span>
+                        ) : (
+                          <span className="text-[12.5px] text-adm-faint">{fmtData(c.decidedAt)}</span>
+                        )}
+                      </Td>
+                    </LinhaClicavel>
+                    {estaAberta && (
+                      <tr>
+                        <Td colSpan={larga ? 4 : 2} className="bg-adm-bg/60 p-0">
+                          <Detalhe
+                            contestacao={c}
+                            podeDecidir={podeDecidir}
+                            onDecidiu={() => {
+                              setAberta(null)
+                              void recomecar()
+                              atualizar()
+                            }}
+                            onErro={lista.setErro}
+                          />
+                        </Td>
+                      </tr>
+                    )}
+                  </FragmentoDeLinha>
+                )
+              })}
+            </tbody>
+          </Tabela>
+        )}
 
-              {aberta === c.id && (
-                <Detalhe
-                  contestacao={c}
-                  podeDecidir={podeDecidir}
-                  onDecidiu={() => {
-                    setAberta(null)
-                    void recarregar()
-                  }}
-                  onErro={lista.setErro}
-                />
-              )}
-            </li>
-          )
-        })}
-      </ul>
-
-      <Rodape
-        mostrando={itens?.length ?? 0}
-        total={lista.total}
-        temMais={lista.temMais}
-        carregando={lista.carregando}
-        onMais={() => void lista.mais()}
-        nome="contestações"
-      />
+        <Rodape
+          mostrando={itens?.length ?? 0}
+          total={lista.total}
+          temMais={lista.temMais}
+          carregando={lista.carregando}
+          onMais={() => void lista.mais()}
+          nome="contestações"
+        />
+      </Cartao>
     </div>
   )
 }
@@ -189,27 +253,24 @@ function Detalhe({
   }
 
   return (
-    <div className="grid gap-px border-t border-ink/10 bg-ink/10 lg:grid-cols-2">
-      <div className="bg-paper-soft/60 px-4 py-4">
-        <p className="mb-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-brass-deep">
-          O que motivou a medida
-        </p>
-        <p className="mb-4 rounded-lg border-l-2 border-ink/20 bg-paper px-3 py-2 text-[12.5px] leading-relaxed text-ink-soft">
+    <div className="grid gap-px border-t border-adm-border bg-adm-border lg:grid-cols-2">
+      <div className="bg-white px-4 py-4">
+        <Rotulo>O que motivou a medida</Rotulo>
+        <p className="mb-4 rounded-md border-l-2 border-adm-faint bg-adm-raised px-3 py-2 text-[12.5px] leading-relaxed text-adm-soft">
           {c.user.profile?.moderationNote || '(o motivo não está mais no perfil)'}
         </p>
 
-        <p className="mb-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-brass-deep">
-          O que o advogado respondeu
-        </p>
-        <p className="whitespace-pre-wrap rounded-lg border-l-2 border-burgundy/50 bg-paper px-3 py-2.5 text-[13px] leading-relaxed text-ink">
+        <Rotulo>O que o advogado respondeu</Rotulo>
+        <p className="whitespace-pre-wrap rounded-md border-l-2 border-adm-accent/60 bg-adm-raised px-3 py-2.5 text-[13px] leading-relaxed text-adm-ink">
           {c.texto}
         </p>
       </div>
 
-      <div className="bg-paper px-4 py-4">
+      <div className="bg-white px-4 py-4">
         {decidida ? (
           <>
-            <p className="mb-2 text-[13px] font-semibold text-ink">
+            <Rotulo>Decisão</Rotulo>
+            <p className="mb-2 text-[13px] font-semibold text-adm-ink">
               {c.status === 'expired'
                 ? 'Venceu sem resposta — a medida caiu sozinha.'
                 : c.status === 'accepted'
@@ -217,16 +278,15 @@ function Detalhe({
                   : 'Contestação recusada: a medida foi mantida.'}
             </p>
             {c.resposta && (
-              <p className="whitespace-pre-wrap rounded-lg bg-paper-soft px-3 py-2 text-[12.5px] leading-relaxed text-ink-soft">
+              <p className="whitespace-pre-wrap rounded-md bg-adm-raised px-3 py-2 text-[12.5px] leading-relaxed text-adm-soft">
                 {c.resposta}
               </p>
             )}
-            <p className="mt-2 font-mono text-[11.5px] text-ink-faint">
-              {fmtData(c.decidedAt)}
-            </p>
+            <p className="mt-2 text-[11.5px] tabular-nums text-adm-muted">{fmtData(c.decidedAt)}</p>
           </>
         ) : (
           <>
+            <Rotulo>Decisão</Rotulo>
             <Motivo
               id={`resp-${c.id}`}
               valor={resposta}
@@ -235,29 +295,22 @@ function Detalhe({
               dica="É o que o advogado vai ler. Se recusar, diga o que continua irregular; se aceitar, diga o que mudou."
               linhas={5}
             />
-            {!podeDecidir && (
-              <Aviso tom="ok">Seu papel lê a fila, mas não decide contestação.</Aviso>
-            )}
+            {!podeDecidir && <Aviso tom="ok">Seu papel lê a fila, mas não decide contestação.</Aviso>}
             <div className="flex flex-wrap gap-2">
-              <button
+              <Botao
+                variante="sucesso"
                 onClick={() => void decidir(true)}
                 disabled={ocupado || !podeDecidir || semResposta}
-                className="inline-flex items-center gap-1.5 rounded-full bg-brass/20 px-4 py-2 text-[13px] font-semibold text-brass-deep transition-colors hover:bg-brass/30 disabled:cursor-not-allowed disabled:bg-ink/[0.06] disabled:text-ink-faint"
               >
                 <CheckIcon width={14} height={14} /> Aceitar e derrubar a medida
-              </button>
-              <button
-                onClick={() => void decidir(false)}
-                disabled={ocupado || !podeDecidir || semResposta}
-                className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-burgundy/40 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-ink/[0.06] disabled:text-ink-faint"
-              >
+              </Botao>
+              <Botao onClick={() => void decidir(false)} disabled={ocupado || !podeDecidir || semResposta}>
                 <XIcon width={14} height={14} /> Manter a medida
-              </button>
+              </Botao>
             </div>
-            <p className="mt-2 text-[11.5px] leading-snug text-ink-faint">
-              Aceitar derruba tudo o que veio com a medida — inclusive a suspensão
-              da conta e a pausa da cobrança. Manter devolve o prazo que a medida
-              tinha antes da contestação.
+            <p className="mt-2 text-[11.5px] leading-snug text-adm-muted">
+              Aceitar derruba tudo o que veio com a medida — inclusive a suspensão da conta e a pausa da
+              cobrança. Manter devolve o prazo que a medida tinha antes da contestação.
             </p>
           </>
         )}

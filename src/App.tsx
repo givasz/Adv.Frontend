@@ -44,9 +44,9 @@ const ContratoPage = sobDemanda(() => import('./pages/ContratoPage'))
 const ModeloProprioPage = sobDemanda(() => import('./pages/ModeloProprioPage'))
 const ConferirDocumentoPage = sobDemanda(() => import('./pages/ConferirDocumentoPage'))
 
-// Rota escondida do painel de moderação — não linkada em nenhum lugar da UI.
-// Trocável por VITE_ADMIN_PATH (sem barra inicial). Mantenha não-óbvia.
-const ADMIN_PATH = (import.meta.env.VITE_ADMIN_PATH ?? 'painel-mod-7fq3k9x2a').replace(/^\/+/, '')
+// Rota escondida do console de administração — não linkada em nenhum lugar da
+// UI. O segmento vive em lib/adminPath.ts (fonte única, usada também pelo smoke).
+import { ADMIN_PATH } from '@/lib/adminPath'
 
 // Reseta a rolagem para o topo a cada troca de rota — sem isso, ao abrir uma
 // página nova (ex.: um documento em /legal) a tela continua na posição anterior.

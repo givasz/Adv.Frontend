@@ -463,3 +463,38 @@
 summary.list-none::-webkit-details-marker {
   display: none;
 }
+
+/* ===== Console de administração (rota escondida) =====
+   Fora de @layer e escopado em .console: o painel interno tem paleta própria
+   (tailwind.config.js → colors.adm) e não herda o bordô/latão da marca nos
+   estados de foco e seleção. Nada daqui vaza para o produto público. */
+.console {
+  font-feature-settings: 'tnum', 'ss01';
+}
+/* Títulos na mesma grotesca do corpo: a serifa de display é voz do produto
+   público, e a base global (h1–h4 → font-display) chegaria aqui sem isto. */
+.console :is(h1, h2, h3, h4) {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-optical-sizing: auto;
+}
+.console :focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.console ::selection {
+  background: #2563eb;
+  color: #fff;
+}
+/* Barras de rolagem discretas nas listas do console (WebKit/Blink). */
+.console ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.console ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.console ::-webkit-scrollbar-track {
+  background: transparent;
+}

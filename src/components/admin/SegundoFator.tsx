@@ -1,4 +1,4 @@
-// Configurar o segundo fator do painel — três passos numa faixa em linha.
+// Configurar o segundo fator do console — três passos numa faixa em linha.
 //
 // Não é uma tela sobreposta: quem precisa configurar precisa ver a fila atrás,
 // e o painel inteiro deixou de usar modal. A faixa fica no topo enquanto o
@@ -11,11 +11,11 @@
 import { useState } from 'react'
 import { create as createQr } from 'qrcode'
 import { totpIniciar, totpLigar } from '@/lib/adminApi'
-import { Aviso, Campo, entrada } from './pecas'
+import { Aviso, Botao, Campo, entrada } from './pecas'
 import { CheckIcon, LockIcon } from '@/components/ui/icons'
 
 /** QR desenhado como um caminho só — o mesmo truque do cartão impresso. */
-function Qr({ texto, lado = 168 }: { texto: string; lado?: number }) {
+function Qr({ texto, lado = 160 }: { texto: string; lado?: number }) {
   let d = ''
   let n = 0
   try {
@@ -35,11 +35,11 @@ function Qr({ texto, lado = 168 }: { texto: string; lado?: number }) {
       width={lado}
       height={lado}
       viewBox={`-1 -1 ${n + 2} ${n + 2}`}
-      className="rounded-lg bg-white p-1"
+      className="shrink-0 rounded-md border border-adm-border bg-white p-1.5"
       role="img"
       aria-label="Código QR para o aplicativo de autenticação"
     >
-      <path d={d} fill="#211c17" shapeRendering="crispEdges" />
+      <path d={d} fill="#111827" shapeRendering="crispEdges" />
     </svg>
   )
 }
@@ -77,35 +77,35 @@ export default function SegundoFator({ onPronto }: { onPronto: () => void }) {
   }
 
   return (
-    <section className="mb-5 rounded-xl2 border border-brass/40 bg-brass/[0.07] p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <LockIcon width={16} height={16} className="text-brass-deep" />
-        <h2 className="font-display text-[15px] font-semibold text-ink">
-          Configure o segundo fator
-        </h2>
+    <section className="mb-5 rounded-lg border border-amber-300/80 bg-adm-warn-soft/60 p-4">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-adm-warn text-white">
+          <LockIcon width={14} height={14} />
+        </span>
+        <h2 className="text-[14px] font-semibold text-adm-ink">Configure o segundo fator</h2>
       </div>
-      <p className="mb-3 max-w-prose text-[13px] text-ink-soft">
-        Seu papel decide o que sai do ar. Até o código de 6 dígitos existir, você
-        consegue consultar a fila e os chamados — mas nenhuma decisão é aplicada.
+      <p className="mb-3 max-w-prose text-[13px] leading-relaxed text-adm-soft">
+        Seu papel decide o que sai do ar. Até o código de 6 dígitos existir, você consegue consultar a
+        fila e os chamados — mas nenhuma decisão é aplicada.
       </p>
 
       {erro && <Aviso>{erro}</Aviso>}
 
       {!dados ? (
-        <button onClick={comecar} disabled={ocupado} className="btn-primary">
+        <Botao variante="primario" onClick={comecar} disabled={ocupado}>
           {ocupado ? 'Preparando…' : 'Começar'}
-        </button>
+        </Botao>
       ) : (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Qr texto={dados.otpauth} />
           <div className="min-w-0 flex-1">
-            <p className="mb-1 text-[12.5px] text-ink-soft">
-              Leia o código no aplicativo de autenticação do celular (Google
-              Authenticator, Authy, ou o gerenciador de senhas que você já usa).
+            <p className="mb-1 text-[12.5px] text-adm-soft">
+              Leia o código no aplicativo de autenticação do celular (Google Authenticator, Authy, ou o
+              gerenciador de senhas que você já usa).
             </p>
-            <p className="mb-3 text-[12px] text-ink-faint">
+            <p className="mb-3 text-[12px] text-adm-muted">
               Sem câmera? Digite este segredo:{' '}
-              <code className="select-all break-all font-mono text-[12px] text-ink">
+              <code className="select-all break-all rounded bg-white px-1 font-mono text-[12px] text-adm-ink">
                 {dados.segredo}
               </code>
             </p>
@@ -120,14 +120,10 @@ export default function SegundoFator({ onPronto }: { onPronto: () => void }) {
                   className={`${entrada} font-mono tracking-[0.3em]`}
                 />
               </Campo>
-              <button
-                type="submit"
-                disabled={ocupado || codigo.length !== 6}
-                className="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <CheckIcon width={15} height={15} />
+              <Botao type="submit" variante="primario" disabled={ocupado || codigo.length !== 6}>
+                <CheckIcon width={14} height={14} />
                 {ocupado ? 'Conferindo…' : 'Ligar'}
-              </button>
+              </Botao>
             </form>
           </div>
         </div>

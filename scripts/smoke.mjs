@@ -12,6 +12,7 @@
 // Uso:  node scripts/smoke.mjs [http://localhost:5173]
 // Sobe o dev server antes (npm run dev). Sai com código 1 se algo quebrar.
 
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 
@@ -82,6 +83,12 @@ try {
   }))
 } catch {}
 `
+
+// O segmento da rota do console, lido do mesmo arquivo que o App usa. Este
+// script é JavaScript puro e não importa TypeScript, então lê o literal.
+const ADMIN_PATH = /'([a-z0-9-]+)'\)\.replace/.exec(
+  readFileSync(new URL('../src/lib/adminPath.ts', import.meta.url), 'utf8'),
+)[1]
 
 const ROTAS = [
   ['/', 'landing'],
@@ -159,11 +166,11 @@ const ROTAS = [
   [`/${SLUG}/agendar`, 'perfil · agendar'],
   [`/${SLUG}/denunciar`, 'perfil · denunciar'],
   [`/${SLUG}/compartilhar`, 'perfil · compartilhar'],
-  // Rota escondida do painel (mesmo padrão de App.tsx). Entrou aqui quando a
-  // sessão do painel virou cookie: a tela passou a perguntar ao servidor quem
-  // está logado ANTES de decidir o que desenhar, e é exatamente esse tipo de
-  // mudança que produz tela branca sem erro nenhum no console.
-  ['/painel-mod-7fq3k9x2a', 'painel de moderação (login)'],
+  // Rota escondida do console (lida de src/lib/adminPath.ts, a fonte única).
+  // Entrou aqui quando a sessão do painel virou cookie: a tela passou a
+  // perguntar ao servidor quem está logado ANTES de decidir o que desenhar, e é
+  // exatamente esse tipo de mudança que produz tela branca sem erro nenhum.
+  [`/${ADMIN_PATH}`, 'console de administração (login)'],
 ]
 
 // Ruído conhecido do ambiente de desenvolvimento — não é falha do app.
@@ -428,14 +435,15 @@ async function conversaDoEscritorio() {
 // as listas mostram erro de rede, o que é esperado: o que este passo procura é
 // tela branca e erro de runtime, não dado.
 async function painelDeModeracao() {
-  const { contexto, pagina, erros } = await abrir('/painel-mod-7fq3k9x2a')
+  const { contexto, pagina, erros } = await abrir(`/${ADMIN_PATH}`)
   try {
     await pagina.getByLabel('E-mail').fill('admin')
     await pagina.getByLabel('Senha').fill('dev-admin-123')
     await clicar(pagina, 'Entrar')
-    // As abas dependem das permissões que o servidor devolve: se nenhuma
+    // As seções dependem das permissões que o servidor devolve: se nenhuma
     // aparecer, é porque entrar deixou de funcionar.
-    await pagina.getByRole('button', { name: 'Denúncias', exact: true }).waitFor({ timeout: ESPERA })
+    const menu = pagina.getByRole('navigation', { name: 'Seções do console' })
+    await menu.getByRole('button', { name: 'Denúncias', exact: true }).waitFor({ timeout: ESPERA })
 
     for (const aba of [
       'Contestações',
@@ -447,11 +455,14 @@ async function painelDeModeracao() {
       // negativa. Nada disso aparece no tsc nem no vitest — só desenhando.
       'Levantamentos',
       'Equipe',
+      // "Minha conta" não entra: a credencial de emergência (a do mock) não tem
+      // conta no banco, e a seção só existe para quem tem.
+      'Visão geral',
       'Denúncias',
     ]) {
-      // Escopo no cabeçalho: as abas convivem com filtros de mesmo nome dentro
+      // Escopo no menu: as seções convivem com filtros de mesmo nome dentro
       // do conteúdo, e clicar no primeiro que aparecer testaria outra coisa.
-      const botao = pagina.locator('header').getByRole('button', { name: aba, exact: true })
+      const botao = menu.getByRole('button', { name: aba, exact: true })
       await botao.waitFor({ timeout: ESPERA })
       await botao.click()
       const texto = (await pagina.locator('main').innerText()).trim()

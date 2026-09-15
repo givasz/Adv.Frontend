@@ -28,10 +28,41 @@ export default {
           deep: '#835f2e',
           light: '#d8b985',
         },
+        // Paleta do CONSOLE (painel interno de gestão). Deliberadamente fora do
+        // "Papel & Tinta": o console é ferramenta de operação, não vitrine —
+        // neutros frios, um acento só e cores semânticas (ok/aviso/perigo)
+        // que o produto público não usa. Ver components/admin/pecas.tsx.
+        adm: {
+          bg: '#f3f5f9',
+          surface: '#ffffff',
+          raised: '#f8fafc',
+          border: '#e3e8ef',
+          line: '#edf1f6',
+          ink: '#111827',
+          soft: '#374151',
+          muted: '#6b7280',
+          faint: '#9ca3af',
+          side: '#0f172a',
+          'side-hi': '#1e293b',
+          accent: '#2563eb',
+          'accent-deep': '#1e40af',
+          'accent-soft': '#e0e9ff',
+          ok: '#15803d',
+          'ok-soft': '#dcfce7',
+          warn: '#b45309',
+          'warn-soft': '#fef3c7',
+          danger: '#b91c1c',
+          'danger-soft': '#fee2e2',
+          info: '#0e7490',
+          'info-soft': '#cffafe',
+        },
       },
       fontFamily: {
         display: ['Fraunces', 'Georgia', 'serif'],
         sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
+        // Console: uma grotesca de interface, já carregada pelo index.html
+        // (é a família do tema Ardósia) — nenhum pedido de fonte a mais.
+        ui: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         card: '0 1px 2px rgba(33,28,23,0.04), 0 8px 24px -12px rgba(33,28,23,0.18)',
