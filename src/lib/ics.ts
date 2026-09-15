@@ -229,11 +229,24 @@ export function ehSafari(): boolean {
 }
 
 /**
- * O Calendário da Apple não aceita evento por link, só por arquivo. No iPhone,
- * baixar o arquivo é justamente o que não queremos (vai para "Arquivos" e para
- * ali); ABRIR o mesmo conteúdo como endereço `data:` numa aba faz o Safari
- * mostrar a tela do evento com "Adicionar". No Mac, o download abre o
- * Calendário direto. No iPhone, só é oferecido no Safari (ver ehSafari).
+ * O nome do botão: o Calendário pelo aparelho que a pessoa tem na mão. O iPad
+ * moderno se apresenta como Mac, e é o toque que o denuncia (ver ehIos).
+ */
+export function nomeDoCalendarioDaApple(): string {
+  if (!ehIos()) return 'Calendário da Apple'
+  return /iPhone|iPod/.test(navigator.userAgent) ? 'Calendário do iPhone' : 'Calendário do iPad'
+}
+
+/**
+ * O Calendário da Apple não aceita evento por link, só por arquivo. No Mac, o
+ * download abre o Calendário direto. No iPhone, só é oferecido no Safari (ver
+ * ehSafari), e o arquivo sai como endereço `data:` com `download`, NA MESMA ABA:
+ * o Safari reconhece o text/calendar e mostra a tela do evento com "Adicionar".
+ *
+ * É o caminho da add-to-calendar-button, a biblioteca de "adicionar à agenda" mais
+ * usada. Antes abríamos o `data:` numa aba nova (`_blank`), e o próprio código dela
+ * avisa que, no celular, isso esbarra em restrição de origem. Nunca foi conferido
+ * num iPhone de verdade — é o primeiro teste a fazer quando algo falhar aqui.
  */
 export function abrirNoCalendarioDaApple(compromissos: Compromisso[], dono: string) {
   if (!ehIos()) {
@@ -242,7 +255,9 @@ export function abrirNoCalendarioDaApple(compromissos: Compromisso[], dono: stri
   }
   const a = document.createElement('a')
   a.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(semMeiaLetra(buildIcs(compromissos, dono)))}`
-  a.target = '_blank'
+  a.download = nomeDoArquivo(compromissos)
+  // Com `download` a página não é trocada pelo arquivo, então a mesma aba é segura.
+  a.target = '_self'
   a.rel = 'noopener'
   a.style.display = 'none'
   document.body.appendChild(a)

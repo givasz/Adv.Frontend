@@ -6,6 +6,7 @@ import {
   linkGoogleAgenda,
   linkOutlook,
   nomeDoArquivo,
+  nomeDoCalendarioDaApple,
   type Compromisso,
 } from './ics'
 
@@ -190,6 +191,27 @@ describe('ehSafari', () => {
     expect(
       com('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0.6478.54 Mobile/15E148 Safari/604.1'),
     ).toBe(false)
+  })
+})
+
+describe('nomeDoCalendarioDaApple', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+  const com = (userAgent: string, maxTouchPoints = 0) => {
+    vi.stubGlobal('navigator', { userAgent, maxTouchPoints })
+    return nomeDoCalendarioDaApple()
+  }
+  const SAFARI_MAC =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15'
+
+  it('chama o Calendário pelo aparelho que a pessoa tem na mão', () => {
+    expect(
+      com('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'),
+    ).toBe('Calendário do iPhone')
+    // iPad moderno: identificação de Mac, mas com toque.
+    expect(com(SAFARI_MAC, 5)).toBe('Calendário do iPad')
+    expect(com(SAFARI_MAC)).toBe('Calendário da Apple')
   })
 })
 

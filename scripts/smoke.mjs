@@ -540,34 +540,36 @@ async function agendaDoAdvogado() {
     await hora.click()
     // Quanto tempo vai durar — é a resposta que fecha o horário.
     await clicar(pagina, '1 hora')
-    // O compromisso indo para a agenda dele: nome → qual agenda → a agenda abre
-    // preenchida. Google e Outlook são LINKS — confere que levam o nome e a hora.
-    // O botão diz QUAL compromisso leva ("Pôr 25 nov · 14:00 na minha agenda").
+    // Fechou o horário: as agendas aparecem na hora, sem toque a mais, e a escolhida
+    // abre preenchida. Google e Outlook são LINKS — confere que levam o nome e a
+    // hora. O nome é um campo opcional junto dos botões, e o link se remonta a cada
+    // letra, sem enviar nada.
+    // O botão de voltar à oferta diz QUAL compromisso leva ("Pôr 25 nov · 14:00 na minha agenda").
     const porNaAgenda = () => pagina.getByRole('button', { name: /^Pôr .+ na minha agenda$/ })
-    await porNaAgenda().waitFor({ timeout: ESPERA })
-    await porNaAgenda().click()
-    const campoNome = pagina.getByLabel('Nome do compromisso na sua agenda')
-    await campoNome.waitFor({ timeout: ESPERA })
-    await campoNome.fill('Reunião — João')
-    await clicar(pagina, 'Enviar resposta')
     const google = pagina.getByRole('link', { name: 'Google Agenda', exact: true })
     await google.waitFor({ timeout: ESPERA })
+    const campoNome = pagina.getByLabel('Nome do compromisso na sua agenda')
+    await campoNome.fill('Reunião — João')
+    await pagina.locator('a[href*="text=Reuni%C3%A3o"]').waitFor({ timeout: ESPERA })
     const urlGoogle = new URL((await google.getAttribute('href')) ?? 'about:blank')
     if (urlGoogle.hostname !== 'calendar.google.com') erros.push(`o link do Google foi para "${urlGoogle.hostname}"`)
     if (urlGoogle.searchParams.get('text') !== 'Reunião — João') erros.push('o link do Google saiu sem o nome')
     if (!/^\d{8}T\d{6}\/\d{8}T\d{6}$/.test(urlGoogle.searchParams.get('dates') ?? '')) {
       erros.push('o link do Google saiu sem dia e hora')
     }
+    // Outlook e o arquivo moram em "Outra agenda".
+    await clicar(pagina, 'Outra agenda')
     const outlook = pagina.getByRole('link', { name: 'Outlook', exact: true })
+    await outlook.waitFor({ timeout: ESPERA })
     const urlOutlook = new URL((await outlook.getAttribute('href')) ?? 'about:blank')
     if (urlOutlook.searchParams.get('subject') !== 'Reunião — João' || !urlOutlook.searchParams.get('startdt')) {
       erros.push('o link do Outlook saiu sem nome ou hora')
     }
-    // "Outra agenda" é o .ics, e ele tem de SAIR de verdade. O balão dizer
-    // "pronto" não prova nada — o download é o produto.
+    // O .ics tem de SAIR de verdade. O balão dizer "pronto" não prova nada — o
+    // download é o produto.
     const [arquivo] = await Promise.all([
       pagina.waitForEvent('download', { timeout: ESPERA }),
-      clicar(pagina, 'Outra agenda'),
+      clicar(pagina, 'Baixar o arquivo (.ics)'),
     ])
     if (!arquivo.suggestedFilename().endsWith('.ics')) {
       erros.push(`o arquivo da agenda saiu como "${arquivo.suggestedFilename()}"`)
@@ -607,6 +609,12 @@ async function agendaDoAdvogado() {
       .click()
     await conversa.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first().click()
     await clicar(pagina, '1 hora')
+    // "Agora não" deixa o compromisso fora da agenda, mas a oferta tem de continuar
+    // ao alcance para quando ele mudar de ideia.
+    await clicar(pagina, 'Agora não')
+    await porNaAgenda()
+      .waitFor({ timeout: ESPERA })
+      .catch(() => erros.push('depois de "Agora não" sumiu o jeito de pôr o compromisso na agenda'))
     await clicar(pagina, 'Não, é só isso')
     const comprovante = pagina.getByText('Horários fechados', { exact: true }).first()
     await comprovante.waitFor({ timeout: ESPERA })

@@ -14,6 +14,7 @@ import {
   emUmBloco,
   linkGoogleAgenda,
   linkOutlook,
+  nomeDoCalendarioDaApple,
   type Compromisso,
 } from '@/lib/ics'
 import { themeStyle } from '@/lib/themes'
@@ -70,7 +71,7 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 // O que fica guardado: data e hora. Nunca de quem é o compromisso, nunca o motivo
 // — não há dado de terceiro nenhum atravessando esta tela.
 
-type Step = 'boot' | 'dia' | 'hora' | 'duracao' | 'mais' | 'liberar' | 'nome' | 'qual' | 'fim'
+type Step = 'boot' | 'dia' | 'hora' | 'duracao' | 'mais' | 'liberar' | 'qual' | 'outras' | 'fim'
 
 /** Para onde o compromisso vai. Google e Outlook são link; Apple e "outra", arquivo. */
 type Destino = 'google' | 'outlook' | 'outlook365' | 'apple' | 'arquivo'
@@ -221,8 +222,11 @@ function Conversa({
   // ele muda de assunto, para o botão nunca oferecer um compromisso que não é o
   // que está na tela.
   const [bloco, setBloco] = useState<{ inicio: string; duracaoMin: number } | null>(null)
-  // O compromisso montado (nome + horário), à espera de ele escolher a agenda — e
-  // guardado depois, para "Não abriu? Escolher outra agenda" não pedir tudo de novo.
+  // O nome que ele dá ao compromisso, no campo logo abaixo das agendas. Opcional,
+  // e fica só no aparelho — ver lib/ics.ts.
+  const [nome, setNome] = useState('')
+  // O compromisso que JÁ foi para uma agenda. Preenchido, a oferta não volta (seria
+  // o evento em dobro); "Não abriu? Escolher outra agenda" reabre a escolha.
   const [agendado, setAgendado] = useState<Compromisso | null>(null)
   // No iPhone, só o Safari entrega o compromisso ao Calendário da Apple (ver
   // ehSafari); no Mac qualquer navegador baixa o arquivo, que o Calendário abre.
@@ -251,6 +255,21 @@ function Conversa({
         ? enderecoEmLinha(profile.address, profile.city, profile.state)
         : undefined,
     [profile.serviceMode.inPerson, profile.address, profile.city, profile.state],
+  )
+  // O compromisso como vai para a agenda: o horário que acabou de fechar e o nome,
+  // se ele escreveu um. Os links do Google e do Outlook se remontam a cada letra, então
+  // o que abre é sempre o que está escrito na tela.
+  const compromisso = useMemo<Compromisso | null>(
+    () =>
+      bloco
+        ? {
+            ...bloco,
+            titulo: nome.trim() || 'Atendimento',
+            local: localDoAtendimento,
+            descricao: 'Anotado pela sua agenda no advoc.me.',
+          }
+        : null,
+    [bloco, nome, localDoAtendimento],
   )
 
   const say = useCallback(
@@ -435,11 +454,12 @@ function Conversa({
         : outros.length === 1
           ? `O das ${outros[0]} também sai da conversa — ficaria em cima desse compromisso.`
           : `Os das ${juntar(outros)} também saem da conversa — ficariam em cima desse compromisso.`,
-      restantes.length > saem.length
-        ? 'Marcou mais algum?'
-        : 'Com isso, o dia ficou sem horário livre — ele some da conversa. Marcou mais algum?',
     )
-    void say(linhas, 'mais')
+    if (restantes.length <= saem.length) {
+      linhas.push('Com isso, o dia ficou sem horário livre — ele some da conversa.')
+    }
+    setNome('')
+    void say([...linhas, ...ofertaDaAgenda()], 'qual')
   }
 
   function fecharDiaInteiro() {
@@ -455,12 +475,13 @@ function Conversa({
     const b = emUmBloco(chaves, cfg.durationMin, { titulo: '' })
     setBloco(b && { inicio: b.inicio, duracaoMin: b.duracaoMin })
     setAgendado(null)
+    setNome('')
     void say(
       [
         `Fechei ${emFoco.longLabel} inteiro: ${chaves.length} ${chaves.length === 1 ? 'horário sai' : 'horários saem'} da conversa.`,
-        'Marcou mais algum?',
+        ...(b ? ofertaDaAgenda() : ['Marcou mais algum?']),
       ],
-      'mais',
+      b ? 'qual' : 'mais',
     )
   }
 
@@ -478,59 +499,50 @@ function Conversa({
 
   // ---- Levar o compromisso para a agenda dele -------------------------------
   //
-  // Nome → em qual agenda → a agenda abre com o evento preenchido, e ele só
-  // confirma. Tudo é montado NO APARELHO DELE e vai direto para a agenda que ele
+  // Fechou o horário → a conversa já oferece as agendas → a escolhida abre com o
+  // evento preenchido, e ele só confirma. O nome é opcional, no campo junto dos
+  // botões. Tudo é montado NO APARELHO DELE e vai direto para a agenda que ele
   // escolheu: o nome não passa pela API, não vai para o banco e não fica em log —
   // a coluna do perfil continua guardando só data e hora. Ver lib/ics.ts.
+
+  /**
+   * As falas que abrem a escolha. Na frente, as agendas do celular: o Google e, no
+   * iPhone, o Calendário dele. Outlook e o arquivo moram em "Outra agenda".
+   */
+  function ofertaDaAgenda(
+    abertura = 'Quer pôr na sua agenda? Toque nela, e o compromisso abre com dia e hora preenchidos.',
+  ): string[] {
+    return [
+      abertura,
+      // Fora do Safari o iPhone baixa o arquivo e para ali: o botão nem aparece, e a
+      // conversa diz por quê em vez de deixá-lo procurando.
+      ...(ehIos() && !ehSafari()
+        ? ['O Calendário do iPhone só recebe o compromisso pelo Safari. Por aqui, use o Google Agenda.']
+        : []),
+    ]
+  }
+
   function irParaAgenda() {
     if (!bloco) return
     push('user', `Pôr ${formatBusyShort(bloco.inicio)} na minha agenda`)
-    setDraft('')
-    void say(
-      [
-        `Como quer chamar o compromisso de ${formatBusyLong(bloco.inicio)} na sua agenda?`,
-        'O nome fica só no seu aparelho — não guardo isso aqui.',
-      ],
-      'nome',
-    )
-  }
-
-  function porNaAgenda(nome: string) {
-    if (!bloco) return
-    push('user', nome.trim() || 'Sem nome')
-    setDraft('')
-    setAgendado({
-      ...bloco,
-      titulo: nome.trim() || 'Atendimento',
-      local: localDoAtendimento,
-      descricao: 'Anotado pela sua agenda no advoc.me.',
-    })
-    void say(
-      [
-        'Qual agenda você usa?',
-        'Eu abro o compromisso nela já com dia, hora e nome — lá é só confirmar.',
-        ...(ehIos() && !ehSafari()
-          ? ['O Calendário do iPhone só recebe o compromisso pelo Safari. Por aqui, use o Google ou o Outlook.']
-          : []),
-      ],
-      'qual',
-    )
+    void say(ofertaDaAgenda('Toque na sua agenda: o compromisso abre com dia e hora preenchidos.'), 'qual')
   }
 
   function escolherAgenda(destino: Destino) {
-    if (!agendado) return
+    if (!compromisso) return
+    setAgendado(compromisso)
     const rotulo: Record<Destino, string> = {
       google: 'Google Agenda',
       outlook: 'Outlook',
       outlook365: 'Outlook do trabalho',
-      apple: 'Calendário da Apple',
-      arquivo: 'Outra agenda',
+      apple: nomeDoCalendarioDaApple(),
+      arquivo: 'Baixar o arquivo (.ics)',
     }
     push('user', rotulo[destino])
     // Google e Outlook já abriram pelo próprio link (ver o Chip com `href`);
     // Apple e "outra" saem daqui, ainda dentro do gesto do toque.
-    if (destino === 'apple') abrirNoCalendarioDaApple([agendado], profile.slug)
-    if (destino === 'arquivo') baixarIcs([agendado], profile.slug)
+    if (destino === 'apple') abrirNoCalendarioDaApple([compromisso], profile.slug)
+    if (destino === 'arquivo') baixarIcs([compromisso], profile.slug)
     // "Deve abrir", e não "abri": o assistente não tem como saber se a agenda
     // abriu — o navegador embutido de app engole aba nova e download em silêncio.
     // Para esse caso há o "Não abriu?" logo abaixo.
@@ -556,6 +568,23 @@ function Conversa({
   function outraAgenda() {
     push('user', 'Escolher outra agenda')
     void say(['Sem problema. Qual?'], 'qual')
+  }
+
+  function outrasAgendas() {
+    push('user', 'Outra agenda')
+    void say(['Qual delas?'], 'outras')
+  }
+
+  function voltarAsAgendas() {
+    push('user', 'Voltar')
+    void say(['Certo. Qual agenda?'], 'qual')
+  }
+
+  // Não quis agora: o horário segue fechado, e o "Pôr … na minha agenda" fica no
+  // passo seguinte para quando ele mudar de ideia.
+  function agoraNao() {
+    push('user', 'Agora não')
+    void say(['Tudo bem. Marcou mais algum?'], 'mais')
   }
 
   function outroDia() {
@@ -586,7 +615,7 @@ function Conversa({
 
   const chips = verTodos ? dias : dias.slice(0, MAX_DAY_CHIPS)
   const duracoes = [...new Set([...DURACOES, cfg.durationMin])].sort((a, b) => a - b)
-  // 'liberar', 'nome' e 'qual' são desvios a partir de 'mais', e não etapas próprias:
+  // 'liberar', 'qual' e 'outras' são desvios a partir de 'mais', e não etapas próprias:
   // sem esta linha o fio de progresso ZERAVA no meio da conversa e voltava —
   // parecia que ela tinha recomeçado sozinha.
   const referencia = ORDEM.includes(step) ? step : 'mais'
@@ -797,39 +826,55 @@ function Conversa({
                     Nenhum
                   </Chip>
                 </ChipRow>
-              ) : step === 'nome' ? (
-                <Composer
-                  value={draft}
-                  onChange={setDraft}
-                  onSend={() => porNaAgenda(draft)}
-                  placeholder="Ex.: Reunião — João Silva"
-                  label="Nome do compromisso na sua agenda"
-                  skipLabel="Sem nome"
-                  onSkip={() => porNaAgenda('')}
-                  canSend={draft.trim().length > 1}
-                />
-              ) : step === 'qual' && agendado ? (
-                <ChipRow label="Qual agenda você usa">
-                  {naApple && ehIos() && (
-                    <Chip onClick={() => escolherAgenda('apple')}>Calendário da Apple</Chip>
-                  )}
-                  <Chip href={linkGoogleAgenda(agendado)} onClick={() => escolherAgenda('google')}>
-                    Google Agenda
-                  </Chip>
-                  <Chip href={linkOutlook(agendado, 'pessoal')} onClick={() => escolherAgenda('outlook')}>
+              ) : step === 'qual' && compromisso ? (
+                <div className="space-y-2.5">
+                  <ChipRow label="Em qual agenda">
+                    {naApple && ehIos() && (
+                      <Chip onClick={() => escolherAgenda('apple')}>{nomeDoCalendarioDaApple()}</Chip>
+                    )}
+                    <Chip href={linkGoogleAgenda(compromisso)} onClick={() => escolherAgenda('google')}>
+                      Google Agenda
+                    </Chip>
+                    {naApple && !ehIos() && (
+                      <Chip onClick={() => escolherAgenda('apple')}>{nomeDoCalendarioDaApple()}</Chip>
+                    )}
+                    <Chip subtle onClick={outrasAgendas}>
+                      Outra agenda
+                    </Chip>
+                    <Chip subtle onClick={agoraNao}>
+                      Agora não
+                    </Chip>
+                  </ChipRow>
+                  {/* Sem foco automático: o teclado subindo sozinho a cada horário
+                      fechado cobriria os botões das agendas. */}
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome do compromisso (opcional)"
+                    aria-label="Nome do compromisso na sua agenda"
+                    maxLength={140}
+                    className="w-full rounded-full border px-4 py-2.5 text-[16px] outline-none transition-colors sm:text-[14px]"
+                    style={{ borderColor: 'var(--c-border)', background: 'var(--c-bg)', color: 'var(--c-text)' }}
+                  />
+                  <p className="t-faint px-1 text-[11px] leading-snug">
+                    O nome fica só no seu aparelho — não guardo isso aqui.
+                  </p>
+                </div>
+              ) : step === 'outras' && compromisso ? (
+                <ChipRow label="Outra agenda">
+                  <Chip href={linkOutlook(compromisso, 'pessoal')} onClick={() => escolherAgenda('outlook')}>
                     Outlook
                   </Chip>
                   <Chip
-                    href={linkOutlook(agendado, 'trabalho')}
+                    href={linkOutlook(compromisso, 'trabalho')}
                     onClick={() => escolherAgenda('outlook365')}
                   >
                     Outlook do trabalho
                   </Chip>
-                  {naApple && !ehIos() && (
-                    <Chip onClick={() => escolherAgenda('apple')}>Calendário da Apple</Chip>
-                  )}
-                  <Chip subtle onClick={() => escolherAgenda('arquivo')}>
-                    Outra agenda
+                  <Chip onClick={() => escolherAgenda('arquivo')}>Baixar o arquivo (.ics)</Chip>
+                  <Chip subtle onClick={voltarAsAgendas}>
+                    Voltar
                   </Chip>
                 </ChipRow>
               ) : step === 'mais' ? (
