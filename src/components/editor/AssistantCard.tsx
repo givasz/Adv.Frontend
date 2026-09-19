@@ -22,7 +22,7 @@ import { Field, TextArea } from './fields'
 import { InfoTip } from './InfoTip'
 import { comVolta } from '@/components/ui/SubPage'
 import { MarginNotes } from './MarginNotes'
-import { CalendarIcon, CheckIcon, WhatsappIcon } from '@/components/ui/icons'
+import { CheckIcon } from '@/components/ui/icons'
 
 // Disponibilidade do assistente virtual: o advogado marca os dias da semana que
 // atende e, dentro de cada dia, as FAIXAS em que atende ("das 7 às 11, das 13 às
@@ -158,15 +158,6 @@ export function AssistantCard({
 
   return (
     <div className={`space-y-5 ${preview ? 'pointer-events-none select-none' : ''}`}>
-      <div className="flex items-start gap-2">
-        <CalendarIcon width={16} height={16} className="mt-0.5 shrink-0 text-brass-deep" />
-        <p className="text-[12.5px] leading-relaxed text-ink-soft">
-          No seu perfil aparece um <span className="font-medium text-ink">assistente virtual</span>{' '}
-          que conversa com quem chega, oferece só os horários marcados aqui e envia o pedido pronto
-          para o seu WhatsApp. Nada é confirmado sem você.
-        </p>
-      </div>
-
       {/* 1 — dias da semana */}
       <div>
         <span className="mb-2 flex items-center justify-between gap-2">
@@ -410,15 +401,6 @@ export function AssistantCard({
             </p>
           </div>
 
-          {!profile.contact.whatsapp && (
-            <div className="flex items-start gap-2 rounded-lg bg-brass/[0.08] px-3 py-2.5">
-              <WhatsappIcon width={15} height={15} className="mt-0.5 shrink-0 text-brass-deep" />
-              <p className="text-[12px] leading-relaxed text-brass-deep">
-                Adicione seu número em <span className="font-semibold">Seus canais</span> — é para lá
-                que o assistente envia os pedidos.
-              </p>
-            </div>
-          )}
         </>
       )}
     </div>

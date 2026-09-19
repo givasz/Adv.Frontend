@@ -563,7 +563,7 @@ export default function Editor() {
               )}
 
               {section === 'agenda' && (
-                <Card title="Agendamento">
+                <Card title="Contato e agendamento">
                   {canUseScheduling(profile.plan) ? (
                     <SchedulingCard
                       profile={profile}

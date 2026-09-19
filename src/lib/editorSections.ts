@@ -261,7 +261,7 @@ export const SECTIONS: Record<SectionId, SectionMeta> = {
     id: 'agenda',
     title: 'Sua agenda',
     short: 'Agenda',
-    subtitle: 'Deixe que marquem um horário direto no perfil.',
+    subtitle: 'Escolha como o visitante fala com você e onde chegam os pedidos.',
     group: 'perfil',
     plan: 'pro',
     keywords: ['agenda', 'horário', 'horários', 'assistente', 'agendamento', 'dias', 'atendimento', 'marcar'],
