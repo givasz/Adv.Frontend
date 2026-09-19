@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Profile } from '@/lib/types'
@@ -114,7 +114,6 @@ export default function AgendaDigitalPage() {
   }
 
   async function remove(entry: CalendarEntry) {
-    if (!window.confirm(`Apagar “${entry.title}” da agenda?`)) return
     setBusy(true); setError('')
     try { await agendaDigital.deleteEntry(entry.id); await loadEntries(); if (draft?.id === entry.id) setDraft(null) }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível apagar.') }
@@ -143,7 +142,6 @@ export default function AgendaDigitalPage() {
   }
 
   async function removeRequest(request: MeetingRequest) {
-    if (!window.confirm(`Excluir os dados de ${request.name} desta solicitação?`)) return
     setBusy(true); setError('')
     try {
       await agendaDigital.deleteRequest(request.id)
@@ -228,7 +226,7 @@ export default function AgendaDigitalPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-deep">DIA SELECIONADO</p>
                 <h2 className="mt-1 font-display text-2xl font-semibold">{titleCase(formatDate(selected, { weekday: 'long', day: 'numeric', month: 'long' }))}</h2>
                 <div className="mt-5 space-y-3">
-                  {loading ? <p className="text-[13px] text-ink-faint">Carregando…</p> : selectedEntries.length ? selectedEntries.map((entry) => <EventCard key={entry.id} entry={entry} editable={profile?.plan === 'premium'}
+                  {loading ? <p className="text-[13px] text-ink-faint">Carregando…</p> : selectedEntries.length ? selectedEntries.map((entry) => <EventCard key={entry.id} entry={entry} editable={profile?.plan === 'premium'} busy={busy}
                     onEdit={() => setDraft({ id: entry.id, title: entry.title, date: entry.startsAt.slice(0, 10), time: eventTime(entry), durationMin: entry.durationMin })}
                     onDelete={() => void remove(entry)} />) : <p className="rounded-xl bg-paper-soft p-4 text-[13px] leading-relaxed text-ink-faint">Dia livre. Adicione um compromisso quando quiser.</p>}
                 </div>
@@ -274,14 +272,18 @@ export default function AgendaDigitalPage() {
   )
 }
 
-function EventCard({ entry, editable, onEdit, onDelete }: { entry: CalendarEntry; editable: boolean; onEdit: () => void; onDelete: () => void }) {
+function EventCard({ entry, editable, busy, onEdit, onDelete }: { entry: CalendarEntry; editable: boolean; busy: boolean; onEdit: () => void; onDelete: () => void }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const confirmationId = useId()
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const event: Compromisso = { inicio: entry.startsAt, duracaoMin: entry.durationMin, titulo: entry.title }
   return <article className="rounded-xl border border-ink/10 bg-paper-soft/60 p-4">
     <div className="flex gap-3"><span className="mt-1 h-9 w-1 shrink-0 rounded-full bg-burgundy" /><div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-wider text-brass-deep">{eventTime(entry)} · {entry.durationMin} min</p><h3 className="mt-1 break-words font-display text-[17px] font-semibold leading-tight">{entry.title}</h3></div></div>
     <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-[11px] font-semibold">
-      {editable && <><button type="button" onClick={onEdit} className="text-burgundy hover:underline">Editar</button><button type="button" onClick={onDelete} className="text-ink-faint hover:text-burgundy hover:underline">Apagar</button></>}
+      {editable && <><button type="button" onClick={onEdit} disabled={busy} className="min-h-10 rounded-lg px-2 text-burgundy hover:bg-burgundy/[0.05] disabled:opacity-50">Editar</button><button ref={deleteButtonRef} type="button" onClick={() => setConfirmingDelete((value) => !value)} disabled={busy} aria-expanded={confirmingDelete} aria-controls={confirmationId} className="min-h-10 rounded-lg px-2 text-ink-faint hover:bg-burgundy/[0.05] hover:text-burgundy disabled:opacity-50">Apagar</button></>}
       <details className="relative"><summary className="cursor-pointer text-burgundy hover:underline">Adicionar ao celular</summary><div className="absolute right-0 z-10 mt-2 flex min-w-48 flex-col gap-1 rounded-xl border border-ink/10 bg-paper p-2 shadow-lift"><a href={linkGoogleAgenda(event)} target="_blank" rel="noopener noreferrer" className="rounded-lg px-2 py-2 hover:bg-paper-soft">Google Agenda</a><a href={linkOutlook(event)} target="_blank" rel="noopener noreferrer" className="rounded-lg px-2 py-2 hover:bg-paper-soft">Outlook</a><button type="button" onClick={() => baixarIcs([event], 'advoc.me')} className="rounded-lg px-2 py-2 text-left hover:bg-paper-soft">Calendário do celular (.ics)</button></div></details>
     </div>
+    {confirmingDelete && <InlineDeleteConfirmation id={confirmationId} title="Apagar compromisso?" description={`“${entry.title}” sairá da sua agenda. Esta ação não pode ser desfeita.`} confirmLabel="Apagar da agenda" busy={busy} onCancel={() => { setConfirmingDelete(false); deleteButtonRef.current?.focus() }} onConfirm={onDelete} />}
   </article>
 }
 
@@ -296,6 +298,9 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
 }) {
   const [when, setWhen] = useState(request.preferredAt ?? '')
   const [durationMin, setDurationMin] = useState(defaultDuration)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const confirmationId = useId()
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const needsAppointment = request.status === 'pending' || (request.status === 'confirmed' && !request.calendarEntryId)
   const wa = whatsappHref(request.whatsapp, `Olá, ${request.name}. Recebi sua solicitação pelo meu perfil no advoc.me e gostaria de conversar sobre o horário.`)
   const email = request.email ? `mailto:${request.email}?subject=${encodeURIComponent('Sua solicitação de reunião')}` : undefined
@@ -330,7 +335,35 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
       {request.status === 'confirmed' && (request.calendarEntryId && request.calendarEntry ?
         <button type="button" onClick={() => onViewCalendar(request.calendarEntry!.startsAt)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brass/50 px-5 py-3 text-[14px] font-semibold text-burgundy hover:bg-brass/[0.08]"><CalendarIcon width={19} height={19} aria-hidden />Ver na agenda</button> :
         <button type="button" disabled={busy || !canSchedule || !when} onClick={() => onDecide('confirmed', { startsAt: when, durationMin })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brass/50 px-5 py-3 text-[14px] font-semibold text-burgundy hover:bg-brass/[0.08] disabled:opacity-50"><CalendarIcon width={19} height={19} aria-hidden />Colocar na agenda</button>)}
-      <button type="button" disabled={busy} onClick={onDelete} className="ml-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-ink-faint hover:bg-paper-soft hover:text-burgundy disabled:opacity-50"><TrashIcon width={19} height={19} aria-hidden />Excluir dados</button>
+      <button ref={deleteButtonRef} type="button" disabled={busy} onClick={() => setConfirmingDelete((value) => !value)} aria-expanded={confirmingDelete} aria-controls={confirmationId} className="ml-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-ink-faint hover:bg-paper-soft hover:text-burgundy disabled:opacity-50"><TrashIcon width={19} height={19} aria-hidden />Excluir dados</button>
     </div>
+    {confirmingDelete && <div className="px-4 pb-4 sm:px-6"><InlineDeleteConfirmation id={confirmationId} title="Excluir dados desta solicitação?" description={`Os dados de ${request.name} e as respostas da triagem serão excluídos do painel. Esta ação não pode ser desfeita.`} confirmLabel="Excluir dados" busy={busy} onCancel={() => { setConfirmingDelete(false); deleteButtonRef.current?.focus() }} onConfirm={onDelete} /></div>}
   </article>
+}
+
+function InlineDeleteConfirmation({ id, title, description, confirmLabel, busy, onCancel, onConfirm }: {
+  id: string
+  title: string
+  description: string
+  confirmLabel: string
+  busy: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true })
+    panelRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [])
+
+  return <div ref={panelRef} id={id} role="group" aria-label={title} tabIndex={-1} className="mt-3 rounded-xl border border-burgundy/25 bg-burgundy/[0.045] p-4 outline-none focus-visible:ring-2 focus-visible:ring-burgundy">
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-burgundy/10 text-burgundy"><TrashIcon width={17} height={17} aria-hidden /></span>
+      <div className="min-w-0"><p className="font-display text-[16px] font-semibold leading-snug text-ink">{title}</p><p className="mt-1 break-words text-[12.5px] leading-relaxed text-ink-soft">{description}</p></div>
+    </div>
+    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <button type="button" disabled={busy} onClick={onCancel} className="min-h-11 w-full rounded-xl border border-ink/15 bg-paper px-4 py-2.5 text-[13px] font-semibold text-ink transition-colors hover:bg-paper-soft disabled:opacity-50 sm:w-auto">Manter</button>
+      <button type="button" disabled={busy} onClick={onConfirm} className="min-h-11 w-full rounded-xl bg-burgundy px-4 py-2.5 text-[13px] font-semibold text-paper transition-colors hover:bg-burgundy-deep disabled:opacity-50 sm:w-auto">{busy ? 'Excluindo…' : confirmLabel}</button>
+    </div>
+  </div>
 }
