@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Profile } from '@/lib/types'
 import { agendaDigital, type CalendarEntry, type MeetingRequest } from '@/lib/agendaDigital'
 import { baixarIcs, linkGoogleAgenda, linkOutlook, type Compromisso } from '@/lib/ics'
 import { whatsappHref, comoAbrirWhatsapp } from '@/lib/whatsapp'
-import { CalendarIcon } from '@/components/ui/icons'
+import { CalendarIcon, CheckIcon, MailIcon, TrashIcon, WhatsappIcon } from '@/components/ui/icons'
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const today = () => dateKey(new Date())
@@ -21,17 +21,23 @@ type Draft = { id?: string; title: string; date: string; time: string; durationM
 export default function AgendaDigitalPage() {
   const [search, setSearch] = useSearchParams()
   const tab = search.get('tab') === 'solicitacoes' ? 'solicitacoes' : 'agenda'
+  const pageParam = Number(search.get('page') ?? 1)
+  const requestPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1
   const [profile, setProfile] = useState<Profile | null>(null)
   const [month, setMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
   const [selected, setSelected] = useState(today)
   const [entries, setEntries] = useState<CalendarEntry[]>([])
   const [requests, setRequests] = useState<MeetingRequest[]>([])
-  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const [totalRequests, setTotalRequests] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pendingCount, setPendingCount] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingRequests, setLoadingRequests] = useState(false)
+  const requestFetch = useRef(0)
 
   const first = dateKey(new Date(month.getFullYear(), month.getMonth(), 1))
   const last = dateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0))
@@ -49,24 +55,29 @@ export default function AgendaDigitalPage() {
   }, [first, last])
   useEffect(() => { void loadEntries() }, [loadEntries])
 
-  const loadRequests = useCallback(async (offset = 0) => {
+  const loadRequests = useCallback(async (page: number) => {
+    const generation = ++requestFetch.current
     setLoadingRequests(true)
     try {
-      const data = await agendaDigital.requests(offset)
-      setRequests((current) => offset ? [...current, ...data.items] : data.items)
-      setNextOffset(data.nextOffset)
+      const data = await agendaDigital.requests(page)
+      if (generation !== requestFetch.current) return
+      setRequests(data.items)
+      setTotalRequests(data.total)
+      setTotalPages(data.totalPages)
+      setCurrentPage(data.page)
+      setPendingCount(data.pendingCount)
       setError('')
-    } catch (e) { setError(e instanceof Error ? e.message : 'Falha ao carregar as solicitações.') }
-    finally { setLoadingRequests(false) }
+    } catch (e) { if (generation === requestFetch.current) setError(e instanceof Error ? e.message : 'Falha ao carregar as solicitações.') }
+    finally { if (generation === requestFetch.current) setLoadingRequests(false) }
   }, [])
-  useEffect(() => { if (tab === 'solicitacoes') void loadRequests() }, [tab, loadRequests])
+  useEffect(() => { if (tab === 'solicitacoes') void loadRequests(requestPage) }, [tab, requestPage, loadRequests])
 
   const calendarDays = useMemo(() => {
     const offset = (month.getDay() + 6) % 7
     return Array.from({ length: 42 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), i - offset + 1))
   }, [month])
   const selectedEntries = entries.filter((entry) => entry.startsAt.slice(0, 10) === selected)
-  const pending = requests.filter((r) => r.status === 'pending').length
+  const pending = pendingCount
 
   function changeMonth(delta: number) {
     const next = new Date(month.getFullYear(), month.getMonth() + delta, 1)
@@ -102,9 +113,23 @@ export default function AgendaDigitalPage() {
     finally { setBusy(false) }
   }
 
-  async function decide(request: MeetingRequest, status: 'confirmed' | 'declined') {
+  function showCalendar(startsAt: string) {
+    const date = startsAt.slice(0, 10)
+    setMonth(new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1))
+    setSelected(date)
+    setDraft(null)
+    setSearch({})
+    if (date.slice(0, 7) === first.slice(0, 7)) void loadEntries()
+  }
+
+  async function decide(request: MeetingRequest, status: 'confirmed' | 'declined', appointment?: { startsAt: string; durationMin: number }) {
     setBusy(true); setError('')
-    try { await agendaDigital.decide(request.id, status); setRequests((items) => items.map((r) => r.id === request.id ? { ...r, status } : r)) }
+    try {
+      const result = await agendaDigital.decide(request.id, status, appointment)
+      setRequests((items) => items.map((r) => r.id === request.id ? { ...r, status: result.status, calendarEntryId: result.entry?.id ?? r.calendarEntryId, calendarEntry: result.entry ? { id: result.entry.id, startsAt: result.entry.startsAt } : r.calendarEntry } : r))
+      if (request.status === 'pending') setPendingCount((count) => Math.max(0, count - 1))
+      if (result.entry) showCalendar(result.entry.startsAt)
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível atualizar a solicitação.') }
     finally { setBusy(false) }
   }
@@ -112,7 +137,11 @@ export default function AgendaDigitalPage() {
   async function removeRequest(request: MeetingRequest) {
     if (!window.confirm(`Excluir os dados de ${request.name} desta solicitação?`)) return
     setBusy(true); setError('')
-    try { await agendaDigital.deleteRequest(request.id); setRequests((items) => items.filter((r) => r.id !== request.id)) }
+    try {
+      await agendaDigital.deleteRequest(request.id)
+      if (requests.length === 1 && currentPage > 1) setSearch({ tab: 'solicitacoes', page: String(currentPage - 1) })
+      else await loadRequests(currentPage)
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível excluir.') }
     finally { setBusy(false) }
   }
@@ -211,9 +240,14 @@ export default function AgendaDigitalPage() {
           </div>
         ) : (
           <section role="tabpanel" className="mx-auto max-w-4xl">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-deep">CONTATOS DO MINI-SITE</p><h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Solicitações de reunião</h2><p className="mt-2 text-[13px] text-ink-soft">Entre em contato e registre sua decisão. A solicitação não reserva o horário.</p></div>{profile?.plan === 'premium' && !profile.meetingInboxEnabled && <Link to="/editor?section=agenda" className="text-[12px] font-semibold text-burgundy underline underline-offset-4">Ativar pedidos no perfil</Link>}</div>
-            <div className="space-y-4">{loadingRequests && requests.length === 0 ? <p role="status" className="rounded-xl bg-paper p-5 text-[13px] text-ink-faint">Carregando solicitações…</p> : requests.length ? requests.map((request) => <RequestCard key={request.id} request={request} busy={busy} onDecide={(status) => void decide(request, status)} onDelete={() => void removeRequest(request)} onCalendar={() => { setSearch({}); const date = request.preferredAt?.slice(0, 10) || today(); setMonth(new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1)); setSelected(date); setDraft({ title: `Reunião com ${request.name}`, date, time: request.preferredAt?.slice(11, 16) || '09:00', durationMin: profile?.assistant?.durationMin ?? 45 }) }} />) : <div className="rounded-2xl border border-ink/10 bg-paper p-8 text-center shadow-card"><CalendarIcon width={25} height={25} className="mx-auto text-brass-deep" /><h3 className="mt-3 font-display text-xl font-semibold">Nenhuma solicitação por aqui</h3><p className="mt-2 text-[13px] text-ink-soft">Quando alguém pedir uma reunião no seu mini-site, o contato aparecerá nesta aba.</p></div>}</div>
-            {nextOffset !== null && <button type="button" onClick={() => void loadRequests(nextOffset)} className="mt-5 w-full rounded-xl border border-ink/15 bg-paper px-4 py-3 text-[13px] font-semibold hover:bg-paper-soft">Carregar mais solicitações</button>}
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-deep">CONTATOS DO MINI-SITE</p><h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Solicitações de reunião</h2><p className="mt-2 text-[13px] text-ink-soft">Combine o horário com a pessoa e confirme para adicioná-lo à agenda.</p></div>{profile?.plan === 'premium' && !profile.meetingInboxEnabled && <Link to="/editor?section=agenda" className="text-[12px] font-semibold text-burgundy underline underline-offset-4">Ativar pedidos no perfil</Link>}</div>
+            {totalRequests > 0 && <p className="mb-4 text-[12px] font-medium text-ink-faint">{totalRequests} {totalRequests === 1 ? 'solicitação' : 'solicitações'} · página {currentPage} de {totalPages}</p>}
+            <div className="space-y-4">{loadingRequests ? <p role="status" className="rounded-xl bg-paper p-5 text-[13px] text-ink-faint">Carregando solicitações…</p> : requests.length ? requests.map((request) => <RequestCard key={request.id} request={request} busy={busy} canSchedule={profile?.plan === 'premium'} defaultDuration={profile?.assistant?.durationMin ?? 45} onDecide={(status, appointment) => void decide(request, status, appointment)} onDelete={() => void removeRequest(request)} onViewCalendar={showCalendar} />) : <div className="rounded-2xl border border-ink/10 bg-paper p-8 text-center shadow-card"><CalendarIcon width={25} height={25} className="mx-auto text-brass-deep" /><h3 className="mt-3 font-display text-xl font-semibold">Nenhuma solicitação por aqui</h3><p className="mt-2 text-[13px] text-ink-soft">Quando alguém pedir uma reunião no seu mini-site, o contato aparecerá nesta aba.</p></div>}</div>
+            {totalPages > 1 && <nav aria-label="Páginas de solicitações" className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-paper p-2 shadow-card">
+              <button type="button" disabled={currentPage <= 1 || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', page: String(currentPage - 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">← Anterior</button>
+              <span className="text-center text-[12px] font-semibold tabular-nums text-ink-soft">{currentPage} / {totalPages}</span>
+              <button type="button" disabled={currentPage >= totalPages || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', page: String(currentPage + 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">Próxima →</button>
+            </nav>}
           </section>
         )}
       </main>
@@ -232,7 +266,18 @@ function EventCard({ entry, editable, onEdit, onDelete }: { entry: CalendarEntry
   </article>
 }
 
-function RequestCard({ request, busy, onDecide, onDelete, onCalendar }: { request: MeetingRequest; busy: boolean; onDecide: (status: 'confirmed' | 'declined') => void; onDelete: () => void; onCalendar: () => void }) {
+function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, onDelete, onViewCalendar }: {
+  request: MeetingRequest
+  busy: boolean
+  canSchedule: boolean
+  defaultDuration: number
+  onDecide: (status: 'confirmed' | 'declined', appointment?: { startsAt: string; durationMin: number }) => void
+  onDelete: () => void
+  onViewCalendar: (startsAt: string) => void
+}) {
+  const [when, setWhen] = useState(request.preferredAt ?? '')
+  const [durationMin, setDurationMin] = useState(defaultDuration)
+  const needsAppointment = request.status === 'pending' || (request.status === 'confirmed' && !request.calendarEntryId)
   const wa = whatsappHref(request.whatsapp, `Olá, ${request.name}. Recebi sua solicitação pelo meu perfil no advoc.me e gostaria de conversar sobre o horário.`)
   const email = request.email ? `mailto:${request.email}?subject=${encodeURIComponent('Sua solicitação de reunião')}` : undefined
   return <article className="overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-card">
@@ -240,8 +285,29 @@ function RequestCard({ request, busy, onDecide, onDelete, onCalendar }: { reques
       <p className="mt-3 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-soft">{request.subject}</p>
       {request.preferredAt && <p className="mt-2 text-[12px] font-semibold text-burgundy">Preferência: {formatDate(request.preferredAt.slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' })} às {request.preferredAt.slice(11, 16)}</p>}
       {request.triage.length > 0 && <details className="mt-3 rounded-xl bg-paper-soft p-3 text-[12px]"><summary className="cursor-pointer font-semibold">Ver respostas da triagem ({request.triage.length})</summary><dl className="mt-3 space-y-3">{request.triage.map((row, i) => <div key={row.id || i}><dt className="font-semibold text-ink">{row.pergunta}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink-soft">{row.resposta}</dd></div>)}</dl></details>}
-      <div className="mt-4 flex flex-wrap gap-2">{wa && <a href={wa} {...comoAbrirWhatsapp()} className="rounded-lg bg-[#1f7a55] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#176143]">Chamar no WhatsApp</a>}{email && <a href={email} className="rounded-lg border border-ink/15 px-3 py-2.5 text-[12px] font-semibold hover:bg-paper-soft">Enviar e-mail</a>}</div>
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {wa && <a href={wa} {...comoAbrirWhatsapp()} className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-xl bg-[#1f7a55] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#176143]"><WhatsappIcon width={19} height={19} aria-hidden />Chamar no WhatsApp</a>}
+        {email && <a href={email} className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-xl border border-ink/15 px-4 py-3 text-[13px] font-semibold text-ink transition-colors hover:bg-paper-soft"><MailIcon width={19} height={19} aria-hidden />Enviar e-mail</a>}
+      </div>
+      {needsAppointment && <div className="mt-5 rounded-xl border border-brass/30 bg-brass/[0.06] p-4">
+        <p className="text-[12px] font-semibold text-ink">Horário combinado</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">Ao confirmar, o compromisso entra direto na sua agenda.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
+          <label className="text-[12px] font-semibold">Data e hora<input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="agenda-input" /></label>
+          <label className="text-[12px] font-semibold">Duração<select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} className="agenda-input">{[15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</select></label>
+        </div>
+        {!canSchedule && <p className="mt-2 text-[11px] text-burgundy">Ative o plano Max para confirmar e incluir o horário na agenda.</p>}
+      </div>}
     </div>
-    <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 bg-paper-soft/45 px-4 py-3 sm:px-6">{request.status === 'pending' && <><button type="button" disabled={busy} onClick={() => onDecide('confirmed')} className="rounded-lg bg-burgundy px-3 py-2 text-[12px] font-semibold text-paper disabled:opacity-50">Confirmei o horário</button><button type="button" disabled={busy} onClick={() => onDecide('declined')} className="rounded-lg border border-ink/15 px-3 py-2 text-[12px] font-semibold disabled:opacity-50">Neguei</button></>}{request.status === 'confirmed' && <button type="button" onClick={onCalendar} className="rounded-lg border border-brass/50 px-3 py-2 text-[12px] font-semibold text-burgundy">Colocar na agenda</button>}<button type="button" disabled={busy} onClick={onDelete} className="ml-auto px-2 py-2 text-[11px] text-ink-faint underline underline-offset-2 hover:text-burgundy">Excluir dados</button></div>
+    <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 bg-paper-soft/45 px-4 py-3 sm:px-6">
+      {request.status === 'pending' && <>
+        <button type="button" disabled={busy || !canSchedule || !when} onClick={() => onDecide('confirmed', { startsAt: when, durationMin })} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-burgundy px-5 py-3 text-[14px] font-semibold text-paper transition-colors hover:bg-burgundy/90 disabled:opacity-50 sm:w-auto"><CheckIcon width={19} height={19} aria-hidden />Confirmar e colocar na agenda</button>
+        <button type="button" disabled={busy} onClick={() => onDecide('declined')} className="min-h-12 rounded-xl border border-ink/15 px-5 py-3 text-[14px] font-semibold hover:bg-paper-soft disabled:opacity-50">Negar solicitação</button>
+      </>}
+      {request.status === 'confirmed' && (request.calendarEntryId && request.calendarEntry ?
+        <button type="button" onClick={() => onViewCalendar(request.calendarEntry!.startsAt)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brass/50 px-5 py-3 text-[14px] font-semibold text-burgundy hover:bg-brass/[0.08]"><CalendarIcon width={19} height={19} aria-hidden />Ver na agenda</button> :
+        <button type="button" disabled={busy || !canSchedule || !when} onClick={() => onDecide('confirmed', { startsAt: when, durationMin })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brass/50 px-5 py-3 text-[14px] font-semibold text-burgundy hover:bg-brass/[0.08] disabled:opacity-50"><CalendarIcon width={19} height={19} aria-hidden />Colocar na agenda</button>)}
+      <button type="button" disabled={busy} onClick={onDelete} className="ml-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-ink-faint hover:bg-paper-soft hover:text-burgundy disabled:opacity-50"><TrashIcon width={19} height={19} aria-hidden />Excluir dados</button>
+    </div>
   </article>
 }

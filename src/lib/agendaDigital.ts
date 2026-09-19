@@ -15,6 +15,8 @@ export interface MeetingRequest {
   email?: string | null
   subject: string
   preferredAt?: string | null
+  calendarEntryId?: string | null
+  calendarEntry?: Pick<CalendarEntry, 'id' | 'startsAt'> | null
   triage: RespostaDeTriagem[]
   status: 'pending' | 'confirmed' | 'declined'
   createdAt: string
@@ -28,6 +30,20 @@ export interface MeetingRequestInput {
   preferredAt?: string
   triage?: RespostaDeTriagem[]
   consent: boolean
+}
+
+export interface RequestPage {
+  items: MeetingRequest[]
+  page: number
+  pageSize: number
+  total: number
+  totalPages: number
+  pendingCount: number
+}
+
+export interface DecisionResult {
+  status: 'confirmed' | 'declined'
+  entry: CalendarEntry | null
 }
 
 const ENTRIES_KEY = 'advocme:calendar:entries'
@@ -70,6 +86,7 @@ export const agendaDigital = {
   async deleteEntry(entryId: string): Promise<void> {
     if (TEM_BACKEND) { await result(`/api/agenda/entries/${encodeURIComponent(entryId)}`, { method: 'DELETE' }); return }
     write(ENTRIES_KEY, read<CalendarEntry>(ENTRIES_KEY).filter((e) => e.id !== entryId))
+    write(REQUESTS_KEY, read<MeetingRequest>(REQUESTS_KEY).map((r) => r.calendarEntryId === entryId ? { ...r, calendarEntryId: null, calendarEntry: null } : r))
   },
   async submit(slug: string, input: MeetingRequestInput): Promise<void> {
     if (TEM_BACKEND) { await result(`/api/profiles/${encodeURIComponent(slug)}/meeting-requests`, json('POST', input)); return }
@@ -77,14 +94,42 @@ export const agendaDigital = {
     const request: MeetingRequest = { ...input, id: id(), triage: input.triage ?? [], status: 'pending', createdAt: new Date().toISOString() }
     write(REQUESTS_KEY, [request, ...read<MeetingRequest>(REQUESTS_KEY)])
   },
-  async requests(offset = 0): Promise<{ items: MeetingRequest[]; nextOffset: number | null }> {
-    if (TEM_BACKEND) return result(`/api/agenda/requests?offset=${offset}`)
-    const all = read<MeetingRequest>(REQUESTS_KEY)
-    return { items: all.slice(offset, offset + 50), nextOffset: all.length > offset + 50 ? offset + 50 : null }
+  async requests(page = 1): Promise<RequestPage> {
+    if (TEM_BACKEND) return result(`/api/agenda/requests?page=${page}`)
+    const all = read<MeetingRequest>(REQUESTS_KEY).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+    const pageSize = 10
+    const totalPages = Math.max(1, Math.ceil(all.length / pageSize))
+    const currentPage = Math.max(1, Math.min(page, totalPages))
+    const entries = read<CalendarEntry>(ENTRIES_KEY)
+    const items = all.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => {
+      const entry = entries.find((e) => e.id === r.calendarEntryId)
+      return { ...r, calendarEntry: entry ? { id: entry.id, startsAt: entry.startsAt } : null }
+    })
+    return { items, page: currentPage, pageSize, total: all.length, totalPages, pendingCount: all.filter((r) => r.status === 'pending').length }
   },
-  async decide(requestId: string, status: 'confirmed' | 'declined'): Promise<void> {
-    if (TEM_BACKEND) { await result(`/api/agenda/requests/${encodeURIComponent(requestId)}`, json('PATCH', { status })); return }
-    write(REQUESTS_KEY, read<MeetingRequest>(REQUESTS_KEY).map((r) => r.id === requestId ? { ...r, status } : r))
+  async decide(requestId: string, status: 'confirmed' | 'declined', appointment?: { startsAt: string; durationMin: number }): Promise<DecisionResult> {
+    if (TEM_BACKEND) return result(`/api/agenda/requests/${encodeURIComponent(requestId)}`, json('PATCH', { status, ...appointment }))
+    const requests = read<MeetingRequest>(REQUESTS_KEY)
+    const request = requests.find((r) => r.id === requestId)
+    if (!request) throw new Error('Solicitação não encontrada.')
+    if (status === 'confirmed' && request.status === 'confirmed' && request.calendarEntryId) {
+      return { status, entry: read<CalendarEntry>(ENTRIES_KEY).find((e) => e.id === request.calendarEntryId) ?? null }
+    }
+    if (request.status !== 'pending' && !(status === 'confirmed' && request.status === 'confirmed')) throw new Error('Esta solicitação já foi respondida.')
+    let entry: CalendarEntry | null = null
+    if (status === 'confirmed') {
+      if (!appointment?.startsAt || !appointment.durationMin) throw new Error('Escolha uma data e hora para confirmar.')
+      const existing = read<CalendarEntry>(ENTRIES_KEY)
+      const start = new Date(appointment.startsAt).getTime()
+      const end = start + appointment.durationMin * 60_000
+      if (existing.some((e) => start < new Date(e.startsAt).getTime() + e.durationMin * 60_000 && new Date(e.startsAt).getTime() < end)) {
+        throw new Error('Já existe um compromisso nesse horário.')
+      }
+      entry = { id: id(), title: `Reunião com ${request.name}`.slice(0, 100), ...appointment }
+      write(ENTRIES_KEY, [...existing, entry])
+    }
+    write(REQUESTS_KEY, requests.map((r) => r.id === requestId ? { ...r, status, calendarEntryId: entry?.id ?? r.calendarEntryId ?? null, calendarEntry: entry ? { id: entry.id, startsAt: entry.startsAt } : r.calendarEntry ?? null } : r))
+    return { status, entry }
   },
   async deleteRequest(requestId: string): Promise<void> {
     if (TEM_BACKEND) { await result(`/api/agenda/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }); return }

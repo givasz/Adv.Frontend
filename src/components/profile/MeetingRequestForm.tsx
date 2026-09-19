@@ -43,6 +43,8 @@ export function MeetingRequestForm({
     : 'w-full rounded-xl border border-ink/15 bg-paper-soft px-3.5 py-3 text-[14px] text-ink outline-none focus:border-burgundy focus:ring-2 focus:ring-burgundy/20'
   const themedStyle = themed ? { borderColor: 'var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text)' } : undefined
   const label = themed ? 'block text-[12px] font-semibold' : 'block text-[12px] font-semibold text-ink'
+  const phoneDigits = whatsapp.replace(/\D/g, '').length
+  const hasContact = /^\S+@\S+\.\S+$/.test(email.trim()) || (phoneDigits >= 10 && phoneDigits <= 15)
 
   if (sent) return (
     <div role="status" className={themed ? 'rounded-xl border p-5 text-center' : 'rounded-xl border border-brass/30 bg-brass/10 p-5 text-center'} style={themedStyle}>
@@ -67,7 +69,7 @@ export function MeetingRequestForm({
           <input className={`${field} mt-1`} style={themedStyle} value={email} onChange={(e) => setEmail(e.target.value)} maxLength={254} type="email" autoComplete="email" placeholder="voce@exemplo.com" />
         </label>
       </div>
-      <p className={themed ? 't-faint text-[11px]' : 'text-[11px] text-ink-faint'}>Informe pelo menos um dos dois canais.</p>
+      {!hasContact && <p className={themed ? 't-faint text-[11px]' : 'text-[11px] text-ink-faint'}>Informe um WhatsApp com DDD ou um e-mail válido.</p>}
       <label className={label}>Assunto em poucas palavras
         <input className={`${field} mt-1`} style={themedStyle} value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={220} required minLength={2} placeholder="Ex.: conversa sobre Direito de Família" />
       </label>
@@ -84,7 +86,7 @@ export function MeetingRequestForm({
       </label>
       <PrivacyNote fluxo="solicitacao" tone={themed ? 'themed' : 'page'} />
       {error && <p role="alert" className={themed ? 'text-[12px] font-semibold' : 'text-[12px] font-semibold text-burgundy'}>{error}</p>}
-      <button type="submit" disabled={busy || !name.trim() || !subject.trim() || (!whatsapp.trim() && !email.trim()) || !consent}
+      <button type="submit" disabled={busy || !name.trim() || !subject.trim() || !hasContact || !consent}
         className={themed ? 't-btn w-full !py-3.5 disabled:opacity-50' : 'btn-primary w-full !py-3.5 disabled:opacity-50'}>
         {busy ? 'Enviando…' : 'Enviar solicitação'}
       </button>
