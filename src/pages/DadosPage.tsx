@@ -115,14 +115,16 @@ export default function DadosPage() {
               no modelo.
             </li>
             <li>
+              <strong className="font-semibold text-ink">Agenda e solicitações:</strong> compromissos que você criou e pedidos enviados pelo mini-site, com contato e respostas da triagem.
+            </li>
+            <li>
               <strong className="font-semibold text-ink">Avisos por e-mail:</strong> qual aviso mandamos e
               quando. O endereço e o conteúdo de cada aviso somem assim que ele sai, e o registro some em 30
               dias.
             </li>
           </ul>
           <p className="mt-3 border-t border-ink/[0.07] pt-3 text-[12.5px] leading-relaxed text-ink-faint">
-            Não guardamos dado de quem visita o seu perfil: o contato vai do aparelho do visitante
-            direto para o seu WhatsApp, sem passar por aqui.
+            Contatos diretos pelo WhatsApp não são guardados aqui. Solicitações enviadas pelo mini-site ficam no seu painel até você excluir ou completar 180 dias.
           </p>
         </section>
 

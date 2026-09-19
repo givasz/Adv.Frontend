@@ -24,6 +24,7 @@ const Onboarding = sobDemanda(() => import('./pages/Onboarding'))
 const Painel = sobDemanda(() => import('./pages/Painel'))
 const Editor = sobDemanda(() => import('./pages/Editor'))
 const AgendaPage = sobDemanda(() => import('./pages/AgendaPage'))
+const AgendaDigitalPage = sobDemanda(() => import('./pages/AgendaDigitalPage'))
 const TestarAssistentePage = sobDemanda(() => import('./pages/TestarAssistentePage'))
 const Preview = sobDemanda(() => import('./pages/Preview'))
 const AdminPanel = sobDemanda(() => import('./pages/AdminPanel'))
@@ -128,6 +129,7 @@ export default function App() {
             porque é a única tarefa que se REPETE — e porque é a mesma conversa
             que o cliente vê, do outro lado. */}
         <Route path="/agenda" element={<RequireAuth><AgendaPage /></RequireAuth>} />
+        <Route path="/agenda-digital" element={<RequireAuth><AgendaDigitalPage /></RequireAuth>} />
         {/* Ensaio do próprio assistente: a conversa de verdade, com o perfil
             gravado, e sem abrir o WhatsApp no fim. É a resposta a "se eu fosse um
             cliente, o que eu veria?" — ver pages/TestarAssistentePage.tsx. */}

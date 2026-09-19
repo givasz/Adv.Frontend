@@ -130,7 +130,7 @@ const ENDERECO = 'Endereço com o seu nome, sem o número que o Free carimba no 
  * afasta). Não há IA nenhuma neste caminho: ver lib/triagem.ts.
  */
 const TRIAGEM =
-  'Assistente de triagem: você escreve as perguntas que ele faz antes de encaminhar, e recebe tudo organizado no WhatsApp'
+  'Assistente de triagem: você define as perguntas e recebe as respostas no WhatsApp ou no painel'
 
 // ---- O pitch de cada plano é uma ETAPA, não uma lista ------------------------
 //
@@ -196,6 +196,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
     ],
     falta: [
       'O assistente marca horário, mas não faz as suas perguntas de triagem',
+      'Sem agenda digital e solicitações no painel',
       'Sem vídeo, cartão para a gráfica, cor própria e contratos',
       'Rodapé “criado com advoc.me” continua',
     ],
@@ -215,6 +216,8 @@ export const PLAN_OFFERS: PlanOffer[] = [
       // do advogado — o contato chega triado —, enquanto os demais itens mudam a
       // página. É o recurso que a home demonstra e o motivo do destaque do Max.
       { text: TRIAGEM },
+      { text: 'Agenda digital com compromissos editáveis e exportação para o calendário do celular' },
+      { text: 'Solicitações de reunião no mini-site, com contato e triagem no painel para confirmar ou negar' },
       // Os contratos vêm logo depois (foram os primeiros de 11/09 a 14/09): é o
       // único recurso do Max que serve ao escritório, e não só ao perfil.
       // "Registrada" é a palavra exata: guardamos a impressão digital do arquivo
@@ -359,6 +362,7 @@ export const PLAN_COMPARE: CompareGroup[] = [
         hint: 'você define as perguntas feitas antes do encaminhamento',
         values: aPartirDe('premium'),
       },
+      { label: 'Agenda digital e solicitações no painel', values: aPartirDe('premium') },
       { label: 'Atalho de conversa no canto do perfil', values: aPartirDe('pro') },
       { label: 'Cartão digital (QR Code e vCard)', values: aPartirDe('pro') },
       { label: 'Cartão de visita para a gráfica (PDF)', values: aPartirDe('premium') },

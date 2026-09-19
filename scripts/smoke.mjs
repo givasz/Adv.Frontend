@@ -105,6 +105,8 @@ const ROTAS = [
   ['/redefinir-senha', 'redefinir senha (sem link)'],
   ['/confirmar-email', 'confirmar e-mail (sem link)'],
   ['/painel', 'painel'],
+  ['/agenda-digital', 'agenda digital'],
+  ['/agenda-digital?tab=solicitacoes', 'solicitações de reunião'],
   ['/painel?assinou=pro', 'painel após assinar'],
   ['/editor', 'editor'],
   // A identidade virou três seções em 12/09/2026; cada uma renderiza cartões

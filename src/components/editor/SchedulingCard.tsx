@@ -6,7 +6,7 @@ import { AssistantCard } from './AssistantCard'
 import { LockIcon, SparkIcon, WhatsappIcon } from '@/components/ui/icons'
 
 const MODES: { key: SchedulingMode; label: string; hint: string }[] = [
-  { key: 'off', label: 'Sem agendamento', hint: 'O botão “Agendar” não aparece no perfil.' },
+  { key: 'off', label: 'Só contato direto', hint: 'Sem marcação prévia. O cliente fala com você pelo WhatsApp do perfil.' },
   {
     key: 'assistant',
     label: 'Assistente virtual',
@@ -68,7 +68,7 @@ export function SchedulingCard({
               type="button"
               role="radio"
               aria-checked={active}
-              onClick={() => set({ schedulingMode: m.key })}
+              onClick={() => set({ schedulingMode: m.key, ...(m.key === 'off' ? { meetingInboxEnabled: false } : {}) })}
               className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
                 active
                   ? 'border-burgundy bg-burgundy/[0.06] ring-1 ring-burgundy/30'
@@ -84,6 +84,22 @@ export function SchedulingCard({
           )
         })}
       </div>
+
+      {profile.plan === 'premium' && (mode === 'assistant' || mode === 'whatsapp') && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brass/35 bg-brass/[0.08] p-4">
+          <input type="checkbox" checked={!!profile.meetingInboxEnabled}
+            onChange={(e) => set({ meetingInboxEnabled: e.target.checked })}
+            className="mt-1 h-4 w-4 accent-burgundy" />
+          <span className="text-[13px] leading-relaxed text-ink-soft">
+            <strong className="block font-semibold text-ink">Receber solicitações no painel</strong>
+            O visitante deixa WhatsApp ou e-mail. Você entra em contato e depois marca como confirmado ou negado. A triagem também chega junto.
+          </span>
+        </label>
+      )}
+
+      {mode === 'off' && !profile.contact.whatsapp && (
+        <p className="rounded-lg bg-brass/[0.08] px-3 py-2 text-[12px] text-brass-deep">Informe seu WhatsApp em “Seus canais” para receber contato direto.</p>
+      )}
 
       {mode === 'assistant' && (
         <div className="rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5">

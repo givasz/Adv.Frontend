@@ -1019,6 +1019,7 @@ export const ROTAS_RESERVADAS = new Set([
   // advoc.me/agenda passaria a disputar o caminho com ela, e a prévia de link
   // dessa página iria buscar um perfil que não existe.
   'agenda',
+  'agenda-digital',
   // /assistente/testar — o ensaio do próprio assistente de triagem. Reservada
   // pelo mesmo motivo de /agenda: um perfil em advoc.me/assistente disputaria o
   // caminho com a tela, e "assistente" é uma das palavras que mais alguém

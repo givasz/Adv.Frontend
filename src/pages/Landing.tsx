@@ -250,7 +250,7 @@ export default function Landing() {
               icon: <Marca size={20} />,
               nome: 'advoc.me',
               faz: 'Reúne e organiza.',
-              mas: 'Um endereço só, com apresentação, áreas, contato, horários e as suas perguntas de triagem. É o link que você manda — e o primeiro contato chega pronto no seu WhatsApp.',
+              mas: 'Um endereço só, com apresentação, áreas, contato, horários e as suas perguntas de triagem. Você escolhe receber o primeiro contato no WhatsApp ou, no Max, no painel.',
               destaque: true,
             },
           ].map((c) => (
@@ -337,7 +337,7 @@ export default function Landing() {
             <p className="mt-5 max-w-lg text-[15.5px] leading-relaxed text-ink-soft">
               Em audiência, em reunião ou fora do escritório: quem chega ao seu perfil responde às
               perguntas que você definiu, escolhe um horário livre na sua grade e o pedido chega
-              organizado no seu WhatsApp.{' '}
+              organizado no WhatsApp ou, se você ativar no Max, no seu painel.{' '}
               <span className="font-medium text-ink">
                 A avaliação do caso e a decisão de atender continuam sendo suas.
               </span>
@@ -380,8 +380,8 @@ export default function Landing() {
                 },
                 {
                   icon: <WhatsappIcon width={18} height={18} />,
-                  title: 'Cai no seu WhatsApp, pronto',
-                  body: 'Nome, dia, horário, formato e as respostas chegam numa mensagem só — direto do aparelho de quem pediu, sem passar por nós.',
+                  title: 'Chega do seu jeito',
+                  body: 'Receba nome, horário e respostas no WhatsApp ou no painel. No painel, você entra em contato e confirma ou nega o pedido.',
                 },
                 {
                   icon: <ScaleIcon width={18} height={18} />,
@@ -542,8 +542,8 @@ export default function Landing() {
             },
             {
               icon: <ShieldIcon width={20} height={20} />,
-              title: 'Sem selo, sem ranking, sem dado de visitante',
-              body: 'Nenhum “verificado”, nenhum destaque pago, nenhuma busca. As mensagens vão do aparelho do visitante direto para o seu WhatsApp — não passam por nós. Todo perfil leva à consulta pública do CNA.',
+              title: 'Sem selo nem ranking',
+              body: 'Nenhum “verificado”, destaque pago ou busca. No contato direto, a mensagem vai ao seu WhatsApp; no Max, você pode optar por receber solicitações no painel. Todo perfil leva à consulta pública do CNA.',
             },
           ].map((c) => (
             <Panel key={c.title}>
@@ -741,6 +741,12 @@ const RECURSOS: { icon: React.ReactNode; title: string; body: string; plano: 'Fr
     plano: 'Pro',
   },
   {
+    icon: <CalendarIcon width={18} height={18} />,
+    title: 'Agenda digital e solicitações',
+    body: 'Organize compromissos, leve eventos para a agenda do celular e responda aos pedidos que chegam pelo mini-site.',
+    plano: 'Max',
+  },
+  {
     icon: <PlayIcon width={18} height={18} />,
     title: 'Vídeo de apresentação',
     body: 'Um vídeo curto no fim do perfil, para a pessoa saber com quem vai falar antes de escrever.',
@@ -771,7 +777,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'O que acontece quando alguém entra em contato pelo perfil?',
-    a: 'No Free, a pessoa toca em WhatsApp ou e-mail e fala com você. No Pro, o assistente oferece só os dias e horários que você deixou abertos e monta o pedido. No Max, ele faz antes as perguntas que você definiu. Em todos os casos a mensagem sai do aparelho do visitante direto para o seu WhatsApp — nada passa por nós.',
+    a: 'No Free, a pessoa toca em WhatsApp ou e-mail e fala com você. No Pro, o assistente oferece os horários que você deixou abertos e monta o pedido para o WhatsApp. No Max, ele também pode fazer suas perguntas de triagem. Você escolhe entre contato direto ou solicitação no mini-site: nesta opção, o contato e as respostas ficam no seu painel até você excluir ou completar 180 dias.',
   },
   {
     q: 'Quem configura as perguntas da triagem?',
@@ -783,7 +789,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'As respostas da triagem ficam guardadas no advoc.me?',
-    a: 'Não. Elas existem só na conversa aberta no aparelho de quem responde e viram uma mensagem que vai dali para o seu WhatsApp. Não há tela, banco ou relatório nosso com essas respostas — o histórico do atendimento é o seu WhatsApp.',
+    a: 'Depende da opção escolhida no Max. No contato direto, as respostas viram mensagem para o seu WhatsApp e não ficam no advoc.me. Se você ativar solicitações pelo mini-site, elas chegam ao painel com o contato do visitante e ficam por até 180 dias, ou até você excluir o pedido.',
   },
   {
     q: 'Posso começar de graça? O Free é grátis mesmo?',

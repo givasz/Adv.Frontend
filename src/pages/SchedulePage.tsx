@@ -8,6 +8,7 @@ import { HREF_DE_EXEMPLO, oQueAconteceria } from '@/lib/exemplo'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
 import { comoAbrirWhatsapp, whatsappHref } from '@/lib/whatsapp'
 import { AssistantChat } from '@/components/profile/AssistantChat'
+import { MeetingRequestForm } from '@/components/profile/MeetingRequestForm'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 import { ArrowRight, CalendarIcon, WhatsappIcon } from '@/components/ui/icons'
 
@@ -73,11 +74,30 @@ export default function SchedulePage() {
   const modo = resolveSchedulingMode(profile)
   const primeiro = profile.name.split(' ')[0]
 
+  if (modo === 'off' || modo === 'external') {
+    return <SubPage title="Agendamento indisponível" subtitle="Este perfil não recebe pedidos de horário por aqui."
+      icon={<CalendarIcon width={18} height={18} />} backTo={voltar} backLabel="Voltar ao perfil">
+      <p className="text-[14px] text-ink-soft">Volte ao perfil para ver os canais de contato escolhidos pelo advogado.</p>
+    </SubPage>
+  }
+
   // Assistente: a conversa guiada ocupa a página inteira. Ela já tem cabeçalho e
   // rodapé próprios, então entra sem o esqueleto de formulário. (No perfil de
   // exemplo, o fim dela também não sai daqui — quem cuida disso é ela mesma.)
   if (modo === 'assistant') {
     return <AssistantChat profile={profile} onClose={() => navigate(voltar)} fullPage />
+  }
+
+  if (profile.plan === 'premium' && profile.meetingInboxEnabled && modo === 'whatsapp') {
+    return (
+      <SubPage title="Solicitar uma reunião" subtitle={`Deixe seu contato para ${primeiro} responder. A solicitação não confirma o horário.`}
+        icon={<CalendarIcon width={18} height={18} />} backTo={voltar} backLabel="Voltar ao perfil"
+        documentTitle={`Solicitar reunião com ${profile.name}`}>
+        <div className="rounded-xl2 border border-ink/10 bg-paper p-4 shadow-card sm:p-6">
+          <MeetingRequestForm slug={profile.slug} demo={isExampleSlug(profile.slug)} />
+        </div>
+      </SubPage>
+    )
   }
 
   // Perfil de exemplo: o número é inventado e pode ser de alguém de verdade. O

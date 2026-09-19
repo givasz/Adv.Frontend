@@ -250,6 +250,8 @@ export interface Profile {
   contact: ContactChannels
   /** comportamento do botão "Agendar" (ver SchedulingMode). Ausente = derivar de contact.scheduling. */
   schedulingMode?: SchedulingMode
+  /** MAX: receber pedidos pelo mini-site no painel; desligado mantém o contato direto. */
+  meetingInboxEnabled?: boolean
   /** config da agenda nativa (só relevante no modo 'native') */
   booking?: BookingConfig
   /** config do assistente virtual (só relevante no modo 'assistant') */
@@ -259,9 +261,9 @@ export interface Profile {
    * antes de encaminhar um atendimento. Roda DENTRO do assistente virtual, antes
    * da escolha de dia e horário — ver lib/triagem.ts.
    *
-   * Guarda só as PERGUNTAS. As respostas do visitante não passam por nós: elas
-   * viram uma mensagem montada no aparelho dele, que vai direto ao WhatsApp do
-   * advogado. Ausente = perfil sem triagem (o roteiro segue como sempre foi).
+   * Guarda só as PERGUNTAS. As respostas seguem direto ao WhatsApp no contato
+   * direto; se o visitante optar pelo pedido no mini-site, ficam na solicitação
+   * privada do advogado. Ausente = perfil sem triagem.
    */
   triage?: TriagemConfig
   /**

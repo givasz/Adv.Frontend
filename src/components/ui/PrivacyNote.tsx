@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom'
 //
 // Curto de propósito — um parágrafo que ninguém lê não é transparência, é enfeite.
 
-type Fluxo = 'assistente' | 'formulario' | 'denuncia'
+type Fluxo = 'assistente' | 'formulario' | 'denuncia' | 'solicitacao'
 
 const TEXTO: Record<Fluxo, { corpo: React.ReactNode; guarda?: string }> = {
   assistente: {
@@ -41,6 +41,12 @@ const TEXTO: Record<Fluxo, { corpo: React.ReactNode; guarda?: string }> = {
         denunciado. O e-mail é opcional e serve só para retorno.
       </>
     ),
+  },
+  solicitacao: {
+    corpo: <>
+      Seus dados e respostas da triagem ficam no <strong>painel privado do advogado</strong> para que ele possa responder. O advogado pode excluí-los depois.
+    </>,
+    guarda: 'Descreva o assunto em linhas gerais. Não envie documentos, senhas ou dados bancários.',
   },
 }
 

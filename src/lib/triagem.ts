@@ -2,8 +2,8 @@
 // encaminhar um atendimento.
 //
 // O QUE É, EM UMA FRASE: uma recepção digital. O advogado define as perguntas, o
-// assistente as faz na ordem, organiza as respostas e entrega tudo no WhatsApp
-// dele. Quem avalia, decide e confirma é o advogado — sempre.
+// assistente as faz na ordem e organiza as respostas para WhatsApp ou solicitação
+// no painel. Quem avalia, decide e confirma é o advogado — sempre.
 //
 // O QUE NÃO É: um chatbot jurídico. Não há IA neste caminho, não há
 // interpretação do caso, não há classificação de mérito, não há resposta a
@@ -13,9 +13,9 @@
 // fronteira é a arquitetura deste arquivo, não um aviso colado nele: não existe
 // função aqui capaz de opinar sobre um caso.
 //
-// NADA DO VISITANTE É GUARDADO. As respostas moram na memória da aba e viram uma
-// mensagem que sai do aparelho de quem respondeu direto para o WhatsApp do
-// advogado. Não há tabela, não há rota e não há coluna — ver backend/src/triagem.ts.
+// O roteiro em si guarda só as perguntas. As respostas moram na memória da aba
+// até o visitante escolher: no contato direto viram mensagem para o WhatsApp;
+// na solicitação consentida vão para MeetingRequest e ficam no painel privado.
 //
 // ⚠️ A PARTE DE CIMA deste arquivo (tipos, tetos, `normalizarTriagem` e o
 // caminho da conversa) é ESPELHO de backend/src/triagem.ts, e os dois lados

@@ -82,7 +82,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         paragraphs: [
           `${IDENTIFICACAO} É ela a controladora dos dados tratados na plataforma, e é a ela que se dirigem os pedidos desta Política.`,
           'Esta Política explica como a plataforma advoc.me ("advoc.me", "nós") trata dados pessoais. Ela vale para quatro pessoas diferentes: o advogado que cria uma conta, as pessoas que ele cita no próprio perfil ou convida para um escritório, quem visita um perfil e quem denuncia um perfil. O tratamento observa a Lei nº 13.709/2018 (LGPD).',
-          'Se você é VISITANTE de um perfil, a parte mais importante cabe numa frase: o advoc.me não recebe nem guarda o que você escreve para falar com o advogado. O assistente de agendamento e o formulário de contato apenas montam a mensagem, que sai do seu próprio aparelho direto para o WhatsApp dele. A partir daí, quem trata os seus dados é o advogado, como controlador, sob a política dele — e o item 8 desta Política é seu.',
+          'Se você é VISITANTE de um perfil, há dois caminhos: no contato direto, a mensagem sai do seu aparelho para o WhatsApp do advogado e não fica no advoc.me. Quando você escolhe enviar uma solicitação pelo mini-site, guardamos nome, contato, assunto, horário preferido e respostas da triagem no painel privado do advogado para que ele responda. Você é informado e confirma esse envio antes de concluir.',
         ],
       },
       {
@@ -92,6 +92,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'O seu aceite dos Termos: a data, a versão do documento aceita e o endereço IP de onde partiu. É o registro de que o contrato entre nós existe — e é a prova que serve tanto a você quanto a nós.',
           `Registro de acesso: cada entrada na sua conta e cada publicação de perfil ficam registradas com data, hora, endereço IP e identificação do navegador, por ${PRAZO_ACESSO}. É o que o art. 15 do Marco Civil da Internet exige de quem opera uma aplicação como esta, e é também o que permite dizer quem publicou um conteúdo quando alguém questiona. Fica sob sigilo, sem tela pública, e só é entregue mediante ordem de autoridade competente.`,
           'Seu perfil: tudo o que você escreve e publica nele — nome, número de inscrição na OAB, foto, cidade/UF, endereço do escritório (se optar por mostrá-lo), áreas de atuação e suas descrições, apresentação, frase de apresentação, perguntas frequentes, links de contato e redes, vídeo, grade de horários do assistente, cor e nome de marca. Perfil publicado é público por natureza.',
+          'Agenda digital: os compromissos que o advogado cria, com nome, dia, hora e duração, ficam em área privada. Só os horários ocupados são usados para deixar de oferecer vagas sobrepostas no assistente.',
+          'Solicitações de reunião: quando o visitante escolhe enviar pelo mini-site, guardamos nome, WhatsApp ou e-mail, assunto, horário preferido e respostas da triagem para mostrar ao advogado no painel. O pedido pode ser excluído pelo advogado e é apagado automaticamente após 180 dias.',
           'Uso do seu perfil: contamos acontecimentos, nunca pessoas — quantas vezes o perfil foi aberto, qual botão foi tocado e em que dia e hora. Não guardamos endereço IP, identificação do aparelho nem cookie de quem visita; por isso não existe "visitantes únicos".',
           'Sua assinatura: o plano contratado, a situação da cobrança, as datas do período pago e da carência, os identificadores da assinatura no provedor de pagamento e o registro de cada evento de cobrança. Nunca o número do cartão — ele fica com o provedor de pagamento.',
           'Seus chamados de suporte: assunto, mensagem, as imagens que você escolher anexar, a página em que você estava e a identificação do navegador (para conseguirmos reproduzir o problema), a resposta que você recebeu e quando você a viu.',
@@ -178,7 +180,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
       {
         heading: '8. Quem visita um perfil',
         bullets: [
-          'Não pedimos nem guardamos seu nome, telefone, e-mail ou o assunto que você quer tratar. A mensagem que o assistente ou o formulário monta sai do seu aparelho direto para o WhatsApp do advogado.',
+          'No contato direto pelo WhatsApp, a mensagem sai do seu aparelho e não fica no advoc.me. Se você enviar uma solicitação pelo mini-site, seus dados de contato, assunto, horário preferido e respostas da triagem ficam no painel privado do advogado por até 180 dias, ou até ele excluir o pedido.',
           'Registramos apenas que o perfil foi aberto e que um botão foi tocado — sem endereço IP, sem cookie, sem identificação do aparelho.',
           'A partir do momento em que você escreve ao advogado, quem trata os seus dados é ele, como controlador, sob as regras da advocacia (inclusive o sigilo profissional) e a política dele.',
         ],
@@ -320,7 +322,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'por sanções disciplinares, administrativas, cíveis ou penais decorrentes do uso que você faz da plataforma ou do conteúdo que publica;',
           'pelo que acontece nos canais externos para os quais o perfil leva (WhatsApp, redes sociais, vídeo hospedado em terceiros);',
           'por indisponibilidades temporárias do serviço. Trabalhamos para mantê-lo no ar e com cópias de segurança diárias, mas não garantimos disponibilidade ininterrupta.',
-          'pela relação entre você e quem o procura pelo perfil — a plataforma não é parte na contratação, não recebe honorários, não avalia causas e não guarda o que o visitante escreve para você.',
+          'pela relação entre você e quem o procura pelo perfil — a plataforma não é parte na contratação, não recebe honorários e não avalia causas; solicitações enviadas no mini-site são guardadas apenas para encaminhar o contato ao seu painel.',
         ],
       },
       {
@@ -356,13 +358,13 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         paragraphs: [
           `Controlador: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}, que opera o advoc.me.`,
           'O advoc.me é controlador dos dados necessários para operar a plataforma: conta, perfil, assinatura, suporte e moderação. Os provedores de hospedagem, de geração de texto por IA, de envio de e-mail e, quando ativo, de pagamento são operadores, que tratam dados só sob nossas instruções.',
-          'Os contatos que cada advogado recebe pelos canais dele não passam por nós: a mensagem vai do aparelho do visitante para o WhatsApp do advogado, que é o único controlador desses dados. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
+          'Contatos diretos pelo WhatsApp não passam por nós. Solicitações enviadas no mini-site passam pela plataforma e ficam no painel privado do advogado por até 180 dias. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
         ],
       },
       {
         heading: '2. Princípios que viraram decisões de produto',
         bullets: [
-          'Necessidade e minimização: a agenda que guardava nome, WhatsApp e assunto de quem procurava um advogado foi retirada do produto em agosto de 2026 justamente por concentrar dado de terceiro sem necessidade. A trilha de auditoria guarda o retrato da apresentação, o resultado da checagem e a versão da política — nada além.',
+          'Necessidade e minimização: o envio de uma solicitação pelo mini-site é opcional. Pedimos um canal de resposta (WhatsApp ou e-mail), o assunto em poucas palavras e consentimento explícito. O pedido é apagado em até 180 dias ou antes, pelo advogado.',
           'Finalidade: contamos acontecimentos no perfil, não pessoas. Não há endereço IP, cookie ou identificação de aparelho nesses registros, e não há "de onde veio o visitante", porque saber isso exigiria guardar de onde ele veio.',
           'Transparência: o que guardamos está listado em português na tela "Seus dados" da sua conta, antes de qualquer botão, e nesta documentação.',
           'Livre acesso e portabilidade: a cópia dos seus dados sai em JSON, formato aberto, sem pedir a ninguém.',
@@ -374,6 +376,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '3. Prazos de guarda',
         bullets: [
           'Conta, perfil, escritório e chamados: enquanto a conta existir.',
+          'Solicitações enviadas pelo mini-site: até 180 dias, ou até o advogado excluir. Compromissos privados da agenda: até o advogado excluir ou encerrar a conta.',
           `Acontecimentos do perfil: ${PRAZO_EVENTOS}. Trilha de auditoria: ${PRAZO_AUDITORIA}. Eventos de cobrança: ${PRAZO_COBRANCA}. O expurgo roda automaticamente todos os dias.`,
           `Conteúdo removido pela moderação: ${PRAZO_CONTEUDO_REMOVIDO}. Registro da decisão: ${PRAZO_REGISTRO_MODERACAO}.`,
           `Registro de acesso (Marco Civil, art. 15): ${PRAZO_ACESSO}. É o único prazo aqui que não é escolha nossa — é o que a lei manda guardar, e por isso não é reduzido a pedido do titular. Também não é ampliado: passado o prazo, é apagado.`,

@@ -504,3 +504,8 @@ summary.list-none::-webkit-details-marker {
 .console ::-webkit-scrollbar-track {
   background: transparent;
 }
+@layer components {
+  .agenda-input {
+    @apply mt-1.5 w-full min-w-0 rounded-xl border border-ink/15 bg-paper-soft px-3 py-2.5 text-[13px] font-normal text-ink outline-none transition-colors focus:border-burgundy focus:ring-2 focus:ring-burgundy/15;
+  }
+}

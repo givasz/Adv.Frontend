@@ -371,7 +371,7 @@ export function ProfileView({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold leading-tight">
-                  Agendar uma conversa
+                  {profile.meetingInboxEnabled ? 'Solicitar uma reunião' : 'Agendar uma conversa'}
                 </span>
                 <span className="t-faint block text-[12px] leading-tight">
                   {assistantTitle(profile)}
@@ -391,7 +391,7 @@ export function ProfileView({
                 className={`${tile} justify-center !py-3.5 font-semibold`}
               >
                 <CalendarIcon width={19} height={19} className="t-accent" />
-                Agendar uma consulta
+                {profile.meetingInboxEnabled ? 'Solicitar uma reunião' : 'Agendar uma consulta'}
               </AcaoAgendar>
             </m.div>
           )}

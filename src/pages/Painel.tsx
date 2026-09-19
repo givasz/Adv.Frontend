@@ -15,7 +15,7 @@ import { AvisoDoSuporte } from '@/components/painel/AvisoDoSuporte'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
-import { ArrowRight, CheckIcon, LockIcon, PenIcon } from '@/components/ui/icons'
+import { ArrowRight, CalendarIcon, CheckIcon, LockIcon, PenIcon } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 import { AgendaCard } from '@/components/painel/AgendaCard'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
@@ -229,6 +229,14 @@ export default function Painel() {
 
         {/* A agenda — logo abaixo do índice. É a única tarefa recorrente do painel. */}
         <AgendaCard profile={profile} />
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          <Tile to="/agenda-digital" title="Agenda digital"
+            texto="Veja seus compromissos, crie horários e leve cada evento para o calendário do celular."
+            icon={CalendarIcon} selo={profile.plan === 'premium' ? undefined : 'Max'} />
+          <Tile to="/agenda-digital?tab=solicitacoes" title="Solicitações de reunião"
+            texto="Responda pelo WhatsApp ou e-mail e registre se confirmou ou negou o pedido."
+            icon={CalendarIcon} selo={profile.plan === 'premium' ? undefined : 'Max'} />
+        </div>
 
         {/* Seu perfil — um cartão por seção, com o que está preenchido. É daqui
             que se controla o perfil depois que o índice já não tem passos. */}
