@@ -158,7 +158,8 @@ export function codificarAvatar(canvas: CanvasCodificavel, quality = 0.82): stri
   return out
 }
 
-function codificaWebp(canvas: CanvasCodificavel): boolean {
+/** O navegador codifica WebP pelo canvas? O Safari devolve PNG em silêncio — daí conferir o prefixo. */
+export function codificaWebp(canvas: CanvasCodificavel): boolean {
   try {
     return canvas.toDataURL('image/webp', 0.5).startsWith('data:image/webp')
   } catch {

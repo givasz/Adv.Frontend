@@ -356,6 +356,12 @@
   animation: rise-in 0.22s ease-out both;
 }
 
+/* Suporte: o aviso de chamado enviado e a mensagem que abre no cartão da
+   resposta sobem e aparecem — opacidade e deslize, nunca altura. Ver pages/SupportPage. */
+.suporte-entra {
+  animation: rise-in 0.18s ease-out both;
+}
+
 /* esconde a barra de rolagem (usado no mockup de celular) */
 .no-scrollbar {
   -ms-overflow-style: none;

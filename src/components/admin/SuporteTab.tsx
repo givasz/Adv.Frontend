@@ -6,9 +6,14 @@
 //
 // A resposta é obrigatória para mudar a situação: é o que o advogado lê em
 // /suporte. Fechar um chamado sem uma linha é fechá-lo na cara de quem escreveu.
+//
+// Desde 16/09/2026 o chamado pode trazer até 3 imagens (miniaturas na ficha,
+// abrem inteiras em outra aba) e a ficha diz se o advogado já leu a resposta.
+// Texto novo na resposta manda um e-mail a ele; repetir a mesma nota ao mudar a
+// situação, não.
 
 import { useEffect, useState } from 'react'
-import { listTickets, setTicketStatus, type AdminTicket } from '@/lib/adminApi'
+import { anexoDoChamadoUrl, listTickets, setTicketStatus, type AdminTicket } from '@/lib/adminApi'
 import { CheckIcon } from '@/components/ui/icons'
 import {
   Aviso,
@@ -143,7 +148,12 @@ export default function SuporteTab({ podeResponder }: { podeResponder: boolean }
                     <LinhaClicavel aberta={estaAberto} onClick={() => setAberto(estaAberto ? null : t.id)}>
                       <Td>
                         <span className="block truncate font-medium text-adm-ink">{t.subject}</span>
-                        <span className="mt-0.5 block truncate text-[12px] text-adm-muted">{t.message}</span>
+                        <span className="mt-0.5 block truncate text-[12px] text-adm-muted">
+                          {t.anexos?.length
+                            ? `${t.anexos.length} ${t.anexos.length === 1 ? 'imagem' : 'imagens'} · `
+                            : ''}
+                          {t.message}
+                        </span>
                       </Td>
                       <Td oculta>
                         <span className="block truncate text-adm-ink">{t.user.profile?.name || 'Sem perfil'}</span>
@@ -241,6 +251,35 @@ function Chamado({
           {t.message}
         </p>
 
+        {t.anexos && t.anexos.length > 0 && (
+          <>
+            <Rotulo className="mt-4">Imagens</Rotulo>
+            <ul className="flex flex-wrap gap-2">
+              {t.anexos.map((a, i) => {
+                const src = anexoDoChamadoUrl(t.id, a.id)
+                return (
+                  <li key={a.id}>
+                    <a
+                      href={src}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      title={`Abrir a imagem ${i + 1} inteira (${Math.max(1, Math.round(a.size / 1024))} KB)`}
+                      className="block overflow-hidden rounded-md border border-adm-border bg-adm-raised transition-colors hover:border-adm-accent"
+                    >
+                      <img
+                        src={src}
+                        alt={`Imagem ${i + 1} anexada ao chamado`}
+                        loading="lazy"
+                        className="h-28 w-28 object-cover"
+                      />
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+
         <Rotulo className="mt-4">Contexto</Rotulo>
         <dl className="grid gap-x-6 gap-y-1 text-[12.5px] sm:grid-cols-2">
           <Par rotulo="Quem">
@@ -285,8 +324,16 @@ function Chamado({
           className={`${entrada} resize-y leading-relaxed`}
         />
         <p className="mt-1 text-[11.5px] text-adm-muted">
-          Obrigatória para mudar a situação. Mínimo de 5 caracteres.
+          Obrigatória para mudar a situação. Mínimo de 5 caracteres. Texto novo avisa o advogado por e-mail.
         </p>
+        {t.answeredAt && (
+          <p className="mt-1.5 text-[11.5px] text-adm-soft">
+            Respondido em {fmtData(t.answeredAt)} ·{' '}
+            {t.seenAt && new Date(t.seenAt).getTime() >= new Date(t.answeredAt).getTime()
+              ? `lido pelo advogado em ${fmtData(t.seenAt)}`
+              : 'o advogado ainda não abriu a resposta'}
+          </p>
+        )}
         {aviso && <Aviso tom="nota" className="mt-2">{aviso}</Aviso>}
 
         <div className="mt-3 flex flex-wrap gap-2">

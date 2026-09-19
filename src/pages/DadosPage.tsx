@@ -100,8 +100,9 @@ export default function DadosPage() {
               escreveu nele, mais a trilha do que foi salvo e publicado.
             </li>
             <li>
-              <strong className="font-semibold text-ink">Seus chamados</strong> de suporte e as
-              respostas que você recebeu.
+              <strong className="font-semibold text-ink">Seus chamados</strong> de suporte, as
+              respostas que você recebeu e o registro das imagens que anexou (as imagens em si
+              ficam na aba Respostas do Suporte).
             </li>
             <li>
               <strong className="font-semibold text-ink">Seus documentos registrados:</strong> só a

@@ -148,6 +148,8 @@ const ROTAS = [
   // O editor de modelo próprio — percorrido de ponta a ponta em modeloProprioDoAdvogado.
   ['/contratos/modelos/novo', 'novo modelo de documento'],
   ['/suporte', 'suporte'],
+  // A aba de respostas — o chamado com imagem é percorrido em chamadoComImagem.
+  ['/suporte?aba=respostas', 'suporte · respostas'],
   // Sem sessão de propósito: quem foi suspenso não consegue entrar, e é
   // justamente essa pessoa que mais precisa desta página.
   ['/contestar', 'contestar uma decisão'],
@@ -1156,7 +1158,47 @@ async function modeloProprioDoAdvogado() {
   return erros
 }
 
+// Chamado de suporte com imagem, do anexo à aba de respostas.
+//
+// A imagem passa pelo mesmo caminho de um arquivo escolhido no celular:
+// decodificada, reduzida e re-codificada pelo canvas (lib/anexoImagem.ts). E o
+// que foi digitado precisa sobreviver à troca de aba — os dois painéis ficam
+// montados justamente para isso.
+async function chamadoComImagem() {
+  const { contexto, pagina, erros } = await abrir('/suporte')
+  // PNG de 1×1 válido: o suficiente para o canvas decodificar de verdade.
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  try {
+    await pagina.getByLabel('Assunto').pressSequentially('Botão de agendar')
+    await pagina.getByRole('tab', { name: 'Respostas' }).click()
+    await pagina.getByRole('tab', { name: 'Novo chamado' }).click()
+    if ((await pagina.getByLabel('Assunto').inputValue()) !== 'Botão de agendar') {
+      erros.push('trocar de aba apagou o assunto digitado')
+    }
+    await pagina.getByLabel('O que aconteceu').pressSequentially('O botão não abre no celular.')
+    await pagina.locator('input[type="file"]').setInputFiles({ name: 'print.png', mimeType: 'image/png', buffer: png })
+    await pagina.getByRole('img', { name: 'Imagem 1 anexada' }).waitFor({ timeout: ESPERA })
+    const src = await pagina.getByRole('img', { name: 'Imagem 1 anexada' }).getAttribute('src')
+    if (!/^data:image\/(webp|jpeg);base64,/.test(src ?? '')) erros.push('a imagem não foi re-codificada pelo canvas')
+
+    await clicar(pagina, 'Enviar chamado')
+    await pagina.getByText('Chamado enviado.').waitFor({ timeout: ESPERA })
+    const aba = pagina.getByRole('tab', { name: /Respostas/ })
+    if ((await aba.getAttribute('aria-selected')) !== 'true') erros.push('depois de enviar, não foi para a aba Respostas')
+    await clicar(pagina, 'Ver sua mensagem e a imagem')
+    await pagina.getByRole('img', { name: 'Imagem 1 que você anexou' }).waitFor({ timeout: ESPERA })
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 const CONVERSAS = [
+  ['chamado de suporte com imagem', chamadoComImagem],
   ['busca do editor e portas do painel', buscaDoEditor],
   ['comparação de planos no celular', comparacaoNoCelular],
   ['balão de conversa no celular da home', balaoNoCelular],

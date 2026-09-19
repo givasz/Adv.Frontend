@@ -67,6 +67,8 @@ const PRAZO_CONTEUDO_REMOVIDO = '6 meses'
 const PRAZO_REGISTRO_MODERACAO = '5 anos'
 const PRAZO_BACKUP = '30 dias, mais uma cópia mensal por 12 meses'
 const PRAZO_RESPOSTA_TITULAR = '15 dias'
+/** RETENCAO_ANEXOS_SUPORTE_DIAS em backend/src/retencao/retencao.service.ts. */
+const PRAZO_ANEXOS_SUPORTE = '90 dias'
 
 export const LEGAL_DOCS: LegalDocContent[] = [
   {
@@ -92,7 +94,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Seu perfil: tudo o que você escreve e publica nele — nome, número de inscrição na OAB, foto, cidade/UF, endereço do escritório (se optar por mostrá-lo), áreas de atuação e suas descrições, apresentação, frase de apresentação, perguntas frequentes, links de contato e redes, vídeo, grade de horários do assistente, cor e nome de marca. Perfil publicado é público por natureza.',
           'Uso do seu perfil: contamos acontecimentos, nunca pessoas — quantas vezes o perfil foi aberto, qual botão foi tocado e em que dia e hora. Não guardamos endereço IP, identificação do aparelho nem cookie de quem visita; por isso não existe "visitantes únicos".',
           'Sua assinatura: o plano contratado, a situação da cobrança, as datas do período pago e da carência, os identificadores da assinatura no provedor de pagamento e o registro de cada evento de cobrança. Nunca o número do cartão — ele fica com o provedor de pagamento.',
-          'Seus chamados de suporte: assunto, mensagem, a página em que você estava e a identificação do navegador (para conseguirmos reproduzir o problema), e a resposta que você recebeu.',
+          'Seus chamados de suporte: assunto, mensagem, as imagens que você escolher anexar, a página em que você estava e a identificação do navegador (para conseguirmos reproduzir o problema), a resposta que você recebeu e quando você a viu.',
           'Moderação: as denúncias recebidas sobre o seu perfil (motivo, descrição e, se quem denunciou quis, um e-mail para retorno), as medidas aplicadas com o motivo escrito, as contestações que você enviar e o registro de quem decidiu, quando e por quê.',
           'Escritório: nome, registro da sociedade, endereço e contatos que o responsável cadastra; os e-mails que ele convida; e o nome, a inscrição na OAB e a área dos advogados que ele lista na equipe. Quem cadastra esses dados responde pela veracidade e pela autorização de quem foi citado.',
           'Retratos estatísticos: uma vez por dia guardamos, por perfil, o plano, a situação da cobrança, se está publicado, a UF e o estado de moderação; e, por mês, o total de cada tipo de acontecimento. Servem para acompanhar a plataforma como um todo, sem identificar visitante algum.',
@@ -117,7 +119,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Hospedagem: o site e a rede de entrega de conteúdo que o servem, e o servidor onde a API e o banco de dados ficam. Esses serviços podem estar fora do Brasil, o que configura transferência internacional nos termos do art. 33 da LGPD; escolhemos provedores com compromissos contratuais de proteção compatíveis com a lei.',
           'Geração de texto por IA: quando você pede à IA que escreva ou revise um texto, as palavras-chave e o texto em questão — e, conforme o plano, seu nome, cidade e áreas — são enviados ao provedor de modelo de linguagem. Hoje usamos GroqCloud, xAI e Google, em cadeia de reserva, e a lista pode variar; nenhum deles recebe a sua conta, o seu e-mail ou dados de visitantes. Detalhes na Política de Inteligência Artificial.',
-          'Envio de e-mails: os avisos da sua conta (confirmação do endereço, redefinição e troca de senha, decisões de moderação e sobre a conta, contestações e mudanças nestes documentos) , o retorno a quem denuncia um perfil e o convite a quem um escritório chama para a equipe são enviados pelo Resend, provedor de envio de e-mail de empresa sediada nos Estados Unidos — o que configura transferência internacional nos termos do art. 33 da LGPD. Ele recebe o endereço de destino e o texto do aviso, e nada mais: não enviamos a ele o seu perfil nem dados de visitantes, e os avisos não usam rastreio de abertura nem de clique. Não mandamos publicidade por e-mail.',
+          'Envio de e-mails: os avisos da sua conta (confirmação do endereço, redefinição e troca de senha, decisões de moderação e sobre a conta, contestações, respostas do suporte e mudanças nestes documentos), o retorno a quem denuncia um perfil e o convite a quem um escritório chama para a equipe são enviados pelo Resend, provedor de envio de e-mail de empresa sediada nos Estados Unidos — o que configura transferência internacional nos termos do art. 33 da LGPD. Ele recebe o endereço de destino e o texto do aviso, e nada mais: não enviamos a ele o seu perfil nem dados de visitantes, e os avisos não usam rastreio de abertura nem de clique. Não mandamos publicidade por e-mail.',
           'Entrar com o Google: é opcional — a conta funciona igual com e-mail e senha. Se você escolhe essa opção, a entrada acontece na tela do próprio Google, que fica sabendo que você entrou no advoc.me, e o Google nos informa o seu nome, o seu e-mail, se ele está confirmado e um identificador da conta. Pedimos só isso: nenhum acesso a Gmail, agenda, contatos, arquivos ou foto. O nome serve apenas para começar o rascunho do seu perfil, e você o troca quando quiser. Os dados da sua conta Google seguem tratados pelo Google, sob a política dele.',
           'Consulta de CEP: ao preencher o endereço no editor, o CEP digitado é consultado em serviços públicos de endereçamento (ViaCEP e BrasilAPI). Só o CEP é enviado.',
           'Fontes tipográficas: as famílias dos temas são servidas pelo Google Fonts; o navegador as busca diretamente daquele serviço, que recebe, como em qualquer acesso, o endereço IP e a identificação do navegador. Ver a Política de Cookies.',
@@ -129,6 +131,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         heading: '4. Por quanto tempo',
         bullets: [
           'Conta, perfil, escritório e chamados de suporte: enquanto a conta existir. Quando você a exclui, tudo isso é apagado junto (ver item 6).',
+          `Imagens anexadas a chamados de suporte: até ${PRAZO_ANEXOS_SUPORTE} depois de o chamado ser marcado como resolvido, apagadas automaticamente depois disso. O chamado e a resposta continuam; só as imagens saem.`,
           `Acontecimentos do perfil (visitas e cliques): ${PRAZO_EVENTOS}, apagados automaticamente depois disso.`,
           `Trilha de auditoria (retrato da apresentação, resultado da checagem e versão da política a cada publicação): ${PRAZO_AUDITORIA}.`,
           `Eventos de cobrança: ${PRAZO_COBRANCA} — é a prova de quem pagou o quê e quando, pelo tempo de contestação de qualquer cobrança.`,

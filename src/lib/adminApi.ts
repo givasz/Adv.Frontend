@@ -666,12 +666,23 @@ export interface AdminTicket {
   userAgent: string
   status: 'open' | 'in_progress' | 'resolved'
   adminNote: string
+  /** Quando a resposta foi escrita ou mudou pela última vez. */
+  answeredAt: string | null
+  /** Quando o advogado viu as respostas pela última vez. */
+  seenAt: string | null
   createdAt: string
   handledAt: string | null
+  /** Imagens anexadas — só o que desenha a miniatura; os bytes saem por `anexoDoChamadoUrl`. */
+  anexos?: { id: string; contentType: string; size: number }[]
   user: {
     email: string
     profile: { name: string; slug: string; plan: string; oabNumber: string } | null
   }
+}
+
+/** Imagem anexada a um chamado. Rota do painel (`suporte:ler`), com o cookie do painel. */
+export function anexoDoChamadoUrl(ticketId: string, anexoId: string): string {
+  return `${API_BASE}/api/admin/support/${encodeURIComponent(ticketId)}/anexos/${encodeURIComponent(anexoId)}`
 }
 
 export async function listTickets(

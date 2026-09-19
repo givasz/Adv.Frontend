@@ -11,6 +11,7 @@ import { AccountMenu } from '@/components/auth/AccountMenu'
 import { UpgradeTopics } from '@/components/editor/UpgradeTopics'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { AvisoCobranca } from '@/components/editor/AvisoCobranca'
+import { AvisoDoSuporte } from '@/components/painel/AvisoDoSuporte'
 import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
@@ -176,6 +177,9 @@ export default function Painel() {
             sozinha olhando a própria página. Some sozinha quando não há nada a
             dizer (ver lib/assinatura.ts). */}
         <AvisoCobranca profile={profile} className="mt-6" />
+
+        {/* Resposta do suporte que a pessoa ainda não leu — some depois de lida. */}
+        <AvisoDoSuporte className="mt-6" />
 
         {/* Acabou de assinar: o que abriu vem primeiro, com festa. Nos outros
             dias o mesmo checklist mora mais abaixo, depois das ferramentas. */}

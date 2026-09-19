@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
+import { useRespostasNovas } from '@/lib/support'
 
 // Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
 // página /entrar, voltando à página atual). Logado: nome + menu com o painel, o
@@ -40,6 +41,9 @@ export function AccountMenu({
   // volta para a inicial em vez de deixar um círculo vazio no canto.
   const [fotoQuebrada, setFotoQuebrada] = useState(false)
   const location = useLocation()
+  // Resposta do suporte que a pessoa ainda não viu: ponto no botão e o item do
+  // menu passa a levar direto à aba de respostas. Só consulta onde o item existe.
+  const novas = useRespostasNovas(isAuthed && !!supportTo)
 
   if (!isAuthed || !user) {
     const next = encodeURIComponent(location.pathname + location.search)
@@ -64,10 +68,15 @@ export function AccountMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-ink/12 bg-paper py-1 pl-1 pr-3 transition-colors hover:border-burgundy/40"
+        className="relative flex items-center gap-2 rounded-full border border-ink/12 bg-paper py-1 pl-1 pr-3 transition-colors hover:border-burgundy/40"
         aria-haspopup="menu"
         aria-expanded={open}
       >
+        {novas > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-burgundy">
+            <span className="sr-only">{novas === 1 ? 'Uma resposta nova do suporte' : `${novas} respostas novas do suporte`}</span>
+          </span>
+        )}
         <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-burgundy/10 text-[13px] font-semibold text-burgundy">
           {foto ? (
             // alt vazio: o nome já está escrito ao lado; repetir seria ruído
@@ -125,12 +134,17 @@ export function AccountMenu({
             )}
             {supportTo && (
               <Link
-                to={supportTo}
+                to={novas > 0 ? `${supportTo}${supportTo.includes('?') ? '&' : '?'}aba=respostas` : supportTo}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+                className="flex w-full items-center justify-between gap-2 border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
               >
-                Falar com o suporte
+                {novas > 0 ? 'Resposta do suporte' : 'Falar com o suporte'}
+                {novas > 0 && (
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-burgundy px-1.5 text-[11px] font-bold tabular-nums text-paper">
+                    {novas}
+                  </span>
+                )}
               </Link>
             )}
             <Link
