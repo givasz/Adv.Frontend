@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Profile } from '@/lib/types'
-import { agendaDigital, type CalendarEntry, type MeetingRequest } from '@/lib/agendaDigital'
+import { agendaDigital, type CalendarEntry, type MeetingRequest, type RequestCounts, type RequestFilter } from '@/lib/agendaDigital'
 import { baixarIcs, linkGoogleAgenda, linkOutlook, type Compromisso } from '@/lib/ics'
 import { whatsappHref, comoAbrirWhatsapp } from '@/lib/whatsapp'
 import { CalendarIcon, CheckIcon, MailIcon, TrashIcon, WhatsappIcon } from '@/components/ui/icons'
@@ -14,15 +14,23 @@ const formatDate = (key: string, options: Intl.DateTimeFormatOptions) =>
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 const monthLabel = (d: Date) => titleCase(d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
 const eventTime = (entry: CalendarEntry) => entry.startsAt.slice(11, 16)
-const statusLabel: Record<MeetingRequest['status'], string> = { pending: 'Aguardando', confirmed: 'Confirmado', declined: 'Negado' }
+const statusLabel: Record<MeetingRequest['status'], string> = { pending: 'Aguardando', confirmed: 'Confirmada', declined: 'Cancelada' }
+const requestViews: { id: RequestFilter; label: string; description: string; empty: string }[] = [
+  { id: 'pending', label: 'Aguardando', description: 'Pedidos recebidos que ainda esperam sua resposta.', empty: 'Nenhum pedido aguardando resposta.' },
+  { id: 'confirmed', label: 'Confirmadas', description: 'Reuniões confirmadas e seus contatos.', empty: 'Nenhuma reunião confirmada por enquanto.' },
+  { id: 'declined', label: 'Canceladas', description: 'Pedidos que foram negados ou cancelados.', empty: 'Nenhuma solicitação cancelada.' },
+  { id: 'all', label: 'Histórico', description: 'Todos os pedidos, do mais recente ao mais antigo.', empty: 'Ainda não há solicitações no histórico.' },
+]
 
 type Draft = { id?: string; title: string; date: string; time: string; durationMin: number }
 
 export default function AgendaDigitalPage() {
   const [search, setSearch] = useSearchParams()
   const tab = search.get('tab') === 'solicitacoes' ? 'solicitacoes' : 'agenda'
+  const requestView = requestViews.find((item) => item.id === search.get('view'))?.id ?? 'pending'
+  const activeView = requestViews.find((item) => item.id === requestView)!
   const pageParam = Number(search.get('page') ?? 1)
-  const requestPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1
+  const requestPage = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1
   const [profile, setProfile] = useState<Profile | null>(null)
   const [month, setMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
   const [selected, setSelected] = useState(today)
@@ -31,7 +39,7 @@ export default function AgendaDigitalPage() {
   const [totalRequests, setTotalRequests] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [requestCounts, setRequestCounts] = useState<RequestCounts>({ pending: 0, confirmed: 0, declined: 0, all: 0 })
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -55,29 +63,29 @@ export default function AgendaDigitalPage() {
   }, [first, last])
   useEffect(() => { void loadEntries() }, [loadEntries])
 
-  const loadRequests = useCallback(async (page: number) => {
+  const loadRequests = useCallback(async (page: number, view: RequestFilter) => {
     const generation = ++requestFetch.current
     setLoadingRequests(true)
     try {
-      const data = await agendaDigital.requests(page)
+      const data = await agendaDigital.requests(page, view)
       if (generation !== requestFetch.current) return
       setRequests(data.items)
       setTotalRequests(data.total)
       setTotalPages(data.totalPages)
       setCurrentPage(data.page)
-      setPendingCount(data.pendingCount)
+      setRequestCounts(data.counts)
       setError('')
     } catch (e) { if (generation === requestFetch.current) setError(e instanceof Error ? e.message : 'Falha ao carregar as solicitações.') }
     finally { if (generation === requestFetch.current) setLoadingRequests(false) }
   }, [])
-  useEffect(() => { if (tab === 'solicitacoes') void loadRequests(requestPage) }, [tab, requestPage, loadRequests])
+  useEffect(() => { void loadRequests(tab === 'solicitacoes' ? requestPage : 1, tab === 'solicitacoes' ? requestView : 'pending') }, [tab, requestPage, requestView, loadRequests])
 
   const calendarDays = useMemo(() => {
     const offset = (month.getDay() + 6) % 7
     return Array.from({ length: 42 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), i - offset + 1))
   }, [month])
   const selectedEntries = entries.filter((entry) => entry.startsAt.slice(0, 10) === selected)
-  const pending = pendingCount
+  const pending = requestCounts.pending
 
   function changeMonth(delta: number) {
     const next = new Date(month.getFullYear(), month.getMonth() + delta, 1)
@@ -126,9 +134,9 @@ export default function AgendaDigitalPage() {
     setBusy(true); setError('')
     try {
       const result = await agendaDigital.decide(request.id, status, appointment)
-      setRequests((items) => items.map((r) => r.id === request.id ? { ...r, status: result.status, calendarEntryId: result.entry?.id ?? r.calendarEntryId, calendarEntry: result.entry ? { id: result.entry.id, startsAt: result.entry.startsAt } : r.calendarEntry } : r))
-      if (request.status === 'pending') setPendingCount((count) => Math.max(0, count - 1))
       if (result.entry) showCalendar(result.entry.startsAt)
+      else if (requestView === 'pending' && requests.length === 1 && currentPage > 1) setSearch({ tab: 'solicitacoes', view: requestView, page: String(currentPage - 1) })
+      else await loadRequests(currentPage, requestView)
     }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível atualizar a solicitação.') }
     finally { setBusy(false) }
@@ -139,8 +147,8 @@ export default function AgendaDigitalPage() {
     setBusy(true); setError('')
     try {
       await agendaDigital.deleteRequest(request.id)
-      if (requests.length === 1 && currentPage > 1) setSearch({ tab: 'solicitacoes', page: String(currentPage - 1) })
-      else await loadRequests(currentPage)
+      if (requests.length === 1 && currentPage > 1) setSearch({ tab: 'solicitacoes', view: requestView, page: String(currentPage - 1) })
+      else await loadRequests(currentPage, requestView)
     }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível excluir.') }
     finally { setBusy(false) }
@@ -240,13 +248,24 @@ export default function AgendaDigitalPage() {
           </div>
         ) : (
           <section role="tabpanel" className="mx-auto max-w-4xl">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-deep">CONTATOS DO MINI-SITE</p><h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Solicitações de reunião</h2><p className="mt-2 text-[13px] text-ink-soft">Combine o horário com a pessoa e confirme para adicioná-lo à agenda.</p></div>{profile?.plan === 'premium' && !profile.meetingInboxEnabled && <Link to="/editor?section=agenda" className="text-[12px] font-semibold text-burgundy underline underline-offset-4">Ativar pedidos no perfil</Link>}</div>
-            {totalRequests > 0 && <p className="mb-4 text-[12px] font-medium text-ink-faint">{totalRequests} {totalRequests === 1 ? 'solicitação' : 'solicitações'} · página {currentPage} de {totalPages}</p>}
-            <div className="space-y-4">{loadingRequests ? <p role="status" className="rounded-xl bg-paper p-5 text-[13px] text-ink-faint">Carregando solicitações…</p> : requests.length ? requests.map((request) => <RequestCard key={request.id} request={request} busy={busy} canSchedule={profile?.plan === 'premium'} defaultDuration={profile?.assistant?.durationMin ?? 45} onDecide={(status, appointment) => void decide(request, status, appointment)} onDelete={() => void removeRequest(request)} onViewCalendar={showCalendar} />) : <div className="rounded-2xl border border-ink/10 bg-paper p-8 text-center shadow-card"><CalendarIcon width={25} height={25} className="mx-auto text-brass-deep" /><h3 className="mt-3 font-display text-xl font-semibold">Nenhuma solicitação por aqui</h3><p className="mt-2 text-[13px] text-ink-soft">Quando alguém pedir uma reunião no seu mini-site, o contato aparecerá nesta aba.</p></div>}</div>
-            {totalPages > 1 && <nav aria-label="Páginas de solicitações" className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-paper p-2 shadow-card">
-              <button type="button" disabled={currentPage <= 1 || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', page: String(currentPage - 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">← Anterior</button>
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-deep">CONTATOS DO MINI-SITE</p><h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Solicitações de reunião</h2><p className="mt-2 text-[13px] text-ink-soft">Acompanhe cada pedido, combine o horário e consulte os registros anteriores.</p></div>{profile?.plan === 'premium' && !profile.meetingInboxEnabled && <Link to="/editor?section=agenda" className="text-[12px] font-semibold text-burgundy underline underline-offset-4">Ativar pedidos no perfil</Link>}</div>
+            <nav aria-label="Estados das solicitações" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {requestViews.map((view) => <button key={view.id} type="button" aria-pressed={requestView === view.id}
+                onClick={() => { if (view.id === requestView) return; requestFetch.current++; setLoadingRequests(true); setSearch({ tab: 'solicitacoes', view: view.id }) }}
+                className={`flex min-h-[78px] items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-left shadow-card transition-colors sm:min-h-[86px] sm:px-4 ${requestView === view.id ? 'border-ink bg-ink text-paper' : 'border-ink/10 bg-paper text-ink hover:border-brass/60 hover:bg-brass/[0.05]'}`}>
+                <span className="text-[13px] font-semibold leading-tight sm:text-[14px]">{view.label}</span>
+                <span className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-1.5 text-[12px] font-bold tabular-nums ${requestView === view.id ? 'bg-brass text-ink' : 'bg-paper-soft text-ink-soft'}`}>{requestCounts[view.id]}</span>
+              </button>)}
+            </nav>
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+              <div><h3 className="font-display text-xl font-semibold">{activeView.label}</h3><p className="mt-1 text-[12px] text-ink-soft">{activeView.description}</p></div>
+              {!loadingRequests && totalRequests > 0 && <p className="text-[12px] font-medium tabular-nums text-ink-faint">{totalRequests} {totalRequests === 1 ? 'pedido' : 'pedidos'} · página {currentPage} de {totalPages}</p>}
+            </div>
+            <div className="space-y-4">{loadingRequests ? <p role="status" className="rounded-xl bg-paper p-5 text-[13px] text-ink-faint">Carregando solicitações…</p> : requests.length ? requests.map((request) => <RequestCard key={request.id} request={request} busy={busy} canSchedule={profile?.plan === 'premium'} defaultDuration={profile?.assistant?.durationMin ?? 45} onDecide={(status, appointment) => void decide(request, status, appointment)} onDelete={() => void removeRequest(request)} onViewCalendar={showCalendar} />) : <div className="rounded-2xl border border-ink/10 bg-paper p-8 text-center shadow-card"><CalendarIcon width={25} height={25} className="mx-auto text-brass-deep" /><h3 className="mt-3 font-display text-xl font-semibold">{activeView.empty}</h3><p className="mt-2 text-[13px] text-ink-soft">{requestView === 'pending' ? 'Novos pedidos aparecerão aqui assim que chegarem pelo mini-site.' : 'Você pode consultar os outros estados ou voltar à agenda.'}</p></div>}</div>
+            {!loadingRequests && totalPages > 1 && <nav aria-label={`Páginas de ${activeView.label.toLowerCase()}`} className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-paper p-2 shadow-card">
+              <button type="button" disabled={currentPage <= 1 || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', view: requestView, page: String(currentPage - 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">← Anterior</button>
               <span className="text-center text-[12px] font-semibold tabular-nums text-ink-soft">{currentPage} / {totalPages}</span>
-              <button type="button" disabled={currentPage >= totalPages || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', page: String(currentPage + 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">Próxima →</button>
+              <button type="button" disabled={currentPage >= totalPages || loadingRequests} onClick={() => setSearch({ tab: 'solicitacoes', view: requestView, page: String(currentPage + 1) })} className="min-h-11 rounded-lg px-3 text-[13px] font-semibold text-burgundy hover:bg-paper-soft disabled:opacity-40">Próxima →</button>
             </nav>}
           </section>
         )}
@@ -291,7 +310,7 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
       </div>
       {needsAppointment && <div className="mt-5 rounded-xl border border-brass/30 bg-brass/[0.06] p-4">
         <p className="text-[12px] font-semibold text-ink">Horário combinado</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">Ao confirmar, o compromisso entra direto na sua agenda.</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">{request.status === 'confirmed' ? 'Escolha a data para colocar este pedido antigo na agenda.' : 'Ao confirmar, o compromisso entra direto na sua agenda.'}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
           <label className="text-[12px] font-semibold">Data e hora<input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="agenda-input" /></label>
           <label className="text-[12px] font-semibold">Duração<select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} className="agenda-input">{[15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</select></label>
@@ -302,7 +321,7 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
     <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 bg-paper-soft/45 px-4 py-3 sm:px-6">
       {request.status === 'pending' && <>
         <button type="button" disabled={busy || !canSchedule || !when} onClick={() => onDecide('confirmed', { startsAt: when, durationMin })} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-burgundy px-5 py-3 text-[14px] font-semibold text-paper transition-colors hover:bg-burgundy/90 disabled:opacity-50 sm:w-auto"><CheckIcon width={19} height={19} aria-hidden />Confirmar e colocar na agenda</button>
-        <button type="button" disabled={busy} onClick={() => onDecide('declined')} className="min-h-12 rounded-xl border border-ink/15 px-5 py-3 text-[14px] font-semibold hover:bg-paper-soft disabled:opacity-50">Negar solicitação</button>
+        <button type="button" disabled={busy} onClick={() => onDecide('declined')} className="min-h-12 rounded-xl border border-ink/15 px-5 py-3 text-[14px] font-semibold hover:bg-paper-soft disabled:opacity-50">Cancelar pedido</button>
       </>}
       {request.status === 'confirmed' && (request.calendarEntryId && request.calendarEntry ?
         <button type="button" onClick={() => onViewCalendar(request.calendarEntry!.startsAt)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-brass/50 px-5 py-3 text-[14px] font-semibold text-burgundy hover:bg-brass/[0.08]"><CalendarIcon width={19} height={19} aria-hidden />Ver na agenda</button> :

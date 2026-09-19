@@ -32,6 +32,9 @@ export interface MeetingRequestInput {
   consent: boolean
 }
 
+export type RequestFilter = 'pending' | 'confirmed' | 'declined' | 'all'
+export type RequestCounts = Record<RequestFilter, number>
+
 export interface RequestPage {
   items: MeetingRequest[]
   page: number
@@ -39,6 +42,7 @@ export interface RequestPage {
   total: number
   totalPages: number
   pendingCount: number
+  counts: RequestCounts
 }
 
 export interface DecisionResult {
@@ -94,18 +98,21 @@ export const agendaDigital = {
     const request: MeetingRequest = { ...input, id: id(), triage: input.triage ?? [], status: 'pending', createdAt: new Date().toISOString() }
     write(REQUESTS_KEY, [request, ...read<MeetingRequest>(REQUESTS_KEY)])
   },
-  async requests(page = 1): Promise<RequestPage> {
-    if (TEM_BACKEND) return result(`/api/agenda/requests?page=${page}`)
+  async requests(page = 1, status: RequestFilter = 'all'): Promise<RequestPage> {
+    if (TEM_BACKEND) return result(`/api/agenda/requests?page=${page}&status=${status}`)
     const all = read<MeetingRequest>(REQUESTS_KEY).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+    const counts: RequestCounts = { pending: 0, confirmed: 0, declined: 0, all: all.length }
+    for (const request of all) counts[request.status]++
+    const filtered = status === 'all' ? all : all.filter((request) => request.status === status)
     const pageSize = 10
-    const totalPages = Math.max(1, Math.ceil(all.length / pageSize))
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
     const currentPage = Math.max(1, Math.min(page, totalPages))
     const entries = read<CalendarEntry>(ENTRIES_KEY)
-    const items = all.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => {
+    const items = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => {
       const entry = entries.find((e) => e.id === r.calendarEntryId)
       return { ...r, calendarEntry: entry ? { id: entry.id, startsAt: entry.startsAt } : null }
     })
-    return { items, page: currentPage, pageSize, total: all.length, totalPages, pendingCount: all.filter((r) => r.status === 'pending').length }
+    return { items, page: currentPage, pageSize, total: filtered.length, totalPages, pendingCount: counts.pending, counts }
   },
   async decide(requestId: string, status: 'confirmed' | 'declined', appointment?: { startsAt: string; durationMin: number }): Promise<DecisionResult> {
     if (TEM_BACKEND) return result(`/api/agenda/requests/${encodeURIComponent(requestId)}`, json('PATCH', { status, ...appointment }))
