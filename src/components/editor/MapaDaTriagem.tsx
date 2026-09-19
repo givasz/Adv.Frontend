@@ -84,9 +84,10 @@ export function MapaDaTriagem({
     [assistenteLigado, profile.assistant],
   )
   const dosDoisJeitos = profile.serviceMode.inPerson && profile.serviceMode.online
+  const recebeNoPainel = profile.plan === 'premium' && !!profile.meetingInboxEnabled
   const mapa = useMemo(
-    () => mapaDaTriagem(perguntas, { comHorarios, dosDoisJeitos, semEtapas: config.semEtapas }),
-    [perguntas, comHorarios, dosDoisJeitos, config.semEtapas],
+    () => mapaDaTriagem(perguntas, { comHorarios, dosDoisJeitos, semEtapas: config.semEtapas, destino: recebeNoPainel ? 'painel' : 'whatsapp' }),
+    [perguntas, comHorarios, dosDoisJeitos, config.semEtapas, recebeNoPainel],
   )
   const fixosAtivos = mapa.depois.filter((p) => !p.removida)
   const fixosTirados = mapa.depois.filter((p) => p.removida)
@@ -177,7 +178,7 @@ export function MapaDaTriagem({
               onChange={(e) => encerrar(no.id, r.id, e.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-burgundy"
             />
-            encerra a triagem aqui e vai direto para {comHorarios ? 'os horários' : 'o envio'}
+            encerra a triagem aqui e vai direto para {comHorarios && !(config.semEtapas ?? []).includes('horario') ? 'os horários' : 'o envio'}
           </label>
         )}
         {r.encerra ? (
@@ -317,7 +318,13 @@ export function MapaDaTriagem({
                 >
                   Devolver
                 </button>
-                <span className="w-full text-[11px] leading-relaxed text-ink-faint">{EFEITO_DE_TIRAR[p.etapa as EtapaFixa]}</span>
+                <span className="w-full text-[11px] leading-relaxed text-ink-faint">
+                  {p.etapa === 'horario'
+                    ? recebeNoPainel
+                      ? 'Sem escolher horário, o pedido chega às Solicitações. Você fala com a pessoa, define a data no pedido e confirma; o compromisso entra na agenda.'
+                      : 'Sem escolher horário, a mensagem abre no seu WhatsApp. Combine com a pessoa e, se usar a agenda digital, adicione o compromisso por lá.'
+                    : EFEITO_DE_TIRAR[p.etapa as EtapaFixa]}
+                </span>
               </li>
             ))}
           </ul>

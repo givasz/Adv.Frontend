@@ -310,7 +310,11 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
       </div>
       {needsAppointment && <div className="mt-5 rounded-xl border border-brass/30 bg-brass/[0.06] p-4">
         <p className="text-[12px] font-semibold text-ink">Horário combinado</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">{request.status === 'confirmed' ? 'Escolha a data para colocar este pedido antigo na agenda.' : 'Ao confirmar, o compromisso entra direto na sua agenda.'}</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{request.status === 'confirmed'
+          ? 'Escolha a data combinada para colocar este pedido antigo na agenda.'
+          : request.preferredAt
+            ? 'Confirme ou ajuste a data depois de conversar com a pessoa. Ao confirmar, o compromisso entra direto na sua agenda.'
+            : 'Este pedido chegou sem horário. Converse com a pessoa pelo contato acima, escolha a data combinada aqui e confirme para colocar na sua agenda.'}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
           <label className="text-[12px] font-semibold">Data e hora<input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="agenda-input" /></label>
           <label className="text-[12px] font-semibold">Duração<select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} className="agenda-input">{[15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</select></label>

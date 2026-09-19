@@ -57,7 +57,7 @@ describe('o começo e o fim do fluxograma', () => {
     expect(comGrade.some((t) => /dia e o horário/i.test(t))).toBe(true)
     expect(semGrade.some((t) => /dia e o horário/i.test(t))).toBe(false)
     expect(comGrade[comGrade.length - 1]).toMatch(/horário só vale/i)
-    expect(semGrade[semGrade.length - 1]).toMatch(/analisa e responde/i)
+    expect(semGrade[semGrade.length - 1]).toMatch(/WhatsApp, sem horário/i)
   })
 
   it('a pergunta de formato só entra quando o perfil atende dos dois jeitos', () => {
@@ -103,7 +103,13 @@ describe('as perguntas que o assistente faz sozinho, tiradas pelo advogado', () 
 
   it('sem dia e horário, o fecho é o de pedido de contato', () => {
     const m = mapaDaTriagem(MINHAS, { ...CHEIO, semEtapas: ['horario'] })
-    expect(m.depois[m.depois.length - 1].texto).toMatch(/analisa e responde/i)
+    expect(m.depois[m.depois.length - 1].texto).toMatch(/WhatsApp, sem horário/i)
+  })
+
+  it('sem dia e horário, o pedido no painel informa que o advogado define a data antes de confirmar', () => {
+    const m = mapaDaTriagem(MINHAS, { ...CHEIO, semEtapas: ['horario'], destino: 'painel' })
+    expect(m.depois.find((p) => p.etapa === 'horario')?.removida).toBe(true)
+    expect(m.depois[m.depois.length - 1].texto).toMatch(/Solicitações, sem horário.*define a data e confirma na agenda/i)
   })
 
   it('tirar uma etapa que nem seria feita não inventa passo', () => {

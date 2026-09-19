@@ -724,6 +724,8 @@ export function mapaDaTriagem(
     dosDoisJeitos: boolean
     /** as perguntas embutidas que o advogado tirou da conversa */
     semEtapas?: EtapaFixa[]
+    /** para onde a conversa envia o pedido */
+    destino?: 'painel' | 'whatsapp'
   },
 ): MapaDaTriagem {
   const numeroPorId = new Map(perguntas.map((q, i) => [q.id, i + 1]))
@@ -803,9 +805,13 @@ export function mapaDaTriagem(
   // Sem a etapa de horário, o fecho é o de pedido de contato — como na conversa.
   const pedeHorario = contexto.comHorarios && !tiradas.has('horario')
   depois.push({
-    texto: pedeHorario
-      ? 'Enviar tudo no seu WhatsApp — o horário só vale depois de você confirmar'
-      : 'Enviar tudo no seu WhatsApp — você analisa e responde',
+    texto: contexto.destino === 'painel'
+      ? pedeHorario
+        ? 'Enviar contato e respostas às Solicitações — você combina e confirma o horário na agenda'
+        : 'Enviar contato e respostas às Solicitações, sem horário — você combina, define a data e confirma na agenda'
+      : pedeHorario
+        ? 'Enviar tudo no seu WhatsApp — o horário só vale depois de você confirmar'
+        : 'Enviar tudo no seu WhatsApp, sem horário — você combina diretamente com a pessoa',
   })
 
   return {

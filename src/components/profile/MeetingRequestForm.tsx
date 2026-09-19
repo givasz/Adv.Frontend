@@ -4,7 +4,7 @@ import type { RespostaDeTriagem } from '@/lib/triagem'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 
 export function MeetingRequestForm({
-  slug, initialName = '', initialSubject = '', preferredAt = '', triage = [], demo = false, themed = false,
+  slug, initialName = '', initialSubject = '', preferredAt = '', triage = [], demo = false, themed = false, contactOnly = false,
 }: {
   slug: string
   initialName?: string
@@ -13,6 +13,7 @@ export function MeetingRequestForm({
   triage?: RespostaDeTriagem[]
   demo?: boolean
   themed?: boolean
+  contactOnly?: boolean
 }) {
   const [name, setName] = useState(initialName)
   const [subject, setSubject] = useState(initialSubject)
@@ -31,7 +32,7 @@ export function MeetingRequestForm({
     setBusy(true)
     setError('')
     try {
-      await agendaDigital.submit(slug, { name, whatsapp, email, subject, preferredAt: when || undefined, triage, consent })
+      await agendaDigital.submit(slug, { name, whatsapp, email, subject, preferredAt: contactOnly ? undefined : when || undefined, triage, consent })
       setSent(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível enviar. Tente novamente.')
@@ -56,7 +57,9 @@ export function MeetingRequestForm({
   return (
     <form onSubmit={submit} className="space-y-3" aria-label="Solicitar reunião">
       <p className={themed ? 'text-[13px] leading-relaxed' : 'text-[13px] leading-relaxed text-ink-soft'}>
-        Deixe um contato para o advogado responder. Isto é um pedido, ainda não é uma reserva.
+        {contactOnly
+          ? 'Deixe um contato para o advogado combinar o horário com você. Nenhuma data será marcada agora.'
+          : 'Deixe um contato para o advogado responder. Isto é um pedido, ainda não é uma reserva.'}
       </p>
       <label className={label}>Seu nome
         <input className={`${field} mt-1`} style={themedStyle} value={name} onChange={(e) => setName(e.target.value)} maxLength={70} required minLength={2} autoComplete="name" />
@@ -73,7 +76,7 @@ export function MeetingRequestForm({
       <label className={label}>Assunto em poucas palavras
         <input className={`${field} mt-1`} style={themedStyle} value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={220} required minLength={2} placeholder="Ex.: conversa sobre Direito de Família" />
       </label>
-      {preferredAt ? (
+      {contactOnly ? null : preferredAt ? (
         <p className={themed ? 'text-[12px]' : 'text-[12px] text-ink-soft'}>Horário pedido: <strong>{new Date(`${preferredAt}:00`).toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' })}</strong></p>
       ) : (
         <label className={label}>Preferência de data e hora <span className="font-normal opacity-70">(opcional)</span>

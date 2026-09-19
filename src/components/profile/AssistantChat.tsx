@@ -698,7 +698,7 @@ export function AssistantChat({
             <MeetingRequestForm slug={profile.slug} initialName={answers.name ?? ''}
               initialSubject={[answers.subject, answers.detail].filter(Boolean).join(' — ') || 'Pedido de contato'}
               preferredAt={answers.day && answers.time ? `${answers.day.key}T${answers.time}` : ''}
-              triage={triagem} demo={semEnvio} themed />
+              contactOnly={!pedeHorario} triage={triagem} demo={semEnvio} themed />
           </div>
         )}
         </div>
@@ -893,7 +893,7 @@ export function AssistantChat({
         )}
         <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
           Assistente automático. Não presta orientação jurídica e não confirma{' '}
-          {temTriagem && !diasVisiveis.length ? 'o atendimento' : 'o horário'} — quem confirma é{' '}
+          {temTriagem && (!diasVisiveis.length || !pedeHorario) ? 'o atendimento' : 'o horário'} — quem confirma é{' '}
           {first || 'o(a) advogado(a)'}.
         </p>
       </div>

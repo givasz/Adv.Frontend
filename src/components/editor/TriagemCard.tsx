@@ -108,6 +108,7 @@ export function TriagemCard({
   const temContato = perguntas.some((q) => q.kind === 'contato')
   /** Perguntas que o assistente faz sozinho e que o advogado tirou no fluxograma. */
   const tiradas = new Set(config.semEtapas ?? [])
+  const recebeNoPainel = profile.plan === 'premium' && !!profile.meetingInboxEnabled
   // Quem a conversa consegue alcançar. O defeito clássico de todo formulário com
   // caminhos é a pergunta que ninguém consegue receber: ela fica na tela,
   // parece no ar, e nunca é feita a ninguém.
@@ -166,7 +167,7 @@ export function TriagemCard({
         <p className="text-[12.5px] leading-relaxed text-ink-soft">
           Defina quais informações você gostaria de receber{' '}
           <span className="font-medium text-ink">antes de um possível atendimento</span>. O
-          assistente faz as suas perguntas, organiza as respostas e manda tudo no seu WhatsApp.
+          assistente faz as suas perguntas, organiza as respostas e envia {recebeNoPainel ? 'o pedido às Solicitações do seu painel' : 'a mensagem ao seu WhatsApp'}.
           Quem analisa e confirma é você.
         </p>
       </div>
@@ -182,7 +183,7 @@ export function TriagemCard({
           {config.enabled
             ? utilizaveis.length
               ? `O assistente pode fazer até ${utilizaveis.length} ${utilizaveis.length === 1 ? 'pergunta' : 'perguntas'} antes de ${tiradas.has('horario') ? 'encaminhar o pedido' : 'oferecer horários'}.`
-              : 'Sem nenhuma pergunta pronta, o assistente segue só com o agendamento.'
+              : tiradas.has('horario') ? 'Sem pergunta pronta nem escolha de horário, o assistente recebe um pedido de contato.' : 'Sem nenhuma pergunta pronta, o assistente segue só com o agendamento.'
             : 'Desligado, o assistente continua marcando horários como sempre fez.'}
         </p>
       </div>

@@ -1,5 +1,6 @@
 import type { Profile, SchedulingMode } from '@/lib/types'
 import { canUseScheduling } from '@/lib/plans'
+import { etapaNaConversa } from '@/lib/triagem'
 import { Field, TextInput } from './fields'
 import { InfoTip } from './InfoTip'
 import { AssistantCard } from './AssistantCard'
@@ -45,15 +46,21 @@ export function SchedulingCard({
   const acceptsRequests = mode === 'assistant' || mode === 'whatsapp'
   const canChooseDestination = profile.plan === 'premium' && acceptsRequests
   const receivesInPanel = canChooseDestination && !!profile.meetingInboxEnabled
+  const scheduleQuestionEnabled = etapaNaConversa(profile, 'horario')
+  const suggestsTimes = mode === 'assistant' && scheduleQuestionEnabled
   const needsWhatsapp = mode === 'off' || (acceptsRequests && !receivesInPanel)
   const result = mode === 'off'
     ? { button: 'Conversar no WhatsApp', detail: 'O visitante fala diretamente com você. Não há pedido de horário nem confirmação prévia.' }
     : mode === 'external'
       ? { button: 'Agendar', detail: 'O visitante abre sua página externa para escolher um horário. O botão aparece após você informar o link.' }
       : mode === 'assistant'
-        ? receivesInPanel
-          ? { button: 'Solicitar uma reunião', detail: 'O assistente sugere horários da sua grade; contato e triagem chegam às Solicitações. Você combina e confirma o horário no painel.' }
-          : { button: 'Agendar uma conversa', detail: 'O assistente sugere horários da sua grade e prepara uma mensagem para o visitante enviar ao seu WhatsApp.' }
+        ? suggestsTimes
+          ? receivesInPanel
+            ? { button: 'Solicitar uma reunião', detail: 'O assistente sugere horários da sua grade; contato e triagem chegam às Solicitações. Você combina e confirma o horário no painel.' }
+            : { button: 'Agendar uma conversa', detail: 'O assistente sugere horários da sua grade e prepara uma mensagem para o visitante enviar ao seu WhatsApp.' }
+          : receivesInPanel
+            ? { button: 'Solicitar uma reunião', detail: 'O assistente recebe o contato e a triagem sem pedir horário. Você combina a data e confirma em Solicitações; o compromisso entra na agenda.' }
+            : { button: 'Agendar uma conversa', detail: 'O assistente recebe a triagem sem pedir horário e prepara a mensagem para seu WhatsApp. Você combina a data diretamente com a pessoa.' }
         : receivesInPanel
           ? { button: 'Solicitar uma reunião', detail: 'O visitante informa contato, assunto e horário preferido. O pedido chega às Solicitações para você responder.' }
           : { button: 'Agendar uma consulta', detail: 'O visitante informa assunto e horário preferido; uma mensagem pronta abre no WhatsApp.' }
@@ -88,7 +95,7 @@ export function SchedulingCard({
               onClick={() => set({ schedulingMode: m.key })}
               className={`group flex min-h-[100px] items-start gap-3 rounded-xl border p-3.5 text-left transition-[border-color,background-color,box-shadow] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burgundy ${active ? 'border-burgundy bg-burgundy/[0.055] shadow-[0_0_0_1px_rgba(103,36,51,0.18)]' : 'border-ink/10 bg-paper-soft/55 hover:border-brass/60 hover:bg-paper-soft'}`}>
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-burgundy text-paper' : 'bg-paper text-brass-deep'}`}><Icon width={18} height={18} aria-hidden /></span>
-              <span className="min-w-0 flex-1"><span className="flex items-start justify-between gap-1 text-[13px] font-semibold leading-snug text-ink">{m.label}{active && <CheckIcon width={17} height={17} className="shrink-0 text-burgundy" aria-hidden />}</span><span className="mt-1.5 block text-[11.5px] leading-relaxed text-ink-soft">{m.hint}</span></span>
+              <span className="min-w-0 flex-1"><span className="flex items-start justify-between gap-1 text-[13px] font-semibold leading-snug text-ink">{m.key === 'assistant' && !scheduleQuestionEnabled ? 'Assistente sem horários' : m.label}{active && <CheckIcon width={17} height={17} className="shrink-0 text-burgundy" aria-hidden />}</span><span className="mt-1.5 block text-[11.5px] leading-relaxed text-ink-soft">{m.key === 'assistant' && !scheduleQuestionEnabled ? 'Triagem e pedido de contato, sem escolha de data.' : m.hint}</span></span>
             </button>
           })}
         </div>
@@ -129,8 +136,14 @@ export function SchedulingCard({
       </div>}
 
       {mode === 'assistant' && <section aria-labelledby="agenda-hours-title" className="space-y-3 border-t border-ink/10 pt-5">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brass-deep">{canChooseDestination ? '03' : '02'} · DISPONIBILIDADE</p><h4 id="agenda-hours-title" className="mt-1 font-display text-xl font-semibold text-ink">Horários do assistente</h4><p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">Defina os dias e horários que ele pode sugerir. A escolha da pessoa ainda é um pedido.</p></div>
-        <div className="rounded-xl border border-ink/10 bg-paper-soft/60 p-3.5 sm:p-4"><AssistantCard profile={profile} set={set} preview={preview} irPara={irPara} /></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brass-deep">{canChooseDestination ? '03' : '02'} · DISPONIBILIDADE</p><h4 id="agenda-hours-title" className="mt-1 font-display text-xl font-semibold text-ink">Horários do assistente</h4><p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{suggestsTimes ? 'Defina os dias e horários que ele pode sugerir. A escolha da pessoa ainda é um pedido.' : 'A etapa de escolher horário foi retirada na Triagem. O assistente agora recebe apenas o pedido de contato.'}</p></div>
+        {suggestsTimes ? <div className="rounded-xl border border-ink/10 bg-paper-soft/60 p-3.5 sm:p-4"><AssistantCard profile={profile} set={set} preview={preview} irPara={irPara} /></div> : <>
+          <div className="rounded-xl border border-brass/30 bg-brass/[0.07] p-4 text-[12.5px] leading-relaxed text-ink-soft">
+            <p>{receivesInPanel ? 'Depois de combinar a data, preencha o horário no pedido em Solicitações e confirme para adicioná-lo à sua agenda.' : 'Depois de combinar a data pelo WhatsApp, adicione o compromisso à sua agenda se você usa a agenda digital.'}</p>
+            {irPara && <button type="button" onClick={() => irPara('/editor?section=triagem')} className="mt-2 font-semibold text-burgundy underline underline-offset-2">Editar a etapa na Triagem</button>}
+          </div>
+          <details className="rounded-xl border border-ink/10 bg-paper-soft/60 p-3.5 sm:p-4"><summary className="cursor-pointer text-[12.5px] font-semibold text-burgundy">Ver ou editar a grade guardada</summary><div className="mt-4"><AssistantCard profile={profile} set={set} preview={preview} irPara={irPara} /></div></details>
+        </>}
       </section>}
 
       {mode === 'external' && <section aria-labelledby="agenda-external-title" className="space-y-3 border-t border-ink/10 pt-5">
