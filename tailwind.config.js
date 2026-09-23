@@ -5,6 +5,12 @@ export default {
   // em src/index.css, então não precisam de safelist — nunca são purgadas.
   theme: {
     extend: {
+      // Celular de verdade começa em 320px (iPhone SE) e há Android de 280px.
+      // `xs` é o ponto em que duas colunas e três botões lado a lado param de
+      // espremer — abaixo dele a capa do painel empilha.
+      screens: {
+        xs: '420px',
+      },
       colors: {
         // Paleta "Papel & Tinta" — letterhead de escritório de advocacia
         paper: {
@@ -67,9 +73,15 @@ export default {
       boxShadow: {
         card: '0 1px 2px rgba(33,28,23,0.04), 0 8px 24px -12px rgba(33,28,23,0.18)',
         lift: '0 2px 4px rgba(33,28,23,0.05), 0 18px 40px -16px rgba(33,28,23,0.28)',
+        // O "selo": a plaqueta de tinta com a sombra de latão deslocada, como um
+        // carimbo sobre papel timbrado. É a assinatura gráfica do painel.
+        selo: '0 0 0 1px rgba(33,28,23,0.92), 3px 3px 0 0 #b08d57',
       },
       borderRadius: {
-        xl2: '1.25rem',
+        // Era 1.25rem: o canto de 20px deixava cada caixa com cara de bolha de
+        // aplicativo genérico. 14px mantém a suavidade e devolve o desenho seco
+        // de papel timbrado — e vale para o app inteiro de uma vez.
+        xl2: '0.875rem',
       },
     },
   },

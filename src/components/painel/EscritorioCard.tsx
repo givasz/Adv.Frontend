@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { solicitacoesDoEscritorio } from '@/lib/agendaDigital'
 import type { Firm, FirmInvite } from '@/lib/escritorio'
 import { ScaleIcon } from '@/components/ui/icons'
+import { Plaqueta } from './pecas'
 
 // Entrada do escritório no painel. Antes a sociedade só existia pelo card do plano
 // na landing: quem já estava logado não tinha caminho nenhum até ela.
@@ -65,15 +66,13 @@ export function EscritorioCard() {
   if (carregando) return null
 
   return (
-    <div className="mt-3 rounded-xl2 border border-ink/10 bg-paper p-4">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 shrink-0 rounded-lg bg-burgundy/[0.07] p-2 text-burgundy">
-          <ScaleIcon width={18} height={18} />
-        </span>
+    <div className="card-paper p-4 sm:p-5">
+      <div className="flex items-start gap-3.5 sm:gap-4">
+        <Plaqueta Icone={ScaleIcon} />
         <div className="min-w-0 flex-1">
           {invites.length > 0 ? (
             <>
-              <p className="text-[14px] font-medium text-ink">
+              <p className="font-display text-[17px] font-semibold leading-tight text-ink">
                 {invites.length === 1
                   ? 'Você foi convidado para um escritório'
                   : `Você tem ${invites.length} convites de escritório`}
@@ -120,7 +119,7 @@ export function EscritorioCard() {
             </>
           ) : firm ? (
             <>
-              <p className="text-[14px] font-medium text-ink">{firm.name}</p>
+              <p className="font-display text-[17px] font-semibold leading-tight text-ink">{firm.name}</p>
               <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-faint">
                 {firm.seats
                   ? `${firm.seats.used} de ${firm.seats.purchased} assentos em uso.`
@@ -141,13 +140,13 @@ export function EscritorioCard() {
                 </Link>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link to="/escritorio/editar" className="btn-primary !py-1.5 !px-3 text-[12.5px]">
+                <Link to="/escritorio/editar" className="btn-primary !py-2 !px-4 text-[13px]">
                   Gerenciar escritório
                 </Link>
                 {firm.slug && (
                   <Link
                     to={`/escritorio/${firm.slug}`}
-                    className="rounded-lg border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-faint transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                    className="btn-ghost !px-4 !py-2 text-[13px]"
                   >
                     Ver página
                   </Link>
@@ -156,14 +155,14 @@ export function EscritorioCard() {
             </>
           ) : (
             <>
-              <p className="text-[14px] font-medium text-ink">Tem uma sociedade de advogados?</p>
+              <p className="font-display text-[17px] font-semibold leading-tight text-ink">Tem uma sociedade de advogados?</p>
               <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-faint">
                 Crie a página institucional do escritório e convide os advogados pelo e-mail deles.
                 Cada um mantém o próprio perfil.
               </p>
               <Link
                 to="/escritorio/editar"
-                className="mt-3 inline-block rounded-lg border border-ink/15 px-3 py-1.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:border-burgundy/40 hover:text-burgundy"
+                className="btn-ghost mt-3 !px-4 !py-2 text-[13px]"
               >
                 Criar escritório
               </Link>

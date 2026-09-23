@@ -29,7 +29,7 @@ export function AvisoDoSuporte({ className = '' }: { className?: string }) {
       </div>
       <Link
         to={comVolta('/suporte?aba=respostas', '/painel')}
-        className="shrink-0 rounded-full border border-ink/20 bg-paper px-4 py-2 text-center text-[12.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy"
+        className="shrink-0 rounded-[10px] border border-ink/20 bg-paper px-4 py-2 text-center text-[12.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy"
       >
         {novas === 1 ? 'Ver a resposta' : 'Ver as respostas'}
       </Link>

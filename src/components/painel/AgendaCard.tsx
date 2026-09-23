@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
 import type { Profile } from '@/lib/types'
 import { resolveSchedulingMode } from '@/lib/booking'
 import { buildAssistantDays, resolveAssistantConfig } from '@/lib/assistant'
 import { comVolta } from '@/components/ui/SubPage'
-import { ArrowRight, CalendarIcon, SparkIcon } from '@/components/ui/icons'
+import { SparkIcon } from '@/components/ui/icons'
+import { Atalho } from './pecas'
 
-// A agenda no painel — em destaque, e no alto.
+// A agenda do assistente no painel — o primeiro cartão de "Toda semana".
 //
 // Todo o resto do painel é obra que se faz UMA vez: a foto, a bio, o vídeo, o
 // cartão. Fechar um horário que foi marcado por fora é a única coisa que se
@@ -15,8 +15,9 @@ import { ArrowRight, CalendarIcon, SparkIcon } from '@/components/ui/icons'
 // para quem já tinha ligado o assistente.
 //
 // Só aparece com o assistente ligado: sem grade não há horário a fechar, e um
-// cartão que não leva a nada é ruído.
-export function AgendaCard({ profile }: { profile: Profile }) {
+// cartão que não leva a nada é ruído. Mudar os dias e horários mora na linha
+// "Agenda" de "Seu perfil".
+export function AgendaCard({ profile, coluna }: { profile: Profile; coluna?: boolean }) {
   const cfg = useMemo(() => resolveAssistantConfig(profile.assistant), [profile.assistant])
   // Sempre pela config RESOLVIDA: perfil antigo sem `assistant` gravado cai no
   // padrão — que é o que o visitante enxerga. Contar a partir do campo cru diria
@@ -29,60 +30,19 @@ export function AgendaCard({ profile }: { profile: Profile }) {
   const fechados = cfg.busy?.length ?? 0
 
   return (
-    <section className="mt-6 overflow-hidden rounded-xl2 border border-burgundy/20 bg-paper shadow-card">
-      <div className="flex flex-wrap items-center gap-4 p-5">
-        <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-burgundy/[0.08] text-burgundy"
-          aria-hidden
-        >
-          <SparkIcon width={20} height={20} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-[17px] font-semibold leading-tight text-ink">
-            Sua agenda
-          </h2>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-ink-soft">
-            {livres > 0 ? (
-              <>
-                Seu assistente está oferecendo{' '}
-                <span className="font-semibold text-ink">
-                  {livres} {livres === 1 ? 'horário' : 'horários'}
-                </span>{' '}
-                em {dias.length} {dias.length === 1 ? 'dia' : 'dias'}.
-              </>
-            ) : (
-              <>Seu assistente não tem horário livre para oferecer agora.</>
-            )}{' '}
-            {fechados > 0 && (
-              <span className="text-ink-faint">
-                {fechados} {fechados === 1 ? 'fechado' : 'fechados'} por você.
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto">
-          <Link
-            to={comVolta('/agenda', '/painel')}
-            className="btn-primary w-full !py-3 sm:w-auto sm:!px-5"
-          >
-            <CalendarIcon width={17} height={17} />
-            Marcar um horário
-            <ArrowRight width={15} height={15} />
-          </Link>
-          {/* Mudar a grade é o outro gesto da agenda, e ficava enterrado no editor:
-              quem já criou o perfil procurava aqui e não achava. */}
-          <Link
-            to="/editor?section=agenda"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy sm:w-auto"
-          >
-            Dias e horários de atendimento
-          </Link>
-        </div>
-      </div>
-      <p className="border-t border-ink/10 bg-paper-soft/70 px-5 py-2.5 text-[12px] leading-relaxed text-ink-faint">
-        Marcou uma reunião por telefone ou pelo WhatsApp? Conte ao assistente e ele para de
-        oferecer aquele horário — só naquele dia.
-      </p>
-    </section>
+    <Atalho
+      to={comVolta('/agenda', '/painel')}
+      Icone={SparkIcon}
+      titulo="Sua agenda"
+      texto="Marcou por telefone ou WhatsApp? Feche o horário e o assistente para de oferecê-lo."
+      destaque={
+        livres > 0
+          ? `${livres} ${livres === 1 ? 'horário livre' : 'horários livres'} em ${dias.length} ${dias.length === 1 ? 'dia' : 'dias'}${
+              fechados > 0 ? ` · ${fechados} ${fechados === 1 ? 'fechado' : 'fechados'}` : ''
+            }`
+          : 'Nenhum horário livre agora'
+      }
+      coluna={coluna}
+    />
   )
 }

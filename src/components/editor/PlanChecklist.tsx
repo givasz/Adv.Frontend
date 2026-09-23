@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Plan, Profile } from '@/lib/types'
@@ -17,26 +18,34 @@ export function PlanChecklist({
   profile,
   /** logo depois do checkout: tom de celebração + destaque visual */
   celebrate = false,
+  limite,
+  className = 'mt-8',
 }: {
   profile: Profile
   celebrate?: boolean
+  /** mostra só os N primeiros pendentes, com "ver os outros" — o painel usa 3 */
+  limite?: number
+  className?: string
 }) {
+  const [tudo, setTudo] = useState(false)
   if (profile.plan === 'free') return null
 
   const pending = featuresPending(profile)
   const { done, total } = featureProgress(profile)
   const label = PLAN_LABEL[profile.plan]
   const pct = total ? Math.round((done / total) * 100) : 100
+  const cortar = !!limite && !tudo && !celebrate && pending.length > limite + 1
+  const visiveis = cortar ? pending.slice(0, limite) : pending
 
   return (
     <motion.section
       initial={celebrate ? { opacity: 0, y: 14 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className={`mt-8 overflow-hidden rounded-xl2 border shadow-card ${
+      className={`${className} overflow-hidden rounded-xl2 border shadow-card ${
         celebrate
           ? 'border-brass/50 bg-gradient-to-b from-brass/[0.12] to-transparent'
-          : 'border-ink/10 bg-paper'
+          : 'border-ink/[0.12] bg-paper-soft'
       }`}
     >
       <div className="border-b border-ink/[0.07] px-5 py-4 sm:px-6">
@@ -76,7 +85,7 @@ export function PlanChecklist({
 
       {pending.length > 0 ? (
         <ul className="divide-y divide-ink/[0.07]">
-          {pending.map((f) => (
+          {visiveis.map((f) => (
             <li key={f.key}>
               <Link
                 to={f.to}
@@ -97,7 +106,7 @@ export function PlanChecklist({
                     {f.body}
                   </span>
                 </span>
-                <span className="hidden shrink-0 items-center gap-1 rounded-full border border-burgundy/25 px-3 py-1.5 text-[12.5px] font-semibold text-burgundy sm:inline-flex">
+                <span className="hidden shrink-0 items-center gap-1 rounded-lg border border-burgundy/25 px-3 py-1.5 text-[12.5px] font-semibold text-burgundy sm:inline-flex">
                   {f.cta}
                   <ArrowRight width={13} height={13} />
                 </span>
@@ -105,6 +114,17 @@ export function PlanChecklist({
               </Link>
             </li>
           ))}
+          {cortar && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setTudo(true)}
+                className="w-full px-5 py-3 text-left text-[13px] font-semibold text-burgundy transition-colors hover:bg-brass/[0.05] sm:px-6"
+              >
+                Ver os outros {pending.length - visiveis.length} recursos
+              </button>
+            </li>
+          )}
         </ul>
       ) : (
         <p className="flex items-center gap-2 px-5 py-4 text-[13px] text-brass-deep sm:px-6">

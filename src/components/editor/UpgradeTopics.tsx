@@ -170,7 +170,7 @@ export function UpgradeTopics({
             // A partir de sm volta a ser uma linha só, com o botão à direita.
             <div
               key={t.key}
-              className="flex flex-col gap-3 rounded-xl2 border border-ink/10 bg-paper p-3.5 shadow-card transition-colors hover:border-brass/40 sm:flex-row sm:items-center"
+              className="flex flex-col gap-3 rounded-xl2 border border-ink/10 bg-paper/70 p-3.5 transition-colors hover:border-brass/40 sm:flex-row sm:items-center"
             >
               {/* Marca + texto andam sempre juntos; só o botão desce no celular. */}
               <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -209,7 +209,7 @@ export function UpgradeTopics({
               ) : (
                 <Link
                   to={checkoutUrl(t.plan)}
-                  className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-full bg-burgundy px-3.5 text-[12.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep sm:min-h-0 sm:w-auto sm:self-center sm:py-1.5"
+                  className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-[10px] bg-burgundy px-3.5 text-[12.5px] font-semibold text-paper-soft transition-colors hover:bg-burgundy-deep sm:min-h-0 sm:w-auto sm:self-center sm:py-1.5"
                 >
                   Ativar {PLAN_LABEL[t.plan]}
                 </Link>

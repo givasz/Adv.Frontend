@@ -46,10 +46,19 @@ export function TrustGauge({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-[30px] font-semibold leading-none" style={{ color }}>
+        {/* O número acompanha o anel: 30px num anel de 84 atropelava o traço. */}
+        <span
+          className="font-display font-semibold leading-none"
+          style={{ color, fontSize: Math.round(Math.min(30, size * 0.26)) }}
+        >
           {score}
         </span>
-        <span className="mt-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-faint">de 100</span>
+        <span
+          className="mt-0.5 font-medium uppercase tracking-wide text-ink-faint"
+          style={{ fontSize: size < 110 ? 9 : 10.5 }}
+        >
+          de 100
+        </span>
       </div>
     </div>
   )
