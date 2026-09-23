@@ -47,9 +47,28 @@ export type Evento =
  * é um contador que qualquer um infla.
  */
 export function registrarEvento(slug: string, evento: Exclude<Evento, 'view'>): void {
+  enviarEvento('profiles', slug, evento)
+}
+
+/**
+ * O mesmo, para a página do ESCRITÓRIO. Porta separada porque escritório e
+ * perfil são tabelas diferentes e um slug pode existir nas duas.
+ */
+export function registrarEventoDoEscritorio(
+  slug: string,
+  evento: Exclude<Evento, 'view'>,
+): void {
+  enviarEvento('firms', slug, evento)
+}
+
+function enviarEvento(
+  porta: 'profiles' | 'firms',
+  slug: string,
+  evento: Exclude<Evento, 'view'>,
+): void {
   if (!TEM_BACKEND || !slug) return
   try {
-    const url = `${API_BASE}/api/profiles/${encodeURIComponent(slug)}/evento`
+    const url = `${API_BASE}/api/${porta}/${encodeURIComponent(slug)}/evento`
     const corpo = JSON.stringify({ evento })
 
     // `sendBeacon` só existe em navegador e pode recusar (fila cheia, aba em
@@ -89,4 +108,15 @@ export function cliqueDoPerfil(
   if (preview) return (e: React.MouseEvent) => e.preventDefault()
   if (!slug) return undefined
   return () => registrarEvento(slug, evento)
+}
+
+/** O mesmo handler, para os links da página do escritório. */
+export function cliqueDoEscritorio(
+  slug: string | undefined,
+  evento: Exclude<Evento, 'view'>,
+  preview: boolean,
+): ((e: React.MouseEvent) => void) | undefined {
+  if (preview) return (e: React.MouseEvent) => e.preventDefault()
+  if (!slug) return undefined
+  return () => registrarEventoDoEscritorio(slug, evento)
 }

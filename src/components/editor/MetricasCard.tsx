@@ -85,7 +85,7 @@ export function MetricasCard() {
         )}
       </Card>
 
-      {dados?.detalhado && <Detalhe dados={dados} />}
+      {dados?.detalhado && <DetalheDasMetricas dados={dados} />}
 
       {dados && !dados.detalhado && (
         <UpsellCard
@@ -107,7 +107,19 @@ export function MetricasCard() {
   )
 }
 
-function Detalhe({ dados }: { dados: Metricas }) {
+/**
+ * O detalhe dos números. Exportado porque a página do ESCRITÓRIO mostra
+ * exatamente o mesmo — é a mesma conta, sobre a mesma tabela, lida por outra
+ * pessoa. Duas cópias divergiriam na primeira mudança de rótulo.
+ */
+export function DetalheDasMetricas({
+  dados,
+  alvo = 'Seu perfil',
+}: {
+  dados: Metricas
+  /** como a página se chama nas frases ("Seu perfil", "A página do escritório") */
+  alvo?: string
+}) {
   const pico = horarioDePico(dados.porHora)
   const maiorDia = Math.max(1, ...dados.porDia.map((d) => d.visitas))
 
@@ -123,7 +135,7 @@ function Detalhe({ dados }: { dados: Metricas }) {
         </div>
         {pico && (
           <p className="text-[13px] text-ink-faint">
-            Seu perfil é mais procurado entre <span className="font-medium text-ink">{pico}</span>.
+            {alvo} é mais procurado entre <span className="font-medium text-ink">{pico}</span>.
           </p>
         )}
       </Card>
@@ -132,7 +144,7 @@ function Detalhe({ dados }: { dados: Metricas }) {
         {dados.cliques.length === 0 ? (
           <p className="text-[13px] leading-relaxed text-ink-faint">
             Ninguém tocou nos botões ainda. Eles aparecem aqui assim que alguém usar o WhatsApp,
-            agendar ou abrir uma das suas redes.
+            falar com o assistente ou abrir uma das redes.
           </p>
         ) : (
           <ul className="space-y-2.5">
@@ -186,7 +198,7 @@ function Detalhe({ dados }: { dados: Metricas }) {
           métricas é "e quem foi?" — e a resposta aqui é que não sabemos, de
           propósito. Melhor dizer antes de ser perguntado. */}
       <p className="px-1 text-[11.5px] leading-relaxed text-ink-faint">
-        Contamos acontecimentos, não pessoas: quantas vezes o perfil foi aberto e quais botões
+        Contamos acontecimentos, não pessoas: quantas vezes a página foi aberta e quais botões
         foram tocados. Não guardamos quem visitou, de onde veio, nem gravamos cookie no aparelho
         de quem entra — por isso não há "visitantes únicos" aqui.{' '}
         <Link

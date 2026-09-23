@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { lawyersInNeutralOrder, type Firm, type FirmLawyer } from '@/lib/escritorio'
+import { isExampleFirm, lawyersInNeutralOrder, type Firm, type FirmLawyer } from '@/lib/escritorio'
 import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import {
   buildAssistantDays,
@@ -8,6 +8,7 @@ import {
   FIRM_PERIODS,
   falaDoEnderecoPresencial,
   firmAlcancaAdvogado,
+  firstName,
   firmAssistantDestination,
   firmAssistantWhatsappHref,
   firmRecebeSemPreferencia,
@@ -15,10 +16,12 @@ import {
   MAX_DAY_CHIPS,
   type AssistantDayOption,
   type FirmAssistantAnswers,
+  type FirmAssistantDestination,
 } from '@/lib/assistant'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon } from '@/components/ui/icons'
 import {
   Bubble,
+  CampoDaTriagem,
   cap,
   Chip,
   ChipRow,
@@ -27,6 +30,22 @@ import {
   TypingDots,
 } from '@/components/assistant/pieces'
 import { useConversation, usePinnedToBottom } from '@/components/assistant/useConversation'
+import { MeetingRequestForm } from '@/components/profile/MeetingRequestForm'
+import { PrivacyNote } from '@/components/ui/PrivacyNote'
+import {
+  AVISO_DE_SEGURANCA,
+  limparResposta,
+  pedeOrientacaoJuridica,
+  perguntasUtilizaveis,
+  proximaPergunta,
+  respostaLivre,
+  respostaNeutra,
+  tetoDaResposta,
+  type EtapaFixa,
+  type PerguntaDeTriagem,
+  type RespostaDeTriagem,
+  type RespostasDoCaminho,
+} from '@/lib/triagem'
 
 // Assistente virtual do ESCRITÓRIO. Mesma conversa guiada do perfil individual
 // (mesmo motor, mesmas peças em components/assistant), adaptada a quem tem vários
@@ -45,11 +64,54 @@ import { useConversation, usePinnedToBottom } from '@/components/assistant/useCo
 // interface diz "Automático", nunca "IA". Um modelo respondendo dúvida de cliente na
 // página de um advogado seria consulta jurídica automatizada.
 
-type Step = 'boot' | 'area' | 'lawyer' | 'format' | 'day' | 'time' | 'period' | 'name' | 'done'
+type Step =
+  | 'boot'
+  | 'area'
+  | 'lawyer'
+  | 'triagem'
+  | 'format'
+  | 'day'
+  | 'time'
+  | 'period'
+  | 'name'
+  | 'done'
 
 // 'period' ocupa o lugar de 'day' no fio de progresso: é a mesma pergunta ("quando?")
-// para quem não tem agenda.
-const STEP_ORDER: Step[] = ['area', 'lawyer', 'format', 'day', 'time', 'name', 'done']
+// para quem não tem agenda. 'triagem' entra logo depois da escolha do advogado —
+// é só aí que se sabe DE QUEM são as perguntas.
+const STEP_ORDER: Step[] = ['area', 'lawyer', 'triagem', 'format', 'day', 'time', 'name', 'done']
+
+/**
+ * "Vai para", em palavras, na linha do resumo.
+ *
+ * Diz as duas coisas que mudam de verdade para quem está enviando: PARA QUEM e
+ * POR ONDE. "WhatsApp do escritório" e "painel de Fulana" são compromissos
+ * diferentes — no primeiro a mensagem sai do aparelho dela, no segundo os dados
+ * ficam guardados conosco até alguém responder.
+ */
+function ondeVaiParar(destino: FirmAssistantDestination): string {
+  if (destino.inbox === 'lawyer') return `Painel de ${destino.label}`
+  if (destino.inbox === 'firm') return 'Painel do escritório'
+  if (destino.direct) return `WhatsApp de ${destino.label}`
+  return 'WhatsApp do escritório'
+}
+
+/** As perguntas de triagem deste advogado, na ordem — vazio quando não há. */
+function perguntasDe(l?: FirmLawyer): PerguntaDeTriagem[] {
+  return l?.triagem?.enabled ? perguntasUtilizaveis(l.triagem.questions) : []
+}
+
+/**
+ * Este advogado ainda quer esta pergunta embutida (dia e horário, formato, nome)?
+ *
+ * Espelha `etapaNaConversa` do perfil: só a triagem ATIVA tira alguma. Sem ela o
+ * assistente é um agendador, e um agendador sem dia e horário não teria o que
+ * agendar.
+ */
+function etapaDe(l: FirmLawyer | undefined, etapa: EtapaFixa): boolean {
+  if (!perguntasDe(l).length) return true
+  return !(l?.triagem?.semEtapas ?? []).includes(etapa)
+}
 
 export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   const { msgs, typing, push, say: falar, reset, reduced, listRef } = useConversation()
@@ -60,6 +122,20 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   // horário escolhido expira no meio da conversa.
   const [dias, setDias] = useState<AssistantDayOption[]>([])
   const [verTodosOsDias, setVerTodosOsDias] = useState(false)
+  // ---- Triagem do advogado escolhido ----
+  // As perguntas só existem depois de alguém ser escolhido, e NUNCA mudam durante
+  // a conversa: nada do que o visitante escreve entra aqui, que é a resposta de
+  // arquitetura ao prompt injection (a mesma do perfil).
+  const [triagemIdx, setTriagemIdx] = useState(0)
+  const [triagem, setTriagem] = useState<RespostaDeTriagem[]>([])
+  /** Os ids das respostas tocadas, por pergunta — é o que decide quem recebe qual pergunta. */
+  const [caminho, setCaminho] = useState<RespostasDoCaminho>({})
+  /** Opções já marcadas numa pergunta de múltipla escolha, antes de confirmar. */
+  const [marcadas, setMarcadas] = useState<string[]>([])
+  /** Quantas vezes o visitante já pediu uma análise do caso (ver respostaNeutra). */
+  const [pedidosDeAnalise, setPedidosDeAnalise] = useState(0)
+  /** O formulário de solicitação já está em cena (destino é caixa, não WhatsApp). */
+  const [mostrarFormulario, setMostrarFormulario] = useState(false)
 
   const say = useCallback(
     (lines: string[], next?: Step) => falar(lines, next ? () => setStep(next) : undefined),
@@ -81,22 +157,52 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     [lawyers, answers.lawyerId],
   )
 
+  // ---- A triagem do advogado escolhido ----
+  //
+  // A lista sai do perfil DELE e não muda durante a conversa. O servidor já
+  // decidiu se vale (plano, interruptor, ao menos uma pergunta respondível) — aqui
+  // só se lê. Sem advogado escolhido não há triagem: a sociedade não tem perguntas
+  // próprias, e inventar umas seria o escritório perguntando no lugar do advogado.
+  const perguntas = useMemo(() => perguntasDe(escolhido), [escolhido])
+  // O advogado pode ter posto a preferência de atendimento e o nome DENTRO da
+  // triagem. Quando pôs, o roteiro não pergunta de novo — duas perguntas iguais
+  // seguidas é o defeito mais visível que um assistente pode ter.
+  const formatoNaTriagem = perguntas.some((q) => q.kind === 'atendimento')
+  const nomeNaTriagem = perguntas.some((q) => q.kind === 'contato')
+  // As perguntas que o assistente faz sozinho — dia e horário, formato, nome — o
+  // advogado pode tirar da conversa no perfil dele. A escolha vale aqui também:
+  // é a mesma triagem, e obedecê-la só numa das portas seria o mesmo problema que
+  // este trecho existe para resolver.
+  const pedeHorario = etapaDe(escolhido, 'horario')
+  const pedeFormato = etapaDe(escolhido, 'formato')
+  const pedeNome = etapaDe(escolhido, 'nome')
+  const perguntaAtual = step === 'triagem' ? perguntas[triagemIdx] : undefined
+
   const start = useCallback(() => {
     reset()
     setAnswers({})
     setDraft('')
     setDias([])
     setVerTodosOsDias(false)
+    setTriagemIdx(0)
+    setTriagem([])
+    setCaminho({})
+    setMarcadas([])
+    setPedidosDeAnalise(0)
+    setMostrarFormulario(false)
     setStep('boot')
+    // A primeira frase é do escritório quando ele escreveu uma; a segunda nunca
+    // é: dizer que o atendimento é automático e não é orientação jurídica não é
+    // escolha de quem publica (Prov. 205/2021).
     const abertura = [
-      'Olá! Sou o assistente virtual do escritório.',
+      firm.assistantGreeting?.trim() || 'Olá! Sou o assistente virtual do escritório.',
       'Não presto orientação jurídica — organizo o seu pedido e encaminho para a equipe.',
     ]
     if (!temDestino) {
       void say(
         [
           ...abertura,
-          'Por enquanto este escritório não informou um WhatsApp para receber pedidos, então não consigo encaminhar o seu por aqui.',
+          'Por enquanto este escritório não informou um canal para receber pedidos, então não consigo encaminhar o seu por aqui.',
         ],
         'done',
       )
@@ -104,13 +210,16 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     }
     if (areas.length) {
       void say([...abertura, 'Sobre qual assunto você precisa falar?'], 'area')
+    } else if (alcancaveis.length) {
+      void say([...abertura, 'Prefere falar com alguém específico?'], 'lawyer')
     } else {
-      void say(
-        [...abertura, 'Prefere falar com alguém específico?'],
-        alcancaveis.length ? 'lawyer' : 'format',
-      )
+      // Sem assunto a perguntar e sem advogado a quem o pedido chegue, a próxima
+      // etapa é o formato — e a pergunta tem de ser a dela. Perguntar "prefere
+      // falar com alguém específico?" e mostrar "Presencial / Online" embaixo é
+      // o assistente não ouvindo a si mesmo.
+      void say([...abertura, 'A conversa seria presencial ou online?'], 'format')
     }
-  }, [areas.length, alcancaveis.length, reset, say, temDestino])
+  }, [areas.length, alcancaveis.length, firm.assistantGreeting, reset, say, temDestino])
 
   useEffect(() => {
     start()
@@ -141,12 +250,12 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
 
   function pickLawyer(l: FirmLawyer | null) {
     push('user', l ? l.name : FIRM_ANY_LAWYER)
-    // Sem preferência o pedido vai ao WhatsApp do escritório. Se ele não existe,
+    // Sem preferência o pedido vai ao escritório. Se ele não tem como receber,
     // seguir adiante levaria a pessoa até o fim para descobrir que não há destino.
     if (!l && !semPreferenciaChega) {
       void say(
         [
-          'Sem preferência, o pedido iria para o WhatsApp do escritório, que ainda não foi informado. Escolha um dos advogados, por favor:',
+          'Sem preferência, o pedido iria para o escritório, que ainda não informou como recebê-lo. Escolha um dos advogados, por favor:',
         ],
         'lawyer',
       )
@@ -159,8 +268,107 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
       day: undefined,
       time: undefined,
       period: undefined,
+      triagem: undefined,
     }))
-    void say(['A conversa seria presencial ou online?'], 'format')
+    iniciarTriagem(l ?? undefined)
+  }
+
+  // ---- Triagem do advogado escolhido ----
+  //
+  // As perguntas são as MESMAS que o perfil dele faz — mesma lista, mesmo motor,
+  // mesmas condições. O que muda é só por onde o visitante entrou. Sem isto, o
+  // advogado recebia pedidos de duas qualidades conforme a porta: completos pelo
+  // perfil, crus pela página da sociedade.
+
+  /** Começa a triagem do advogado escolhido — ou pula direto para o formato. */
+  function iniciarTriagem(l?: FirmLawyer) {
+    const lista = perguntasDe(l)
+    setTriagemIdx(0)
+    setTriagem([])
+    setCaminho({})
+    setMarcadas([])
+    if (!lista.length) {
+      void say(['A conversa seria presencial ou online?'], 'format')
+      return
+    }
+    // A fala de segurança vem ANTES da primeira pergunta: é o único momento em
+    // que a pessoa ainda não escreveu nada e pode decidir o que escrever.
+    void say([AVISO_DE_SEGURANCA, lista[0].label], 'triagem')
+  }
+
+  /**
+   * Registra uma resposta e vai para a próxima pergunta do advogado.
+   *
+   * Duas respostas NÃO entram no bloco da triagem: a preferência de atendimento e
+   * o nome. Elas alimentam campos que a mensagem já tem ("Formato:", "Nome:"), e
+   * repeti-las embaixo faria o advogado ler a mesma coisa duas vezes.
+   */
+  function responderTriagem(
+    indice: number,
+    bruto: string,
+    antesDaProxima: string[] = [],
+    opcoesTocadas?: string[],
+  ) {
+    const pergunta = perguntas[indice]
+    if (!pergunta) return
+    const resposta = limparResposta(bruto, tetoDaResposta(pergunta.kind))
+    push('user', resposta || 'Prefiro não responder agora')
+    if (pergunta.kind === 'contato') {
+      if (resposta) setAnswers((a) => ({ ...a, name: resposta }))
+    } else if (pergunta.kind === 'atendimento') {
+      if (resposta) setAnswers((a) => ({ ...a, format: resposta.toLowerCase() }))
+    } else {
+      setTriagem((r) => [...r, { id: pergunta.id, pergunta: pergunta.label, resposta }])
+    }
+
+    // Pedido de análise jurídica numa resposta escrita à mão: o assistente diz,
+    // de frente, que não avalia — e segue. Ignorar deixaria a pessoa achando que
+    // alguém vai responder depois; responder seria consulta automatizada, que é o
+    // que o Prov. 205/2021 veda.
+    const antes = [...antesDaProxima]
+    if (respostaLivre(pergunta.kind) && pedeOrientacaoJuridica(resposta)) {
+      const n = pedidosDeAnalise + 1
+      setPedidosDeAnalise(n)
+      antes.unshift(respostaNeutra(n))
+    }
+    // O CAMINHO depende das RESPOSTAS: guardamos os ids tocados, nunca o texto,
+    // que o advogado corrige a qualquer hora. `proximaPergunta` só anda para
+    // frente, que é o que impede a conversa de andar em círculo.
+    const respondeu = !!resposta || !!opcoesTocadas?.length
+    const novo: RespostasDoCaminho = respondeu
+      ? { ...caminho, [pergunta.id]: opcoesTocadas ?? [] }
+      : caminho
+    const formatoRespondido = pergunta.kind === 'atendimento' && !!resposta
+    seguirTriagem(proximaPergunta(perguntas, indice, novo), antes, novo, formatoRespondido)
+  }
+
+  /** Da pergunta `proximo` em diante — ou o resto do roteiro, quando acabarem. */
+  function seguirTriagem(
+    proximo: number,
+    antes: string[],
+    respostas: RespostasDoCaminho,
+    formatoRespondido = false,
+  ) {
+    setDraft('')
+    setMarcadas([])
+    setCaminho(respostas)
+    setTriagemIdx(proximo)
+    if (proximo < perguntas.length) {
+      void say([...antes, perguntas[proximo].label], 'triagem')
+      return
+    }
+    depoisDaTriagem(antes, formatoRespondido || !!answers.format)
+  }
+
+  /** Acabaram as perguntas do advogado: volta o roteiro do escritório. */
+  function depoisDaTriagem(antes: string[], jaTemFormato: boolean) {
+    // Com a preferência de atendimento perguntada DENTRO da triagem, repeti-la
+    // aqui seria o assistente não tendo escutado a própria conversa.
+    if (!jaTemFormato && !formatoNaTriagem && pedeFormato) {
+      void say([...antes, 'A conversa seria presencial ou online?'], 'format')
+      return
+    }
+    perguntarQuando(antes)
   }
 
   function pickFormat(format: string) {
@@ -174,6 +382,12 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
 
   /** Dia e horário da agenda do advogado escolhido — ou período, quando não há agenda. */
   function perguntarQuando(antes: string[]) {
+    // O advogado pode ter tirado dia e horário da conversa: aí o pedido é de
+    // CONTATO, e ele combina o horário ao responder.
+    if (!pedeHorario) {
+      pedirNomeOuFechar(antes, false)
+      return
+    }
     const agenda = escolhido?.agenda
     if (!escolhido || !agenda) {
       void say([...antes, 'Que dia e período são melhores para você?'], 'period')
@@ -184,7 +398,10 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     setVerTodosOsDias(false)
     if (livres.length) {
       void say(
-        [...antes, `Estes são os dias com horário livre na agenda de ${escolhido.name}. Qual fica melhor?`],
+        [
+          ...antes,
+          `Estes são os dias com horário livre na agenda de ${escolhido.name}. Qual fica melhor?`,
+        ],
         'day',
       )
       return
@@ -223,26 +440,56 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     setAnswers((a) => ({ ...a, time, period: undefined }))
     // Voltou só para trocar um horário que expirou: o resto já está respondido.
     if (answers.name) {
+      setMostrarFormulario(false)
       void say(
-        [
-          `Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`,
-          'Toque no botão abaixo para enviar o pedido — o horário só vale depois da confirmação.',
-        ],
+        [`Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`, fechoDoPedido(true)],
         'done',
       )
       return
     }
-    void say(['Por último: como podemos te chamar?'], 'name')
+    pedirNomeOuFechar([], true)
   }
 
   function pickPeriod(period: string) {
     push('user', period)
     setAnswers((a) => ({ ...a, period, day: undefined, time: undefined }))
     if (answers.name) {
-      void say(['Anotado. Toque no botão abaixo para enviar o pedido.'], 'done')
+      void say(['Anotado.', fechoDoPedido(true)], 'done')
       return
     }
-    void say(['Por último: como podemos te chamar?'], 'name')
+    pedirNomeOuFechar([], true)
+  }
+
+  /**
+   * O nome fecha a conversa — a menos que a triagem já o tenha perguntado, ou que
+   * o advogado tenha tirado a pergunta.
+   */
+  function pedirNomeOuFechar(antes: string[], comHorario: boolean) {
+    if (!answers.name && !nomeNaTriagem && pedeNome) {
+      void say([...antes, 'Por último: como podemos te chamar?'], 'name')
+      return
+    }
+    void say([...antes, 'Registrei o seu pedido.', fechoDoPedido(comHorario)], 'done')
+  }
+
+  /** A última fala: diz por onde o pedido sai e quem confirma. */
+  function fechoDoPedido(comHorario: boolean): string {
+    const quem = firmAssistantDestination(firm, answers)
+    if (quem.inbox) {
+      const onde =
+        quem.inbox === 'lawyer'
+          ? `deixe WhatsApp ou e-mail para enviar a solicitação a ${quem.label}`
+          : 'deixe WhatsApp ou e-mail para enviar a solicitação ao escritório'
+      return comHorario
+        ? `Para terminar, ${onde} — o horário só vale depois da confirmação.`
+        : `Para terminar, ${onde}. Quem responde entra em contato pelo canal informado.`
+    }
+    if (quem.direct) {
+      return `Toque no botão abaixo para enviar tudo pelo WhatsApp de ${quem.label} — quem confirma o horário é ${quem.label}.`
+    }
+    return comHorario
+      ? 'Toque no botão abaixo para enviar tudo pelo WhatsApp — o escritório confirma o horário.'
+      : 'Toque no botão abaixo para enviar pelo WhatsApp — o escritório entra em contato.'
   }
 
   function sendName(text: string) {
@@ -252,21 +499,13 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     const finais = { ...answers, name: value }
     setAnswers(finais)
     setDraft('')
-    const saudacao = `Prazer, ${value.split(/\s+/)[0]}.`
+    const saudacao = `Prazer, ${firstName(value)}.`
     if (!horarioAindaVale(answers)) {
       horarioSaiu([saudacao])
       return
     }
-    const quem = firmAssistantDestination(firm, finais)
-    void say(
-      [
-        `${saudacao} Registrei o seu pedido.`,
-        quem.direct
-          ? `Toque no botão abaixo para enviar tudo pelo WhatsApp de ${quem.label} — quem confirma o horário é ${quem.label}.`
-          : 'Toque no botão abaixo para enviar tudo pelo WhatsApp — o escritório confirma o horário.',
-      ],
-      'done',
-    )
+    const comHorario = !!(answers.day && answers.time) || !!answers.period
+    void say([`${saudacao} Registrei o seu pedido.`, fechoDoPedido(comHorario)], 'done')
   }
 
   // ---- Horário que expirou no meio da conversa ----
@@ -290,6 +529,7 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     const agora = agenda ? buildAssistantDays(agenda) : []
     setDias(agora)
     setVerTodosOsDias(false)
+    setMostrarFormulario(false)
     setAnswers((a) => ({ ...a, day: undefined, time: undefined }))
     void say(
       agora.length
@@ -312,10 +552,19 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
   const progress = step === 'boot' ? 0 : Math.min(1, answered / (STEP_ORDER.length - 1))
   const comHorario = !!(answers.day && answers.time)
   const duracao = comHorario ? escolhido?.agenda?.durationMin : undefined
-  const href = firmAssistantWhatsappHref(firm, answers, duracao)
-  const destino = firmAssistantDestination(firm, answers)
-  const ready = step === 'done' && !!answers.name && !!href
+  // A triagem viaja junto na mensagem do WhatsApp e no pedido ao painel.
+  const respostas: FirmAssistantAnswers = { ...answers, triagem }
+  const href = firmAssistantWhatsappHref(firm, respostas, duracao)
+  const destino = firmAssistantDestination(firm, respostas)
+  // Sem nome a conversa não fecha — a menos que a triagem tenha perguntado por
+  // ele, ou que o advogado tenha tirado a pergunta.
+  const temNome = !!answers.name || nomeNaTriagem || !pedeNome
+  const ready = step === 'done' && temNome && (!!destino.inbox || !!href)
   const diasNaTela = verTodosOsDias ? dias : dias.slice(0, MAX_DAY_CHIPS)
+  // Escritório de demonstração: a conversa roda inteira (é a demonstração), mas
+  // nada sai daqui — o WhatsApp é inventado e o pedido não vai a painel nenhum.
+  // Mesmo tratamento dos perfis-exemplo. Ver lib/exemplo.ts.
+  const semEnvio = isExampleFirm(firm.slug)
 
   const quando = comHorario ? `${answers.day!.longLabel} às ${answers.time}` : answers.period
   const rows: [string, string][] = [
@@ -325,9 +574,9 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
     quando ? ['Quando', quando] : null,
     duracao ? ['Duração', `${duracao} minutos`] : null,
     answers.name ? ['Nome', answers.name] : null,
-    // Para quem o pedido vai: com encaminhamento direto o visitante sai da conversa
-    // no WhatsApp de uma pessoa, não do escritório. Isso não pode ser surpresa.
-    ['Vai para', destino.direct ? destino.label : 'WhatsApp do escritório'],
+    // Para quem o pedido vai, e por onde. Sair da conversa no WhatsApp de uma
+    // pessoa, ou deixar dados guardados num painel, não pode ser surpresa.
+    ['Vai para', ondeVaiParar(destino)],
   ].filter(Boolean) as [string, string][]
 
   return (
@@ -396,7 +645,43 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
             ))}
           </AnimatePresence>
           {typing && <TypingDots />}
-          {ready && <Summary title="Pedido de conversa" rows={rows} reduced={reduced} />}
+          {ready && (
+            <Summary
+              title="Pedido de conversa"
+              rows={rows}
+              // As respostas da triagem aparecem empilhadas, como no perfil: elas
+              // são do visitante, e ele precisa reler o que vai enviar.
+              empilhadas={triagem.map((r) => [r.pergunta, r.resposta || '—'] as [string, string])}
+              reduced={reduced}
+            />
+          )}
+          {ready && destino.inbox && mostrarFormulario && (
+            <div
+              className="rounded-xl border p-4"
+              style={{ borderColor: 'var(--c-border)', background: 'var(--c-surface)' }}
+            >
+              <MeetingRequestForm
+                // Trocar dia, horário ou nome depois de abrir o formulário tem de
+                // REMONTÁ-LO: ele lê as props uma vez, no início, e sem isto o
+                // campo continuaria com o horário anterior.
+                key={`${answers.day?.key ?? ''}-${answers.time ?? ''}-${answers.period ?? ''}-${answers.name ?? ''}`}
+                alvo="escritorio"
+                slug={firm.slug}
+                // A escolha do visitante vai SEMPRE. Endereçar ou não é decisão
+                // do servidor (o escritório delega ou centraliza) — mandar só
+                // quando a caixa é do advogado faria a sociedade receber o pedido
+                // sem saber com quem a pessoa quis falar.
+                lawyerId={answers.lawyerId}
+                initialName={answers.name ?? ''}
+                initialSubject={answers.area || 'Pedido de contato'}
+                preferredAt={answers.day && answers.time ? `${answers.day.key}T${answers.time}` : ''}
+                contactOnly={!comHorario}
+                triage={triagem}
+                demo={semEnvio}
+                themed
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -412,6 +697,17 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
           >
             {typing ? (
               <p className="t-faint py-2 text-center text-[12px]">…</p>
+            ) : perguntaAtual ? (
+              <CampoDaTriagem
+                pergunta={perguntaAtual}
+                indice={triagemIdx}
+                draft={draft}
+                setDraft={setDraft}
+                marcadas={marcadas}
+                setMarcadas={setMarcadas}
+                onResponder={responderTriagem}
+                endereco={falaDoEnderecoPresencial(firm)}
+              />
             ) : step === 'area' ? (
               <ChipRow label="Assunto">
                 {areas.map((a) => (
@@ -484,12 +780,38 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
                 label="Seu nome"
                 canSend={draft.trim().length > 1}
               />
+            ) : ready && destino.inbox ? (
+              // Destino é CAIXA: o pedido não sai pelo WhatsApp, é gravado para
+              // quem responde. O formulário abre acima, junto do resumo.
+              <button
+                type="button"
+                onClick={() => {
+                  if (!horarioAindaVale(answers)) {
+                    horarioSaiu()
+                    return
+                  }
+                  setMostrarFormulario(true)
+                }}
+                className="t-btn w-full !py-3.5 text-[15px]"
+              >
+                {mostrarFormulario ? 'Preencha o contato acima' : 'Enviar solicitação no site'}
+                <ArrowRight width={16} height={16} />
+              </button>
             ) : ready ? (
               <div className="space-y-2">
                 <a
                   href={href}
                   {...comoAbrirWhatsapp()}
                   onClick={(e) => {
+                    // Escritório de demonstração: o botão existe e não abre nada.
+                    if (semEnvio) {
+                      e.preventDefault()
+                      push(
+                        'bot',
+                        'Este é um escritório de exemplo: num escritório real, seu pedido abriria o WhatsApp agora. Nada foi enviado.',
+                      )
+                      return
+                    }
                     // A pessoa pode ter parado no botão por um bom tempo.
                     if (horarioAindaVale(answers)) return
                     e.preventDefault()
@@ -511,13 +833,22 @@ export function AssistenteEscritorio({ firm }: { firm: Firm }) {
               </div>
             ) : step === 'done' ? (
               <p className="t-faint py-2 text-center text-[12.5px] leading-relaxed">
-                Este escritório ainda não informou um WhatsApp para receber o pedido.
+                Este escritório ainda não informou um canal para receber o pedido.
               </p>
             ) : null}
           </motion.div>
         </AnimatePresence>
 
-        <p className="t-faint mt-2.5 text-center text-[10.5px] leading-relaxed opacity-90">
+        {/* Onde o que foi escrito vai parar. Muda com o destino: mensagem no
+            WhatsApp de alguém é uma coisa; dado gravado num painel é outra, e a
+            LGPD pede que a diferença esteja escrita antes do envio. */}
+        <PrivacyNote
+          fluxo={destino.inbox ? 'solicitacao' : 'assistente'}
+          tone="themed"
+          semGuarda={step !== 'triagem'}
+          className="mt-2.5 text-center"
+        />
+        <p className="t-faint mt-2 text-center text-[10.5px] leading-relaxed opacity-90">
           Assistente automático. Não presta orientação jurídica e não confirma o horário — quem
           confirma é {destino.direct ? destino.label : 'o escritório'}.
         </p>

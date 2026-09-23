@@ -37,6 +37,10 @@ const SECOES: { key: string; label: string }[] = [
   { key: 'areas', label: 'Todas as áreas' },
   { key: 'faqs', label: 'Perguntas frequentes' },
   { key: 'socials', label: 'Redes e site' },
+  // As perguntas do assistente de triagem são lidas pelo visitante como a bio é:
+  // esconder o perfil parcialmente tem de alcançá-las. Vale também na página do
+  // escritório, que faz as mesmas perguntas do advogado escolhido.
+  { key: 'triagem', label: 'Perguntas da triagem' },
 ]
 
 /** A escada, na tela. Espelha backend/src/admin/sancoes.ts. */

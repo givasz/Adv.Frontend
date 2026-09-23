@@ -43,6 +43,20 @@ export async function carregarMetricas(): Promise<Metricas> {
   return (await res.json()) as Metricas
 }
 
+/**
+ * O resumo da PÁGINA DO ESCRITÓRIO que o usuário administra.
+ *
+ * Mesma forma e mesma tela do perfil — e a mesma ausência: contamos
+ * acontecimentos, nunca pessoas. Sempre detalhado, porque a sociedade opera no
+ * tier alto; quem decide isso é o servidor, como no perfil.
+ */
+export async function carregarMetricasDoEscritorio(): Promise<Metricas> {
+  if (!TEM_BACKEND || !getSession()) return VAZIO
+  const res = await apiFetch('/api/analytics/firm')
+  if (!res.ok) throw new Error('Não foi possível carregar as visitas agora.')
+  return (await res.json()) as Metricas
+}
+
 /** Como cada tipo de acontecimento se chama para quem lê a tela. */
 export function rotuloDoEvento(evento: string): string {
   const fixos: Record<string, string> = {

@@ -152,6 +152,87 @@ describe('para onde o pedido pode ir', () => {
   })
 })
 
+// A caixa de solicitações vale nas DUAS pontas, e a ordem entre elas é o que
+// mantém cada um dono da própria decisão: `assistantRoute` é a escolha do
+// escritório sobre a própria página; dentro do que ele delega, a caixa do
+// advogado é a escolha dele sobre onde receber.
+describe('caixa de solicitações', () => {
+  const comCaixa = {
+    ...escritorio,
+    lawyers: [
+      { id: 'a', name: 'Ana Beatriz', whatsapp: '5511911111111', meetingInbox: true },
+      { id: 'c', name: 'Carlos Andrade' },
+    ],
+  }
+
+  it('delegando ao advogado, a caixa DELE vence o WhatsApp dele', () => {
+    const d = firmAssistantDestination(
+      { ...comCaixa, assistantRoute: 'lawyer' },
+      { lawyerId: 'a', lawyer: 'Ana Beatriz' },
+    )
+    expect(d.inbox).toBe('lawyer')
+    expect(d.label).toBe('Ana Beatriz')
+    expect(d.whatsapp).toBeUndefined()
+  })
+
+  it('sem delegar, a caixa do advogado não tira o pedido do escritório', () => {
+    // `assistantRoute` institucional é o escritório dizendo que os pedidos são
+    // dele. A caixa do advogado não passa por cima disso.
+    const d = firmAssistantDestination(comCaixa, { lawyerId: 'a', lawyer: 'Ana Beatriz' })
+    expect(d.inbox).toBe(null)
+    expect(d.whatsapp).toBe('5511990000000')
+  })
+
+  it('com a caixa da sociedade ligada, o pedido vai para ela e não para o WhatsApp', () => {
+    const d = firmAssistantDestination({ ...comCaixa, meetingInboxEnabled: true }, {})
+    expect(d.inbox).toBe('firm')
+    expect(d.whatsapp).toBeUndefined()
+  })
+
+  it('caixa da sociedade é destino: escritório sem WhatsApp nenhum deixa de ser beco sem saída', () => {
+    const f = { ...escritorio, contact: {}, meetingInboxEnabled: true }
+    expect(firmTemDestino(f)).toBe(true)
+    expect(firmRecebeSemPreferencia(f)).toBe(true)
+  })
+
+  it('advogado sem número mas com caixa é alcançável quando o escritório delega', () => {
+    const f = {
+      ...escritorio,
+      contact: {},
+      assistantRoute: 'lawyer',
+      lawyers: [{ id: 'x', name: 'Rita Alves', meetingInbox: true }],
+    }
+    expect(firmAlcancaAdvogado(f, f.lawyers[0])).toBe(true)
+    // Sem preferência continua não chegando: a sociedade não tem canal nenhum.
+    expect(firmRecebeSemPreferencia(f)).toBe(false)
+  })
+
+  it('destino por caixa não gera link de WhatsApp', () => {
+    const f = { ...escritorio, contact: {}, meetingInboxEnabled: true }
+    expect(firmAssistantWhatsappHref(f, { name: 'Rita' })).toBeUndefined()
+  })
+})
+
+// A triagem do advogado escolhido entra na mensagem exatamente como entra na do
+// perfil dele: é a mesma triagem, e só a porta de entrada mudou.
+describe('triagem na mensagem do escritório', () => {
+  it('as respostas viajam com o pedido, com a ressalva de que não são análise', () => {
+    const msg = buildFirmAssistantMessage('Andrade & Vieira', {
+      lawyer: 'Ana Beatriz',
+      name: 'Rita',
+      triagem: [{ id: 't1', pergunta: 'A empresa já foi formalizada?', resposta: 'Ainda não' }],
+    })
+    expect(msg).toContain('A empresa já foi formalizada?')
+    expect(msg).toContain('Ainda não')
+    expect(msg).toContain('Não são análise jurídica.')
+  })
+
+  it('sem triagem, a mensagem não ganha bloco nenhum', () => {
+    const msg = buildFirmAssistantMessage('Andrade & Vieira', { name: 'Rita' })
+    expect(msg).not.toContain('Triagem')
+  })
+})
+
 describe('preferências de horário', () => {
   it('são períodos, não horários — a sociedade não tem agenda por advogado', () => {
     expect(FIRM_PERIODS.length).toBeGreaterThan(1)
@@ -167,7 +248,12 @@ describe('nome do destino', () => {
       { ...escritorio, assistantRoute: 'lawyer' },
       { lawyer: 'Ana Beatriz' },
     )
-    expect(d).toEqual({ whatsapp: '5511911111111', label: 'Ana Beatriz', direct: true })
+    expect(d).toEqual({
+      whatsapp: '5511911111111',
+      label: 'Ana Beatriz',
+      direct: true,
+      inbox: null,
+    })
   })
 
   it('sem encaminhamento direto, o destino é o escritório', () => {

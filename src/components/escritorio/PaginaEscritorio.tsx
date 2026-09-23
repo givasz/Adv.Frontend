@@ -17,6 +17,8 @@ import { MiniPerfil } from './MiniPerfil'
 import { PainelEmLinha } from './PainelEmLinha'
 import { AssistenteEscritorio } from './AssistenteEscritorio'
 import { safeHref } from '@/lib/safeUrl'
+import { cliqueDoEscritorio, registrarEventoDoEscritorio } from '@/lib/eventos'
+import { firmAssistantDestination, firmTemDestino } from '@/lib/assistant'
 import { enderecoCurto, enderecoVisivel, linkDoMapa } from '@/lib/endereco'
 import { comoAbrirFora } from '@/lib/abrirFora'
 
@@ -28,6 +30,27 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
   const [selected, setSelected] = useState<string | null>(null)
   const lawyers = lawyersInNeutralOrder(firm)
   const active = lawyers.find((l) => l.id === selected) ?? null
+  // Há para onde mandar um pedido? Antes a conversa só aparecia com WhatsApp
+  // institucional — com a caixa de solicitações ligada, um escritório pode
+  // receber sem ter número nenhum.
+  const podeFalar = firmTemDestino(firm)
+  // Sem escolher advogado, o pedido sai pelo WhatsApp ou fica numa caixa? O ícone
+  // de WhatsApp num escritório que recebe pelo site prometeria o aplicativo errado.
+  const saiPorWhatsapp = firmAssistantDestination(firm, {}).inbox === null
+
+  /**
+   * O clique num link da página, contado. A visita é gravada pelo SERVIDOR ao
+   * montar a resposta (firms.service.getBySlug): contar do lado do navegador
+   * exigiria confiar em quem chama, e uma rota pública que aceita "some mais uma
+   * visita" é um contador que qualquer um infla.
+   */
+  const clique = (evento: Parameters<typeof cliqueDoEscritorio>[1]) =>
+    cliqueDoEscritorio(firm.slug, evento, false)
+
+  function abrirAssistente() {
+    registrarEventoDoEscritorio(firm.slug, 'assistente')
+    setAssistente(true)
+  }
 
   // White-label: a cor do escritório (se houver) sobrescreve o vinho padrão via CSS var,
   // que cascateia para os destaques da página e dos modais (mesma subárvore do DOM).
@@ -77,6 +100,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
             <a
               href={linkDoMapa(firm.address, firm.city, firm.state)}
               {...comoAbrirFora()}
+              onClick={clique('endereco')}
               className="mt-1 inline text-[12px] leading-snug text-ink-faint hover:underline"
             >
               {enderecoCurto(firm.address)}{' '}
@@ -92,35 +116,51 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
         {/* Redes institucionais (topo) — separadas das redes pessoais dos advogados */}
         <nav className="mt-6 flex items-center justify-center gap-3" aria-label="Redes do escritório">
           {safeHref(firm.contact.instagram) && (
-            <SocialDot href={safeHref(firm.contact.instagram)!} label="Instagram do escritório">
+            <SocialDot
+              href={safeHref(firm.contact.instagram)!}
+              label="Instagram do escritório"
+              onClick={clique('rede:instagram')}
+            >
               <InstagramIcon width={19} height={19} />
             </SocialDot>
           )}
           {safeHref(firm.contact.linkedin) && (
-            <SocialDot href={safeHref(firm.contact.linkedin)!} label="LinkedIn do escritório">
+            <SocialDot
+              href={safeHref(firm.contact.linkedin)!}
+              label="LinkedIn do escritório"
+              onClick={clique('rede:linkedin')}
+            >
               <LinkedinIcon width={19} height={19} />
             </SocialDot>
           )}
-          {firm.contact.whatsapp && (
+          {podeFalar && (
             <button
               type="button"
-              onClick={() => setAssistente(true)}
-              aria-label="WhatsApp do escritório"
+              onClick={abrirAssistente}
+              // Nome PRÓPRIO, diferente do botão grande logo abaixo: os dois
+              // abrem a mesma conversa, e dois controles com o mesmo nome
+              // acessível deixam quem usa leitor de tela sem saber que são o
+              // mesmo destino (foi o que o teste de fumaça pegou).
+              aria-label="Ir para a conversa com o escritório"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/12 bg-paper-soft text-ink-soft transition-colors hover:border-brass/50 hover:text-burgundy"
             >
-              <WhatsappIcon width={19} height={19} />
+              {saiPorWhatsapp ? (
+                <WhatsappIcon width={19} height={19} />
+              ) : (
+                <SparkIcon width={19} height={19} />
+              )}
             </button>
           )}
         </nav>
 
         {/* Falar com o escritório — a conversa guiada é a ação principal da
             página, então mora aqui em cima, não no rodapé. */}
-        {firm.contact.whatsapp && (
+        {podeFalar && (
           <section className="mt-7">
             {!assistente && (
               <button
                 type="button"
-                onClick={() => setAssistente(true)}
+                onClick={abrirAssistente}
                 className="flex w-full items-center gap-3 rounded-xl2 border border-ink/10 bg-paper-soft p-3.5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-brass/50 hover:shadow-lift"
               >
                 <span
@@ -210,6 +250,7 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
             {firm.contact.email && (
               <a
                 href={`mailto:${firm.contact.email}`}
+                onClick={clique('email')}
                 className="inline-flex items-center gap-1.5 transition-colors hover:text-burgundy"
               >
                 <MailIcon width={16} height={16} />
@@ -220,14 +261,18 @@ export function PaginaEscritorio({ firm }: { firm: Firm }) {
           {/* Mesmo assistente do topo: um só painel na página. Ao abrir, o
               PainelEmLinha se traz para a vista, então clicar daqui leva a pessoa
               até a conversa em vez de abrir uma segunda cópia dela. */}
-          {firm.contact.whatsapp && !assistente && (
+          {podeFalar && !assistente && (
             <button
               type="button"
-              onClick={() => setAssistente(true)}
+              onClick={abrirAssistente}
               className="btn-primary mt-4 w-full"
               style={{ background: 'var(--firm-accent)' }}
             >
-              <WhatsappIcon width={18} height={18} />
+              {saiPorWhatsapp ? (
+                <WhatsappIcon width={18} height={18} />
+              ) : (
+                <SparkIcon width={18} height={18} />
+              )}
               Falar com o escritório
             </button>
           )}
@@ -250,15 +295,18 @@ function SocialDot({
   href,
   label,
   children,
+  onClick,
 }: {
   href: string
   label: string
   children: React.ReactNode
+  onClick?: (e: React.MouseEvent) => void
 }) {
   return (
     <a
       href={href}
       {...comoAbrirFora()}
+      onClick={onClick}
       aria-label={label}
       className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/12 bg-paper-soft text-ink-soft transition-colors hover:border-brass/50 hover:text-burgundy"
     >

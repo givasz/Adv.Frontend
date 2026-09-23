@@ -12,10 +12,10 @@ import { MeetingRequestForm } from './MeetingRequestForm'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import {
   Bubble,
+  CampoDaTriagem,
   cap,
   Chip,
   ChipRow,
-  ChipToggle,
   Composer,
   Summary,
   TypingDots,
@@ -35,7 +35,6 @@ import {
 } from '@/lib/assistant'
 import {
   AVISO_DE_SEGURANCA,
-  formatarData,
   limparResposta,
   pedeOrientacaoJuridica,
   proximaPergunta,
@@ -43,7 +42,6 @@ import {
   respostaLivre,
   respostaNeutra,
   tetoDaResposta,
-  type PerguntaDeTriagem,
   type RespostaDeTriagem,
   type RespostasDoCaminho,
   etapaNaConversa,
@@ -958,154 +956,6 @@ function useAutoStart(start: () => void, autoStart: boolean) {
   useEffect(() => {
     if (autoStart) start()
   }, [start, autoStart])
-}
-
-// ---- A área de resposta de uma pergunta da triagem -------------------------
-//
-// Um tipo por vez, e nenhum deles é um formulário: escolha vira chip, sim/não
-// vira dois chips, texto vira o mesmo campo do resto da conversa. O visitante
-// não deve perceber que mudou de mecanismo no meio do caminho.
-//
-// O enunciado JÁ FOI DITO pelo assistente, no balão acima. Aqui o rótulo é o do
-// gesto ("Escolha uma opção"), e o `aria-label` do campo livre repete a pergunta
-// — quem ouve a tela precisa do vínculo que o olho faz sozinho.
-
-const ROTULO_DO_GESTO: Record<PerguntaDeTriagem['kind'], string> = {
-  escolha: 'Escolha uma opção',
-  multipla: 'Marque quantas quiser',
-  'sim-nao': 'Sim ou não',
-  atendimento: 'Formato do atendimento',
-  data: 'Escolha uma data',
-  texto: 'Sua resposta',
-  'texto-longo': 'Sua resposta',
-  contato: 'Seu nome',
-}
-
-function CampoDaTriagem({
-  pergunta,
-  indice,
-  draft,
-  setDraft,
-  marcadas,
-  setMarcadas,
-  onResponder,
-  endereco,
-}: {
-  pergunta: PerguntaDeTriagem
-  indice: number
-  draft: string
-  setDraft: (v: string) => void
-  marcadas: string[]
-  setMarcadas: (v: string[]) => void
-  onResponder: (indice: number, texto: string, antes?: string[], opcoes?: string[]) => void
-  /** fala do endereço, dita quando a pessoa escolhe presencial */
-  endereco: string
-}) {
-  const rotulo = ROTULO_DO_GESTO[pergunta.kind]
-  const pular = pergunta.optional ? (
-    <Chip subtle onClick={() => onResponder(indice, '')}>
-      Prefiro não responder
-    </Chip>
-  ) : null
-
-  // Escolha, sim/não e atendimento são o MESMO gesto: uma fileira de opções.
-  // As três guardam suas opções no mesmo lugar (as duas últimas com a lista
-  // fixa, posta pelo normalizador) — é isso que faz ramificar ser um mecanismo
-  // só, e não três.
-  if (pergunta.kind !== 'multipla' && pergunta.options?.length) {
-    return (
-      <ChipRow label={rotulo}>
-        {pergunta.options.map((o) => (
-          <Chip
-            key={o.id}
-            onClick={() =>
-              // Escolher "presencial" é a hora de dizer onde fica o escritório —
-              // quem acabou de decidir sair de casa pergunta "onde?" em seguida.
-              onResponder(
-                indice,
-                o.texto,
-                pergunta.kind === 'atendimento' && o.id === 'presencial' && endereco
-                  ? [endereco]
-                  : [],
-                // O id da opção é o que decide o CAMINHO. O texto é o que vai na
-                // mensagem; usá-lo como chave soltaria a pergunta ligada a cada
-                // correção de digitação do advogado.
-                [o.id],
-              )
-            }
-          >
-            {o.texto}
-          </Chip>
-        ))}
-        {pular}
-      </ChipRow>
-    )
-  }
-
-  if (pergunta.kind === 'multipla') {
-    const alterna = (id: string) =>
-      setMarcadas(marcadas.includes(id) ? marcadas.filter((x) => x !== id) : [...marcadas, id])
-    return (
-      <div>
-        <ChipRow label={rotulo}>
-          {(pergunta.options ?? []).map((o) => (
-            <ChipToggle key={o.id} on={marcadas.includes(o.id)} onClick={() => alterna(o.id)}>
-              {o.texto}
-            </ChipToggle>
-          ))}
-        </ChipRow>
-        <div className="mt-2.5 flex items-center gap-3">
-          <button
-            type="button"
-            disabled={!marcadas.length}
-            // A ordem das OPÇÕES manda, não a ordem em que foram tocadas: a
-            // resposta é lida pelo advogado, e ele reconhece a própria lista.
-            // Os ids marcados viajam juntos: basta UM deles para abrir a
-            // pergunta ligada a ele (múltipla escolha só não ENCERRA a triagem).
-            onClick={() => {
-              const escolhidas = (pergunta.options ?? []).filter((o) => marcadas.includes(o.id))
-              onResponder(
-                indice,
-                escolhidas.map((o) => o.texto).join(', '),
-                [],
-                escolhidas.map((o) => o.id),
-              )
-            }}
-            className="rounded-full px-4 py-2 text-[13.5px] font-semibold transition-opacity disabled:opacity-40"
-            style={{ background: 'var(--c-accent)', color: 'var(--c-accent-ink)' }}
-          >
-            Pronto{marcadas.length ? ` (${marcadas.length})` : ''}
-          </button>
-          {pergunta.optional && (
-            <button
-              type="button"
-              onClick={() => onResponder(indice, '')}
-              className="t-faint text-[13px] font-medium underline-offset-4 hover:underline"
-            >
-              Prefiro não responder
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // Campo escrito: data, resposta curta, resposta longa e o nome.
-  const data = pergunta.kind === 'data'
-  return (
-    <Composer
-      value={draft}
-      onChange={setDraft}
-      onSend={() => onResponder(indice, data ? formatarData(draft) : draft)}
-      type={data ? 'date' : 'text'}
-      maxLength={tetoDaResposta(pergunta.kind)}
-      placeholder={data ? '' : pergunta.kind === 'contato' ? 'Seu nome' : 'Escreva sua resposta'}
-      label={pergunta.label}
-      skipLabel={pergunta.optional ? 'Pular' : undefined}
-      onSkip={pergunta.optional ? () => onResponder(indice, '') : undefined}
-      canSend={draft.trim().length > (pergunta.kind === 'contato' ? 1 : 0)}
-    />
-  )
 }
 
 // ---- Fio de progresso da conversa com triagem ------------------------------

@@ -18,7 +18,7 @@ import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
 import { LogoUpload } from '@/components/escritorio/LogoUpload'
 import { AdicionarAdvogado, DarAcesso } from '@/components/escritorio/GestaoAdvogados'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { TrashIcon } from '@/components/ui/icons'
+import { CalendarIcon, ChartIcon, TrashIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
 export default function FirmEditor() {
@@ -102,6 +102,31 @@ export default function FirmEditor() {
     () => (firm ? [firm.tagline, firm.about].flatMap((t) => checkCompliance(t || '')) : []),
     [firm],
   )
+  // A abertura do assistente e os assuntos também são texto público, e o servidor
+  // recusa o save com vedação neles. Cada um tem o próprio apontamento para o
+  // aviso aparecer junto do campo que o causou.
+  const assistantIssues = useMemo(
+    () => checkCompliance(firm?.assistantGreeting || ''),
+    [firm?.assistantGreeting],
+  )
+  const areaIssues = useMemo(
+    () => (firm?.extraAreas ?? []).flatMap((a) => checkCompliance(a)),
+    [firm?.extraAreas],
+  )
+  // Os assuntos que já entram sozinhos, pela área principal de cada advogado: é o
+  // que a lista abaixo mostra como fixo, para o dono não reescrever o que já existe.
+  const derivadosDosAdvogados = useMemo(() => {
+    const vistos = new Set<string>()
+    return (firm?.lawyers ?? [])
+      .map((l) => (l.area ?? '').trim())
+      .filter((a) => {
+        const chave = a.toLowerCase()
+        if (!a || vistos.has(chave)) return false
+        vistos.add(chave)
+        return true
+      })
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [firm?.lawyers])
 
   if (!firm) {
     return (
@@ -217,6 +242,30 @@ export default function FirmEditor() {
           da sociedade + um perfil para cada advogado. O grid é sempre <strong>alfabético</strong> (sem
           hierarquia — Prov. 205/2021).
         </div>
+
+        {/* As duas telas que não editam a página, mas são do escritório: o que
+            chega por ela e o movimento dela. Aqui em cima porque são o trabalho
+            RECORRENTE de quem administra — editar o institucional se faz uma vez. */}
+        {firm.slug && (
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <AtalhoDoEscritorio
+              to="/escritorio/solicitacoes"
+              titulo="Solicitações"
+              texto={
+                firm.meetingInboxEnabled
+                  ? 'Pedidos que chegaram pela página. Encaminhe a um advogado do escritório.'
+                  : 'Desligada. Hoje a conversa da página termina no WhatsApp.'
+              }
+              icone={<CalendarIcon width={17} height={17} />}
+            />
+            <AtalhoDoEscritorio
+              to="/escritorio/visitas"
+              titulo="Visitas"
+              texto="Quantas vezes a página foi aberta e o que foi usado nela."
+              icone={<ChartIcon width={17} height={17} />}
+            />
+          </div>
+        )}
 
         {/* Sociedade */}
         <Card title="A sociedade">
@@ -417,64 +466,145 @@ export default function FirmEditor() {
         <Card title="Assistente virtual">
           <p className="text-[12.5px] leading-relaxed text-ink-faint">
             Na página do escritório, quem quiser falar responde a uma conversa guiada (assunto,
-            advogado, formato e quando) e o pedido chega pronto no WhatsApp. Quem escolhe um
-            advogado com a agenda ligada vê os horários livres dessa agenda; nos outros casos, a
+            advogado, formato e quando) e o pedido chega pronto a quem vai responder. Quem escolhe
+            um advogado com a agenda ligada vê os horários livres dessa agenda; nos outros casos, a
             conversa pergunta dia e período. É um roteiro fixo: não dá orientação jurídica e não
             confirma horário.
           </p>
+
+          {/* A abertura é a primeira frase que o visitante lê. Ela passa pela
+              mesma checagem da OAB que a frase institucional — por isso o aviso
+              em linha, e não só a recusa ao salvar. */}
+          <Field
+            label="Como o assistente abre a conversa"
+            hint="Opcional. Vazio = a abertura padrão, que já diz que o atendimento é automático."
+          >
+            <TextInput
+              value={firm.assistantGreeting ?? ''}
+              onChange={(e) => set({ assistantGreeting: e.target.value })}
+              maxLength={180}
+              placeholder="Olá! Sou o assistente virtual do escritório."
+            />
+            <ComplianceHint issues={assistantIssues} />
+          </Field>
+
           <Field label="Para onde vai o pedido">
             <div className="grid gap-2">
               <RotaOption
                 checked={(firm.assistantRoute ?? 'institutional') === 'institutional'}
                 onSelect={() => set({ assistantRoute: 'institutional' })}
-                title="WhatsApp do escritório"
+                title="Para o escritório"
                 desc="O atendimento fica centralizado com a secretaria. Recomendado."
               />
               <RotaOption
                 checked={firm.assistantRoute === 'lawyer'}
                 onSelect={() => set({ assistantRoute: 'lawyer' })}
-                title="WhatsApp do advogado escolhido"
-                desc="Vai direto para quem a pessoa escolheu. Sem escolha ou sem número, volta para o escritório."
+                title="Para o advogado escolhido"
+                desc="Vai direto para quem a pessoa escolheu. Sem escolha, ou sem canal dele, volta para o escritório."
               />
             </div>
           </Field>
 
-          {/* Sem o número institucional, parte dos pedidos (ou todos) não tem para
-              onde ir — e o dono só descobriria pelo visitante. */}
-          {!firm.contact.whatsapp && (
-            <p className="rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-brass-deep">
-              {firm.assistantRoute === 'lawyer'
-                ? 'Sem o WhatsApp do escritório, quem não escolhe um advogado — ou escolhe alguém sem número — não tem para onde mandar o pedido. Preencha o WhatsApp do escritório acima.'
-                : 'Sem o WhatsApp do escritório, o assistente não tem para onde mandar o pedido. Preencha o WhatsApp do escritório acima.'}
+          {/* Caixa de solicitações: a alternativa ao WhatsApp. Ligar significa
+              passar a GUARDAR nome, contato e assunto de visitante — a decisão é
+              de quem responde pelo escritório, e o texto diz isso sem rodeio. */}
+          <Field label="Como o escritório recebe">
+            <div className="grid gap-2">
+              <RotaOption
+                checked={firm.meetingInboxEnabled !== true}
+                onSelect={() => set({ meetingInboxEnabled: false })}
+                title="Pelo WhatsApp"
+                desc="A conversa termina montando a mensagem, que sai do aparelho do visitante. O escritório não guarda nada."
+              />
+              <RotaOption
+                checked={firm.meetingInboxEnabled === true}
+                onSelect={() => set({ meetingInboxEnabled: true })}
+                title="Na caixa de solicitações"
+                desc="O pedido fica em Solicitações, para encaminhar a um advogado. Nome, contato e assunto passam a ficar guardados até alguém apagar."
+              />
+            </div>
+            {/* Com o pedido indo direto ao advogado escolhido, a caixa DELE
+                continua valendo: não seria certo o escritório desligar a própria
+                caixa e com isso desligar a de terceiro. Quem lê "o escritório não
+                guarda nada" precisa saber que o advogado pode guardar. */}
+            {firm.assistantRoute === 'lawyer' && !firm.meetingInboxEnabled && (
+              <p className="text-[12px] leading-relaxed text-ink-faint">
+                Com o pedido indo direto ao advogado escolhido, quem tiver a própria caixa ligada
+                continua recebendo por ela — no painel dele, não no do escritório.
+              </p>
+            )}
+          </Field>
+
+          {firm.meetingInboxEnabled && (
+            <p className="rounded-lg border border-ink/10 bg-paper-soft px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-soft">
+              Os pedidos chegam em{' '}
+              <Link
+                to="/escritorio/solicitacoes"
+                className="font-semibold text-burgundy underline underline-offset-2"
+              >
+                Solicitações do escritório
+              </Link>
+              . Quem administra encaminha a um advogado, e ele confirma na agenda dele.
             </p>
           )}
 
-          {/* Quem oferece horário e quem recebe só a preferência de período: sem
-              isto, o dono vê a conversa pedir "esta semana, de manhã" para um
-              advogado e horários para outro, e não entende por quê. */}
+          {/* Sem canal nenhum, parte dos pedidos (ou todos) não tem para onde ir —
+              e o dono só descobriria pelo visitante. */}
+          {!firm.contact.whatsapp && !firm.meetingInboxEnabled && (
+            <p className="rounded-lg border border-brass/25 bg-brass/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-brass-deep">
+              {firm.assistantRoute === 'lawyer'
+                ? 'Sem o WhatsApp do escritório e sem a caixa de solicitações, quem não escolhe um advogado — ou escolhe alguém sem canal — não tem para onde mandar o pedido.'
+                : 'Sem o WhatsApp do escritório e sem a caixa de solicitações, o assistente não tem para onde mandar o pedido.'}
+            </p>
+          )}
+
+          {/* Assuntos: os derivados das áreas dos advogados mais os do escritório.
+              Só os derivados deixavam a conversa sem a pergunta de assunto quando
+              ninguém tinha preenchido área — e sem nada que o dono pudesse fazer. */}
+          <Field
+            label="Assuntos que a conversa oferece"
+            hint="As áreas principais dos advogados entram sozinhas. Acrescente aqui o que o escritório atende e ninguém tem como área principal."
+          >
+            <ListaDeAssuntos
+              derivados={derivadosDosAdvogados}
+              proprios={firm.extraAreas ?? []}
+              onChange={(extraAreas) => set({ extraAreas })}
+            />
+            <ComplianceHint issues={areaIssues} />
+          </Field>
+
+          {/* Quem oferece horário, quem faz triagem e quem recebe pelo painel:
+              sem isto, o dono vê a conversa se comportar diferente a cada
+              advogado e não entende por quê. Tudo em LEITURA — cada uma dessas
+              escolhas é do advogado, no perfil dele. */}
           {firm.lawyers.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[12.5px] font-semibold text-ink">Horários na conversa</p>
+              <p className="mb-1.5 text-[12.5px] font-semibold text-ink">
+                Como a conversa se comporta com cada advogado
+              </p>
               <ul className="divide-y divide-ink/10 rounded-lg border border-ink/10">
                 {[...firm.lawyers]
                   .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
                   .map((l) => (
-                    <li
-                      key={l.id}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-[12.5px]"
-                    >
+                    <li key={l.id} className="px-3 py-2 text-[12.5px]">
                       <span className="font-medium text-ink">{l.name}</span>
-                      <span className="text-ink-faint">
+                      <span className="mt-0.5 block text-ink-faint">
                         {l.agenda
                           ? 'oferece os horários livres da agenda'
                           : 'sem agenda — pergunta dia e período'}
+                        {(l.triagem?.questions?.length ?? 0) > 0 &&
+                          ` · faz ${l.triagem!.questions.length} pergunta${l.triagem!.questions.length > 1 ? 's' : ''} de triagem`}
+                        {l.meetingInbox && ' · recebe pedidos no painel dele'}
                       </span>
                     </li>
                   ))}
               </ul>
               <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-faint">
-                Cada advogado liga a agenda no próprio perfil (Agendamento → assistente virtual) e
-                fecha os horários que marcou por fora em Sua agenda, no painel.
+                Cada advogado configura isso no próprio perfil: a agenda em Agendamento, as
+                perguntas em Triagem, e fecha os horários já marcados em Sua agenda, no painel.
+                {firm.assistantRoute === 'lawyer'
+                  ? ' Como o pedido vai direto a quem for escolhido, quem tem a caixa ligada recebe por ela.'
+                  : ' Como o pedido vem para o escritório, a caixa de cada advogado só vale no perfil dele.'}
               </p>
             </div>
           )}
@@ -572,6 +702,130 @@ export default function FirmEditor() {
 
 // Escolha do destino do assistente. Rádio de verdade (não um switch decorativo):
 // são duas opções excludentes e o teclado precisa navegar entre elas.
+/**
+ * Os assuntos que a conversa oferece: os que vêm dos advogados (fixos, em
+ * cinza) e os que o escritório escreveu (removíveis).
+ *
+ * A separação não é enfeite: o dono precisa saber o que já está lá sem ele para
+ * não reescrever "Direito de Família" que o perfil da Camila já traz — e o que
+ * ele escreve some se um advogado passar a ter aquela área? Não: repetido é
+ * dobrado uma vez só na leitura (ver firms.service.toApi), e o dele continua
+ * valendo se o advogado sair.
+ */
+/** Atalho para uma tela do escritório que não é o editor. */
+function AtalhoDoEscritorio({
+  to,
+  titulo,
+  texto,
+  icone,
+}: {
+  to: string
+  titulo: string
+  texto: string
+  icone: React.ReactNode
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-start gap-3 rounded-xl2 border border-ink/10 bg-paper p-3.5 transition-all hover:-translate-y-0.5 hover:border-burgundy/30 hover:shadow-card"
+    >
+      <span className="mt-0.5 shrink-0 rounded-lg bg-burgundy/[0.07] p-2 text-burgundy">
+        {icone}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[14px] font-semibold text-ink">{titulo}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{texto}</span>
+      </span>
+    </Link>
+  )
+}
+
+function ListaDeAssuntos({
+  derivados,
+  proprios,
+  onChange,
+}: {
+  derivados: string[]
+  proprios: string[]
+  onChange: (lista: string[]) => void
+}) {
+  const [novo, setNovo] = useState('')
+  const MAX = 12
+  const jaTem = (t: string) =>
+    [...derivados, ...proprios].some((a) => a.toLowerCase() === t.toLowerCase())
+
+  function adicionar() {
+    const texto = novo.trim().slice(0, 60)
+    if (!texto || jaTem(texto) || proprios.length >= MAX) return
+    onChange([...proprios, texto])
+    setNovo('')
+  }
+
+  return (
+    <div className="space-y-2">
+      {(derivados.length > 0 || proprios.length > 0) && (
+        <ul className="flex flex-wrap gap-1.5">
+          {derivados.map((a) => (
+            <li
+              key={`d-${a}`}
+              className="rounded-full border border-ink/10 bg-paper-soft px-2.5 py-1 text-[12.5px] text-ink-faint"
+              title="Vem da área principal de um advogado"
+            >
+              {a}
+            </li>
+          ))}
+          {proprios.map((a) => (
+            <li
+              key={`p-${a}`}
+              className="inline-flex items-center gap-1 rounded-full border border-burgundy/25 bg-burgundy/[0.06] py-1 pl-2.5 pr-1 text-[12.5px] text-ink"
+            >
+              {a}
+              <button
+                type="button"
+                onClick={() => onChange(proprios.filter((x) => x !== a))}
+                aria-label={`Remover o assunto ${a}`}
+                className="rounded-full p-0.5 text-ink-faint transition-colors hover:text-burgundy"
+              >
+                <TrashIcon width={13} height={13} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {proprios.length < MAX && (
+        <div className="flex gap-2">
+          <TextInput
+            value={novo}
+            onChange={(e) => setNovo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              // Enter dentro de um editor que salva sozinho não pode submeter
+              // nada: aqui ele só acrescenta o assunto.
+              e.preventDefault()
+              adicionar()
+            }}
+            maxLength={60}
+            placeholder="Ex.: Direito Imobiliário"
+          />
+          <button
+            type="button"
+            onClick={adicionar}
+            disabled={!novo.trim() || jaTem(novo.trim())}
+            className="shrink-0 rounded-lg border border-ink/15 px-3 text-[13px] font-semibold text-ink transition-colors hover:border-burgundy/40 disabled:opacity-40"
+          >
+            Adicionar
+          </button>
+        </div>
+      )}
+      {!derivados.length && !proprios.length && (
+        <p className="text-[12px] leading-relaxed text-ink-faint">
+          Sem nenhum assunto, a conversa pula a pergunta e vai direto para a escolha do advogado.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function RotaOption({
   checked,
   onSelect,

@@ -82,7 +82,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         paragraphs: [
           `${IDENTIFICACAO} É ela a controladora dos dados tratados na plataforma, e é a ela que se dirigem os pedidos desta Política.`,
           'Esta Política explica como a plataforma advoc.me ("advoc.me", "nós") trata dados pessoais. Ela vale para quatro pessoas diferentes: o advogado que cria uma conta, as pessoas que ele cita no próprio perfil ou convida para um escritório, quem visita um perfil e quem denuncia um perfil. O tratamento observa a Lei nº 13.709/2018 (LGPD).',
-          'Se você é VISITANTE de um perfil, há dois caminhos: no contato direto, a mensagem sai do seu aparelho para o WhatsApp do advogado e não fica no advoc.me. Quando você escolhe enviar uma solicitação pelo mini-site, guardamos nome, contato, assunto, horário preferido e respostas da triagem no painel privado do advogado para que ele responda. Você é informado e confirma esse envio antes de concluir.',
+          'Se você é VISITANTE de um perfil ou da página de um escritório, há dois caminhos: no contato direto, a mensagem sai do seu aparelho para o WhatsApp e não fica no advoc.me. Quando você escolhe enviar uma solicitação pelo site, guardamos nome, contato, assunto, horário preferido e respostas da triagem no painel privado de quem vai responder — o advogado, ou o escritório, quando o pedido chega pela página da sociedade. Você é informado e confirma esse envio antes de concluir.',
         ],
       },
       {
@@ -93,8 +93,9 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           `Registro de acesso: cada entrada na sua conta e cada publicação de perfil ficam registradas com data, hora, endereço IP e identificação do navegador, por ${PRAZO_ACESSO}. É o que o art. 15 do Marco Civil da Internet exige de quem opera uma aplicação como esta, e é também o que permite dizer quem publicou um conteúdo quando alguém questiona. Fica sob sigilo, sem tela pública, e só é entregue mediante ordem de autoridade competente.`,
           'Seu perfil: tudo o que você escreve e publica nele — nome, número de inscrição na OAB, foto, cidade/UF, endereço do escritório (se optar por mostrá-lo), áreas de atuação e suas descrições, apresentação, frase de apresentação, perguntas frequentes, links de contato e redes, vídeo, grade de horários do assistente, cor e nome de marca. Perfil publicado é público por natureza.',
           'Agenda digital: os compromissos que o advogado cria, com nome, dia, hora e duração, ficam em área privada. Só os horários ocupados são usados para deixar de oferecer vagas sobrepostas no assistente.',
-          'Solicitações de reunião: quando o visitante escolhe enviar pelo mini-site, guardamos nome, WhatsApp ou e-mail, assunto, horário preferido e respostas da triagem para mostrar ao advogado no painel. O pedido pode ser excluído pelo advogado e é apagado automaticamente após 180 dias.',
-          'Uso do seu perfil: contamos acontecimentos, nunca pessoas — quantas vezes o perfil foi aberto, qual botão foi tocado e em que dia e hora. Não guardamos endereço IP, identificação do aparelho nem cookie de quem visita; por isso não existe "visitantes únicos".',
+          'Solicitações de reunião: quando o visitante escolhe enviar pelo site, guardamos nome, WhatsApp ou e-mail, assunto, horário preferido e respostas da triagem para mostrar no painel de quem vai responder. O pedido pode ser excluído por quem o recebeu e é apagado automaticamente após 180 dias.',
+          'Solicitações que chegam pela página de um escritório: ficam no painel da sociedade, onde quem a administra as encaminha ao advogado que vai responder — e passam a aparecer também no painel dele. Guardamos ainda o advogado que o visitante pediu na conversa, quando ele pediu algum. Quem administra o escritório vê os pedidos que entraram pela página dele; pedidos feitos no perfil individual de um advogado não são vistos pelo escritório.',
+          'Uso do seu perfil e da página do escritório: contamos acontecimentos, nunca pessoas — quantas vezes a página foi aberta, qual botão foi tocado e em que dia e hora. Não guardamos endereço IP, identificação do aparelho nem cookie de quem visita; por isso não existe "visitantes únicos". Os números da página do escritório são só dela: o movimento do perfil de cada advogado continua sendo visto só por ele.',
           'Sua assinatura: o plano contratado, a situação da cobrança, as datas do período pago e da carência, os identificadores da assinatura no provedor de pagamento e o registro de cada evento de cobrança. Nunca o número do cartão — ele fica com o provedor de pagamento.',
           'Seus chamados de suporte: assunto, mensagem, as imagens que você escolher anexar, a página em que você estava e a identificação do navegador (para conseguirmos reproduzir o problema), a resposta que você recebeu e quando você a viu.',
           'Moderação: as denúncias recebidas sobre o seu perfil (motivo, descrição e, se quem denunciou quis, um e-mail para retorno), as medidas aplicadas com o motivo escrito, as contestações que você enviar e o registro de quem decidiu, quando e por quê.',
@@ -134,7 +135,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         bullets: [
           'Conta, perfil, escritório e chamados de suporte: enquanto a conta existir. Quando você a exclui, tudo isso é apagado junto (ver item 6).',
           `Imagens anexadas a chamados de suporte: até ${PRAZO_ANEXOS_SUPORTE} depois de o chamado ser marcado como resolvido, apagadas automaticamente depois disso. O chamado e a resposta continuam; só as imagens saem.`,
-          `Acontecimentos do perfil (visitas e cliques): ${PRAZO_EVENTOS}, apagados automaticamente depois disso.`,
+          `Acontecimentos do perfil e da página do escritório (visitas e cliques): ${PRAZO_EVENTOS}, apagados automaticamente depois disso.`,
           `Trilha de auditoria (retrato da apresentação, resultado da checagem e versão da política a cada publicação): ${PRAZO_AUDITORIA}.`,
           `Eventos de cobrança: ${PRAZO_COBRANCA} — é a prova de quem pagou o quê e quando, pelo tempo de contestação de qualquer cobrança.`,
           `Moderação: o conteúdo retirado do ar fica guardado por ${PRAZO_CONTEUDO_REMOVIDO}, como prova em eventual contestação; o registro da decisão (quem, quando, por quê) fica por ${PRAZO_REGISTRO_MODERACAO}.`,
@@ -273,7 +274,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           'Endereço do perfil: o endereço sem número é um recurso dos planos pagos. Ao voltar ao Free, ele passa a ter um número no fim, como o de qualquer perfil gratuito — mas só 7 dias depois, com a data avisada no painel desde o primeiro dia, para você ter tempo de atualizar cartões e links. Passado o prazo, o endereço anterior deixa de abrir e fica disponível para outra pessoa. Trocar entre planos pagos não altera o endereço.',
           'Se uma cobrança falhar, você é avisado no painel, com a data. O plano segue inteiro por 7 dias de carência (ou até o fim do mês já pago, o que for maior); depois disso os recursos do plano ficam desligados — não apagados — e voltam quando o pagamento entrar.',
           'Mudanças de preço são avisadas com pelo menos 30 dias de antecedência e nunca alcançam o mês já pago. Se não concordar, basta cancelar antes da renovação.',
-          'Escritório: o plano é contratado pelo responsável pela sociedade, inclui um número de advogados e cobra por advogado adicional. Cada membro recebe o Pro enquanto estiver na equipe; ao sair, ou se o escritório for encerrado, volta ao plano individual que tinha antes.',
+          'Escritório: o plano é contratado pelo responsável pela sociedade, inclui um número de advogados e cobra por advogado adicional. O responsável e cada membro usam o plano do escritório enquanto estiverem na equipe; ao sair, ou se o escritório for encerrado, cada um volta ao plano individual que tinha antes.',
           'Enquanto o pagamento on-line não estiver disponível, a assinatura é ativada sem cobrança e você é avisado no painel, com antecedência, antes da primeira. Os dados do cartão nunca ficam conosco: ficam com o provedor de pagamento.',
           'Quando uma medida de moderação retira o seu perfil do ar, a cobrança é suspensa enquanto ela durar — não cobramos por um serviço que nós mesmos suspendemos.',
         ],
@@ -358,13 +359,13 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         paragraphs: [
           `Controlador: ${OPERADOR.razaoSocial}, CNPJ ${OPERADOR.cnpj}, que opera o advoc.me.`,
           'O advoc.me é controlador dos dados necessários para operar a plataforma: conta, perfil, assinatura, suporte e moderação. Os provedores de hospedagem, de geração de texto por IA, de envio de e-mail e, quando ativo, de pagamento são operadores, que tratam dados só sob nossas instruções.',
-          'Contatos diretos pelo WhatsApp não passam por nós. Solicitações enviadas no mini-site passam pela plataforma e ficam no painel privado do advogado por até 180 dias. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
+          'Contatos diretos pelo WhatsApp não passam por nós. Solicitações enviadas no site passam pela plataforma e ficam por até 180 dias no painel privado de quem vai responder — o advogado, ou o escritório, quando o pedido chega pela página da sociedade. O advogado que cadastra dados de colegas num escritório responde pela autorização deles.',
         ],
       },
       {
         heading: '2. Princípios que viraram decisões de produto',
         bullets: [
-          'Necessidade e minimização: o envio de uma solicitação pelo mini-site é opcional. Pedimos um canal de resposta (WhatsApp ou e-mail), o assunto em poucas palavras e consentimento explícito. O pedido é apagado em até 180 dias ou antes, pelo advogado.',
+          'Necessidade e minimização: o envio de uma solicitação pelo site é opcional. Pedimos um canal de resposta (WhatsApp ou e-mail), o assunto em poucas palavras e consentimento explícito. O pedido é apagado em até 180 dias ou antes, por quem o recebeu.',
           'Finalidade: contamos acontecimentos no perfil, não pessoas. Não há endereço IP, cookie ou identificação de aparelho nesses registros, e não há "de onde veio o visitante", porque saber isso exigiria guardar de onde ele veio.',
           'Transparência: o que guardamos está listado em português na tela "Seus dados" da sua conta, antes de qualquer botão, e nesta documentação.',
           'Livre acesso e portabilidade: a cópia dos seus dados sai em JSON, formato aberto, sem pedir a ninguém.',

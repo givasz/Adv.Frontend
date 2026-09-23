@@ -1,10 +1,24 @@
 import { useState, type FormEvent } from 'react'
-import { agendaDigital } from '@/lib/agendaDigital'
+import { agendaDigital, type AlvoDoPedido } from '@/lib/agendaDigital'
 import type { RespostaDeTriagem } from '@/lib/triagem'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
 
+/**
+ * O que a tela diz depois do envio. Quem recebeu importa: num pedido endereçado
+ * ao advogado é ele quem responde; na caixa do escritório, quem administra
+ * encaminha primeiro — e prometer resposta direta seria a tela mentindo sobre
+ * quantas mãos o pedido ainda vai passar.
+ */
+function quemRecebeu(alvo: AlvoDoPedido, lawyerId?: string): string {
+  if (alvo === 'escritorio' && !lawyerId) {
+    return 'O escritório recebeu seus dados no painel e vai encaminhar a quem for responder. O horário só fica marcado após a confirmação.'
+  }
+  return 'O advogado recebeu seus dados no painel e entrará em contato pelo canal informado. O horário só fica marcado após a confirmação dele.'
+}
+
 export function MeetingRequestForm({
   slug, initialName = '', initialSubject = '', preferredAt = '', triage = [], demo = false, themed = false, contactOnly = false,
+  alvo = 'perfil', lawyerId,
 }: {
   slug: string
   initialName?: string
@@ -14,6 +28,10 @@ export function MeetingRequestForm({
   demo?: boolean
   themed?: boolean
   contactOnly?: boolean
+  /** a página que recebe: o perfil de um advogado (padrão) ou um escritório */
+  alvo?: AlvoDoPedido
+  /** escritório: o advogado escolhido; sem ele o pedido fica na caixa da sociedade */
+  lawyerId?: string
 }) {
   const [name, setName] = useState(initialName)
   const [subject, setSubject] = useState(initialSubject)
@@ -32,7 +50,7 @@ export function MeetingRequestForm({
     setBusy(true)
     setError('')
     try {
-      await agendaDigital.submit(slug, { name, whatsapp, email, subject, preferredAt: contactOnly ? undefined : when || undefined, triage, consent })
+      await agendaDigital.submit(slug, { name, whatsapp, email, subject, preferredAt: contactOnly ? undefined : when || undefined, triage, consent, lawyerId }, alvo)
       setSent(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível enviar. Tente novamente.')
@@ -49,8 +67,8 @@ export function MeetingRequestForm({
 
   if (sent) return (
     <div role="status" className={themed ? 'rounded-xl border p-5 text-center' : 'rounded-xl border border-brass/30 bg-brass/10 p-5 text-center'} style={themedStyle}>
-      <p className="font-display text-xl font-semibold">{demo ? 'Este é um perfil de exemplo' : 'Solicitação enviada'}</p>
-      <p className="mt-2 text-[13px] leading-relaxed">{demo ? 'Nenhum pedido foi enviado.' : 'O advogado recebeu seus dados no painel e entrará em contato pelo canal informado. O horário só fica marcado após a confirmação dele.'}</p>
+      <p className="font-display text-xl font-semibold">{demo ? (alvo === 'escritorio' ? 'Este é um escritório de exemplo' : 'Este é um perfil de exemplo') : 'Solicitação enviada'}</p>
+      <p className="mt-2 text-[13px] leading-relaxed">{demo ? 'Nenhum pedido foi enviado.' : quemRecebeu(alvo, lawyerId)}</p>
     </div>
   )
 
@@ -85,7 +103,11 @@ export function MeetingRequestForm({
       )}
       <label className="flex items-start gap-2.5 text-[12px] leading-relaxed">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-burgundy" />
-        <span>Autorizo o envio e armazenamento destes dados no painel do advogado para resposta à solicitação.</span>
+        <span>
+          {alvo === 'escritorio' && !lawyerId
+            ? 'Autorizo o envio e armazenamento destes dados no painel do escritório para resposta à solicitação.'
+            : 'Autorizo o envio e armazenamento destes dados no painel do advogado para resposta à solicitação.'}
+        </span>
       </label>
       <PrivacyNote fluxo="solicitacao" tone={themed ? 'themed' : 'page'} />
       {error && <p role="alert" className={themed ? 'text-[12px] font-semibold' : 'text-[12px] font-semibold text-burgundy'}>{error}</p>}

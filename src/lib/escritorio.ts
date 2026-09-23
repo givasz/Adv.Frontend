@@ -4,11 +4,18 @@
 // clientes/casos, urgência ou linguagem de venda.
 
 import type { Endereco } from './endereco'
+import type { TriagemConfig } from './triagem'
 import type { AssistantConfig } from './types'
 
 /** Advogado integrante do escritório (card do grid + mini-perfil interno). */
 export interface FirmLawyer {
   id: string
+  /**
+   * Endereço do perfil individual. VAZIO no advogado que o escritório listou à
+   * mão e ainda não tem conta — é assim que o card sabe não virar link, e que a
+   * caixa de solicitações sabe que não há painel para onde encaminhar.
+   */
+  slug?: string
   name: string
   /** ex.: "OAB/SP 214.870" */
   oabNumber: string
@@ -28,6 +35,23 @@ export interface FirmLawyer {
    * para quem ligou o assistente e tem plano que permite.
    */
   agenda?: AssistantConfig
+  /**
+   * As perguntas de triagem que ELE escreveu no próprio perfil, quando valem
+   * (plano Max, interruptor ligado, ao menos uma pergunta respondível).
+   *
+   * Sem isto, escolher um advogado pela página da sociedade pulava a triagem
+   * inteira que o mesmo advogado faz no perfil dele: duas portas para a mesma
+   * pessoa, com qualidade de informação diferente. O servidor é quem decide se
+   * vale (profiles/agenda-publica.ts) — aqui só se lê.
+   */
+  triagem?: TriagemConfig
+  /**
+   * Ele recebe pedidos no PAINEL em vez de no WhatsApp? Quando sim, a conversa
+   * do escritório termina no formulário de solicitação, como a do perfil dele —
+   * antes, entrar por aqui ignorava a caixa que ele tinha ligado e jogava tudo
+   * no WhatsApp.
+   */
+  meetingInbox?: boolean
 }
 
 /** Grade de exemplo, a mesma forma que o editor grava (faixas + horários). */
@@ -150,6 +174,21 @@ export interface Firm {
    *                              institucional quando não há escolha ou número.
    */
   assistantRoute?: 'institutional' | 'lawyer'
+  /** Frase de abertura do assistente institucional. Vazio = a fala padrão. */
+  assistantGreeting?: string
+  /**
+   * Assuntos escritos por quem administra, ALÉM dos derivados da área principal
+   * de cada advogado. A lista que a conversa oferece é a soma das duas: só as
+   * derivadas deixavam sem pergunta de assunto o escritório cujos membros ainda
+   * não preencheram área, e sem nada que o dono pudesse fazer a respeito.
+   */
+  extraAreas?: string[]
+  /**
+   * Os pedidos da página institucional chegam à caixa do escritório em vez de
+   * sair pelo WhatsApp. Desligado por padrão: ligar é passar a GUARDAR dado de
+   * visitante, e a escolha é de quem responde pelo escritório.
+   */
+  meetingInboxEnabled?: boolean
   // ---- Gestão: só vem em /firms/me (editor). A página pública não recebe. ----
   /** membros e convites pendentes, em ordem alfabética (nunca por senioridade) */
   members?: FirmMember[]
@@ -213,6 +252,39 @@ export const sampleFirm: Firm = {
       whatsapp: '5511990000001',
       // Usa a agenda do assistente: a conversa do escritório oferece os horários dela.
       agenda: gradeDeExemplo('09:00', '12:00', ['09:00', '10:00', '11:00']),
+      // E recebe no PAINEL, não no WhatsApp: escolhendo-a, a conversa termina no
+      // formulário de solicitação. Com a Camila no WhatsApp e ela na caixa, o
+      // exemplo mostra os DOIS caminhos — e é a caixa do advogado valendo também
+      // na página da sociedade, que era o que faltava.
+      meetingInbox: true,
+      // E a triagem DELA: quem a escolhe pela página do escritório responde às
+      // mesmas perguntas que responderia no perfil dela. Enunciados factuais, sem
+      // promessa e sem pedir detalhe do caso (Prov. 205/2021 e a guarda de dados
+      // do aviso de privacidade).
+      triagem: {
+        enabled: true,
+        questions: [
+          {
+            id: 'e1',
+            kind: 'escolha',
+            label: 'A empresa já foi formalizada?',
+            options: [
+              { id: 'sim', texto: 'Sim' },
+              { id: 'nao', texto: 'Ainda não' },
+            ],
+          },
+          {
+            id: 'e2',
+            kind: 'escolha',
+            label: 'Existe prazo ou audiência marcada?',
+            options: [
+              { id: 'p-sim', texto: 'Sim' },
+              { id: 'p-nao', texto: 'Não' },
+              { id: 'p-nsei', texto: 'Não sei' },
+            ],
+          },
+        ],
+      },
     },
     {
       id: 'l2',
@@ -225,6 +297,8 @@ export const sampleFirm: Firm = {
       linkedin: 'https://linkedin.com/in/camila-nunes',
       whatsapp: '5511990000002',
       agenda: gradeDeExemplo('14:00', '18:00', ['14:00', '15:00', '16:00', '17:00']),
+      // Sem caixa de propósito: escolhendo-a, o pedido sai pelo WhatsApp DELA —
+      // é a demonstração do encaminhamento direto (assistantRoute 'lawyer').
     },
     {
       id: 'l3',
@@ -315,6 +389,9 @@ export function blankFirm(): Firm {
     areas: [],
     lawyers: [],
     assistantRoute: 'institutional',
+    assistantGreeting: '',
+    extraAreas: [],
+    meetingInboxEnabled: false,
   }
 }
 

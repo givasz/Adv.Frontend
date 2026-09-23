@@ -10,6 +10,24 @@ export interface CalendarEntry {
 
 export interface MeetingRequest {
   id: string
+  /**
+   * Só na caixa do ESCRITÓRIO: o advogado a quem o pedido já está endereçado.
+   * `null` = ninguém foi escolhido e quem administra ainda vai encaminhar.
+   */
+  lawyer?: { id: string; name: string } | null
+  /**
+   * Preenchido quando o pedido entrou pela página de um ESCRITÓRIO. Muda duas
+   * coisas na tela do advogado: a origem fica dita, e o botão de excluir sai —
+   * o registro é da sociedade, e quem o apaga é quem administra (o advogado
+   * responde, confirma e nega, mas não elimina o que não é dele).
+   */
+  firmId?: string | null
+  /**
+   * Só na caixa do ESCRITÓRIO: o advogado que o visitante pediu, quando é
+   * diferente de quem vai responder. Perder essa escolha seria jogar fora a
+   * única coisa que ele disse sobre com quem quer falar.
+   */
+  preferido?: { id: string; name: string } | null
   name: string
   whatsapp?: string | null
   email?: string | null
@@ -30,9 +48,26 @@ export interface MeetingRequestInput {
   preferredAt?: string
   triage?: RespostaDeTriagem[]
   consent: boolean
+  /**
+   * Só no pedido feito pela página do ESCRITÓRIO: o id do perfil do advogado que
+   * o VISITANTE escolheu na conversa. Vai sempre que houve escolha — quem decide
+   * se isso endereça o pedido a ele ou fica só como preferência é o servidor,
+   * conforme o escritório delegar ou centralizar o atendimento. Ele também
+   * confere que o id é mesmo de um membro ativo: o corpo é do visitante.
+   */
+  lawyerId?: string
 }
 
+/** A página que recebe o pedido: o perfil de um advogado ou a de um escritório. */
+export type AlvoDoPedido = 'perfil' | 'escritorio'
+
 export type RequestFilter = 'pending' | 'confirmed' | 'declined' | 'all'
+
+/** Um advogado do escritório, como a caixa de solicitações precisa dele. */
+export interface DestinoPossivel {
+  id: string
+  name: string
+}
 export type RequestCounts = Record<RequestFilter, number>
 
 export interface RequestPage {
@@ -92,8 +127,9 @@ export const agendaDigital = {
     write(ENTRIES_KEY, read<CalendarEntry>(ENTRIES_KEY).filter((e) => e.id !== entryId))
     write(REQUESTS_KEY, read<MeetingRequest>(REQUESTS_KEY).map((r) => r.calendarEntryId === entryId ? { ...r, calendarEntryId: null, calendarEntry: null } : r))
   },
-  async submit(slug: string, input: MeetingRequestInput): Promise<void> {
-    if (TEM_BACKEND) { await result(`/api/profiles/${encodeURIComponent(slug)}/meeting-requests`, json('POST', input)); return }
+  async submit(slug: string, input: MeetingRequestInput, alvo: AlvoDoPedido = 'perfil'): Promise<void> {
+    const porta = alvo === 'escritorio' ? 'firms' : 'profiles'
+    if (TEM_BACKEND) { await result(`/api/${porta}/${encodeURIComponent(slug)}/meeting-requests`, json('POST', input)); return }
     // Perfis demonstrativos não pertencem a alguém: o componente público os mantém em modo de exemplo.
     const request: MeetingRequest = { ...input, id: id(), triage: input.triage ?? [], status: 'pending', createdAt: new Date().toISOString() }
     write(REQUESTS_KEY, [request, ...read<MeetingRequest>(REQUESTS_KEY)])
@@ -141,5 +177,36 @@ export const agendaDigital = {
   async deleteRequest(requestId: string): Promise<void> {
     if (TEM_BACKEND) { await result(`/api/agenda/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' }); return }
     write(REQUESTS_KEY, read<MeetingRequest>(REQUESTS_KEY).filter((r) => r.id !== requestId))
+  },
+}
+
+/**
+ * A caixa de solicitações do ESCRITÓRIO — os pedidos que entraram pela página da
+ * sociedade.
+ *
+ * Três verbos, e o que FALTA neles é a decisão: confirmar não está aqui. O
+ * compromisso entra na agenda de uma pessoa, e marcar horário no calendário de
+ * outra seria mexer na agenda dela. Quem administra encaminha; quem confirma é o
+ * advogado, na agenda digital dele.
+ */
+export const solicitacoesDoEscritorio = {
+  async listar(page = 1, status: RequestFilter = 'all'): Promise<RequestPage> {
+    if (!TEM_BACKEND) {
+      return { items: [], page: 1, pageSize: 10, total: 0, totalPages: 1, pendingCount: 0, counts: { pending: 0, confirmed: 0, declined: 0, all: 0 } }
+    }
+    return result(`/api/firms/me/requests?page=${page}&status=${status}`)
+  },
+  /** Endereça o pedido a um advogado do escritório: ele passa a vê-lo na agenda dele. */
+  async encaminhar(requestId: string, lawyerId: string): Promise<void> {
+    if (!TEM_BACKEND) return
+    await result(`/api/firms/me/requests/${encodeURIComponent(requestId)}`, json('PATCH', { lawyerId }))
+  },
+  async negar(requestId: string): Promise<void> {
+    if (!TEM_BACKEND) return
+    await result(`/api/firms/me/requests/${encodeURIComponent(requestId)}`, json('PATCH', { status: 'declined' }))
+  },
+  async apagar(requestId: string): Promise<void> {
+    if (!TEM_BACKEND) return
+    await result(`/api/firms/me/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' })
   },
 }

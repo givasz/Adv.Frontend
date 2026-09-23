@@ -251,8 +251,14 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: 'Página institucional da sociedade' },
       { text: `${FIRM_PRICING.includedSeats} advogados inclusos` },
       { text: `+ R$ ${FIRM_PRICING.extraSeatPrice}/mês por advogado adicional` },
-      { text: 'Perfil Pro completo para cada advogado da equipe' },
-      { text: 'Assistente do escritório encaminha por área ao advogado certo' },
+      // O tier do escritório é o mais alto, e vale para QUEM CRIA a sociedade
+      // também — não só para quem é convidado (ver firms.service.createOrUpdate).
+      { text: 'Perfil Max completo para cada advogado da equipe, e para quem administra' },
+      // "ao advogado certo" saiu: quem escolhe é o visitante, e a lista é
+      // alfabética. Sugerir que a plataforma aponta o mais indicado é ranking, e
+      // ranking é o que o Prov. 205/2021 veda.
+      { text: 'Assistente do escritório organiza o pedido e encaminha a quem o visitante escolher' },
+      { text: 'Caixa de solicitações da sociedade, para encaminhar a um advogado' },
       { text: 'Marca do escritório no lugar da nossa' },
     ],
     ctaTo: '/escritorio/editar',

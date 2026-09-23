@@ -166,6 +166,10 @@ const ROTAS = [
   ['/legal', 'documentos legais'],
   ['/legal/termos', 'termos'],
   ['/escritorio/editar', 'escritório · editor'],
+  // As duas telas do escritório que não editam a página: o que chega por ela e
+  // o movimento dela.
+  ['/escritorio/solicitacoes', 'escritório · solicitações'],
+  ['/escritorio/visitas', 'escritório · visitas'],
   [`/escritorio/${FIRM_SLUG}`, 'escritório · página'],
   [`/${SLUG}`, 'perfil público'],
   [`/${SLUG}/agendar`, 'perfil · agendar'],
@@ -184,7 +188,7 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
 const EXIGEM_CONTA =
-  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/editar|contratos(?!\/conferir))/
+  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/(editar|solicitacoes|visitas)|contratos(?!\/conferir))/
 
 const navegador = await chromium.launch()
 const falhas = []
@@ -371,6 +375,69 @@ async function conversaDeTeste() {
 }
 
 // Escritório: assunto → advogado → formato → período → nome → WhatsApp.
+// A conversa do escritório com TRIAGEM e caixa de solicitações.
+//
+// Beatriz Andrade tem as duas coisas no exemplo: perguntas de triagem (que o
+// perfil dela faria) e a caixa ligada. Escolhê-la pela página da sociedade tem de
+// fazer as MESMAS perguntas e terminar no formulário — não no WhatsApp. Era
+// exatamente isso que não atravessava: entrar pela sociedade pulava a triagem e
+// ignorava a caixa do advogado.
+async function triagemNoEscritorio() {
+  const { contexto, pagina, erros } = await abrir(`/escritorio/${FIRM_SLUG}`)
+  try {
+    await clicar(pagina, 'Falar com o escritório')
+    await clicar(pagina, 'Direito Empresarial')
+    await clicar(pagina, 'Beatriz Andrade')
+
+    // As perguntas são as DELA. Se a triagem não atravessar, a conversa vai
+    // direto para "Presencial / Online" e este passo estoura.
+    await clicar(pagina, 'Ainda não')
+    await clicar(pagina, 'Não sei')
+
+    await clicar(pagina, 'Online')
+    const dia = pagina.locator('button').filter({ hasText: /^(seg|ter|qua|qui|sex|sáb|dom),/i }).first()
+    await dia.waitFor({ timeout: ESPERA })
+    await dia.click()
+    const hora = pagina.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).first()
+    await hora.waitFor({ timeout: ESPERA })
+    await hora.click()
+    const nome = pagina.getByLabel('Seu nome')
+    await nome.waitFor({ timeout: ESPERA })
+    await nome.fill('Visitante Smoke')
+    await clicar(pagina, 'Enviar resposta')
+
+    // Destino é CAIXA: não há link de WhatsApp, há o formulário.
+    const botao = pagina.getByRole('button', { name: /Enviar solicitação no site/ })
+    await botao.waitFor({ timeout: ESPERA })
+    if (await pagina.getByRole('link', { name: /Enviar para/ }).count()) {
+      erros.push('com a caixa da advogada ligada, o pedido ainda saiu pelo WhatsApp')
+    }
+
+    // O resumo mostra para ONDE o pedido vai — painel, não WhatsApp.
+    const corpo = await pagina.locator('body').innerText()
+    if (!corpo.includes('Painel de Beatriz Andrade')) {
+      erros.push('o resumo não disse que o pedido vai para o painel da advogada')
+    }
+    // E as respostas da triagem aparecem no resumo, para a pessoa reler.
+    if (!corpo.includes('A empresa já foi formalizada?')) {
+      erros.push('as respostas da triagem não apareceram no resumo do pedido')
+    }
+
+    await botao.click()
+    const consent = pagina.getByRole('checkbox')
+    await consent.waitFor({ timeout: ESPERA })
+    await pagina.getByLabel('E-mail').fill('visitante@exemplo.com')
+    await consent.check()
+    await clicar(pagina, 'Enviar solicitação')
+    // Escritório de EXEMPLO: o formulário confirma sem enviar nada.
+    await pagina.getByText('Este é um escritório de exemplo').waitFor({ timeout: ESPERA })
+  } catch (e) {
+    erros.push(String(e).split('\n')[0])
+  }
+  await contexto.close()
+  return erros
+}
+
 async function conversaDoEscritorio() {
   const { contexto, pagina, erros } = await abrir(`/escritorio/${FIRM_SLUG}`)
   try {
@@ -1212,6 +1279,7 @@ const CONVERSAS = [
   ['teste do próprio assistente', conversaDeTeste],
   ['tela da triagem: montar, ver o roteiro e acessibilidade', acessibilidadeDaTriagem],
   ['assistente do escritório', conversaDoEscritorio],
+  ['triagem e caixa na página do escritório', triagemNoEscritorio],
   ['painel de moderação (por dentro)', painelDeModeracao],
 ]
 

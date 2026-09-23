@@ -690,6 +690,12 @@ export interface FirmAssistantAnswers {
   /** rótulo da preferência de horário (ver FIRM_PERIODS) — quando não há agenda */
   period?: string
   name?: string
+  /**
+   * As respostas da triagem DO ADVOGADO ESCOLHIDO, quando ele tem uma. Vazio
+   * quando ninguém foi escolhido, quando o escolhido não tem triagem, ou quando
+   * ele não tem conta (advogado listado pelo escritório).
+   */
+  triagem?: RespostaDeTriagem[]
 }
 
 /**
@@ -713,10 +719,14 @@ export function buildFirmAssistantMessage(
     horario && durationMin ? `Duração prevista: ${durationMin} min` : null,
     !horario && answers.period ? `Preferência de horário: ${answers.period}` : null,
   ]
+  // O bloco da triagem sai exatamente como no perfil individual (mesma função):
+  // é a mesma triagem, lida pela mesma pessoa — só a porta de entrada mudou.
+  const triagem = linhasDaTriagem(answers.triagem ?? [])
   return [
     `Olá! Vim pela página do ${firmName} no advoc.me e gostaria de marcar uma conversa.`,
     '',
     ...fields.filter((l): l is string => !!l),
+    ...(triagem.length ? ['', ...triagem] : []),
     '',
     'Fico no aguardo da confirmação.',
   ].join('\n')
@@ -730,54 +740,84 @@ export function buildFirmAssistantMessage(
  * WhatsApp.
  */
 export interface FirmAssistantDestination {
-  /** número que vai receber; ausente = ninguém informou WhatsApp */
+  /** número que vai receber; ausente = ninguém informou WhatsApp (ou o pedido vai por caixa) */
   whatsapp?: string
   /** para quem o pedido vai, em palavras — a conversa mostra isso ao visitante */
   label: string
   /** true quando o pedido vai direto ao advogado escolhido */
   direct: boolean
+  /**
+   * O pedido é ENTREGUE NUMA CAIXA, e não pelo WhatsApp:
+   *   'lawyer' → painel do advogado escolhido (ele ligou a caixa no perfil dele);
+   *   'firm'   → caixa do escritório, de onde quem administra encaminha.
+   * `null` = sai pelo WhatsApp, como sempre saiu.
+   */
+  inbox: 'lawyer' | 'firm' | null
 }
 
 /** O que o assistente precisa saber do escritório para decidir o destino. */
 interface EscritorioDoAssistente {
   contact: { whatsapp?: string }
-  lawyers: { id?: string; name: string; whatsapp?: string }[]
+  lawyers: { id?: string; name: string; whatsapp?: string; meetingInbox?: boolean }[]
   assistantRoute?: string
+  meetingInboxEnabled?: boolean
 }
 
-/** Para quem o pedido vai, com o nome — o visitante precisa saber antes de enviar. */
+/** O advogado que o visitante escolheu, achado pelo id (nomes se repetem). */
+function advogadoEscolhido(firm: EscritorioDoAssistente, answers: FirmAssistantAnswers) {
+  if (!answers.lawyerId && !answers.lawyer) return undefined
+  // Pelo id quando há: dois advogados com o mesmo nome (um com conta, outro
+  // listado pelo escritório) mandariam o pedido para o lugar errado.
+  return answers.lawyerId
+    ? firm.lawyers.find((l) => l.id === answers.lawyerId)
+    : firm.lawyers.find((l) => l.name === answers.lawyer)
+}
+
+/**
+ * Para quem o pedido vai, com o nome — o visitante precisa saber antes de enviar.
+ *
+ * A ordem respeita quem decide o quê. `assistantRoute` é a escolha do ESCRITÓRIO
+ * sobre a própria página: só quando ele delega ('lawyer') o pedido sai direto
+ * para o advogado escolhido — e aí a caixa DELE vence o WhatsApp dele, porque
+ * caixa ligada é o advogado dizendo onde quer receber. Era justamente isso que
+ * faltava: entrar pela página da sociedade ignorava a caixa do advogado e jogava
+ * tudo no WhatsApp, enquanto o perfil dele mandava para o painel.
+ *
+ * Fora disso, o pedido é do escritório: caixa da sociedade, se ligada; senão, o
+ * WhatsApp institucional.
+ */
 export function firmAssistantDestination(
   firm: EscritorioDoAssistente,
   answers: FirmAssistantAnswers,
 ): FirmAssistantDestination {
-  if (firm.assistantRoute === 'lawyer' && (answers.lawyerId || answers.lawyer)) {
-    // Pelo id quando há: dois advogados com o mesmo nome (um com conta, outro
-    // listado pelo escritório) mandariam o pedido para o número errado.
-    const escolhido = answers.lawyerId
-      ? firm.lawyers.find((l) => l.id === answers.lawyerId)
-      : firm.lawyers.find((l) => l.name === answers.lawyer)
+  if (firm.assistantRoute === 'lawyer') {
+    const escolhido = advogadoEscolhido(firm, answers)
+    if (escolhido?.meetingInbox) {
+      return { label: escolhido.name, direct: true, inbox: 'lawyer' }
+    }
     // Número que não serve para o wa.me é o mesmo que não ter número: anunciar
     // "vai para Fulano" e entregar um link morto é pior que cair no escritório.
     if (escolhido?.whatsapp && whatsappHref(escolhido.whatsapp)) {
-      return { whatsapp: escolhido.whatsapp, label: escolhido.name, direct: true }
+      return { whatsapp: escolhido.whatsapp, label: escolhido.name, direct: true, inbox: null }
     }
   }
-  return { whatsapp: firm.contact.whatsapp, label: 'o escritório', direct: false }
+  if (firm.meetingInboxEnabled) return { label: 'o escritório', direct: false, inbox: 'firm' }
+  return { whatsapp: firm.contact.whatsapp, label: 'o escritório', direct: false, inbox: null }
 }
 
-/** Sem escolher advogado, o pedido tem para onde ir? Esse caminho é sempre o WhatsApp do escritório. */
+/** Sem escolher advogado, o pedido tem para onde ir? Caixa da sociedade ou WhatsApp dela. */
 export function firmRecebeSemPreferencia(firm: EscritorioDoAssistente): boolean {
-  return !!whatsappHref(firm.contact.whatsapp)
+  return firm.meetingInboxEnabled === true || !!whatsappHref(firm.contact.whatsapp)
 }
 
 /** Um pedido para ESTE advogado chega a alguém — direto a ele ou pelo escritório? */
 export function firmAlcancaAdvogado(
   firm: EscritorioDoAssistente,
-  lawyer: { whatsapp?: string },
+  lawyer: { whatsapp?: string; meetingInbox?: boolean },
 ): boolean {
   return (
     firmRecebeSemPreferencia(firm) ||
-    (firm.assistantRoute === 'lawyer' && !!whatsappHref(lawyer.whatsapp))
+    (firm.assistantRoute === 'lawyer' && (lawyer.meetingInbox === true || !!whatsappHref(lawyer.whatsapp)))
   )
 }
 
@@ -803,8 +843,9 @@ export function firmAssistantWhatsappHref(
   answers: FirmAssistantAnswers,
   durationMin?: number,
 ): string | undefined {
-  // `firmAssistantWhatsapp` é quem escolhe o DESTINATÁRIO (o advogado da área, ou
-  // a sociedade). Só o formato do número é assunto de `whatsappHref`.
+  // `firmAssistantWhatsapp` é quem escolhe o DESTINATÁRIO (o advogado escolhido, ou
+  // a sociedade). Só o formato do número é assunto de `whatsappHref`. Destino que
+  // é CAIXA não tem número e devolve undefined — a conversa termina no formulário.
   return whatsappHref(
     firmAssistantWhatsapp(firm, answers),
     buildFirmAssistantMessage(firm.name, answers, durationMin),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { solicitacoesDoEscritorio } from '@/lib/agendaDigital'
 import type { Firm, FirmInvite } from '@/lib/escritorio'
 import { ScaleIcon } from '@/components/ui/icons'
 
@@ -19,6 +20,9 @@ export function EscritorioCard() {
   const [firm, setFirm] = useState<Firm | null>(null)
   const [invites, setInvites] = useState<FirmInvite[]>([])
   const [carregando, setCarregando] = useState(true)
+  // Pedidos da página do escritório ainda sem resposta. É a única coisa aqui que
+  // é TAREFA, e por isso vira destaque — o resto do cartão é navegação.
+  const [pendentes, setPendentes] = useState(0)
   const [respondendo, setRespondendo] = useState('')
   const [erro, setErro] = useState('')
 
@@ -30,6 +34,15 @@ export function EscritorioCard() {
     setFirm(meu && meu.name ? meu : null)
     setInvites(convites)
     setCarregando(false)
+    // Só faz sentido perguntar a quem administra um escritório com a caixa
+    // ligada: nos outros casos a rota devolveria 404 ou zero, e uma chamada a
+    // mais em todo carregamento do painel não se paga.
+    if (meu?.meetingInboxEnabled) {
+      const dados = await solicitacoesDoEscritorio.listar(1, 'pending').catch(() => null)
+      setPendentes(dados?.pendingCount ?? 0)
+    } else {
+      setPendentes(0)
+    }
   }, [])
 
   useEffect(() => {
@@ -114,6 +127,19 @@ export function EscritorioCard() {
                   : 'Sua sociedade de advogados.'}{' '}
                 Convide advogados e cuide da página institucional.
               </p>
+              {pendentes > 0 && (
+                <Link
+                  to="/escritorio/solicitacoes"
+                  className="mt-2.5 flex items-center justify-between gap-3 rounded-lg border border-burgundy/25 bg-burgundy/[0.06] px-3 py-2.5 transition-colors hover:border-burgundy/50"
+                >
+                  <span className="text-[13px] font-medium text-ink">
+                    {pendentes === 1
+                      ? '1 pedido esperando resposta'
+                      : `${pendentes} pedidos esperando resposta`}
+                  </span>
+                  <span className="shrink-0 text-[12.5px] font-semibold text-burgundy">Ver</span>
+                </Link>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link to="/escritorio/editar" className="btn-primary !py-1.5 !px-3 text-[12.5px]">
                   Gerenciar escritório
