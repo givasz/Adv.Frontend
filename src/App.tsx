@@ -31,6 +31,7 @@ const AdminPanel = sobDemanda(() => import('./pages/AdminPanel'))
 const Escritorio = sobDemanda(() => import('./pages/Escritorio'))
 const FirmEditor = sobDemanda(() => import('./pages/FirmEditor'))
 const SolicitacoesEscritorio = sobDemanda(() => import('./pages/SolicitacoesEscritorio'))
+const PainelEscritorio = sobDemanda(() => import('./pages/PainelEscritorio'))
 const VisitasEscritorio = sobDemanda(() => import('./pages/VisitasEscritorio'))
 const LegalPage = sobDemanda(() => import('./pages/LegalPage'))
 const ReportPage = sobDemanda(() => import('./pages/ReportPage'))
@@ -165,6 +166,7 @@ export default function App() {
         <Route path="/escritorio/editar" element={<RequireAuth><FirmEditor /></RequireAuth>} />
         {/* Antes de /escritorio/:slug, senão o Nest do roteador casaria estas
             como se fossem o endereço público de uma sociedade. */}
+        <Route path="/escritorio/painel" element={<RequireAuth><PainelEscritorio /></RequireAuth>} />
         <Route path="/escritorio/solicitacoes" element={<RequireAuth><SolicitacoesEscritorio /></RequireAuth>} />
         <Route path="/escritorio/visitas" element={<RequireAuth><VisitasEscritorio /></RequireAuth>} />
         <Route path="/escritorio/:slug" element={<Escritorio />} />

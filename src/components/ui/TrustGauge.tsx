@@ -17,10 +17,13 @@ export function TrustGauge({
   score,
   size = 148,
   stroke = 12,
+  legenda = 'de 100',
 }: {
   score: number
   size?: number
   stroke?: number
+  /** o que vai embaixo do número — "pronta" no painel do escritório */
+  legenda?: string
 }) {
   const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
@@ -57,7 +60,7 @@ export function TrustGauge({
           className="mt-0.5 font-medium uppercase tracking-wide text-ink-faint"
           style={{ fontSize: size < 110 ? 9 : 10.5 }}
         >
-          de 100
+          {legenda}
         </span>
       </div>
     </div>

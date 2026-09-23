@@ -152,8 +152,8 @@ export default function SolicitacoesEscritorio() {
       title="Solicitações do escritório"
       subtitle="Pedidos que chegaram pela página da sociedade."
       icon={<CalendarIcon width={18} height={18} />}
-      backTo="/escritorio/editar"
-      backLabel="Escritório"
+      backTo="/escritorio/painel"
+      backLabel="Painel do escritório"
       documentTitle="Solicitações do escritório · advoc.me"
     >
       {firm && !firm.meetingInboxEnabled && (

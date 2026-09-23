@@ -31,7 +31,7 @@ export function PainelHero({ profile }: { profile: Profile }) {
     <section aria-label="Seu link" className="card-paper p-4 sm:p-6" data-capa-do-perfil>
       <div className="flex items-center justify-between gap-3">
         <h2 className="eyebrow font-sans">Seu link</h2>
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
           <span className="relative flex h-1.5 w-1.5" aria-hidden>
             <span className="absolute inset-0 animate-ping rounded-full bg-emerald-600/50 motion-reduce:hidden" />
             <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-700" />

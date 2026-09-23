@@ -26,6 +26,7 @@ import { SecaoAtalho, SecaoLinha } from '@/components/painel/SecaoTile'
 import { VisitasTile } from '@/components/painel/VisitasTile'
 import { Atalho, Grupo, ListaEmCartao, SeloDoPlano } from '@/components/painel/pecas'
 import { Marca } from '@/components/ui/Marca'
+import { TrocaDePainel } from '@/components/painel/TrocaDePainel'
 
 const LAST_KEY = 'advocme:trust:last'
 
@@ -163,6 +164,8 @@ export default function Painel() {
       <main className="stagger mx-auto w-full max-w-3xl space-y-9 px-4 pb-16 pt-2 sm:space-y-11 sm:px-5 sm:pt-4">
         {/* Saudação + plano. O plano é um carimbo que leva à seção do plano. */}
         <div className="space-y-5">
+          {/* Só para quem administra um escritório: a porta do painel da sociedade. */}
+          <TrocaDePainel atual="pessoal" />
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
             <div className="flex min-w-0 items-center gap-3.5">
               <Avatar name={profile.name} src={profile.avatarUrl} size={52} />

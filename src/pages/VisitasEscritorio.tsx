@@ -43,8 +43,8 @@ export default function VisitasEscritorio() {
       title="Visitas ao escritório"
       subtitle="O movimento da página institucional da sociedade."
       icon={<ChartIcon width={18} height={18} />}
-      backTo="/escritorio/editar"
-      backLabel="Escritório"
+      backTo="/escritorio/painel"
+      backLabel="Painel do escritório"
       documentTitle="Visitas ao escritório · advoc.me"
     >
       <div className="space-y-4">

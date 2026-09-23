@@ -168,6 +168,7 @@ const ROTAS = [
   ['/escritorio/editar', 'escritório · editor'],
   // As duas telas do escritório que não editam a página: o que chega por ela e
   // o movimento dela.
+  ['/escritorio/painel', 'escritório · painel'],
   ['/escritorio/solicitacoes', 'escritório · solicitações'],
   ['/escritorio/visitas', 'escritório · visitas'],
   [`/escritorio/${FIRM_SLUG}`, 'escritório · página'],
@@ -188,7 +189,7 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
 const EXIGEM_CONTA =
-  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/(editar|solicitacoes|visitas)|contratos(?!\/conferir))/
+  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/(editar|painel|solicitacoes|visitas)|contratos(?!\/conferir))/
 
 const navegador = await chromium.launch()
 const falhas = []

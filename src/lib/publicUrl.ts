@@ -44,3 +44,12 @@ export function profileUrlLabel(slug: string): string {
 export function hostLabel(): string {
   return publicOrigin().replace(/^https?:\/\//, '')
 }
+
+/**
+ * URL pública da PÁGINA DO ESCRITÓRIO — a mesma origem dos perfis, sob
+ * /escritorio/. É a que vai para o QR e para o "copiar link" do painel da
+ * sociedade.
+ */
+export function firmUrl(slug: string): string {
+  return `${publicOrigin()}/escritorio/${slug}`
+}

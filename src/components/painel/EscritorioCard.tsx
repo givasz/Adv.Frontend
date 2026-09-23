@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { carregarMeuEscritorio } from '@/lib/meuEscritorio'
 import { solicitacoesDoEscritorio } from '@/lib/agendaDigital'
 import type { Firm, FirmInvite } from '@/lib/escritorio'
 import { ScaleIcon } from '@/components/ui/icons'
@@ -29,7 +30,8 @@ export function EscritorioCard() {
 
   const carregar = useCallback(async () => {
     const [meu, convites] = await Promise.all([
-      api.getMyFirm().catch(() => null),
+      // Carona no pedido da troca de painel, quando os dois montam juntos.
+      carregarMeuEscritorio(),
       api.getFirmInvites().catch(() => [] as FirmInvite[]),
     ])
     setFirm(meu && meu.name ? meu : null)
@@ -128,7 +130,7 @@ export function EscritorioCard() {
               </p>
               {pendentes > 0 && (
                 <Link
-                  to="/escritorio/solicitacoes"
+                  to="/escritorio/solicitacoes?voltar=%2Fpainel"
                   className="mt-2.5 flex items-center justify-between gap-3 rounded-lg border border-burgundy/25 bg-burgundy/[0.06] px-3 py-2.5 transition-colors hover:border-burgundy/50"
                 >
                   <span className="text-[13px] font-medium text-ink">
@@ -140,8 +142,10 @@ export function EscritorioCard() {
                 </Link>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link to="/escritorio/editar" className="btn-primary !py-2 !px-4 text-[13px]">
-                  Gerenciar escritório
+                {/* O painel da sociedade é a porta: pedidos, advogados, visitas
+                    e a página. O editor fica a um clique de lá. */}
+                <Link to="/escritorio/painel" className="btn-primary !py-2 !px-4 text-[13px]">
+                  Painel do escritório
                 </Link>
                 {firm.slug && (
                   <Link

@@ -95,9 +95,20 @@ export function Toggle({
   )
 }
 
-export function Card({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+export function Card({
+  title,
+  children,
+  action,
+  id,
+}: {
+  title: string
+  children: ReactNode
+  action?: ReactNode
+  /** âncora (#contato): o painel do escritório leva direto ao cartão */
+  id?: string
+}) {
   return (
-    <section className="rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
+    <section id={id} className="scroll-mt-20 rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-display text-lg font-semibold">{title}</h3>
         {action}

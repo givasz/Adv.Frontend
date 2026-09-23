@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useSalvarAntesDeSair } from '@/lib/salvarAntesDeSair'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
+import { ANCORA_DO_ESCRITORIO } from '@/lib/escritorioPainel'
 import { checkCompliance } from '@/lib/oab'
 import {
   blankFirm,
@@ -18,7 +19,7 @@ import { EnderecoCampos } from '@/components/editor/EnderecoCampos'
 import { LogoUpload } from '@/components/escritorio/LogoUpload'
 import { AdicionarAdvogado, DarAcesso } from '@/components/escritorio/GestaoAdvogados'
 import { AccountMenu } from '@/components/auth/AccountMenu'
-import { CalendarIcon, ChartIcon, TrashIcon } from '@/components/ui/icons'
+import { ArrowLeft, TrashIcon } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
 export default function FirmEditor() {
@@ -127,6 +128,24 @@ export default function FirmEditor() {
       })
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [firm?.lawyers])
+
+  // Chegou do painel do escritório por uma âncora (#contato, #advogados): rola
+  // até o cartão e acende o anel de latão. Espera o escritório carregar — antes
+  // disso o cartão não existe. Depende de `carregado`, não de `firm`: o firm
+  // muda a cada tecla, e re-rolar enquanto a pessoa digita seria intolerável.
+  const { hash, key: navKey } = useLocation()
+  const carregado = !!firm
+  useEffect(() => {
+    if (!carregado || !hash) return
+    const t = setTimeout(() => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)))
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      el.classList.add('campo-alvo')
+      setTimeout(() => el.classList.remove('campo-alvo'), 2200)
+    }, 120)
+    return () => clearTimeout(t)
+  }, [carregado, hash, navKey])
 
   if (!firm) {
     return (
@@ -243,32 +262,20 @@ export default function FirmEditor() {
           hierarquia — Prov. 205/2021).
         </div>
 
-        {/* As duas telas que não editam a página, mas são do escritório: o que
-            chega por ela e o movimento dela. Aqui em cima porque são o trabalho
-            RECORRENTE de quem administra — editar o institucional se faz uma vez. */}
+        {/* Pedidos, visitas e advogados moram no PAINEL do escritório — o editor
+            é só a página. Volta para lá, como o editor pessoal volta ao /painel. */}
         {firm.slug && (
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <AtalhoDoEscritorio
-              to="/escritorio/solicitacoes"
-              titulo="Solicitações"
-              texto={
-                firm.meetingInboxEnabled
-                  ? 'Pedidos que chegaram pela página. Encaminhe a um advogado do escritório.'
-                  : 'Desligada. Hoje a conversa da página termina no WhatsApp.'
-              }
-              icone={<CalendarIcon width={17} height={17} />}
-            />
-            <AtalhoDoEscritorio
-              to="/escritorio/visitas"
-              titulo="Visitas"
-              texto="Quantas vezes a página foi aberta e o que foi usado nela."
-              icone={<ChartIcon width={17} height={17} />}
-            />
-          </div>
+          <Link
+            to="/escritorio/painel"
+            className="inline-flex items-center gap-1.5 py-1 text-[13px] font-medium text-ink-faint transition-colors hover:text-ink"
+          >
+            <ArrowLeft width={14} height={14} />
+            Painel do escritório
+          </Link>
         )}
 
         {/* Sociedade */}
-        <Card title="A sociedade">
+        <Card id={ANCORA_DO_ESCRITORIO.sociedade} title="A sociedade">
           <Field label="Nome da sociedade">
             <TextInput
               value={firm.name}
@@ -345,7 +352,7 @@ export default function FirmEditor() {
         {/* Endereço da sede. É no escritório que ele mais fazia falta: uma
             sociedade tem porta física, e a página institucional dizia só a
             cidade — quem ia até lá tinha de perguntar o resto por mensagem. */}
-        <Card title="Endereço da sede">
+        <Card id={ANCORA_DO_ESCRITORIO.sede} title="Endereço da sede">
           <p className="-mt-1 text-[12.5px] leading-relaxed text-ink-faint">
             Opcional. Aparece na página do escritório com um botão que abre o mapa.
           </p>
@@ -359,7 +366,7 @@ export default function FirmEditor() {
         </Card>
 
         {/* Apresentação */}
-        <Card title="Apresentação">
+        <Card id={ANCORA_DO_ESCRITORIO.apresentacao} title="Apresentação">
           <Field label="Frase institucional" hint={`${firm.tagline.length}/120`}>
             <TextInput
               value={firm.tagline}
@@ -381,7 +388,7 @@ export default function FirmEditor() {
         </Card>
 
         {/* Marca (white-label) */}
-        <Card title="Marca própria (white-label)">
+        <Card id={ANCORA_DO_ESCRITORIO.marca} title="Marca própria (white-label)">
           <Field label="Cor de destaque" hint="aplica na página">
             <div className="flex items-center gap-3">
               <input
@@ -420,7 +427,7 @@ export default function FirmEditor() {
         </Card>
 
         {/* Contato institucional */}
-        <Card title="Contato institucional">
+        <Card id={ANCORA_DO_ESCRITORIO.contato} title="Contato institucional">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Telefone">
               <TextInput
@@ -463,7 +470,7 @@ export default function FirmEditor() {
         </Card>
 
         {/* Assistente virtual da página */}
-        <Card title="Assistente virtual">
+        <Card id={ANCORA_DO_ESCRITORIO.assistente} title="Assistente virtual">
           <p className="text-[12.5px] leading-relaxed text-ink-faint">
             Na página do escritório, quem quiser falar responde a uma conversa guiada (assunto,
             advogado, formato e quando) e o pedido chega pronto a quem vai responder. Quem escolhe
@@ -612,6 +619,7 @@ export default function FirmEditor() {
 
         {/* Advogados */}
         <Card
+          id={ANCORA_DO_ESCRITORIO.advogados}
           title="Advogados da sociedade"
           action={
             <span className="text-[12px] font-medium text-ink-faint">
@@ -700,8 +708,6 @@ export default function FirmEditor() {
   )
 }
 
-// Escolha do destino do assistente. Rádio de verdade (não um switch decorativo):
-// são duas opções excludentes e o teclado precisa navegar entre elas.
 /**
  * Os assuntos que a conversa oferece: os que vêm dos advogados (fixos, em
  * cinza) e os que o escritório escreveu (removíveis).
@@ -712,34 +718,6 @@ export default function FirmEditor() {
  * dobrado uma vez só na leitura (ver firms.service.toApi), e o dele continua
  * valendo se o advogado sair.
  */
-/** Atalho para uma tela do escritório que não é o editor. */
-function AtalhoDoEscritorio({
-  to,
-  titulo,
-  texto,
-  icone,
-}: {
-  to: string
-  titulo: string
-  texto: string
-  icone: React.ReactNode
-}) {
-  return (
-    <Link
-      to={to}
-      className="flex items-start gap-3 rounded-xl2 border border-ink/10 bg-paper p-3.5 transition-all hover:-translate-y-0.5 hover:border-burgundy/30 hover:shadow-card"
-    >
-      <span className="mt-0.5 shrink-0 rounded-lg bg-burgundy/[0.07] p-2 text-burgundy">
-        {icone}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[14px] font-semibold text-ink">{titulo}</span>
-        <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-faint">{texto}</span>
-      </span>
-    </Link>
-  )
-}
-
 function ListaDeAssuntos({
   derivados,
   proprios,
