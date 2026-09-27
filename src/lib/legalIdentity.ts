@@ -97,4 +97,10 @@ export const TERMS_UPDATED = '19 de setembro de 2026'
  * teste em `avisosPublicos.spec.ts` impede que um endereço de e-mail volte a
  * aparecer no texto legal.
  */
-export const CONTACT_EMAIL: string | null = null
+//
+// 27/09/2026: a caixa existe — contato@selfcoding.com.br, lida pela equipe. Ela
+// já aparece fora dos documentos (rodapé da home, índice de /legal). Citá-la
+// DENTRO dos Termos e da Privacidade muda o texto aceito, e isso exige versão
+// nova em TERMS_VERSION (aqui e em backend/src/legal/termos.ts) e um aceite
+// novo de todas as contas — é um passo à parte, de propósito.
+export const CONTACT_EMAIL: string | null = 'contato@selfcoding.com.br'

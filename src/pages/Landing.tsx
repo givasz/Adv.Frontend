@@ -19,7 +19,7 @@ import { ContratosVitrine } from '@/components/landing/ContratosVitrine'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
-import { OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
+import { CONTACT_EMAIL, OPERADOR, operadorEndereco } from '@/lib/legalIdentity'
 import {
   ArrowRight,
   CardIcon,
@@ -78,11 +78,14 @@ export default function Landing() {
   // Convidar a "criar meu perfil" quem já tem um (e está logado, com o nome ali
   // do lado no menu de conta) faz o produto parecer que não sabe quem você é.
   const meu = useMyProfileLink()
-  // Para quem ainda não tem: "meu advoc.me" — o produto vira uma coisa que a
-  // pessoa passa a ter, e não um cadastro que ela faz. Quem já tem vê o próprio
-  // destino (painel ou continuar).
+  // Para quem ainda não tem: "Criar grátis" — o custo zero é a objeção que o
+  // botão responde antes de a pessoa perguntar (o plano Free existe e não pede
+  // cartão). Falar de gratuidade aqui é o advoc.me falando do PRÓPRIO plano a
+  // advogados, não publicidade de serviço jurídico — a vedação do Prov.
+  // 205/2021 ("consulta grátis") é sobre o anúncio do advogado, e continua
+  // valendo nos perfis. Quem já tem vê o próprio destino (painel ou continuar).
   const criar = meu.label === 'Criar meu perfil'
-  const rotuloPrincipal = criar ? 'Criar meu advoc.me' : meu.label
+  const rotuloPrincipal = criar ? 'Criar grátis' : meu.label
 
   useEffect(() => {
     // O mesmo título do index.html e da borda — um título só para a home.
@@ -98,9 +101,12 @@ export default function Landing() {
     <div className="grain min-h-dvh overflow-x-hidden supports-[overflow:clip]:overflow-x-clip">
       {/* Nav */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-        <span className="flex items-center gap-2 font-display text-xl font-semibold">
+        {/* Abaixo de 360px a marca fica só na balança: com o nome, "advoc.me"
+            encostava em "Entrar" e no botão de criar (medido a 320px). */}
+        <span className="flex min-w-0 items-center gap-2 font-display text-xl font-semibold">
           <Marca size={32} />
-          advoc.me
+          <span className="hidden min-[360px]:inline">advoc.me</span>
+          <span className="sr-only min-[360px]:hidden">advoc.me</span>
         </span>
         <div className="flex items-center gap-2 sm:gap-4">
           <a href="#como-funciona" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
@@ -136,7 +142,7 @@ export default function Landing() {
           <Link
             to={meu.to}
             {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-            className="btn-primary whitespace-nowrap !py-2.5 !px-4 text-[13.5px] sm:!px-5 sm:text-[14px]"
+            className="btn-conversion whitespace-nowrap !py-2.5 !px-4 text-[13.5px] sm:!px-5 sm:text-[14px]"
           >
             <span className="sm:hidden">{meu.short}</span>
             <span className="hidden sm:inline">{meu.label}</span>
@@ -191,7 +197,7 @@ export default function Landing() {
             <Link
               to={meu.to}
               {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-              className="btn-primary"
+              className="btn-conversion"
             >
               {rotuloPrincipal}
               <ArrowRight width={18} height={18} />
@@ -304,7 +310,7 @@ export default function Landing() {
             <Link
               to={meu.to}
               {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-              className="btn-primary !py-2.5 text-[14px]"
+              className="btn-conversion !py-2.5 text-[14px]"
             >
               {rotuloPrincipal}
             </Link>
@@ -586,7 +592,7 @@ export default function Landing() {
           <Link
             to={meu.to}
             {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-            className="btn-primary"
+            className="btn-conversion"
           >
             {rotuloPrincipal}
             <ArrowRight width={18} height={18} />
@@ -622,6 +628,19 @@ export default function Landing() {
           © {new Date().getFullYear()} advoc.me · {OPERADOR.razaoSocial} · CNPJ {OPERADOR.cnpj} ·{' '}
           {operadorEndereco()}
         </p>
+        {/* O canal da empresa para quem não tem conta (quem tem usa o Suporte,
+            que tem fila e registro). Ver CONTACT_EMAIL em lib/legalIdentity. */}
+        {CONTACT_EMAIL && (
+          <p className="mt-3 text-[13px]">
+            Fale com a gente:{' '}
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="font-medium text-ink-soft underline underline-offset-2 [overflow-wrap:anywhere] hover:text-ink"
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </p>
+        )}
         <p className="mt-1 text-[12px] text-ink-faint/80">
           Dúvidas sobre os seus dados: veja a{' '}
           <Link to="/legal/privacidade" className="underline underline-offset-2 hover:text-ink">

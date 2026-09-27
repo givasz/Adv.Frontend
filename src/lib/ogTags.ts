@@ -934,7 +934,7 @@ export function corpoDaHome(): string {
     `${estilo()}<main ${SNAPSHOT}>` +
     `<section><h1>Seu escritório começa aqui.</h1>` +
     `<p>Uma página profissional para apresentar a sua advocacia e organizar o primeiro contato de quem chega até você — pelo Instagram, pelo WhatsApp ou pelo cartão. Grátis para começar, sem cartão, pensada para as regras de publicidade da advocacia.</p>` +
-    `<p><a href="/criar-conta">Criar meu advoc.me</a> · <a href="/${EXAMPLE_SLUGS[0]}">Ver um exemplo</a></p></section>` +
+    `<p><a href="/criar-conta">Criar grátis</a> · <a href="/${EXAMPLE_SLUGS[0]}">Ver um exemplo</a></p></section>` +
     `<section id="problema"><h2>Por que não só o Instagram e o WhatsApp?</h2><p>O Instagram mostra o seu conteúdo. O WhatsApp começa a conversa. O advoc.me reúne, num endereço só, quem você é, com o que trabalha e como falar com você — e organiza o primeiro contato, que chega pronto no seu WhatsApp.</p></section>` +
     `<section id="como-funciona"><h2>Como funciona</h2><ol><li>O que o seu cliente encontra: um endereço com o seu nome — foto, OAB, áreas de atuação, apresentação e os seus canais.</li><li>O que acontece quando ele quer falar com você: ele responde às perguntas que você definiu e escolhe um horário que você deixou aberto.</li><li>O que chega para você: uma mensagem só, no seu WhatsApp, com nome, dia, horário, formato e as respostas. Você lê, avalia e confirma.</li></ol><p>Para montar o seu: nome, OAB, cidade, áreas e contato. A IA escreve a apresentação; você revisa e publica.</p></section>` +
     `<section id="assistente"><h2>Assistente de triagem</h2><p>Seu advoc.me continua recebendo os primeiros contatos enquanto você trabalha: quem chega ao seu perfil responde às perguntas que você definiu, escolhe um horário livre na sua grade e o pedido chega organizado no seu WhatsApp. No Pro, o assistente oferece só os seus horários; no Max, ele faz as suas perguntas antes. Ele se identifica como automático e não presta orientação jurídica — a avaliação do caso e a decisão de atender continuam sendo suas.</p></section>` +
@@ -943,7 +943,7 @@ export function corpoDaHome(): string {
     `<section id="planos"><h2>Planos</h2><p>Comece grátis e suba quando fizer sentido. Free: comece a sua presença profissional. Pro: apresente o seu trabalho por inteiro e receba pedidos de horário prontos. Max: organize também o primeiro atendimento, com a triagem e os contratos. Escritório: leve o advoc.me para toda a equipe. Preço por mês, sem fidelidade.</p></section>` +
     `<section><h2>Feito para a realidade de quem advoga</h2><p>O editor sinaliza possíveis pontos de atenção nas regras de publicidade da advocacia enquanto você escreve; o assistente conhece o próprio limite; não há selo, ranking nem dado de visitante guardado; todo perfil leva à consulta pública do CNA. A responsabilidade pelo conteúdo é do profissional.</p></section>` +
     `<section><h2>Um endereço só seu, pronto em minutos</h2><p>Comece no Free, sem cartão. Suba de plano quando quiser — e volte quando quiser, sem perder nada do que escreveu.</p>` +
-    `<p><a href="/criar-conta">Criar meu advoc.me</a> · <a href="/legal/termos">Termos de uso</a> · <a href="/legal/privacidade">Privacidade</a></p></section>` +
+    `<p><a href="/criar-conta">Criar grátis</a> · <a href="/legal/termos">Termos de uso</a> · <a href="/legal/privacidade">Privacidade</a></p></section>` +
     `</main>`
   )
 }

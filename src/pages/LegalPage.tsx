@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getLegalDoc, LEGAL_DOCS } from '@/lib/legalContent'
+import { CONTACT_EMAIL } from '@/lib/legalIdentity'
 import { ArrowRight } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
 
@@ -113,6 +114,20 @@ function LegalIndex() {
           </li>
         ))}
       </ul>
+      {/* Fora do texto dos documentos de propósito: citar o e-mail DENTRO deles
+          muda a versão aceita por todas as contas (ver lib/legalIdentity). */}
+      {CONTACT_EMAIL && (
+        <p className="mt-6 text-[14px] leading-relaxed text-ink-soft">
+          Dúvidas sobre estes documentos, sem conta na plataforma:{' '}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-medium text-burgundy underline underline-offset-2 [overflow-wrap:anywhere] hover:text-burgundy-deep"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          . Com conta, abra um chamado em Suporte: ele tem fila e fica registrado dos dois lados.
+        </p>
+      )}
     </div>
   )
 }
