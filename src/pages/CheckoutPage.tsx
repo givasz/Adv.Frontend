@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Plan } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -10,8 +9,9 @@ import { precoDoPlano } from '@/lib/plans'
 import { PAGAMENTO_ONLINE_DISPONIVEL, REGRAS_DE_COBRANCA, offerOf } from '@/lib/planOffer'
 import { getTheme, isThemeUnlocked, type ThemeId } from '@/lib/themes'
 import { SubPage, useVoltar } from '@/components/ui/SubPage'
-import { PlanFeaturePeek } from '@/components/editor/PlanChecklist'
 import { CheckIcon, ClockIcon, ScaleIcon } from '@/components/ui/icons'
+import { CheckoutPago } from '@/components/checkout/CheckoutPago'
+import { PlanoAtivado } from '@/components/checkout/PlanoAtivado'
 
 // Assinatura — /assinar/:plano.
 //
@@ -21,6 +21,11 @@ import { CheckIcon, ClockIcon, ScaleIcon } from '@/components/ui/icons'
 // ativado" acontece sem a tela por baixo brigando pela atenção.
 //
 // Quem grava o plano é o servidor (POST /profiles/me/plan) — ver lib/api.ts.
+//
+// Com o pagamento on-line ligado (VITE_PAGAMENTO_ONLINE, ver planOffer.ts), esta
+// página entrega a vez ao CheckoutPago: cartão, Pix ou boleto pelo Asaas, e o plano
+// abre quando o pagamento é confirmado. O resto deste arquivo é o checkout antigo,
+// que segue valendo enquanto a variável não estiver ligada.
 //
 // Sobre o pagamento: enquanto o provedor não está ligado
 // (PAGAMENTO_ONLINE_DISPONIVEL = false), ESTA é a única tela que diz isso. A home
@@ -83,10 +88,10 @@ export default function CheckoutPage() {
 
   const label = PLAN_LABEL[plan]
   const oferta = offerOf(plan)
-  // A volta leva a notícia junto: quem recebe (o painel) comemora o que abriu.
-  // É o estado da compra viajando pela URL — o que o modal fazia com useState e
-  // perdia a cada recarregamento.
-  const voltarComemorando = `${voltar}${voltar.includes('?') ? '&' : '?'}assinou=${plan}`
+
+  if (PAGAMENTO_ONLINE_DISPONIVEL) {
+    return <CheckoutPago plan={plan} label={label} tema={tema} voltar={voltar} />
+  }
 
   if (phase === 'processing') {
     return (
@@ -100,38 +105,7 @@ export default function CheckoutPage() {
     )
   }
 
-  if (phase === 'done') {
-    return (
-      <SubPage title="Plano ativado" backTo={voltar} backLabel="Voltar" documentTitle={`${label} ativo`}>
-        <div className="flex flex-col items-center gap-2 rounded-xl2 border border-ink/10 bg-paper px-6 py-10 text-center shadow-card">
-          <motion.span
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 16, stiffness: 260 }}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-brass/20 text-brass-deep"
-          >
-            <CheckIcon width={34} height={34} strokeWidth={2.4} />
-          </motion.span>
-          <p className="mt-3 max-w-[19rem] text-[13.5px] leading-relaxed text-ink-soft">
-            Seu plano <span className="font-semibold text-brass-deep">{label}</span> está ativo. Isto é
-            o que abriu agora:
-          </p>
-          {/* Mesma lista do checklist pós-compra — a promessa da venda e o que
-              aparece depois nunca divergem (ver lib/planFeatures.ts). */}
-          <div className="mt-3 w-full rounded-lg border border-ink/10 bg-paper-soft/60 p-3.5 text-left">
-            <PlanFeaturePeek plan={plan} max={5} />
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(voltarComemorando, { replace: true })}
-            className="btn-primary mt-4 w-full !py-3"
-          >
-            Ver o que fazer agora
-          </button>
-        </div>
-      </SubPage>
-    )
-  }
+  if (phase === 'done') return <PlanoAtivado plan={plan} label={label} voltar={voltar} />
 
   return (
     <SubPage

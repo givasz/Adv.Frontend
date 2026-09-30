@@ -24,6 +24,7 @@ import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { getTheme, isThemeUnlocked } from './themes'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import { copiaDeDados } from './copiaDeDados'
+import type { PedidoDeAssinatura, ResultadoDoCheckout } from './pagamento'
 import type {
   GenerateRequest,
   GenerateResult,
@@ -697,6 +698,48 @@ export const api = {
     const resolved = subiu ? { ...next, slug: resolveMockSlug(next, true) } : next
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved))
     return resolved
+  },
+
+  /**
+   * Assinatura PAGA — o checkout com o Asaas (ver backend/src/billing/checkout.service.ts).
+   *
+   * Diferente de `setPlan`, não devolve o perfil: o plano só abre quando o
+   * pagamento é confirmado. No cartão aprovado isso já aconteceu quando a
+   * resposta chega; no Pix e no boleto, acontece depois, pelo webhook — e a tela
+   * descobre relendo o perfil (`getDraft`).
+   *
+   * O corpo carrega número de cartão e CPF: vai numa requisição e some. Nada aqui
+   * guarda o pedido.
+   */
+  async assinar(pedido: PedidoDeAssinatura): Promise<ResultadoDoCheckout> {
+    if (!USE_REAL_API || !contaAtiva()) {
+      throw new Error('O pagamento on-line precisa de uma conta conectada ao servidor.')
+    }
+    const res = await escrever('/api/billing/assinar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pedido),
+    })
+    if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para assinar.')
+    if (!res.ok) {
+      throw new Error(
+        parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível concluir o pagamento agora.',
+      )
+    }
+    return res.json()
+  },
+
+  /** Cancela a assinatura paga. Quem pagou o mês tem o mês. */
+  async cancelarAssinatura(): Promise<{ ok: true; valeAte: string | null }> {
+    if (!USE_REAL_API || !contaAtiva()) {
+      throw new Error('Cancelar a assinatura precisa de uma conta conectada ao servidor.')
+    }
+    const res = await escrever('/api/billing/cancelar', { method: 'POST' })
+    if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para cancelar.')
+    if (!res.ok) {
+      throw new Error(parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível cancelar agora.')
+    }
+    return res.json()
   },
 
   // Denúncia de um perfil — qualquer visitante pode. Sem backend real (dev),

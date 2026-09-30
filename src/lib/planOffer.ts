@@ -43,9 +43,16 @@ import { THEMES, isThemeUnlocked } from './themes'
  * eles são (preço de tabela, cobrança mensal), sem "grátis nos testes": a oferta
  * que a pessoa lê hoje é a mesma que ela vai pagar amanhã.
  *
- * Quando o provedor entrar, troque para `true` e o checkout deixa de avisar.
+ * Desde 29/09/2026 o provedor é o Asaas e o checkout pago existe
+ * (components/checkout/CheckoutPago.tsx). Ele é ligado por AMBIENTE, e não
+ * trocando esta linha: `VITE_PAGAMENTO_ONLINE=true` na máquina de teste (com o
+ * backend falando com o sandbox) e, no dia do lançamento, no Netlify — seguido de
+ * um build, porque o Vite grava a variável no código na hora do build.
+ *
+ * Sem a variável, tudo segue como antes: o checkout ativa o plano e avisa que a
+ * cobrança ainda não começou.
  */
-export const PAGAMENTO_ONLINE_DISPONIVEL = false
+export const PAGAMENTO_ONLINE_DISPONIVEL = import.meta.env.VITE_PAGAMENTO_ONLINE === 'true'
 
 const temaCount = (p: Plan) => THEMES.filter((t) => isThemeUnlocked(t, p)).length
 // "1 tema visual", "3 temas visuais": desde 13/09/2026 o Free entrega só o neutro,
