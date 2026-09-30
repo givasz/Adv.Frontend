@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { aceitarTermos, useAuth } from '@/lib/auth'
-import { TERMS_UPDATED } from '@/lib/legalIdentity'
+import { OPERADOR, TERMS_UPDATED } from '@/lib/legalIdentity'
 import { ArrowRight, CheckIcon } from './icons'
 
 // O AVISO DE MUDANÇA DOS TERMOS — a promessa do item 13 virando mecanismo.
@@ -93,21 +93,41 @@ export function AvisoDeTermos() {
           <div className="mt-3 border-t border-brass/25 pt-3 text-[12.5px] leading-relaxed text-ink-soft">
             <ul className="list-disc space-y-1 pl-4">
               <li>
-                Dá para entrar com a sua conta Google, se preferir. É opcional: e-mail e senha continuam
-                funcionando igual.
+                O advoc.me passou a ser operado pela {OPERADOR.razaoSocial} (CNPJ {OPERADOR.cnpj}), com
+                sede em {OPERADOR.municipio}/{OPERADOR.uf}. Antes, era operado pela VEACCI SERVIÇOS DE T.I
+                LTDA.
               </li>
               <li>
-                Quem entra com o Google nos passa só nome, e-mail e um identificador da conta — nenhum
-                acesso a Gmail, agenda, contatos ou arquivos. Guardamos o identificador para reconhecer
-                você na próxima vez.
+                É ela, a partir de agora, a responsável pelo contrato com você e pelos seus dados — a
+                controladora, na linguagem da LGPD. Os dados continuam nos mesmos servidores: nada foi
+                copiado nem enviado a ninguém por causa da troca.
               </li>
+              <li>Seu perfil, seu plano e o que está publicado continuam exatamente como estão.</li>
             </ul>
+            {/* Quem aceitou antes da revisão de 19 de setembro também precisa ler o
+                que ela mudou. Datas ISO ordenam como texto: "2026-09-12-2" < "2026-09-19-1". */}
+            {(user?.termsVersion ?? '') < '2026-09-19-1' && (
+              <>
+                <p className="mt-2.5 font-medium text-ink">E, da revisão de 19 de setembro:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>
+                    Dá para entrar com a sua conta Google, se preferir. É opcional: e-mail e senha
+                    continuam funcionando igual.
+                  </li>
+                  <li>
+                    Quem entra com o Google nos passa só nome, e-mail e um identificador da conta — nenhum
+                    acesso a Gmail, agenda, contatos ou arquivos. Guardamos o identificador para
+                    reconhecer você na próxima vez.
+                  </li>
+                </ul>
+              </>
+            )}
             {/* Quem aceitou antes da revisão do e-mail (a primeira de 12 de
                 setembro) também precisa ler o que ela mudou. Datas ISO ordenam
                 como texto: "2026-09-12" < "2026-09-12-2". */}
             {(user?.termsVersion ?? '') < '2026-09-12' && (
               <>
-                <p className="mt-2.5 font-medium text-ink">E, da revisão anterior, também de 12 de setembro:</p>
+                <p className="mt-2.5 font-medium text-ink">E, da revisão de 12 de setembro:</p>
                 <ul className="mt-1 list-disc space-y-1 pl-4">
                   <li>
                     Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,

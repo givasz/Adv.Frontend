@@ -26,17 +26,29 @@
 // paridade. O servidor não pode confiar na versão que o navegador manda: seria o
 // cliente escolhendo qual contrato assinou.
 
+// 29/09/2026: a operação passou da VEACCI SERVIÇOS DE T.I LTDA (CNPJ
+// 43.563.547/0001-08) para a SELF CODING, constituída em 28/09/2026. Dados do
+// comprovante de inscrição no CNPJ emitido em 29/09/2026.
+//
+// A troca veio junto com a do provedor de pagamento: a conta de cobrança no Asaas
+// é da Self Coding, e quem cobra tem de ser quem o contrato diz que vende. Uma
+// assinatura faturada num CNPJ enquanto os Termos apontam outro é o tipo de
+// divergência que o consumidor usa para contestar a cobrança — e que ele ganha.
+//
+// O endereço é a sede fiscal registrada no CNPJ. É para lá que vão notificação
+// extrajudicial e citação (ver CANAL_SEDE em legalContent.ts).
 export const OPERADOR = {
-  razaoSocial: 'VEACCI SERVIÇOS DE T.I LTDA — ME',
+  razaoSocial: 'SELF CODING DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA',
   nomeFantasia: 'advoc.me',
-  cnpj: '43.563.547/0001-08',
-  /** Logradouro e número. Vazio enquanto não confirmado — ver `operadorEndereco`. */
-  logradouro: '',
-  municipio: 'São João do Paraíso',
-  uf: 'MG',
+  cnpj: '69.366.280/0001-52',
+  /** Logradouro, número, complemento e bairro. Vazio = só município/UF (ver `operadorEndereco`). */
+  logradouro: 'Rua Visconde do Rio Branco, 1488, conj. 909, 9º andar, Cond. Universe Life Square, Bloco Com., Centro',
+  cep: '80420-210',
+  municipio: 'Curitiba',
+  uf: 'PR',
 } as const
 
-/** "VEACCI SERVIÇOS DE T.I LTDA — ME, CNPJ 43.563.547/0001-08" */
+/** "SELF CODING DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA, inscrita no CNPJ sob o nº 69.366.280/0001-52" */
 export function operadorLinha(): string {
   return `${OPERADOR.razaoSocial}, inscrita no CNPJ sob o nº ${OPERADOR.cnpj}`
 }
@@ -50,7 +62,8 @@ export function operadorLinha(): string {
  */
 export function operadorEndereco(): string {
   const cidade = `${OPERADOR.municipio}/${OPERADOR.uf}`
-  return OPERADOR.logradouro ? `${OPERADOR.logradouro}, ${cidade}` : cidade
+  if (!OPERADOR.logradouro) return cidade
+  return `${OPERADOR.logradouro}, ${cidade}${OPERADOR.cep ? `, CEP ${OPERADOR.cep}` : ''}`
 }
 
 /** Frase completa de identificação, usada na abertura dos Termos e da Privacidade. */
@@ -62,10 +75,10 @@ export function operadorIdentificacao(): string {
  * Versão vigente dos documentos legais — é a data da revisão, e é o que fica
  * gravado no aceite de cada conta.
  */
-export const TERMS_VERSION = '2026-09-19-1'
+export const TERMS_VERSION = '2026-09-29-1'
 
 /** A mesma data por extenso, para exibição no topo de cada documento. */
-export const TERMS_UPDATED = '19 de setembro de 2026'
+export const TERMS_UPDATED = '29 de setembro de 2026'
 
 /**
  * POR QUE NÃO HÁ E-MAIL DE CONTATO AQUI.
