@@ -161,6 +161,29 @@ export function ConferirEmailDaConta() {
   )
 }
 
+const TOM_DA_CASA = {
+  caixa: 'rounded-xl2 border border-brass/40 bg-brass/[0.08] p-4',
+  titulo: 'flex items-center gap-2 font-display text-[15.5px] font-semibold text-ink',
+  icone: 'shrink-0 text-brass-deep',
+  texto: 'mt-1.5 text-[13px] leading-relaxed text-ink-soft',
+  aviso: 'mt-2 text-[12.5px] font-medium leading-relaxed text-burgundy-deep',
+  principal: 'btn-primary !py-2 text-[13px] disabled:opacity-60',
+  link: 'px-2 py-2 text-[13px] font-semibold text-burgundy hover:underline disabled:opacity-60',
+  discreto: 'px-2 py-2 text-[13px] font-medium text-ink-soft hover:text-ink',
+}
+
+const TOM_NEUTRO: typeof TOM_DA_CASA = {
+  caixa: 'rounded-xl border border-[#fde68a] bg-[#fffbeb] p-4 font-ui',
+  titulo: 'flex items-center gap-2 font-ui text-[14.5px] font-semibold text-[#0f172a]',
+  icone: 'shrink-0 text-[#b45309]',
+  texto: 'mt-1.5 text-[13px] leading-relaxed text-[#475569]',
+  aviso: 'mt-2 text-[12.5px] font-medium leading-relaxed text-[#b91c1c]',
+  principal:
+    'h-9 rounded-lg bg-[#0f172a] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#1e293b] disabled:opacity-60',
+  link: 'px-2 py-2 text-[13px] font-semibold text-[#0f172a] hover:underline disabled:opacity-60',
+  discreto: 'px-2 py-2 text-[13px] font-medium text-[#64748b] hover:text-[#0f172a]',
+}
+
 /**
  * Cartão "confirme seu e-mail" — na conclusão de /comecar e na assinatura.
  *
@@ -170,9 +193,15 @@ export function ConferirEmailDaConta() {
 export function ConfirmarEmailCartao({
   contexto,
   className = '',
+  neutro = false,
 }: {
   contexto: 'publicado' | 'assinar'
   className?: string
+  /**
+   * Sem o latão e o vinho da casa — para o checkout pago, que tem paleta própria
+   * de ambiente financeiro (ver o cabeçalho de CheckoutPago.tsx).
+   */
+  neutro?: boolean
 }) {
   const { emailPending, user } = useAuth()
   const [envio, setEnvio] = useState<'parado' | 'enviando' | 'enviado'>('parado')
@@ -218,13 +247,15 @@ export function ConfirmarEmailCartao({
     if (sessao?.user?.emailPending) setAindaNao(true)
   }
 
+  const c = neutro ? TOM_NEUTRO : TOM_DA_CASA
+
   return (
-    <div className={`rounded-xl2 border border-brass/40 bg-brass/[0.08] p-4 ${className}`}>
-      <p className="flex items-center gap-2 font-display text-[15.5px] font-semibold text-ink">
-        <MailIcon width={17} height={17} className="shrink-0 text-brass-deep" aria-hidden />
+    <div className={`${c.caixa} ${className}`}>
+      <p className={c.titulo}>
+        <MailIcon width={17} height={17} className={c.icone} aria-hidden />
         {contexto === 'assinar' ? 'Confirme seu e-mail para assinar' : 'Falta confirmar seu e-mail'}
       </p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
+      <p className={c.texto}>
         {envio === 'enviado' ? (
           <>
             Link enviado para <Endereco>{user.email}</Endereco>. Confira a caixa de entrada e o spam.
@@ -242,12 +273,12 @@ export function ConfirmarEmailCartao({
         )}
       </p>
       {aindaNao && (
-        <p className="mt-2 text-[12.5px] font-medium leading-relaxed text-burgundy-deep">
+        <p className={c.aviso}>
           Ainda não aparece como confirmado. Abra o link mais recente: cada pedido novo substitui o anterior.
         </p>
       )}
       {erro && (
-        <p role="alert" className="mt-2 text-[12.5px] font-medium leading-relaxed text-burgundy-deep">
+        <p role="alert" className={c.aviso}>
           {erro}
         </p>
       )}
@@ -266,7 +297,7 @@ export function ConfirmarEmailCartao({
             type="button"
             onClick={() => void jaConfirmei()}
             disabled={conferindo}
-            className="btn-primary !py-2 text-[13px] disabled:opacity-60"
+            className={c.principal}
           >
             {conferindo ? 'Conferindo…' : 'Já confirmei'}
           </button>
@@ -275,7 +306,7 @@ export function ConfirmarEmailCartao({
               type="button"
               onClick={() => void mandar()}
               disabled={envio === 'enviando'}
-              className="px-2 py-2 text-[13px] font-semibold text-burgundy hover:underline disabled:opacity-60"
+              className={c.link}
             >
               {envio === 'enviando' ? 'Enviando…' : 'Mandar outro link'}
             </button>
@@ -283,7 +314,7 @@ export function ConfirmarEmailCartao({
           <button
             type="button"
             onClick={() => setCorrigindo(true)}
-            className="px-2 py-2 text-[13px] font-medium text-ink-soft hover:text-ink"
+            className={c.discreto}
           >
             Corrigir o e-mail
           </button>

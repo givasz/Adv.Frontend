@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  bandeiraDoNumero,
   dataCurta,
   documentoValido,
   mascaraCartao,
@@ -50,6 +51,25 @@ describe('máscaras enquanto digita', () => {
     expect(dataCurta('2026-10-29')).toBe('29/10/2026')
     expect(dataCurta(undefined)).toBe('')
     expect(reais(49)).toBe('R$ 49,00')
+  })
+})
+
+describe('bandeira reconhecida enquanto digita', () => {
+  it('reconhece as bandeiras pelos primeiros dígitos, com ou sem espaço', () => {
+    expect(bandeiraDoNumero('4444 4444')).toBe('visa')
+    expect(bandeiraDoNumero('5184 0197')).toBe('mastercard')
+    expect(bandeiraDoNumero('2221 00')).toBe('mastercard')
+    expect(bandeiraDoNumero('3782 822463')).toBe('amex')
+    expect(bandeiraDoNumero('6062 8255')).toBe('hipercard')
+  })
+  it('Elo antes de Visa e Mastercard, que dividem faixas com ela', () => {
+    expect(bandeiraDoNumero('4389 35')).toBe('elo')
+    expect(bandeiraDoNumero('5067 00')).toBe('elo')
+    expect(bandeiraDoNumero('6363 68')).toBe('elo')
+  })
+  it('sem dígitos ou faixa desconhecida: nenhuma bandeira', () => {
+    expect(bandeiraDoNumero('')).toBeNull()
+    expect(bandeiraDoNumero('9999')).toBeNull()
   })
 })
 

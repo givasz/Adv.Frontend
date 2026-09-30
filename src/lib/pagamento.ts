@@ -220,3 +220,22 @@ export function umMesAntes(iso: string): string {
   const dia = Math.min(Number(m[3]), ultimo);
   return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
+
+export type Bandeira = 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard'
+
+/**
+ * A bandeira pelos primeiros dígitos, enquanto a pessoa digita — é o que faz o
+ * campo "reconhecer" o cartão, como em todo checkout que ela já usou. Só para a
+ * tela: quem decide de verdade é o Asaas. O Elo vem antes do Visa e do
+ * Mastercard porque parte das faixas dele começa com 4 e com 5.
+ */
+export function bandeiraDoNumero(numero: string): Bandeira | null {
+  const d = digitos(numero)
+  if (!d) return null
+  if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(d)) return 'elo'
+  if (/^(606282|3841)/.test(d)) return 'hipercard'
+  if (/^3[47]/.test(d)) return 'amex'
+  if (/^4/.test(d)) return 'visa'
+  if (/^(5[1-5]|2[2-7])/.test(d)) return 'mastercard'
+  return null
+}
