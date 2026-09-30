@@ -24,7 +24,13 @@ import { canUseScheduling, FAQ_LIMIT } from './plans'
 import { getTheme, isThemeUnlocked } from './themes'
 import { DEFAULT_ASSISTANT_CONFIG } from './assistant'
 import { copiaDeDados } from './copiaDeDados'
-import type { PedidoDeAssinatura, ResultadoDoCheckout } from './pagamento'
+import {
+  ErroComCodigo,
+  type PedidoDeAssinatura,
+  type ResultadoDoCancelamento,
+  type ResultadoDoCheckout,
+  type ResumoDaAssinatura,
+} from './pagamento'
 import type {
   GenerateRequest,
   GenerateResult,
@@ -729,8 +735,11 @@ export const api = {
     return res.json()
   },
 
-  /** Cancela a assinatura paga. Quem pagou o mês tem o mês. */
-  async cancelarAssinatura(): Promise<{ ok: true; valeAte: string | null }> {
+  /**
+   * Cancela a assinatura paga. Fora do prazo de arrependimento, quem pagou o mês
+   * tem o mês; dentro dele, o valor é devolvido e o plano termina agora.
+   */
+  async cancelarAssinatura(): Promise<ResultadoDoCancelamento> {
     if (!USE_REAL_API || !contaAtiva()) {
       throw new Error('Cancelar a assinatura precisa de uma conta conectada ao servidor.')
     }
@@ -738,6 +747,69 @@ export const api = {
     if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para cancelar.')
     if (!res.ok) {
       throw new Error(parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível cancelar agora.')
+    }
+    return res.json()
+  },
+
+  /** O que a tela "Minha assinatura" mostra (GET /api/billing/assinatura). */
+  async minhaAssinatura(): Promise<ResumoDaAssinatura> {
+    if (!USE_REAL_API || !contaAtiva()) {
+      throw new Error('Sua assinatura aparece aqui quando a conta estiver conectada ao servidor.')
+    }
+    const res = await apiFetch('/api/billing/assinatura')
+    if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para ver sua assinatura.')
+    if (!res.ok) {
+      throw new Error(parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível carregar sua assinatura.')
+    }
+    return res.json()
+  },
+
+  /**
+   * Troca de plano. Subir vale na hora; descer fica agendado; Free é cancelar.
+   * Lança ErroComCodigo('…', 'precisa_cartao') quando a troca no cartão exige
+   * confirmar o cartão de novo — a tela abre os campos e reenvia com eles.
+   */
+  async trocarPlano(pedido: {
+    plano: 'free' | 'pro' | 'premium'
+    cpfCnpj?: string
+    cartao?: PedidoDeAssinatura['cartao']
+    titular?: PedidoDeAssinatura['titular']
+  }): Promise<ResumoDaAssinatura | ResultadoDoCancelamento> {
+    if (!USE_REAL_API || !contaAtiva()) throw new Error('Trocar de plano precisa de uma conta conectada ao servidor.')
+    const res = await escrever('/api/billing/trocar-plano', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pedido),
+    })
+    if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para trocar de plano.')
+    if (!res.ok) {
+      const texto = await res.text().catch(() => '')
+      let codigo: string | undefined
+      try {
+        codigo = (JSON.parse(texto) as { codigo?: string }).codigo
+      } catch {
+        codigo = undefined
+      }
+      throw new ErroComCodigo(parseApiMessage(texto) || 'Não foi possível trocar de plano agora.', codigo)
+    }
+    return res.json()
+  },
+
+  /** Troca o cartão da assinatura. O corpo tem número e CPF: vai e some. */
+  async trocarCartao(pedido: {
+    cpfCnpj: string
+    cartao: NonNullable<PedidoDeAssinatura['cartao']>
+    titular: NonNullable<PedidoDeAssinatura['titular']>
+  }): Promise<ResumoDaAssinatura> {
+    if (!USE_REAL_API || !contaAtiva()) throw new Error('Trocar o cartão precisa de uma conta conectada ao servidor.')
+    const res = await escrever('/api/billing/cartao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pedido),
+    })
+    if (res.status === 401) throw sessaoCaiu('Sua sessão expirou. Entre de novo para trocar o cartão.')
+    if (!res.ok) {
+      throw new Error(parseApiMessage(await res.text().catch(() => '')) || 'Não foi possível trocar o cartão agora.')
     }
     return res.json()
   },

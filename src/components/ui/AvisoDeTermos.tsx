@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { aceitarTermos, useAuth } from '@/lib/auth'
-import { OPERADOR, TERMS_UPDATED } from '@/lib/legalIdentity'
-import { ArrowRight, CheckIcon } from './icons'
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { aceitarTermos, useAuth } from "@/lib/auth";
+import { OPERADOR, TERMS_UPDATED } from "@/lib/legalIdentity";
+import { ArrowRight, CheckIcon } from "./icons";
 
 // O AVISO DE MUDANÇA DOS TERMOS — a promessa do item 13 virando mecanismo.
 //
@@ -29,30 +29,44 @@ import { ArrowRight, CheckIcon } from './icons'
 // linha. Nada cobre o que a pessoa estava fazendo.
 
 /** Onde a faixa aparece: as telas da conta. Some no perfil público e na landing. */
-export const TELAS_DO_APP = ['/painel', '/editor', '/comecar', '/planos', '/assinar', '/plano', '/conta', '/escritorio', '/suporte']
+export const TELAS_DO_APP = [
+  "/painel",
+  "/editor",
+  "/comecar",
+  "/planos",
+  "/assinar",
+  "/plano",
+  "/conta",
+  "/escritorio",
+  "/suporte",
+];
 
 export function AvisoDeTermos() {
-  const { termsPending, user } = useAuth()
-  const { pathname } = useLocation()
-  const [aberto, setAberto] = useState(false)
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
+  const { termsPending, user } = useAuth();
+  const { pathname } = useLocation();
+  const [aberto, setAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const naTela = TELAS_DO_APP.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-  if (!termsPending || !naTela) return null
+  const naTela = TELAS_DO_APP.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  if (!termsPending || !naTela) return null;
 
   async function confirmar() {
-    if (salvando) return
-    setSalvando(true)
-    setErro(null)
+    if (salvando) return;
+    setSalvando(true);
+    setErro(null);
     try {
-      await aceitarTermos()
+      await aceitarTermos();
       // Sem estado de "pronto": o aceite gravado zera `termsPending`, a faixa
       // some sozinha e a pessoa volta ao que estava fazendo. Um "salvo!" numa
       // barra que desaparece no mesmo instante é confete que ninguém lê.
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível registrar agora.')
-      setSalvando(false)
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível registrar agora.",
+      );
+      setSalvando(false);
     }
   }
 
@@ -61,7 +75,8 @@ export function AvisoDeTermos() {
       <div className="mx-auto max-w-5xl px-5 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13px] font-medium leading-snug text-ink">
-            Atualizamos os Termos de Uso e a Política de Privacidade em {TERMS_UPDATED}.
+            Atualizamos os Termos de Uso e a Política de Privacidade em{" "}
+            {TERMS_UPDATED}.
             <span className="ml-1 font-normal text-ink-soft">
               Publicar o perfil depende do seu aceite.
             </span>
@@ -72,7 +87,7 @@ export function AvisoDeTermos() {
               onClick={() => setAberto((v) => !v)}
               className="-my-1 px-1 py-2 text-[13px] font-semibold text-burgundy hover:underline"
             >
-              {aberto ? 'Fechar' : 'O que mudou'}
+              {aberto ? "Fechar" : "O que mudou"}
             </button>
             <button
               type="button"
@@ -80,8 +95,10 @@ export function AvisoDeTermos() {
               disabled={salvando}
               className="btn-primary !py-2 !text-[13px] disabled:opacity-60"
             >
-              {salvando ? 'Registrando…' : 'Li e aceito'}
-              {!salvando && <CheckIcon width={15} height={15} strokeWidth={2.6} />}
+              {salvando ? "Registrando…" : "Li e aceito"}
+              {!salvando && (
+                <CheckIcon width={15} height={15} strokeWidth={2.6} />
+              )}
             </button>
           </div>
         </div>
@@ -93,30 +110,64 @@ export function AvisoDeTermos() {
           <div className="mt-3 border-t border-brass/25 pt-3 text-[12.5px] leading-relaxed text-ink-soft">
             <ul className="list-disc space-y-1 pl-4">
               <li>
-                O advoc.me passou a ser operado pela {OPERADOR.razaoSocial} (CNPJ {OPERADOR.cnpj}), com
-                sede em {OPERADOR.municipio}/{OPERADOR.uf}. Antes, era operado pela VEACCI SERVIÇOS DE T.I
-                LTDA.
+                O pagamento on-line começou: as assinaturas passam a ser
+                cobradas pelo Asaas, no cartão, no Pix ou no boleto. O plano
+                abre quando o pagamento é confirmado.
               </li>
               <li>
-                É ela, a partir de agora, a responsável pelo contrato com você e pelos seus dados — a
-                controladora, na linguagem da LGPD. Os dados continuam nos mesmos servidores: nada foi
-                copiado nem enviado a ninguém por causa da troca.
+                Para cobrar, o Asaas recebe o seu nome, e-mail e CPF ou CNPJ —
+                e, no cartão, os dados do cartão e do endereço da fatura. Nada
+                disso fica guardado no advoc.me.
               </li>
-              <li>Seu perfil, seu plano e o que está publicado continuam exatamente como estão.</li>
+              <li>
+                Cancelar, trocar de plano e trocar o cartão ficam em Minha
+                assinatura. Dentro dos 7 dias do direito de arrependimento,
+                cancelar devolve o valor pago.
+              </li>
             </ul>
-            {/* Quem aceitou antes da revisão de 19 de setembro também precisa ler o
-                que ela mudou. Datas ISO ordenam como texto: "2026-09-12-2" < "2026-09-19-1". */}
-            {(user?.termsVersion ?? '') < '2026-09-19-1' && (
+            {/* Quem aceitou antes da revisão de 29 de setembro também precisa ler o
+                que ela mudou. Datas ISO ordenam como texto. */}
+            {(user?.termsVersion ?? "") < "2026-09-29-1" && (
               <>
-                <p className="mt-2.5 font-medium text-ink">E, da revisão de 19 de setembro:</p>
+                <p className="mt-2.5 font-medium text-ink">
+                  E, da revisão de 29 de setembro:
+                </p>
                 <ul className="mt-1 list-disc space-y-1 pl-4">
                   <li>
-                    Dá para entrar com a sua conta Google, se preferir. É opcional: e-mail e senha
-                    continuam funcionando igual.
+                    O advoc.me passou a ser operado pela {OPERADOR.razaoSocial}{" "}
+                    (CNPJ {OPERADOR.cnpj}), com sede em {OPERADOR.municipio}/
+                    {OPERADOR.uf}. Antes, era operado pela VEACCI SERVIÇOS DE
+                    T.I LTDA.
                   </li>
                   <li>
-                    Quem entra com o Google nos passa só nome, e-mail e um identificador da conta — nenhum
-                    acesso a Gmail, agenda, contatos ou arquivos. Guardamos o identificador para
+                    É ela, a partir de agora, a responsável pelo contrato com
+                    você e pelos seus dados — a controladora, na linguagem da
+                    LGPD. Os dados continuam nos mesmos servidores: nada foi
+                    copiado nem enviado a ninguém por causa da troca.
+                  </li>
+                  <li>
+                    Seu perfil, seu plano e o que está publicado continuam
+                    exatamente como estão.
+                  </li>
+                </ul>
+              </>
+            )}
+            {/* Quem aceitou antes da revisão de 19 de setembro também precisa ler o
+                que ela mudou. Datas ISO ordenam como texto: "2026-09-12-2" < "2026-09-19-1". */}
+            {(user?.termsVersion ?? "") < "2026-09-19-1" && (
+              <>
+                <p className="mt-2.5 font-medium text-ink">
+                  E, da revisão de 19 de setembro:
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <li>
+                    Dá para entrar com a sua conta Google, se preferir. É
+                    opcional: e-mail e senha continuam funcionando igual.
+                  </li>
+                  <li>
+                    Quem entra com o Google nos passa só nome, e-mail e um
+                    identificador da conta — nenhum acesso a Gmail, agenda,
+                    contatos ou arquivos. Guardamos o identificador para
                     reconhecer você na próxima vez.
                   </li>
                 </ul>
@@ -125,42 +176,51 @@ export function AvisoDeTermos() {
             {/* Quem aceitou antes da revisão do e-mail (a primeira de 12 de
                 setembro) também precisa ler o que ela mudou. Datas ISO ordenam
                 como texto: "2026-09-12" < "2026-09-12-2". */}
-            {(user?.termsVersion ?? '') < '2026-09-12' && (
+            {(user?.termsVersion ?? "") < "2026-09-12" && (
               <>
-                <p className="mt-2.5 font-medium text-ink">E, da revisão de 12 de setembro:</p>
+                <p className="mt-2.5 font-medium text-ink">
+                  E, da revisão de 12 de setembro:
+                </p>
                 <ul className="mt-1 list-disc space-y-1 pl-4">
                   <li>
-                    Os avisos da conta passam a chegar também por e-mail: confirmação do endereço,
-                    redefinição e troca de senha, decisões de moderação, convites de escritório e mudanças
-                    nos documentos.
+                    Os avisos da conta passam a chegar também por e-mail:
+                    confirmação do endereço, redefinição e troca de senha,
+                    decisões de moderação, convites de escritório e mudanças nos
+                    documentos.
                   </li>
                   <li>
-                    Quem envia é o Resend, empresa sediada nos Estados Unidos, que recebe só o endereço e
-                    o texto do aviso — sem rastreio de abertura nem de clique.
+                    Quem envia é o Resend, empresa sediada nos Estados Unidos,
+                    que recebe só o endereço e o texto do aviso — sem rastreio
+                    de abertura nem de clique.
                   </li>
                   <li>
-                    Quem denuncia um perfil e informa um e-mail recebe a confirmação e o aviso de que a
-                    análise terminou.
+                    Quem denuncia um perfil e informa um e-mail recebe a
+                    confirmação e o aviso de que a análise terminou.
                   </li>
                 </ul>
               </>
             )}
             {/* Quem nunca aceitou a revisão de 4 de setembro também precisa ler o
                 que ela mudou — a comparação é por data ISO, que ordena como texto. */}
-            {(user?.termsVersion ?? '') < '2026-09-04' && (
+            {(user?.termsVersion ?? "") < "2026-09-04" && (
               <>
-                <p className="mt-2.5 font-medium text-ink">E, da revisão de 4 de setembro:</p>
+                <p className="mt-2.5 font-medium text-ink">
+                  E, da revisão de 4 de setembro:
+                </p>
                 <ul className="mt-1 list-disc space-y-1 pl-4">
                   <li>
-                    Passamos a identificar a empresa que opera a plataforma, com CNPJ e endereço.
+                    Passamos a identificar a empresa que opera a plataforma, com
+                    CNPJ e endereço.
                   </li>
                   <li>
-                    Registramos entrada na conta e publicação de perfil (data, hora e IP) por 180 dias,
-                    como exige o art. 15 do Marco Civil da Internet.
+                    Registramos entrada na conta e publicação de perfil (data,
+                    hora e IP) por 180 dias, como exige o art. 15 do Marco Civil
+                    da Internet.
                   </li>
                   <li>
-                    Ficou explícito que o conteúdo do perfil é de responsabilidade de quem o publica, e
-                    que não conferimos inscrições na OAB.
+                    Ficou explícito que o conteúdo do perfil é de
+                    responsabilidade de quem o publica, e que não conferimos
+                    inscrições na OAB.
                   </li>
                 </ul>
               </>
@@ -180,11 +240,14 @@ export function AvisoDeTermos() {
         )}
 
         {erro && (
-          <p role="alert" className="mt-2 text-[12.5px] font-medium text-burgundy-deep">
+          <p
+            role="alert"
+            className="mt-2 text-[12.5px] font-medium text-burgundy-deep"
+          >
             {erro}
           </p>
         )}
       </div>
     </div>
-  )
+  );
 }

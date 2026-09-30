@@ -57,7 +57,12 @@ describe('o checkout não guarda o que se digita', () => {
   // A tela recebe número de cartão e CPF. Nenhum dos arquivos do pagamento pode
   // escrever em armazenamento do navegador — a regra "salvar antes de sair" dos
   // editores não vale aqui.
-  const arquivos = ['lib/pagamento.ts', 'components/checkout/CheckoutPago.tsx']
+  const arquivos = [
+    'lib/pagamento.ts',
+    'components/checkout/CheckoutPago.tsx',
+    'components/checkout/CamposDoCartao.tsx',
+    'pages/MinhaAssinaturaPage.tsx',
+  ]
   for (const a of arquivos) {
     it(`${a} não usa localStorage, sessionStorage nem console`, () => {
       const fonte = readFileSync(join(__dirname, '..', a), 'utf8')

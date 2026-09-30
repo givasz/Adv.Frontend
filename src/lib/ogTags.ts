@@ -1009,6 +1009,10 @@ export const ROTAS_RESERVADAS = new Set([
   'conta',
   'planos',
   'assinar',
+  // /assinatura — ver, trocar e cancelar a assinatura paga. Um perfil em
+  // advoc.me/assinatura disputaria o caminho com a tela onde se cancela e se
+  // recebe devolução: exatamente a página que ninguém pode achar no lugar errado.
+  'assinatura',
   // /plano/mudar/:plano — descer de plano. Reservado como qualquer outra rota do
   // app: sem isto, um advogado poderia pegar o endereço advoc.me/plano e a página
   // dele passaria a disputar o caminho com a tela de mudança de assinatura.

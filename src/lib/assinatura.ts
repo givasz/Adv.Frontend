@@ -114,7 +114,9 @@ export function avisoDeCobranca(
         (faltam > 0 ? ` (${faltam} ${faltam === 1 ? 'dia' : 'dias'})` : '') +
         '. Depois disso os recursos do plano ficam desligados — e voltam sozinhos quando o pagamento entrar.',
       acao: 'Atualizar pagamento',
-      destino: '/conta',
+      // Era '/conta', uma rota que nunca existiu (só /conta/dados). É na tela da
+      // assinatura que se paga o mês em aberto e se troca o cartão.
+      destino: '/assinatura',
     }
   }
 
@@ -149,7 +151,9 @@ export function avisoDeCobranca(
         `Você continua com o ${nome} até lá — o mês já está pago. ` +
         'Depois dessa data, os recursos que só o plano maior tem ficam guardados, não apagados.',
       acao: 'Cancelar a mudança',
-      destino: `/assinar/${s.plan}`,
+      // Desfazer a descida é na tela da assinatura ("Manter o Max"); o checkout
+      // tentaria criar uma segunda assinatura.
+      destino: '/assinatura',
     }
   }
 

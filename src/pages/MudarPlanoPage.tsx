@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import type { Plan, Profile } from '@/lib/types'
-import { api } from '@/lib/api'
-import { PLAN_LABEL } from '@/lib/upsell'
-import { mudancasAoDescer } from '@/lib/rebaixamento'
-import { dataCurta } from '@/lib/assinatura'
-import { SubPage, useVoltar } from '@/components/ui/SubPage'
-import { CheckIcon, ClockIcon } from '@/components/ui/icons'
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import type { Plan, Profile } from "@/lib/types";
+import { api } from "@/lib/api";
+import { PLAN_LABEL } from "@/lib/upsell";
+import { mudancasAoDescer } from "@/lib/rebaixamento";
+import { dataCurta } from "@/lib/assinatura";
+import { PAGAMENTO_ONLINE_DISPONIVEL } from "@/lib/planOffer";
+import type { ResumoDaAssinatura } from "@/lib/pagamento";
+import { SubPage, useVoltar } from "@/components/ui/SubPage";
+import { CheckIcon, ClockIcon } from "@/components/ui/icons";
 
 // Descer de plano — /plano/mudar/:plano.
 //
@@ -27,70 +29,102 @@ import { CheckIcon, ClockIcon } from '@/components/ui/icons'
 // botão. Fricção para reter é o tipo de coisa que o público desta plataforma —
 // advogados — reconhece e cobra.
 
-const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 }
+const RANK: Record<Plan, number> = { free: 0, pro: 1, premium: 2 };
 
 export default function MudarPlanoPage() {
-  const { plano } = useParams()
-  const navigate = useNavigate()
-  const voltar = useVoltar('/painel')
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
+  const { plano } = useParams();
+  const navigate = useNavigate();
+  const voltar = useVoltar("/painel");
+  const [profile, setProfile] = useState<Profile | null>(null);
+  // Com o pagamento on-line ligado, descer uma assinatura do Asaas é trocar o
+  // plano LÁ (MinhaAssinaturaService) — pela rota antiga o plano mudaria aqui e a
+  // cobrança seguiria correndo. `undefined` = ainda conferindo.
+  const [resumo, setResumo] = useState<ResumoDaAssinatura | null | undefined>(
+    PAGAMENTO_ONLINE_DISPONIVEL ? undefined : null,
+  );
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const alvo = (plano === 'free' || plano === 'pro' || plano === 'premium' ? plano : null) as Plan | null
+  const alvo = (
+    plano === "free" || plano === "pro" || plano === "premium" ? plano : null
+  ) as Plan | null;
 
   useEffect(() => {
-    let vivo = true
+    let vivo = true;
     api
       .getDraft()
       .then((p) => vivo && setProfile(p))
-      .catch(() => vivo && setErro('Não foi possível carregar seu perfil.'))
-    return () => {
-      vivo = false
+      .catch(() => vivo && setErro("Não foi possível carregar seu perfil."));
+    if (PAGAMENTO_ONLINE_DISPONIVEL) {
+      api
+        .minhaAssinatura()
+        .then((r) => vivo && setResumo(r))
+        .catch(() => vivo && setResumo(null));
     }
-  }, [])
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
-  if (!alvo) return <Navigate to="/painel" replace />
+  if (!alvo) return <Navigate to="/painel" replace />;
 
-  if (!profile) {
+  // Voltar ao Free com assinatura no Asaas é cancelar — e o cancelamento mora na
+  // tela da assinatura, que diz ANTES do clique se o valor é devolvido.
+  const comAssinatura = !!resumo?.assinatura;
+  if (alvo === "free" && comAssinatura)
+    return <Navigate to="/assinatura" replace />;
+
+  if (!profile || resumo === undefined) {
     return (
-      <SubPage title="Mudar de plano" backTo={voltar} documentTitle="Mudar de plano">
+      <SubPage
+        title="Mudar de plano"
+        backTo={voltar}
+        documentTitle="Mudar de plano"
+      >
         <div className="flex justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink/15 border-t-burgundy" />
         </div>
       </SubPage>
-    )
+    );
   }
 
   // Subir não passa por aqui — para isso existe o checkout.
   if (RANK[alvo] >= RANK[profile.plan]) {
-    return <Navigate to={alvo === 'free' ? '/painel' : `/assinar/${alvo}`} replace />
+    return (
+      <Navigate to={alvo === "free" ? "/painel" : `/assinar/${alvo}`} replace />
+    );
   }
 
-  const { perde, mantem } = mudancasAoDescer(profile, alvo)
+  const { perde, mantem } = mudancasAoDescer(profile, alvo);
   // Mês pago em aberto: a mudança tem data, e a data é a do fim do que já foi pago.
-  const fimDoPeriodo = profile.subscription?.currentPeriodEnd ?? null
-  const agendada = !!fimDoPeriodo && new Date(fimDoPeriodo).getTime() > Date.now()
+  const fimDoPeriodo = profile.subscription?.currentPeriodEnd ?? null;
+  const agendada =
+    !!fimDoPeriodo && new Date(fimDoPeriodo).getTime() > Date.now();
 
   const confirmar = async () => {
-    setSalvando(true)
-    setErro(null)
+    setSalvando(true);
+    setErro(null);
     try {
-      await api.setPlan(alvo)
-      navigate(voltar, { replace: true })
+      if (comAssinatura) await api.trocarPlano({ plano: alvo });
+      else await api.setPlan(alvo);
+      navigate(voltar, { replace: true });
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível mudar o plano.')
-      setSalvando(false)
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível mudar o plano.",
+      );
+      setSalvando(false);
     }
-  }
+  };
 
   return (
     <SubPage
-      title={alvo === 'free' ? 'Voltar ao Free' : `Mudar para o ${PLAN_LABEL[alvo]}`}
+      title={
+        alvo === "free" ? "Voltar ao Free" : `Mudar para o ${PLAN_LABEL[alvo]}`
+      }
       subtitle={
         agendada
           ? `Você já pagou até ${dataCurta(fimDoPeriodo)} — nada muda antes disso.`
-          : 'Veja o que muda na sua página antes de confirmar.'
+          : "Veja o que muda na sua página antes de confirmar."
       }
       backTo={voltar}
       backLabel="Cancelar"
@@ -99,12 +133,19 @@ export default function MudarPlanoPage() {
       <div className="rounded-xl2 border border-ink/10 bg-paper p-5 shadow-card">
         {agendada && (
           <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-brass/40 bg-brass/[0.08] px-3.5 py-3">
-            <ClockIcon width={16} height={16} className="mt-[2px] shrink-0 text-brass-deep" />
+            <ClockIcon
+              width={16}
+              height={16}
+              className="mt-[2px] shrink-0 text-brass-deep"
+            />
             <p className="text-[12.5px] leading-relaxed text-ink-soft">
-              A mudança acontece em{' '}
-              <span className="font-semibold text-ink">{dataCurta(fimDoPeriodo)}</span>, quando o mês
-              que você já pagou termina. Até lá você continua com o{' '}
-              {PLAN_LABEL[profile.plan]} inteiro — e pode desfazer quando quiser.
+              A mudança acontece em{" "}
+              <span className="font-semibold text-ink">
+                {dataCurta(fimDoPeriodo)}
+              </span>
+              , quando o mês que você já pagou termina. Até lá você continua com
+              o {PLAN_LABEL[profile.plan]} inteiro — e pode desfazer quando
+              quiser.
             </p>
           </div>
         )}
@@ -116,8 +157,14 @@ export default function MudarPlanoPage() {
             </h2>
             <ul className="mt-2.5 space-y-1.5">
               {perde.map((t) => (
-                <li key={t} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
-                  <span aria-hidden className="mt-[7px] h-px w-2.5 shrink-0 bg-ink/30" />
+                <li
+                  key={t}
+                  className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft"
+                >
+                  <span
+                    aria-hidden
+                    className="mt-[7px] h-px w-2.5 shrink-0 bg-ink/30"
+                  />
                   {t}
                 </li>
               ))}
@@ -127,15 +174,23 @@ export default function MudarPlanoPage() {
 
         <h2
           className={`text-[11.5px] font-semibold uppercase tracking-[0.14em] text-brass-deep ${
-            perde.length > 0 ? 'mt-5 border-t border-ink/10 pt-4' : ''
+            perde.length > 0 ? "mt-5 border-t border-ink/10 pt-4" : ""
           }`}
         >
           O que continua igual
         </h2>
         <ul className="mt-2.5 space-y-1.5">
           {mantem.map((t) => (
-            <li key={t} className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft">
-              <CheckIcon width={13} height={13} strokeWidth={2.6} className="mt-[3px] shrink-0 text-brass-deep" />
+            <li
+              key={t}
+              className="flex items-start gap-2 text-[13px] leading-snug text-ink-soft"
+            >
+              <CheckIcon
+                width={13}
+                height={13}
+                strokeWidth={2.6}
+                className="mt-[3px] shrink-0 text-brass-deep"
+              />
               {t}
             </li>
           ))}
@@ -166,7 +221,7 @@ export default function MudarPlanoPage() {
             className="flex-1 rounded-full border border-ink/15 py-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-burgundy/40 hover:text-burgundy disabled:opacity-60"
           >
             {salvando
-              ? 'Mudando…'
+              ? "Mudando…"
               : agendada
                 ? `Agendar mudança para o ${PLAN_LABEL[alvo]}`
                 : `Confirmar mudança para o ${PLAN_LABEL[alvo]}`}
@@ -174,5 +229,5 @@ export default function MudarPlanoPage() {
         </div>
       </div>
     </SubPage>
-  )
+  );
 }

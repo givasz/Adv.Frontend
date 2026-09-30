@@ -35,24 +35,20 @@ import {
 import { THEMES, isThemeUnlocked } from './themes'
 
 /**
- * O pagamento on-line já está ligado?
+ * O pagamento on-line está ligado?
  *
- * Hoje NÃO: o provedor de pagamento ainda está sendo integrado. Enquanto isso, o
- * checkout ativa o plano e diz isso com todas as letras — é a ÚNICA tela que fala
- * nesse assunto. A home, a vitrine do editor e o painel mostram os planos como
- * eles são (preço de tabela, cobrança mensal), sem "grátis nos testes": a oferta
- * que a pessoa lê hoje é a mesma que ela vai pagar amanhã.
+ * SIM, desde 30/09/2026: as assinaturas são cobradas pelo Asaas (cartão, Pix,
+ * boleto) — checkout em components/checkout/CheckoutPago.tsx, gestão em
+ * pages/MinhaAssinaturaPage.tsx.
  *
- * Desde 29/09/2026 o provedor é o Asaas e o checkout pago existe
- * (components/checkout/CheckoutPago.tsx). Ele é ligado por AMBIENTE, e não
- * trocando esta linha: `VITE_PAGAMENTO_ONLINE=true` na máquina de teste (com o
- * backend falando com o sandbox) e, no dia do lançamento, no Netlify — seguido de
- * um build, porque o Vite grava a variável no código na hora do build.
- *
- * Sem a variável, tudo segue como antes: o checkout ativa o plano e avisa que a
- * cobrança ainda não começou.
+ * A variável `VITE_PAGAMENTO_ONLINE=false` é a CHAVE DE EMERGÊNCIA: no Netlify,
+ * seguida de um build (o Vite grava a variável no código na hora do build), ela
+ * volta o site ao checkout antigo, que ativava o plano sem cobrar. Só serve se o
+ * backend também parar de cobrar — sem ASAAS_API_KEY na VPS, que é o que destrava
+ * de novo o `setPlan` (ver ProfilesService.setPlan). Ligar um lado sem o outro
+ * deixa o advogado sem nenhum caminho para assinar.
  */
-export const PAGAMENTO_ONLINE_DISPONIVEL = import.meta.env.VITE_PAGAMENTO_ONLINE === 'true'
+export const PAGAMENTO_ONLINE_DISPONIVEL = import.meta.env.VITE_PAGAMENTO_ONLINE !== 'false'
 
 const temaCount = (p: Plan) => THEMES.filter((t) => isThemeUnlocked(t, p)).length
 // "1 tema visual", "3 temas visuais": desde 13/09/2026 o Free entrega só o neutro,
@@ -467,7 +463,7 @@ export const REGRAS_DE_COBRANCA: string[] = [
   'Entre planos pagos o endereço do perfil não muda. Voltando ao Free, ele ganha um número no fim depois de 7 dias — avisados no painel, com a data.',
   'Arrependeu-se? Em até 7 dias da primeira contratação, devolvemos o valor integral.',
   'Se a cobrança falhar, você é avisado no painel com a data — o perfil segue no ar e nada é apagado.',
-  'Os dados do cartão ficam com o provedor de pagamento, nunca conosco.',
+  'Pagamento processado pelo Asaas. Os dados do cartão não ficam conosco.',
 ]
 
 /** Uma linha só, para o lugar onde não cabe a lista. */

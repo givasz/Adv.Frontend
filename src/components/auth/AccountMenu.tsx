@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { useRespostasNovas } from '@/lib/support'
+import { PAGAMENTO_ONLINE_DISPONIVEL } from '@/lib/planOffer'
 
 // Widget de conta para a barra de navegação. Deslogado: link "Entrar" (leva à
 // página /entrar, voltando à página atual). Logado: nome + menu com o painel, o
@@ -145,6 +146,16 @@ export function AccountMenu({
                     {novas}
                   </span>
                 )}
+              </Link>
+            )}
+            {PAGAMENTO_ONLINE_DISPONIVEL && (
+              <Link
+                to={`/assinatura?voltar=${encodeURIComponent(location.pathname + location.search)}`}
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="block w-full border-b border-ink/[0.07] px-3.5 py-2.5 text-left text-[13px] font-medium text-ink-soft transition-colors hover:bg-ink/[0.04] hover:text-burgundy"
+              >
+                Minha assinatura
               </Link>
             )}
             <Link

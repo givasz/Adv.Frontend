@@ -43,6 +43,7 @@ const DadosPage = sobDemanda(() => import('./pages/DadosPage'))
 const PlansPage = sobDemanda(() => import('./pages/PlansPage'))
 const CheckoutPage = sobDemanda(() => import('./pages/CheckoutPage'))
 const MudarPlanoPage = sobDemanda(() => import('./pages/MudarPlanoPage'))
+const MinhaAssinaturaPage = sobDemanda(() => import('./pages/MinhaAssinaturaPage'))
 const ContratosPage = sobDemanda(() => import('./pages/ContratosPage'))
 const ContratoPage = sobDemanda(() => import('./pages/ContratoPage'))
 const ModeloProprioPage = sobDemanda(() => import('./pages/ModeloProprioPage'))
@@ -158,6 +159,7 @@ export default function App() {
         {/* Descer de plano tem página própria: ela diz o que muda ANTES de mudar.
             Subir continua indo pelo checkout — são decisões diferentes. */}
         <Route path="/plano/mudar/:plano" element={<RequireAuth><MudarPlanoPage /></RequireAuth>} />
+        <Route path="/assinatura" element={<RequireAuth><MinhaAssinaturaPage /></RequireAuth>} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />

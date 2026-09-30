@@ -159,6 +159,7 @@ const ROTAS = [
   ['/planos', 'planos'],
   ['/planos?recurso=faq&plano=free', 'planos · recurso'],
   ['/assinar/pro', 'checkout'],
+  ['/assinatura', 'minha assinatura'],
   // Descer de plano. A semente está no Max, então esta rota renderiza de verdade
   // (subir redireciona para o checkout, e aí não haveria tela a conferir).
   ['/plano/mudar/pro', 'mudar de plano · descer'],
