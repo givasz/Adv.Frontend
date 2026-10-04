@@ -143,12 +143,6 @@ const ROTAS = [
   ['/editor?section=story', 'editor · story para as redes'],
   // A conversa do advogado com o próprio assistente — percorrida em agendaDoAdvogado.
   ['/agenda', 'sua agenda (conversa do advogado)'],
-  // Contratos: a mesa de documentos e a conferência PÚBLICA — o documento em
-  // si é percorrido de ponta a ponta em contratoDoAdvogado.
-  ['/contratos', 'contratos e procurações'],
-  ['/contratos/conferir', 'conferir um documento (pública)'],
-  // O editor de modelo próprio — percorrido de ponta a ponta em modeloProprioDoAdvogado.
-  ['/contratos/modelos/novo', 'novo modelo de documento'],
   ['/suporte', 'suporte'],
   // A aba de respostas — o chamado com imagem é percorrido em chamadoComImagem.
   ['/suporte?aba=respostas', 'suporte · respostas'],
@@ -190,7 +184,7 @@ const IGNORAR = [/favicon/i, /Download the React DevTools/i, /\[vite\]/i]
 // Rotas que exigem conta. Cair no login com a sessão semeada é falha: foi o que
 // aconteceu, calado, o tempo todo em que a semente usou a chave errada.
 const EXIGEM_CONTA =
-  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/(editar|painel|solicitacoes|visitas)|contratos(?!\/conferir))/
+  /^\/(painel|editor|agenda|assistente|suporte|conta|planos|assinar|plano\/mudar|comecar|escritorio\/(editar|painel|solicitacoes|visitas))/
 
 const navegador = await chromium.launch()
 const falhas = []
@@ -721,64 +715,6 @@ async function agendaDoAdvogado() {
 }
 
 /**
- * Um documento de ponta a ponta: modelo → dados → revisão → declaração →
- * registro → PDF baixado → conferência pública do MESMO arquivo.
- *
- * Nada disto aparece em tsc nem em vitest: o PDF sai de um import dinâmico, o
- * download depende de gesto do usuário, e a conferência lê o arquivo pelo
- * <input type="file"> — três pontos que só quebram no navegador. O fim do
- * percurso é o que prova o produto: o arquivo baixado, reenviado, é reconhecido.
- */
-async function contratoDoAdvogado() {
-  const { contexto, pagina, erros } = await abrir('/contratos')
-  try {
-    await pagina.getByRole('button', { name: /Procuração ad judicia/ }).click()
-    await pagina.waitForURL(/\/contratos\/rascunho\//, { timeout: ESPERA })
-
-    await pagina.locator('label', { hasText: /^Advogada$/ }).first().click()
-    await pagina.getByLabel(/^Endereço profissional/).fill('Av. Afonso Pena, 1500, Belo Horizonte/MG')
-    await pagina.getByLabel(/^Nome completo/).fill('João da Silva')
-    await pagina.getByLabel(/^Nacionalidade/).fill('brasileiro')
-    await pagina.getByLabel(/^Estado civil/).fill('solteiro')
-    await pagina.getByLabel(/^Profissão/).fill('engenheiro')
-    await pagina.getByLabel(/^CPF/).fill('52998224725')
-    await pagina.getByLabel(/^Endereço completo/).fill('Rua das Flores, 120, Belo Horizonte/MG')
-    await clicar(pagina, 'Montar a minuta')
-
-    await pagina.getByText('sem inteligência artificial').waitFor({ timeout: ESPERA })
-    const folha = pagina.locator('article[aria-label^="Documento:"]')
-    if (!(await folha.innerText()).includes('PROCURAÇÃO') && !(await folha.textContent())?.includes('Procuração')) {
-      erros.push('a folha da revisão não mostrou o documento')
-    }
-    await clicar(pagina, 'Revisei, seguir')
-
-    await pagina.getByLabel(/^Li o documento inteiro/).check()
-    await pagina.getByLabel(/^O conteúdo é de minha responsabilidade/).check()
-    await clicar(pagina, 'Registrar e gerar o PDF')
-
-    const baixar = pagina.getByRole('button', { name: /^Baixar o PDF/ })
-    await baixar.waitFor({ timeout: ESPERA })
-    const [arquivo] = await Promise.all([pagina.waitForEvent('download', { timeout: ESPERA }), baixar.click()])
-    const nome = arquivo.suggestedFilename()
-    if (!/^procuracao-ad-judicia-et-extra-AVM-[0-9A-Z]{4}-[0-9A-Z]{4}\.pdf$/.test(nome)) {
-      erros.push(`o PDF saiu como "${nome}"`)
-    }
-    const caminho = await arquivo.path()
-    const bytes = caminho ? await readFile(caminho) : Buffer.alloc(0)
-    if (bytes.subarray(0, 5).toString('latin1') !== '%PDF-') erros.push('o arquivo baixado não é um PDF')
-
-    // A conferência pública, com o arquivo que acabou de sair.
-    await pagina.goto(BASE + '/contratos/conferir', { waitUntil: 'networkidle', timeout: ESPERA })
-    await pagina.locator('input[type="file"]').setInputFiles(caminho)
-    await pagina.getByText('Idêntico ao documento registrado').waitFor({ timeout: ESPERA })
-  } catch (e) {
-    erros.push(String(e).split('\n')[0])
-  }
-  await contexto.close()
-  return erros
-}
-
-/**
  * A TELA DA TRIAGEM, de ponta a ponta: montar, ver o roteiro e acessibilidade.
  *
  * Não substitui uma auditoria, mas trava o que mais some sem ninguém notar: um
@@ -1179,56 +1115,6 @@ async function comparacaoNoCelular() {
   return erros
 }
 
-/**
- * Um modelo próprio do começo ao uso: escrever, ser barrado por um CPF no texto,
- * trocar pelo campo, salvar, voltar à lista, usar o modelo e ver o campo que o
- * advogado inventou virar pergunta — e a resposta aparecer na folha.
- *
- * É a trava de dado pessoal no DOM: se ela parar de aparecer, ou se o salvar
- * passar por cima dela, este percurso quebra.
- */
-async function modeloProprioDoAdvogado() {
-  const { contexto, pagina, erros } = await abrir('/contratos/modelos/novo')
-  try {
-    await pagina.getByText('O modelo guarda só texto').waitFor({ timeout: ESPERA })
-    await pagina.locator('input[name="nome-do-modelo"]').fill('Consultoria mensal')
-    await pagina.locator('input[name="titulo-do-documento"]').fill('Contrato de consultoria jurídica')
-    const objeto = pagina.getByLabel('Texto do trecho 2')
-    await objeto.fill('Consultoria mensal para o cliente de CPF 529.982.247-25.')
-    await pagina.getByText('Isto não pode ficar no modelo').waitFor({ timeout: ESPERA })
-    await clicar(pagina, 'Salvar modelo')
-    if (!/\/contratos\/modelos\/novo/.test(pagina.url())) erros.push('salvou um modelo com CPF no texto')
-
-    await objeto.fill('Consultoria jurídica mensal, pelo valor de {Valor mensal}.')
-    await pagina.getByText('Isto não pode ficar no modelo').waitFor({ state: 'detached', timeout: ESPERA })
-    await clicar(pagina, 'Salvar modelo')
-    await pagina.waitForURL(/\/contratos(\?|$)/, { timeout: ESPERA })
-
-    await pagina.getByRole('button', { name: 'Usar o modelo Consultoria mensal' }).click()
-    await pagina.waitForURL(/\/contratos\/rascunho\//, { timeout: ESPERA })
-    await pagina.locator('label', { hasText: /^Advogada$/ }).first().click()
-    await pagina.getByLabel(/^Endereço profissional/).fill('Av. Afonso Pena, 1500, Belo Horizonte/MG')
-    await pagina.getByLabel(/^Nome completo/).fill('João da Silva')
-    await pagina.getByLabel(/^Nacionalidade/).fill('brasileiro')
-    await pagina.getByLabel(/^Estado civil/).fill('solteiro')
-    await pagina.getByLabel(/^Profissão/).fill('engenheiro')
-    await pagina.getByLabel(/^CPF/).fill('52998224725')
-    await pagina.getByLabel(/^Endereço completo/).fill('Rua das Flores, 120, Belo Horizonte/MG')
-    await pagina.getByLabel(/^Valor mensal/).fill('R$ 2.000,00')
-    await clicar(pagina, 'Montar a minuta')
-
-    const folha = pagina.locator('article[aria-label^="Documento:"]')
-    await folha.waitFor({ timeout: ESPERA })
-    const textoDaFolha = (await folha.locator('textarea').evaluateAll((els) => els.map((e) => e.value))).join('\n')
-    if (!textoDaFolha.includes('pelo valor de R$ 2.000,00')) erros.push('o campo do modelo não virou o valor preenchido')
-    if (/\{|\}/.test(textoDaFolha)) erros.push('sobrou campo entre chaves na minuta')
-  } catch (e) {
-    erros.push(String(e).split('\n')[0])
-  }
-  await contexto.close()
-  return erros
-}
-
 // Chamado de suporte com imagem, do anexo à aba de respostas.
 //
 // A imagem passa pelo mesmo caminho de um arquivo escolhido no celular:
@@ -1275,8 +1161,6 @@ const CONVERSAS = [
   ['balão de conversa no celular da home', balaoNoCelular],
   ['perfil de exemplo não sai da página', exemploNaoSai],
   ['agenda do advogado (editor)', agendaDoAdvogado],
-  ['contrato do advogado, do modelo à conferência', contratoDoAdvogado],
-  ['modelo próprio: trava de dado pessoal, salvar e usar', modeloProprioDoAdvogado],
   ['assistente do perfil', conversaDoPerfil],
   ['teste do próprio assistente', conversaDeTeste],
   ['tela da triagem: montar, ver o roteiro e acessibilidade', acessibilidadeDaTriagem],

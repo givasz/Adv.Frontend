@@ -105,16 +105,6 @@ export default function DadosPage() {
               ficam na aba Respostas do Suporte).
             </li>
             <li>
-              <strong className="font-semibold text-ink">Seus documentos registrados:</strong> só a
-              impressão digital de cada PDF, o código, a data e o endereço de onde você confirmou a
-              revisão. O texto e os dados dos seus clientes ficam no seu aparelho, não aqui.
-            </li>
-            <li>
-              <strong className="font-semibold text-ink">Seus modelos de documento:</strong> o texto que
-              você escreveu, com campos entre chaves no lugar dos dados de cliente — que não são aceitos
-              no modelo.
-            </li>
-            <li>
               <strong className="font-semibold text-ink">Agenda e solicitações:</strong> compromissos que você criou e pedidos enviados pelo mini-site, com contato e respostas da triagem.
             </li>
             <li>

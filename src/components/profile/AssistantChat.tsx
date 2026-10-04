@@ -6,9 +6,9 @@ import { themeStyle } from '@/lib/themes'
 import { useDialog } from '@/lib/a11y'
 import { comoAbrirWhatsapp } from '@/lib/whatsapp'
 import { isExampleSlug } from '@/lib/perfilPublico'
+import { agendaDigital } from '@/lib/agendaDigital'
 import { Avatar } from '@/components/ui/Avatar'
 import { PrivacyNote } from '@/components/ui/PrivacyNote'
-import { MeetingRequestForm } from './MeetingRequestForm'
 import { ArrowRight, CalendarIcon, SparkIcon, WhatsappIcon, XIcon } from '@/components/ui/icons'
 import {
   Bubble,
@@ -130,7 +130,9 @@ export function AssistantChat({
   // Sem número válido não há para onde mandar o pedido: melhor dizer na abertura
   // do que depois de a pessoa responder tudo.
   const inbox = profile.plan === 'premium' && profile.meetingInboxEnabled === true
-  const semWhatsapp = !inbox && !assistantWhatsappHref(profile, {}, config.durationMin)
+  // O WhatsApp é sempre a saída. A caixa do painel, quando ligada, acompanha o
+  // pedido em paralelo e nunca substitui esse link.
+  const semWhatsapp = !assistantWhatsappHref(profile, {}, config.durationMin)
   const areas = useMemo(
     () => profile.areas.map((a) => a.label.trim()).filter(Boolean),
     [profile.areas],
@@ -177,7 +179,8 @@ export function AssistantChat({
   const pedeNomeEmbutido = etapaNaConversa(profile, 'nome')
   /** O pedido já foi fechado uma vez — trocar um horário que expirou não refaz o resto. */
   const [pedidoFechado, setPedidoFechado] = useState(false)
-  const [showRequestForm, setShowRequestForm] = useState(false)
+  /** Evita registros repetidos se houver mais de um toque antes de o app abrir. */
+  const handoffRegistrado = useRef(false)
   const [triagemIdx, setTriagemIdx] = useState(0)
   const [triagem, setTriagem] = useState<RespostaDeTriagem[]>([])
   /** Os ids das respostas tocadas, por pergunta — é o que decide quem recebe qual pergunta. */
@@ -215,7 +218,7 @@ export function AssistantChat({
     setTriagem([])
     setCaminho({})
     setPedidoFechado(false)
-    setShowRequestForm(false)
+    handoffRegistrado.current = false
     setMarcadas([])
     setPedidosDeAnalise(0)
     setStep('boot')
@@ -252,7 +255,7 @@ export function AssistantChat({
   }, [config.greeting, days.length, first, say, reset, semWhatsapp, temTriagem, perguntas])
 
   useAutoStart(start, autoStart)
-  usePinnedToBottom(listRef, [msgs, typing, step, showRequestForm])
+  usePinnedToBottom(listRef, [msgs, typing, step])
 
   // ---- Transições da TRIAGEM ----
 
@@ -363,7 +366,7 @@ export function AssistantChat({
       void say(
         [
           `Troquei para ${answers.day?.longLabel ?? 'esse dia'} às ${time}.`,
-          inbox ? 'Deixe WhatsApp ou e-mail para enviar a solicitação ao painel — o horário só vale depois da confirmação.' : 'Toque no botão abaixo para enviar pelo WhatsApp — o horário só vale depois da confirmação.',
+          'Toque no botão abaixo para enviar pelo WhatsApp — o horário só vale depois da confirmação.',
         ],
         'done',
       )
@@ -445,12 +448,12 @@ export function AssistantChat({
         ? [
             ...abre,
             'Registrei seu pedido.',
-            inbox ? 'Deixe WhatsApp ou e-mail para enviar a solicitação ao painel. O horário só vale depois da confirmação.' : 'Toque no botão abaixo para enviar tudo pelo WhatsApp — o horário só vale depois da confirmação.',
+            'Toque no botão abaixo para enviar tudo pelo WhatsApp — o horário só vale depois da confirmação.',
           ]
         : [
             ...abre,
             'Registrei suas respostas.',
-            inbox ? 'Deixe WhatsApp ou e-mail para enviar ao painel. O advogado vai analisar e responder.' : 'Toque no botão abaixo para enviar pelo WhatsApp. O advogado vai analisar e responder — quem confirma o atendimento é ele.',
+            'Toque no botão abaixo para enviar pelo WhatsApp. O advogado vai analisar e responder — quem confirma o atendimento é ele.',
           ],
       'done',
     )
@@ -550,6 +553,23 @@ export function AssistantChat({
   // mensagem. Fora do Max a lista é sempre vazia e nada muda.
   const respostas: AssistantAnswers = temTriagem ? { ...answers, triagem } : answers
   const href = assistantWhatsappHref(profile, respostas, config.durationMin)
+
+  function registrarNoPainel() {
+    if (!inbox || semEnvio || handoffRegistrado.current) return
+    handoffRegistrado.current = true
+    // Não aguardamos: abrir o WhatsApp é a ação principal e não pode depender da
+    // API. `keepalive` no cliente dá ao espelho no painel a melhor chance de concluir.
+    void agendaDigital.registerWhatsappHandoff(profile.slug, {
+      name: answers.name?.trim() || 'Contato pelo WhatsApp',
+      subject: [answers.subject, answers.detail].filter(Boolean).join(' — ') || 'Pedido de contato pelo WhatsApp',
+      preferredAt: answers.day && answers.time ? `${answers.day.key}T${answers.time}` : undefined,
+      triage: triagem,
+    }).catch(() => {
+      // A mensagem continua seguindo. Se a pessoa voltar, outro toque pode tentar
+      // registrar o acompanhamento novamente.
+      handoffRegistrado.current = false
+    })
+  }
   // Com triagem, o fio de progresso conta as perguntas do advogado — o roteiro
   // tem um tamanho diferente em cada perfil, e o STEP_ORDER fixo mostraria a
   // barra pulando de 0 a 60% na primeira resposta.
@@ -568,7 +588,7 @@ export function AssistantChat({
       : Math.min(1, answered / (STEP_ORDER.length - 1))
   // Sem horário escolhido não há PEDIDO DE HORÁRIO — mas com triagem há um pedido
   // de contato, que vale por si. O que nunca há é conversa sem WhatsApp de destino.
-  const ready = step === 'done' && (inbox || !!href) && (!!answers.time || temTriagem)
+  const ready = step === 'done' && !!href && (!!answers.time || temTriagem)
   /** A pergunta em cena, quando o roteiro está na triagem. */
   const perguntaAtual = step === 'triagem' ? perguntas[triagemIdx] : undefined
 
@@ -691,14 +711,6 @@ export function AssistantChat({
             reduced={reduced}
           />
         )}
-        {ready && inbox && showRequestForm && (
-          <div className="rounded-xl border p-4" style={{ borderColor: 'var(--c-border)', background: 'var(--c-surface)' }}>
-            <MeetingRequestForm slug={profile.slug} initialName={answers.name ?? ''}
-              initialSubject={[answers.subject, answers.detail].filter(Boolean).join(' — ') || 'Pedido de contato'}
-              preferredAt={answers.day && answers.time ? `${answers.day.key}T${answers.time}` : ''}
-              contactOnly={!pedeHorario} triage={triagem} demo={semEnvio} themed />
-          </div>
-        )}
         </div>
       </div>
 
@@ -799,12 +811,6 @@ export function AssistantChat({
                 label="Seu nome"
                 canSend={draft.trim().length > 1}
               />
-            ) : ready && inbox ? (
-              <button type="button" onClick={() => setShowRequestForm(true)}
-                className="t-btn w-full !py-3.5 text-[15px]">
-                {showRequestForm ? 'Preencha o contato acima' : 'Enviar solicitação no site'}
-                <ArrowRight width={16} height={16} />
-              </button>
             ) : ready ? (
               <div className="space-y-2">
                 {semEnvio ? (
@@ -843,12 +849,8 @@ export function AssistantChat({
                   <a
                     href={href}
                     {...comoAbrirWhatsapp()}
-                    onClick={(e) => {
-                      // A pessoa pode ter parado no botão por um bom tempo. Sem
-                      // horário escolhido não há o que expirar.
-                      if (!answers.time || horarioAindaVale(answers)) return
-                      e.preventDefault()
-                      horarioSaiu()
+                    onClick={() => {
+                      registrarNoPainel()
                     }}
                     className="t-btn w-full !py-3.5 text-[15px]"
                   >
@@ -856,6 +858,11 @@ export function AssistantChat({
                     Enviar no WhatsApp
                     <ArrowRight width={16} height={16} />
                   </a>
+                )}
+                {inbox && !semEnvio && (
+                  <p className="t-faint px-2 text-center text-[11px] leading-relaxed">
+                    Ao continuar, um resumo também aparece em Solicitações para o advogado confirmar se o horário foi marcado.
+                  </p>
                 )}
                 <button
                   type="button"
@@ -867,7 +874,7 @@ export function AssistantChat({
               </div>
             ) : step === 'done' ? (
               <p className="t-faint py-2 text-center text-[12.5px] leading-relaxed">
-                {inbox || profile.contact.whatsapp
+                {href
                   ? 'Nenhum horário está aberto por aqui no momento.'
                   : 'Este perfil ainda não informou um WhatsApp para receber o pedido.'}
               </p>

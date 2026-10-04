@@ -327,7 +327,7 @@ export const DocIcon = (p: IconProps) => (
   </svg>
 )
 
-// Pena sobre a linha de assinatura — contratos e procurações. Traço, nunca selo:
+// Pena sobre a linha de escrita. Traço, nunca selo:
 // o ícone diz "documento para assinar", não "documento aprovado".
 export const PenIcon = (p: IconProps) => (
   <svg {...base(p)}>

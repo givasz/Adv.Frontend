@@ -44,7 +44,7 @@ const TEXTO: Record<Fluxo, { corpo: React.ReactNode; guarda?: string }> = {
   },
   solicitacao: {
     corpo: <>
-      Seus dados e respostas da triagem ficam no <strong>painel privado do advogado</strong> para que ele possa responder. O advogado pode excluí-los depois.
+      Seus dados e respostas da triagem ficam no <strong>painel privado do advogado</strong> para que ele possa acompanhar o pedido. Quando o botão abre o WhatsApp, a mensagem também segue direto do seu aparelho. O advogado pode excluir o resumo depois.
     </>,
     guarda: 'Descreva o assunto em linhas gerais. Não envie documentos, senhas ou dados bancários.',
   },

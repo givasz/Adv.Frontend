@@ -107,7 +107,7 @@ type NavegadorComArquivo = Navigator & {
 /**
  * O aparelho abre a folha de compartilhar com uma imagem? Só no toque: no
  * Windows o Chrome também sabe, e abriria a folha do sistema em vez de baixar —
- * mesma regra de lib/cardExport.ts e lib/contratos/entrega.ts.
+ * mesma regra de lib/cardExport.ts.
  */
 export function podeCompartilharImagem(): boolean {
   const nav = navigator as NavegadorComArquivo

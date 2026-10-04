@@ -5,7 +5,6 @@ import { api, SessaoExpirada } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import { computeTrust, type TrustFactor } from '@/lib/trustScore'
 import { resolveSchedulingMode } from '@/lib/booking'
-import { canUseContratos } from '@/lib/plans'
 import { PLAN_LABEL } from '@/lib/upsell'
 import { DESTINO_DO_FATOR, SECTIONS_BY_GROUP, editorPath } from '@/lib/editorSections'
 import { AccountMenu } from '@/components/auth/AccountMenu'
@@ -17,7 +16,7 @@ import { FalhaAoCarregar } from '@/components/ui/FalhaAoCarregar'
 import { TrustGauge } from '@/components/ui/TrustGauge'
 import { comVolta } from '@/components/ui/SubPage'
 import { Avatar } from '@/components/ui/Avatar'
-import { ArrowRight, CalendarIcon, CheckIcon, MessageIcon, PenIcon, ShareIcon } from '@/components/ui/icons'
+import { ArrowRight, CalendarIcon, CheckIcon, MessageIcon, ShareIcon } from '@/components/ui/icons'
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 import { AgendaCard } from '@/components/painel/AgendaCard'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
@@ -48,7 +47,7 @@ function motivator(score: number): string {
 //      O que falta nele?          → o Índice de Confiança, com os passos dentro.
 //   2. O que eu faço toda semana? → agenda do assistente, agenda digital, pedidos.
 //   3. Como chego a mais gente?   → visitas, compartilhar, story, QR.
-//   4. O que uso com o cliente?   → cartão impresso, contratos, documentos.
+//   4. O que uso com o cliente?   → cartão impresso e conteúdo.
 //   5. E cada parte do perfil?    → uma LISTA num cartão só (muito, visitado pouco).
 //   6. E o meu plano?             → o que o plano abriu e ainda não foi usado; oferta.
 //   7. Escritório.
@@ -235,17 +234,9 @@ export default function Painel() {
           </div>
         </Grupo>
 
-        <Grupo titulo="Com o cliente" subtitulo="Do cartão entregue ao contrato assinado.">
-          <div className="grid gap-3 sm:grid-cols-3">
+        <Grupo titulo="Com o cliente" subtitulo="Materiais para apresentar o seu trabalho.">
+          <div className="grid gap-3 sm:grid-cols-2">
             <SecaoAtalho id="cartao" profile={profile} coluna />
-            <Atalho
-              to={comVolta('/contratos', '/painel')}
-              titulo="Contratos e procurações"
-              texto="A minuta a partir de um modelo, com o registro do PDF."
-              Icone={PenIcon}
-              selo={canUseContratos(profile.plan) ? undefined : 'Max'}
-              coluna
-            />
             <SecaoAtalho id="conteudo" profile={profile} coluna />
           </div>
         </Grupo>

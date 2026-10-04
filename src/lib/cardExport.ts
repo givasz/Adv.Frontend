@@ -249,8 +249,7 @@ export async function entregarArquivo(blob: Blob, nome: string): Promise<void> {
     share?: (d: { files: File[]; title?: string }) => Promise<void>
   }
   // Só no toque: no Windows, o Chrome e o Edge também sabem compartilhar arquivo,
-  // e abriam a folha do sistema em vez de baixar o PNG. Mesma regra de
-  // lib/contratos/entrega.ts.
+  // e abriam a folha do sistema em vez de baixar o PNG.
   const toque = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
   const podeCompartilhar = toque && typeof File !== 'undefined' && !!nav.canShare && !!nav.share
   if (podeCompartilhar) {

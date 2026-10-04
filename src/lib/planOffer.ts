@@ -27,9 +27,7 @@ import {
   CHAR_LIMITS,
   FAQ_LIMIT,
   FIRM_PRICING,
-  MODELOS_PROPRIOS_LIMITE,
   PLAN_PRICE,
-  canUseContratos,
   precoDoPlano,
 } from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
@@ -200,7 +198,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
     falta: [
       'O assistente marca horário, mas não faz as suas perguntas de triagem',
       'Sem agenda digital e solicitações no painel',
-      'Sem vídeo, cartão para a gráfica, cor própria e contratos',
+      'Sem vídeo, cartão para a gráfica e cor própria',
       'Rodapé “criado com advoc.me” continua',
     ],
     ctaTo: '/comecar?plan=pro',
@@ -221,16 +219,6 @@ export const PLAN_OFFERS: PlanOffer[] = [
       { text: TRIAGEM },
       { text: 'Agenda digital com compromissos editáveis e exportação para o calendário do celular' },
       { text: 'Solicitações de reunião no mini-site, com contato e triagem no painel para confirmar ou negar' },
-      // Os contratos vêm logo depois (foram os primeiros de 11/09 a 14/09): é o
-      // único recurso do Max que serve ao escritório, e não só ao perfil.
-      // "Registrada" é a palavra exata: guardamos a impressão digital do arquivo
-      // — não assinamos, não validamos e não guardamos o contrato. Enviar para
-      // assinatura daqui ainda não existe e por isso não está na frase.
-      { text: 'Contratos de honorários, procurações e declarações a partir de modelos, com o PDF registrado' },
-      // "Só com texto" é a promessa E a regra: o servidor recusa modelo com CPF,
-      // e-mail, telefone… (ver lib/contratos/proprio.ts). Não dizer isso aqui
-      // venderia um cofre de contratos que o produto se recusa a ser.
-      { text: `Até ${MODELOS_PROPRIOS_LIMITE} modelos escritos por você, só com texto — os dados do cliente entram a cada documento` },
       { text: 'Vídeo de apresentação no fim do perfil' },
       // Estava faltando na home — e é o recurso mais palpável do Max: sai um PDF
       // pronto para a gráfica, com frente, verso, sangria e marcas de corte.
@@ -410,30 +398,6 @@ export const PLAN_COMPARE: CompareGroup[] = [
         values: aPartirDe('pro'),
       },
       { label: 'Comprovante de conformidade em PDF', values: aPartirDe('premium') },
-    ],
-  },
-  {
-    title: 'Documentos do escritório',
-    rows: [
-      {
-        label: 'Contratos de honorários, procurações e declarações',
-        hint: 'a partir de modelos, revisados por você',
-        values: aPartirDe('premium'),
-      },
-      {
-        label: 'Impressão digital do PDF registrada',
-        hint: 'qualquer pessoa confere se o arquivo mudou',
-        values: aPartirDe('premium'),
-      },
-      {
-        label: 'Modelos escritos por você',
-        hint: 'só texto, sem dado de cliente',
-        values: porPlano((p) => (canUseContratos(p) ? `até ${MODELOS_PROPRIOS_LIMITE}` : false)),
-      },
-      // Enviar para assinatura eletrônica DAQUI (Clicksign, D4Sign…) não existe, e
-      // não ganha linha nem marcada "em preparo" — mesma decisão do domínio
-      // próprio em 04/09. A tela de contratos ensina a assinar com o gov.br ou com
-      // certificado, que é o que funciona hoje.
     ],
   },
   {

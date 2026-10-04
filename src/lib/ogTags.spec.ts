@@ -381,7 +381,6 @@ describe('o que entra no índice', () => {
     ['/ana-ribeiro/agendar', false],
     ['/ana-ribeiro/denunciar', false],
     ['/__preview/classic', false],
-    ['/contratos/conferir', false],
   ])('%s → indexável: %s', (caminho, esperado) => {
     expect(paginaIndexavel(caminho)).toBe(esperado)
   })
@@ -446,11 +445,8 @@ describe('o corpo estático — o que o robô lê no lugar de uma div vazia', ()
   it('a home tem um h1 e as mesmas âncoras do Landing.tsx', () => {
     const html = corpoDaHome()
     expect(html.match(/<h1>/g)).toHaveLength(1)
-    // A vitrine de contratos é um componente à parte; as âncoras são as mesmas.
-    const landing =
-      readFileSync(join(__dirname, '..', 'pages', 'Landing.tsx'), 'utf-8') +
-      readFileSync(join(__dirname, '..', 'components', 'landing', 'ContratosVitrine.tsx'), 'utf-8')
-    for (const id of ['problema', 'assistente', 'contratos', 'como-funciona', 'planos']) {
+    const landing = readFileSync(join(__dirname, '..', 'pages', 'Landing.tsx'), 'utf-8')
+    for (const id of ['problema', 'assistente', 'como-funciona', 'planos']) {
       expect(landing).toContain(`id="${id}"`)
       expect(html).toContain(`id="${id}"`)
     }

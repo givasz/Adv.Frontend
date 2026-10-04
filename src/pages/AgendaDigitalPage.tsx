@@ -307,6 +307,7 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
   return <article className="overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-card">
     <div className="border-l-4 border-brass px-4 py-5 sm:px-6"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brass-deep">RECEBIDA {new Date(request.createdAt).toLocaleDateString('pt-BR')}</p><h3 className="mt-1 font-display text-xl font-semibold">{request.name}</h3></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${request.status === 'pending' ? 'bg-brass/15 text-brass-deep' : request.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-ink/5 text-ink-faint'}`}>{statusLabel[request.status]}</span></div>
       {request.firmId && <p className="mt-2 inline-flex rounded-full bg-burgundy/[0.07] px-2.5 py-1 text-[11px] font-semibold text-burgundy">Veio pela página do escritório</p>}
+      {request.viaWhatsapp && <p className="mt-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">Conversa aberta no WhatsApp</p>}
       <p className="mt-3 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-soft">{request.subject}</p>
       {request.preferredAt && <p className="mt-2 text-[12px] font-semibold text-burgundy">Preferência: {formatDate(request.preferredAt.slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' })} às {request.preferredAt.slice(11, 16)}</p>}
       {request.triage.length > 0 && <details className="mt-3 rounded-xl bg-paper-soft p-3 text-[12px]"><summary className="cursor-pointer font-semibold">Ver respostas da triagem ({request.triage.length})</summary><dl className="mt-3 space-y-3">{request.triage.map((row, i) => <div key={row.id || i}><dt className="font-semibold text-ink">{row.pergunta}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink-soft">{row.resposta}</dd></div>)}</dl></details>}
@@ -320,7 +321,9 @@ function RequestCard({ request, busy, canSchedule, defaultDuration, onDecide, on
           ? 'Escolha a data combinada para colocar este pedido antigo na agenda.'
           : request.preferredAt
             ? 'Confirme ou ajuste a data depois de conversar com a pessoa. Ao confirmar, o compromisso entra direto na sua agenda.'
-            : 'Este pedido chegou sem horário. Converse com a pessoa pelo contato acima, escolha a data combinada aqui e confirme para colocar na sua agenda.'}</p>
+            : request.viaWhatsapp
+              ? 'Confira a conversa que chegou ao seu WhatsApp. Depois de combinar a data, preencha aqui e confirme para colocar na agenda.'
+              : 'Este pedido chegou sem horário. Converse com a pessoa pelo contato acima, escolha a data combinada aqui e confirme para colocar na sua agenda.'}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
           <label className="text-[12px] font-semibold">Data e hora<input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="agenda-input" /></label>
           <label className="text-[12px] font-semibold">Duração<select value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} className="agenda-input">{[15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</select></label>

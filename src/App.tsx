@@ -44,10 +44,6 @@ const PlansPage = sobDemanda(() => import('./pages/PlansPage'))
 const CheckoutPage = sobDemanda(() => import('./pages/CheckoutPage'))
 const MudarPlanoPage = sobDemanda(() => import('./pages/MudarPlanoPage'))
 const MinhaAssinaturaPage = sobDemanda(() => import('./pages/MinhaAssinaturaPage'))
-const ContratosPage = sobDemanda(() => import('./pages/ContratosPage'))
-const ContratoPage = sobDemanda(() => import('./pages/ContratoPage'))
-const ModeloProprioPage = sobDemanda(() => import('./pages/ModeloProprioPage'))
-const ConferirDocumentoPage = sobDemanda(() => import('./pages/ConferirDocumentoPage'))
 
 // Rota escondida do console de administração — não linkada em nenhum lugar da
 // UI. O segmento vive em lib/adminPath.ts (fonte única, usada também pelo smoke).
@@ -138,17 +134,6 @@ export default function App() {
             gravado, e sem abrir o WhatsApp no fim. É a resposta a "se eu fosse um
             cliente, o que eu veria?" — ver pages/TestarAssistentePage.tsx. */}
         <Route path="/assistente/testar" element={<RequireAuth><TestarAssistentePage /></RequireAuth>} />
-        {/* Contratos e procurações: minuta por modelo, revisão e registro da
-            impressão digital do PDF. O texto fica no aparelho; o servidor guarda
-            só o hash (ver lib/contratos/rascunhos.ts). */}
-        <Route path="/contratos" element={<RequireAuth><ContratosPage /></RequireAuth>} />
-        <Route path="/contratos/rascunho/:id" element={<RequireAuth><ContratoPage /></RequireAuth>} />
-        {/* Modelos próprios (Max, até 3): só texto, com campos entre chaves no
-            lugar do dado de cliente. "novo" cria. */}
-        <Route path="/contratos/modelos/:id" element={<RequireAuth><ModeloProprioPage /></RequireAuth>} />
-        {/* Sem RequireAuth de propósito: quem confere um contrato é o cliente, a
-            outra parte ou um juiz — gente sem conta. */}
-        <Route path="/contratos/conferir" element={<ConferirDocumentoPage />} />
         <Route path="/suporte" element={<RequireAuth><SupportPage /></RequireAuth>} />
         {/* Sem RequireAuth de propósito: quem foi suspenso não consegue entrar,
             e é justamente essa pessoa que mais precisa desta página. */}

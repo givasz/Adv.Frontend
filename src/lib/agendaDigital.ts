@@ -31,6 +31,8 @@ export interface MeetingRequest {
   name: string
   whatsapp?: string | null
   email?: string | null
+  /** O resumo foi registrado enquanto o visitante abriu a conversa no WhatsApp. */
+  viaWhatsapp?: boolean
   subject: string
   preferredAt?: string | null
   calendarEntryId?: string | null
@@ -48,6 +50,8 @@ export interface MeetingRequestInput {
   preferredAt?: string
   triage?: RespostaDeTriagem[]
   consent: boolean
+  /** Registra o resumo sem substituir nem atrasar a abertura do WhatsApp. */
+  viaWhatsapp?: boolean
   /**
    * Só no pedido feito pela página do ESCRITÓRIO: o id do perfil do advogado que
    * o VISITANTE escolheu na conversa. Vai sempre que houve escolha — quem decide
@@ -106,7 +110,7 @@ async function result<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-const json = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+const json = (method: string, body: unknown, keepalive = false): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive })
 const id = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
 
 export const agendaDigital = {
@@ -132,6 +136,19 @@ export const agendaDigital = {
     if (TEM_BACKEND) { await result(`/api/${porta}/${encodeURIComponent(slug)}/meeting-requests`, json('POST', input)); return }
     // Perfis demonstrativos não pertencem a alguém: o componente público os mantém em modo de exemplo.
     const request: MeetingRequest = { ...input, id: id(), triage: input.triage ?? [], status: 'pending', createdAt: new Date().toISOString() }
+    write(REQUESTS_KEY, [request, ...read<MeetingRequest>(REQUESTS_KEY)])
+  },
+  /**
+   * Melhor esforço: esta chamada acompanha um link real para o WhatsApp.
+   * `keepalive` permite que o POST termine quando o celular troca de aplicativo.
+   */
+  async registerWhatsappHandoff(slug: string, input: Omit<MeetingRequestInput, 'consent' | 'viaWhatsapp'>): Promise<void> {
+    const payload: MeetingRequestInput = { ...input, consent: true, viaWhatsapp: true }
+    if (TEM_BACKEND) {
+      await result(`/api/profiles/${encodeURIComponent(slug)}/meeting-requests`, json('POST', payload, true))
+      return
+    }
+    const request: MeetingRequest = { ...payload, id: id(), triage: payload.triage ?? [], status: 'pending', createdAt: new Date().toISOString() }
     write(REQUESTS_KEY, [request, ...read<MeetingRequest>(REQUESTS_KEY)])
   },
   async requests(page = 1, status: RequestFilter = 'all'): Promise<RequestPage> {

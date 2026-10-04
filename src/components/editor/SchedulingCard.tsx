@@ -48,7 +48,7 @@ export function SchedulingCard({
   const receivesInPanel = canChooseDestination && !!profile.meetingInboxEnabled
   const scheduleQuestionEnabled = etapaNaConversa(profile, 'horario')
   const suggestsTimes = mode === 'assistant' && scheduleQuestionEnabled
-  const needsWhatsapp = mode === 'off' || (acceptsRequests && !receivesInPanel)
+  const needsWhatsapp = mode === 'off' || mode === 'assistant' || (acceptsRequests && !receivesInPanel)
   const result = mode === 'off'
     ? { button: 'Conversar no WhatsApp', detail: 'O visitante fala diretamente com você. Não há pedido de horário nem confirmação prévia.' }
     : mode === 'external'
@@ -56,10 +56,10 @@ export function SchedulingCard({
       : mode === 'assistant'
         ? suggestsTimes
           ? receivesInPanel
-            ? { button: 'Solicitar uma reunião', detail: 'O assistente sugere horários da sua grade; contato e triagem chegam às Solicitações. Você combina e confirma o horário no painel.' }
+            ? { button: 'Agendar uma conversa', detail: 'O assistente prepara a mensagem para o seu WhatsApp e também cria um pedido em Solicitações, para você confirmar se o horário foi marcado.' }
             : { button: 'Agendar uma conversa', detail: 'O assistente sugere horários da sua grade e prepara uma mensagem para o visitante enviar ao seu WhatsApp.' }
           : receivesInPanel
-            ? { button: 'Solicitar uma reunião', detail: 'O assistente recebe o contato e a triagem sem pedir horário. Você combina a data e confirma em Solicitações; o compromisso entra na agenda.' }
+            ? { button: 'Agendar uma conversa', detail: 'O assistente prepara a triagem para o seu WhatsApp e também deixa o acompanhamento em Solicitações, onde você confirma a data combinada.' }
             : { button: 'Agendar uma conversa', detail: 'O assistente recebe a triagem sem pedir horário e prepara a mensagem para seu WhatsApp. Você combina a data diretamente com a pessoa.' }
         : receivesInPanel
           ? { button: 'Solicitar uma reunião', detail: 'O visitante informa contato, assunto e horário preferido. O pedido chega às Solicitações para você responder.' }
@@ -102,18 +102,18 @@ export function SchedulingCard({
       </section>
 
       {canChooseDestination && <section aria-labelledby="agenda-destination-title" className="space-y-3 border-t border-ink/10 pt-5">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brass-deep">02 · DESTINO DO PEDIDO</p><h4 id="agenda-destination-title" className="mt-1 font-display text-xl font-semibold text-ink">Onde você quer receber os pedidos?</h4></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brass-deep">02 · {mode === 'assistant' ? 'ACOMPANHAMENTO' : 'DESTINO DO PEDIDO'}</p><h4 id="agenda-destination-title" className="mt-1 font-display text-xl font-semibold text-ink">{mode === 'assistant' ? 'Guardar também no painel?' : 'Onde você quer receber os pedidos?'}</h4>{mode === 'assistant' && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">A mensagem sempre abre no WhatsApp. No Max, você pode acompanhar o mesmo pedido por aqui.</p>}</div>
         <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Destino dos pedidos">
           <button type="button" aria-pressed={!receivesInPanel} onClick={() => set({ meetingInboxEnabled: false })}
             className={`flex min-h-[88px] items-start gap-3 rounded-xl border p-3.5 text-left transition-[border-color,background-color] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burgundy ${!receivesInPanel ? 'border-burgundy bg-burgundy/[0.055]' : 'border-ink/10 bg-paper-soft/55 hover:border-brass/60'}`}>
             <WhatsappIcon width={21} height={21} className="mt-0.5 shrink-0 text-[#1f7a55]" aria-hidden />
-            <span><strong className="block text-[13px] text-ink">No meu WhatsApp</strong><span className="mt-1 block text-[11.5px] leading-relaxed text-ink-soft">O visitante envia uma mensagem pronta.</span></span>
+            <span><strong className="block text-[13px] text-ink">{mode === 'assistant' ? 'Somente WhatsApp' : 'No meu WhatsApp'}</strong><span className="mt-1 block text-[11.5px] leading-relaxed text-ink-soft">O visitante envia uma mensagem pronta.</span></span>
             {!receivesInPanel && <CheckIcon width={17} height={17} className="ml-auto shrink-0 text-burgundy" aria-hidden />}
           </button>
           <button type="button" aria-pressed={receivesInPanel} onClick={() => set({ meetingInboxEnabled: true })}
             className={`flex min-h-[88px] items-start gap-3 rounded-xl border p-3.5 text-left transition-[border-color,background-color] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-burgundy ${receivesInPanel ? 'border-burgundy bg-burgundy/[0.055]' : 'border-ink/10 bg-paper-soft/55 hover:border-brass/60'}`}>
             <MailIcon width={21} height={21} className="mt-0.5 shrink-0 text-brass-deep" aria-hidden />
-            <span><strong className="block text-[13px] text-ink">No painel advoc.me</strong><span className="mt-1 block text-[11.5px] leading-relaxed text-ink-soft">Contato e triagem ficam em Solicitações.</span></span>
+            <span><strong className="block text-[13px] text-ink">{mode === 'assistant' ? 'WhatsApp + painel' : 'No painel advoc.me'}</strong><span className="mt-1 block text-[11.5px] leading-relaxed text-ink-soft">{mode === 'assistant' ? 'A mensagem abre no WhatsApp e um resumo fica em Solicitações.' : 'Contato e triagem ficam em Solicitações.'}</span></span>
             {receivesInPanel && <CheckIcon width={17} height={17} className="ml-auto shrink-0 text-burgundy" aria-hidden />}
           </button>
         </div>

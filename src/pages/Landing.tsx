@@ -15,7 +15,6 @@ import { PhonePreview } from '@/components/editor/PhonePreview'
 import { CompararPlanos } from '@/components/landing/CompararPlanos'
 import { PrimeiroContato } from '@/components/landing/PrimeiroContato'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
-import { ContratosVitrine } from '@/components/landing/ContratosVitrine'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
 import { LEGAL_DOCS } from '@/lib/legalContent'
@@ -46,7 +45,7 @@ import { Marca } from '@/components/ui/Marca'
 //   1. o DESEJO — uma presença profissional, num endereço só seu;
 //   2. o BENEFÍCIO — apresentar o trabalho e organizar o primeiro contato;
 //   3. o DIFERENCIAL — feito para a advocacia, e demonstrado (não descrito);
-//   4. os RECURSOS — perfil, triagem, agenda, contratos, cartão…;
+//   4. os RECURSOS — perfil, triagem, agenda, cartão…;
 //   5. a SEGURANÇA — pensado para as regras de publicidade da advocacia.
 //
 // Até essa data a página abria por "dentro das regras da OAB" e seguia com o
@@ -114,11 +113,6 @@ export default function Landing() {
           </a>
           <a href="#assistente" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
             Assistente
-          </a>
-          {/* A partir de 768px: entre 640 e 768 os quatro links brigavam com o
-              menu da conta e o botão principal. */}
-          <a href="#contratos" className="hidden text-sm font-medium text-ink-soft hover:text-ink md:block">
-            Contratos
           </a>
           {/* Quem chega decidido a comparar preço não devia ter de adivinhar que
               precisa rolar até o fim. O link aparece a partir de 480px porque
@@ -421,10 +415,6 @@ export default function Landing() {
           </div>
         </div>
       </motion.section>
-
-      {/* Contratos e procurações — recurso do Max, com a folha e o canhoto do
-          registro desenhados na mesma linguagem das telas de verdade. */}
-      <ContratosVitrine />
 
       {/* Os recursos que não têm seção própria, em uma lista editorial — cada um
           com o plano a partir do qual existe. É o "por que pagar" dito por
@@ -833,10 +823,6 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'A apresentação escrita pela IA já sai dentro das regras?',
     a: 'A IA é orientada pelas normas e o texto passa pela mesma checagem de qualquer conteúdo. Ainda assim, nada é publicado sem a sua revisão e aprovação — e ela não inventa formação, anos de atuação ou cargo que você não informou.',
-  },
-  {
-    q: 'Os contratos que eu monto ficam guardados no advoc.me?',
-    a: 'Não. O texto, os dados do cliente e os valores ficam no seu aparelho e no PDF que você baixa. O que registramos é só a impressão digital do arquivo, o código impresso no rodapé e a data em que você confirmou a revisão — o bastante para qualquer pessoa conferir depois se o PDF mudou. Montar e registrar documentos é do plano Max.',
   },
 ]
 
