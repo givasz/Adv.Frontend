@@ -29,7 +29,13 @@ const BENEFICIOS = [
 
 export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode)
-  const [name, setName] = useState('')
+  // O nome digitado no campo de endereço da home (EnderecoCta) viaja dentro do
+  // ?next=/comecar?nome=… e chega aqui já preenchido — é dele que sai o endereço.
+  const [name, setName] = useState(() => {
+    const destino = new URLSearchParams(window.location.search).get('next') ?? ''
+    const q = destino.indexOf('?')
+    return q < 0 ? '' : (new URLSearchParams(destino.slice(q)).get('nome') ?? '').slice(0, 60)
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')

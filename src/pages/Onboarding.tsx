@@ -110,7 +110,13 @@ export default function Onboarding() {
           navigate(`/painel${q}`, { replace: true })
           return
         }
-        setProfile(isUnstarted(d) ? blankEssentials(d) : d)
+        // ?nome= vem do campo de endereço do fim da home (EnderecoCta): o que a
+        // pessoa digitou lá vira o nome aqui, e é dele que sai o endereço do
+        // Free. Só onde o nome está em branco — nunca por cima do que já escreveu
+        // (no cadastro o nome é opcional, e o da conta tem precedência).
+        const nome = (searchParams.get('nome') ?? '').replace(/\s+/g, ' ').trim().slice(0, 60)
+        const p = isUnstarted(d) ? blankEssentials(d) : d
+        setProfile(nome && !p.name.trim() ? { ...p, name: nome } : p)
       })
       .catch((e: unknown) => {
         // Sessão caída → o RequireAuth já leva ao login. O resto vira mensagem, em

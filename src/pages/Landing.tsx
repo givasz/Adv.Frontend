@@ -14,6 +14,7 @@ import { FAQ_LIMIT } from '@/lib/plans'
 import { PhonePreview } from '@/components/editor/PhonePreview'
 import { CompararPlanos } from '@/components/landing/CompararPlanos'
 import { PrimeiroContato } from '@/components/landing/PrimeiroContato'
+import { EnderecoCta } from '@/components/landing/EnderecoCta'
 import { AssistantDemo } from '@/components/profile/AssistantDemo'
 import { AccountMenu } from '@/components/auth/AccountMenu'
 import { useMyProfileLink } from '@/lib/useMyProfileLink'
@@ -566,32 +567,37 @@ export default function Landing() {
         </div>
       </Section>
 
-      {/* CTA final */}
-      <section className="mx-auto max-w-4xl px-5 py-20 text-center">
-        <div className="rule-brass mx-auto mb-8 max-w-xs" />
-        <h2 className="font-display text-3xl font-semibold sm:text-5xl">
-          Um endereço só seu,
-          <br />
-          <span className="italic text-burgundy">pronto em minutos.</span>
-        </h2>
-        <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
-          Comece no Free, sem cartão. Suba de plano quando quiser — e volte quando quiser, sem perder
-          nada do que escreveu.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            to={meu.to}
-            {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
-            className="btn-conversion"
-          >
-            {rotuloPrincipal}
-            <ArrowRight width={18} height={18} />
-          </Link>
-          <a href="#planos" className="btn-ghost">
-            Ver os planos
-          </a>
-        </div>
-      </section>
+      {/* CTA final — quem ainda não tem perfil escolhe o endereço ali mesmo
+          (EnderecoCta); quem já tem não é convidado a criar o que existe. */}
+      {criar ? (
+        <EnderecoCta destino={meu.to} />
+      ) : (
+        <section className="mx-auto max-w-4xl px-5 py-20 text-center">
+          <div className="rule-brass mx-auto mb-8 max-w-xs" />
+          <h2 className="font-display text-3xl font-semibold sm:text-5xl">
+            Um endereço só seu,
+            <br />
+            <span className="italic text-burgundy">pronto em minutos.</span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-md text-[15.5px] leading-relaxed text-ink-soft">
+            Comece no Free, sem cartão. Suba de plano quando quiser — e volte quando quiser, sem perder
+            nada do que escreveu.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to={meu.to}
+              {...(meu.external ? { target: '_blank', rel: 'noreferrer noopener' } : {})}
+              className="btn-conversion"
+            >
+              {rotuloPrincipal}
+              <ArrowRight width={18} height={18} />
+            </Link>
+            <a href="#planos" className="btn-ghost">
+              Ver os planos
+            </a>
+          </div>
+        </section>
+      )}
 
       <footer className="border-t border-ink/10 py-10 text-center text-[13px] text-ink-faint">
         <nav className="mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-5">
