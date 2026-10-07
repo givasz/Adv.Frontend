@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   dataDoBeneficio,
   linkLegivel,
@@ -77,12 +76,15 @@ function Convite({ dados, onAceitar, aceitando }: { dados: PainelConvidado } & A
       </ol>
       <p className="mt-2 text-[11.5px] text-ink-faint">Versão das regras: {dados.regras.versao}</p>
 
+      {dados.renovacao && !dados.bloqueio && (
+        <p className="mt-5 rounded-lg border border-brass/40 bg-brass/10 p-3 text-[13px] leading-relaxed text-ink">
+          {dados.renovacao}
+        </p>
+      )}
+
       {dados.bloqueio ? (
         <div className="mt-5 rounded-lg border border-brass/40 bg-brass/10 p-3 text-[13px] leading-relaxed text-ink">
           <p>{dados.bloqueio}</p>
-          <Link to="/assinatura" className="mt-2 inline-block font-semibold text-burgundy underline-offset-4 hover:underline">
-            Abrir Minha assinatura
-          </Link>
         </div>
       ) : (
         <div className="mt-5">
@@ -93,7 +95,9 @@ function Convite({ dados, onAceitar, aceitando }: { dados: PainelConvidado } & A
               onChange={(e) => setLi(e.target.checked)}
               className="mt-0.5 h-4 w-4 accent-burgundy"
             />
-            Li e aceito as regras do Programa Advocme Parceiros.
+            {dados.renovacao
+              ? 'Li e aceito as regras do Programa Advocme Parceiros e o encerramento da renovação da minha assinatura.'
+              : 'Li e aceito as regras do Programa Advocme Parceiros.'}
           </label>
           <button
             type="button"

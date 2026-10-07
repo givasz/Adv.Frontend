@@ -817,3 +817,33 @@ export const acoesDoParceiro = {
   revogarRecompensa: (rewardId: string, reason: string) =>
     postar(`/admin/partner-rewards/${encodeURIComponent(rewardId)}/revoke`, { reason }),
 }
+
+// Convite pelo e-mail: com conta, vira participação convidada; sem conta, o
+// e-mail sai e o convite espera o cadastro com o mesmo endereço.
+export interface ConvitePorEmail {
+  id: string
+  email: string
+  createdAt: string | null
+  expiraEm: string | null
+  vencido: boolean
+}
+
+export async function convidarParceiroPorEmail(
+  email: string,
+  reason: string,
+): Promise<{ resultado: 'conta' | 'email'; id: string; email: string }> {
+  return json(await adminFetch('/admin/partners/invite', { method: 'POST', body: JSON.stringify({ email, reason }) }))
+}
+
+export async function listarConvitesPorEmail(cursor?: string): Promise<Trilha<ConvitePorEmail>> {
+  return json(await adminFetch(`/admin/partners/invites${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`))
+}
+
+export async function cancelarConvitePorEmail(id: string, reason: string): Promise<{ ok: boolean }> {
+  return json(
+    await adminFetch(`/admin/partners/invites/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  )
+}

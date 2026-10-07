@@ -12,11 +12,12 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import {
   acoesDoParceiro,
+  cancelarConvitePorEmail,
+  convidarParceiroPorEmail,
   fichaDoParceiro,
-  getModerationProfile,
+  listarConvitesPorEmail,
   listarParceiros,
-  searchProfiles,
-  type AdminProfile,
+  type ConvitePorEmail,
   type FichaDoParceiro,
   type ParceiroNaLista,
   type StatusDoParceiroAdmin,
@@ -25,6 +26,7 @@ import { SearchIcon } from '@/components/ui/icons'
 import {
   Aviso,
   Botao,
+  Campo,
   Cartao,
   Carregando,
   Chip,
@@ -71,7 +73,7 @@ const SITUACAO_DA_RECOMPENSA: Record<string, { label: string; tom: Tom }> = {
   revoked: { label: 'revogada', tom: 'neutro' },
 }
 
-export default function PartnersTab({ podeGerir, podeBuscarContas }: { podeGerir: boolean; podeBuscarContas: boolean }) {
+export default function PartnersTab({ podeGerir }: { podeGerir: boolean }) {
   const secao = SECOES.find((s) => s.id === 'parceiros')!
   const larga = useTelaLarga()
   const [status, setStatus] = useState('')
@@ -127,7 +129,7 @@ export default function PartnersTab({ podeGerir, podeBuscarContas }: { podeGerir
         software a outros profissionais — nunca cliente, causa, consulta ou contato.
       </Aviso>
 
-      {podeGerir && podeBuscarContas && <ConvidarConta onConvidou={() => setTick((n) => n + 1)} />}
+      {podeGerir && <ConvidarConta onConvidou={() => setTick((n) => n + 1)} />}
 
       <Cartao
         semPreenchimento
@@ -225,43 +227,40 @@ export default function PartnersTab({ podeGerir, podeBuscarContas }: { podeGerir
 // ---- Convidar --------------------------------------------------------------
 
 function ConvidarConta({ onConvidou }: { onConvidou: () => void }) {
-  const [q, setQ] = useState('')
-  const [achados, setAchados] = useState<AdminProfile[] | null>(null)
-  const [escolhido, setEscolhido] = useState<AdminProfile | null>(null)
+  const [email, setEmail] = useState('')
   const [motivo, setMotivo] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  const [pendentes, setPendentes] = useState<ConvitePorEmail[] | null>(null)
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
-    const termo = q.trim()
-    if (termo.length < 2) {
-      setAchados(null)
-      return
-    }
     let vivo = true
-    const t = setTimeout(() => {
-      void searchProfiles(termo, 0, 8)
-        .then((r) => vivo && setAchados(r.itens))
-        .catch((e: unknown) => vivo && setErro(e instanceof Error ? e.message : 'Falha na busca.'))
-    }, 300)
+    void listarConvitesPorEmail()
+      .then((r) => vivo && setPendentes(r.itens))
+      .catch(() => vivo && setPendentes([]))
     return () => {
       vivo = false
-      clearTimeout(t)
     }
-  }, [q])
+  }, [tick])
+
+  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
   async function convidar() {
-    if (!escolhido) return
     setOcupado(true)
     setErro(null)
+    setOk(null)
     try {
-      const perfil = await getModerationProfile(escolhido.id)
-      await acoesDoParceiro.convidar(perfil.userId, motivo)
-      setOk(`Convite registrado para ${escolhido.name}. A pessoa recebe o aviso por e-mail e aceita no painel dela.`)
-      setEscolhido(null)
+      const r = await convidarParceiroPorEmail(email.trim(), motivo)
+      setOk(
+        r.resultado === 'conta'
+          ? `${r.email} já tem conta: o convite está no painel da pessoa, e ela recebeu o aviso por e-mail.`
+          : `${r.email} ainda não tem conta: enviamos o convite por e-mail. Quando a pessoa se cadastrar com este e-mail, o convite aparece no painel dela.`,
+      )
+      setEmail('')
       setMotivo('')
-      setQ('')
+      setTick((n) => n + 1)
       onConvidou()
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não deu para convidar.')
@@ -270,51 +269,66 @@ function ConvidarConta({ onConvidou }: { onConvidou: () => void }) {
     }
   }
 
+  async function cancelar(id: string) {
+    if (motivo.trim().length < 5) {
+      setErro('Escreva o motivo na caixa acima antes de cancelar um convite.')
+      return
+    }
+    setOcupado(true)
+    setErro(null)
+    try {
+      await cancelarConvitePorEmail(id, motivo)
+      setTick((n) => n + 1)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não deu para cancelar.')
+    } finally {
+      setOcupado(false)
+    }
+  }
+
   return (
-    <Cartao titulo="Convidar uma conta" descricao="A entrada no programa é só por convite. Busque o advogado pelo nome ou endereço." className="mb-4">
+    <Cartao
+      titulo="Convidar por e-mail"
+      descricao="Com conta, o convite aparece no painel da pessoa. Sem conta, ela recebe um e-mail para se cadastrar com este endereço. Nada é ativado antes do aceite dela."
+      className="mb-4"
+    >
       {erro && <Aviso>{erro}</Aviso>}
       {ok && <Aviso tom="ok">{ok}</Aviso>}
-      <input
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value)
-          setEscolhido(null)
-          setOk(null)
-        }}
-        placeholder="Nome ou endereço do perfil…"
-        aria-label="Buscar conta para convidar"
-        className={entrada}
-      />
-      {achados && !escolhido && (
-        <ul className="mt-2 divide-y divide-adm-line rounded-md border border-adm-border">
-          {achados.length === 0 && <li className="px-3 py-2 text-[12.5px] text-adm-muted">Nada encontrado.</li>}
-          {achados.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
-              <span className="min-w-0 truncate text-[13px]">
-                <span className="font-medium text-adm-ink">{p.name}</span>{' '}
-                <span className="text-adm-muted">advoc.me/{p.slug}</span>
-              </span>
-              <Botao tamanho="sm" onClick={() => setEscolhido(p)}>
-                Escolher
-              </Botao>
-            </li>
-          ))}
-        </ul>
-      )}
-      {escolhido && (
-        <div className="mt-3">
-          <p className="mb-2 text-[13px] text-adm-soft">
-            Convidar <strong className="text-adm-ink">{escolhido.name}</strong> (advoc.me/{escolhido.slug})
-          </p>
-          <Motivo id="motivo-convite" valor={motivo} onChange={setMotivo} dica="Fica no histórico do console. Mínimo de 5 caracteres." />
-          <div className="flex gap-2">
-            <Botao variante="primario" disabled={ocupado || motivo.trim().length < 5} onClick={() => void convidar()}>
-              {ocupado ? 'Convidando…' : 'Confirmar convite'}
-            </Botao>
-            <Botao variante="fantasma" onClick={() => setEscolhido(null)}>
-              Cancelar
-            </Botao>
-          </div>
+      <Campo id="email-convite" label="E-mail da pessoa">
+        <input
+          id="email-convite"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="nome@exemplo.com.br"
+          autoComplete="off"
+          spellCheck={false}
+          className={entrada}
+        />
+      </Campo>
+      <Motivo id="motivo-convite" valor={motivo} onChange={setMotivo} dica="Fica no histórico do console. Mínimo de 5 caracteres." />
+      <Botao variante="primario" disabled={ocupado || !emailValido || motivo.trim().length < 5} onClick={() => void convidar()}>
+        {ocupado ? 'Enviando…' : 'Enviar convite'}
+      </Botao>
+
+      {pendentes && pendentes.length > 0 && (
+        <div className="mt-4">
+          <Rotulo>Convites por e-mail aguardando cadastro</Rotulo>
+          <ul className="divide-y divide-adm-line rounded-md border border-adm-border">
+            {pendentes.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-[12.5px]">
+                <span className="min-w-0">
+                  <span className="font-medium text-adm-ink">{c.email}</span>{' '}
+                  <span className="text-adm-muted">
+                    enviado {fmtData(c.createdAt)} · {c.vencido ? 'vencido' : `vale até ${fmtData(c.expiraEm)}`}
+                  </span>
+                </span>
+                <Botao tamanho="sm" variante="fantasma" disabled={ocupado} onClick={() => void cancelar(c.id)}>
+                  Cancelar convite
+                </Botao>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Cartao>

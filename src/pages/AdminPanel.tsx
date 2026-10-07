@@ -266,7 +266,7 @@ function Painel({
       {secao === 'contestacoes' && <ContestacoesTab podeDecidir={podeDecidir} />}
       {secao === 'suporte' && <SuporteTab podeResponder={podeResponder} />}
       {secao === 'advogados' && <AdvogadosTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
-      {secao === 'parceiros' && <PartnersTab podeGerir={podeGerirParceiros} podeBuscarContas={me.permissoes.includes('contas:ler')} />}
+      {secao === 'parceiros' && <PartnersTab podeGerir={podeGerirParceiros} />}
       {secao === 'historico' && <HistoricoTab />}
       {secao === 'levantamentos' && <LevantamentosTab />}
       {secao === 'equipe' && <EquipeTab eu={me} />}

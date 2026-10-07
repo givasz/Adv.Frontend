@@ -49,6 +49,7 @@ const convidado: PainelConvidado = {
   regras: { versao: '2026-10-07', itens: ['O programa existe exclusivamente para a indicação do software Advocme.'] },
   beneficioInicialDias: 45,
   bloqueio: null,
+  renovacao: null,
   proximaAcao: 'Leia as regras e aceite para ativar 45 dias de acesso ao MAX.',
 }
 
@@ -120,13 +121,20 @@ describe('painel do parceiro', () => {
     expect(texto(html)).not.toMatch(PROIBIDO)
   })
 
-  it('MAX com renovação ativa: o bloqueio aparece no lugar do aceite, com o caminho para Minha assinatura', () => {
+  it('MAX dado pelo escritório: o bloqueio aparece no lugar do aceite', () => {
     const html = render(
-      <PainelDoProgramaParceiros dados={{ ...convidado, bloqueio: 'Sua assinatura MAX está com renovação ativa. Cancele primeiro a renovação.' }} />,
+      <PainelDoProgramaParceiros dados={{ ...convidado, bloqueio: 'Seu acesso ao MAX hoje vem do escritório, sem data de término.' }} />,
     )
-    expect(html).toContain('renovação ativa')
-    expect(html).toContain('href="/assinatura"')
+    expect(html).toContain('vem do escritório')
     expect(html).not.toContain('Aceitar e participar')
+  })
+
+  it('assinatura com renovação: diz ANTES do clique que o aceite encerra a renovação', () => {
+    const aviso = 'Você tem uma assinatura PRO com renovação. Ao aceitar, a renovação é encerrada: não haverá novas cobranças.'
+    const html = render(<PainelDoProgramaParceiros dados={{ ...convidado, renovacao: aviso }} />)
+    expect(html).toContain(aviso)
+    expect(html).toContain('o encerramento da renovação da minha assinatura')
+    expect(html).toContain('Aceitar e participar')
   })
 
   it('ativo: link, copiar, MAX até a data, contadores e situação de cada indicação — sem dado de ninguém', () => {
@@ -246,6 +254,10 @@ describe('seção de plano', () => {
   it('explica o acesso adicional: PRO continua cobrado; Free volta ao que paga, sem cobrança automática', () => {
     const pro = avisoDoBeneficioNoPlano({ plan: 'premium', subscription: { plan: 'pro', rebaixado: false }, partnerBenefit: { active: true, benefitUntil: ate } })
     expect(pro).toMatch(/PRO continua sendo cobrado/)
+    // PRO cuja renovação foi encerrada no aceite: não diz que continua cobrado.
+    const encerrado = avisoDoBeneficioNoPlano({ plan: 'premium', subscription: { plan: 'pro', rebaixado: false, status: 'canceled' }, partnerBenefit: { active: true, benefitUntil: ate } })
+    expect(encerrado).not.toMatch(/continua sendo cobrado/)
+    expect(encerrado).toMatch(/não gera cobrança automática/)
     expect(pro).toContain('21/11/2026')
     const free = avisoDoBeneficioNoPlano({ plan: 'premium', subscription: { plan: 'free', rebaixado: false }, partnerBenefit: { active: true, benefitUntil: ate } })
     expect(free).toMatch(/não gera cobrança automática/)

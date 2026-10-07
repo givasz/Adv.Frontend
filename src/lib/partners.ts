@@ -48,8 +48,10 @@ export interface PainelConvidado extends Comum {
   status: 'invited'
   regras: { versao: string; itens: string[] }
   beneficioInicialDias: number
-  /** MAX com renovação ativa (ou dado pelo escritório): a cortesia não ativa. */
+  /** MAX dado pelo escritório (sem término): a cortesia não ativa. */
   bloqueio: string | null
+  /** Assinatura paga com renovação: o aceite a ENCERRA — a frase vem do servidor e aparece antes do clique. */
+  renovacao: string | null
 }
 
 export interface Indicacao {
@@ -162,7 +164,7 @@ export async function aceitarProgramaParceiros(termsVersion: string): Promise<Pa
  */
 export function planoQueVocePaga(p: {
   plan: 'free' | 'pro' | 'premium'
-  subscription?: { plan: 'free' | 'pro' | 'premium'; rebaixado: boolean }
+  subscription?: { plan: 'free' | 'pro' | 'premium'; rebaixado: boolean; status?: string }
   partnerBenefit?: { active: boolean }
 }): 'free' | 'pro' | 'premium' {
   if (!p.partnerBenefit?.active) return p.plan
@@ -174,14 +176,16 @@ export function planoQueVocePaga(p: {
 /** A frase da seção de plano para quem tem o acesso adicional ao Max. */
 export function avisoDoBeneficioNoPlano(p: {
   partnerBenefit?: { active: boolean; benefitUntil: string | null }
-  subscription?: { plan: 'free' | 'pro' | 'premium'; rebaixado: boolean }
+  subscription?: { plan: 'free' | 'pro' | 'premium'; rebaixado: boolean; status?: string }
   plan: 'free' | 'pro' | 'premium'
 }): string | null {
   if (!p.partnerBenefit?.active) return null
   const ate = dataDoBeneficio(p.partnerBenefit.benefitUntil)
   const pago = planoQueVocePaga(p)
   const base = `Seu acesso ao MAX vem do ${NOME_DO_PROGRAMA}${ate ? ` até ${ate}` : ''}. `
-  return pago === 'pro'
+  // PRO que ainda renova (assinou de novo depois do aceite) segue cobrado; o que
+  // foi encerrado no aceite vale só até o fim do período já pago.
+  return pago === 'pro' && p.subscription?.status !== 'canceled'
     ? base + 'Seu plano PRO continua sendo cobrado normalmente.'
     : base + 'A cortesia não gera cobrança automática: ao término, sua conta volta ao plano que você paga hoje.'
 }
