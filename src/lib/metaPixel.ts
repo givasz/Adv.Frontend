@@ -1,0 +1,132 @@
+// PIXEL DA META — medição dos anúncios do próprio advoc.me.
+//
+// O código que a Meta manda colar no <head> não serve aqui, por três motivos:
+//
+//   1. O CSP (netlify.toml, `script-src 'self'`) bloqueia <script> inline em
+//      silêncio. Colado no index.html, o pixel simplesmente não rodaria.
+//   2. O index.html é o MESMO arquivo de todo perfil de advogado (a borda só troca
+//      as meta tags). Colado lá, o pixel mandaria à Meta cada visita de quem
+//      procura um advogado — dado de terceiro que orbita o sigilo, que a Política
+//      de Privacidade promete não coletar.
+//   3. Cookie de publicidade exige consentimento (LGPD, art. 7º, I; guia de
+//      cookies da ANPD). Sem a escolha da pessoa, nada é carregado.
+//
+// Por isso: o script só é buscado nas ROTAS_COM_PIXEL, e só depois de a pessoa
+// aceitar na faixa (AvisoDeCookies). Uma vez carregado ele fica na memória da
+// aba, mas não envia nada sozinho: o rastreio automático de troca de rota e a
+// coleta automática de botões e formulários vão desligados abaixo, e o
+// PageView só é disparado pelo PixelDaMeta nas rotas da lista.
+
+export const META_PIXEL_ID = '978105135326195'
+
+/**
+ * Onde o pixel pode medir: as páginas de venda e de entrada da plataforma.
+ * NUNCA perfil (`/:slug`), escritório, agendamento ou denúncia — é a página do
+ * advogado e o visitante dela não é cliente nosso. Também fora: entrar (quem já
+ * é cliente) e o checkout (ninguém de fora lendo a página onde se digita cartão).
+ */
+export const ROTAS_COM_PIXEL = ['/', '/criar-conta', '/comecar', '/planos'] as const
+
+export function rotaComPixel(pathname: string): boolean {
+  const limpo = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  return (ROTAS_COM_PIXEL as readonly string[]).includes(limpo)
+}
+
+// ---------------------------------------------------------------------------
+// Consentimento — guardado só neste navegador. Sem escolha = sem pixel.
+
+const CHAVE = 'advocme_cookies_publicidade'
+export type Escolha = 'aceito' | 'recusado'
+
+export function escolhaDeCookies(): Escolha | null {
+  try {
+    const v = localStorage.getItem(CHAVE)
+    return v === 'aceito' || v === 'recusado' ? v : null
+  } catch {
+    return null
+  }
+}
+
+const ouvintes = new Set<() => void>()
+
+export function ouvirEscolha(fn: () => void): () => void {
+  ouvintes.add(fn)
+  return () => ouvintes.delete(fn)
+}
+
+export function gravarEscolha(escolha: Escolha) {
+  try {
+    localStorage.setItem(CHAVE, escolha)
+  } catch {
+    // Navegador sem armazenamento: a escolha vale só para esta aba.
+  }
+  if (escolha === 'recusado') revogar()
+  ouvintes.forEach((fn) => fn())
+}
+
+// ---------------------------------------------------------------------------
+// O pixel em si — o mesmo trecho da Meta, como módulo e não como inline.
+
+type Fbq = ((...args: unknown[]) => void) & {
+  callMethod?: (...args: unknown[]) => void
+  queue: unknown[]
+  push: Fbq
+  loaded: boolean
+  version: string
+  disablePushState?: boolean
+}
+
+declare global {
+  interface Window {
+    fbq?: Fbq
+    _fbq?: Fbq
+  }
+}
+
+let iniciado = false
+
+function carregar() {
+  if (iniciado || typeof window === 'undefined') return
+  iniciado = true
+
+  if (!window.fbq) {
+    const n = function (...args: unknown[]) {
+      if (n.callMethod) n.callMethod(...args)
+      else n.queue.push(args)
+    } as Fbq
+    n.push = n
+    n.loaded = true
+    n.version = '2.0'
+    n.queue = []
+    window.fbq = n
+    if (!window._fbq) window._fbq = n
+
+    const s = document.createElement('script')
+    s.async = true
+    s.src = 'https://connect.facebook.net/en_US/fbevents.js'
+    document.head.appendChild(s)
+  }
+
+  const fbq = window.fbq!
+  // Numa SPA a Meta conta sozinha cada pushState — inclusive a ida da home para
+  // um perfil de exemplo. Desligado: quem decide o que é visita é rotaComPixel.
+  fbq.disablePushState = true
+  // Sem coleta automática de cliques, rótulos de botão e campos de formulário.
+  fbq('set', 'autoConfig', false, META_PIXEL_ID)
+  fbq('consent', 'grant')
+  fbq('init', META_PIXEL_ID)
+}
+
+function revogar() {
+  window.fbq?.('consent', 'revoke')
+}
+
+/** Registra a visita da página atual — só com aceite e só nas rotas da lista. */
+export function registrarVisita(pathname: string) {
+  if (escolhaDeCookies() !== 'aceito' || !rotaComPixel(pathname)) return
+  carregar()
+  // `trackSingle`, e não `track`: com o disablePushState ligado, o fbevents
+  // descarta todo PageView de `track` depois do primeiro da carga — a segunda
+  // página visitada na mesma aba sumia (conferido no navegador em 07/10/2026).
+  window.fbq?.('trackSingle', META_PIXEL_ID, 'PageView')
+}

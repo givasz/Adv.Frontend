@@ -71,7 +71,8 @@ describe('a abertura do frame-src é MÍNIMA', () => {
   it('as travas que não têm nada a ver com vídeo continuam de pé', () => {
     expect(diretiva('object-src')).toBe("'none'")
     expect(diretiva('frame-ancestors')).toBe("'none'")
-    expect(diretiva('script-src')).toBe("'self'")
+    // Único host de script de fora: o Pixel da Meta (ver metaPixel.spec.ts).
+    expect(diretiva('script-src')).toBe("'self' https://connect.facebook.net")
     expect(diretiva('base-uri')).toBe("'self'")
   })
 })

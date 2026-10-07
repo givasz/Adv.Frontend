@@ -111,8 +111,8 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           "Para cumprir obrigações legais e regulatórias e atender a ordens de autoridades, inclusive a guarda dos registros que a lei exige.",
           `Para cumprir o art. 15 do Marco Civil da Internet: o registro de acesso descrito no item 1, guardado por ${PRAZO_ACESSO}. A base é o cumprimento de obrigação legal, e por isso esse registro não é apagado a pedido antes do prazo — nem quando a conta é excluída.`,
           "Por legítimo interesse, sempre de forma proporcional: segurança da plataforma (limitar tentativas de acesso, detectar abuso), moderação de conteúdo e melhoria do serviço a partir de números agregados. Fora do registro de acesso acima, o endereço IP é usado na hora, para limitar tentativas, e não é gravado.",
-          'Com o seu consentimento, onde ele é a base: o e-mail opcional que quem denuncia informa para receber retorno, e a opção "continuar conectado neste aparelho".',
-          "Não vendemos dados pessoais, não montamos perfil de comportamento e não usamos os seus dados para publicidade.",
+          'Com o seu consentimento, onde ele é a base: o e-mail opcional que quem denuncia informa para receber retorno, a opção "continuar conectado neste aparelho" e o Pixel da Meta nas páginas de apresentação da plataforma, que mede os anúncios do próprio advoc.me (ver a Política de Cookies).',
+          "Não vendemos dados pessoais e não montamos perfil de comportamento. Os dados do seu perfil e da sua conta não são usados para publicidade, e o Pixel da Meta nunca é carregado nos perfis nem nas páginas de escritório.",
         ],
       },
       {
@@ -127,6 +127,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           "Entrar com o Google: é opcional — a conta funciona igual com e-mail e senha. Se você escolhe essa opção, a entrada acontece na tela do próprio Google, que fica sabendo que você entrou no advoc.me, e o Google nos informa o seu nome, o seu e-mail, se ele está confirmado e um identificador da conta. Pedimos só isso: nenhum acesso a Gmail, agenda, contatos, arquivos ou foto. O nome serve apenas para começar o rascunho do seu perfil, e você o troca quando quiser. Os dados da sua conta Google seguem tratados pelo Google, sob a política dele.",
           "Consulta de CEP: ao preencher o endereço no editor, o CEP digitado é consultado em serviços públicos de endereçamento (ViaCEP e BrasilAPI). Só o CEP é enviado.",
           "Fontes tipográficas: as famílias dos temas são servidas pelo Google Fonts; o navegador as busca diretamente daquele serviço, que recebe, como em qualquer acesso, o endereço IP e a identificação do navegador. Ver a Política de Cookies.",
+          "Medição de anúncios: só se você aceitar, e só nas páginas de apresentação da plataforma (nunca nos perfis), o Pixel da Meta informa à Meta Platforms que a página foi aberta, com o endereço IP e a identificação do navegador. A Meta pode estar fora do Brasil (LGPD, art. 33). Ver a Política de Cookies.",
           "Pagamento: as assinaturas são cobradas pelo Asaas, instituição de pagamento brasileira. Para criar a cobrança, enviamos a ele o seu nome, o seu e-mail e o CPF ou CNPJ que você informar; no pagamento com cartão, também os dados do cartão, o CEP, o número do endereço e o telefone de quem recebe a fatura, e o endereço IP de onde partiu a compra, que o Asaas usa para prevenir fraude. Os dados do cartão passam pelos nossos servidores só a caminho do Asaas — não são gravados nem registrados — e ficam guardados por ele, sob a política dele. É o Asaas quem envia por e-mail os avisos de cada cobrança (cobrança criada, vencimento próximo, pagamento recebido), com o link para pagar. Nós guardamos só os identificadores e o histórico dos eventos.",
           "Autoridades: compartilhamos dados quando exigido por lei ou por ordem de autoridade competente, e avisamos você quando a própria ordem não impedir.",
         ],
@@ -437,7 +438,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
     sections: [
       {
         paragraphs: [
-          "O advoc.me usa apenas cookies e armazenamentos locais estritamente necessários ao funcionamento. Não usamos cookies de publicidade, de análise de audiência nem rastreadores de terceiros. Por isso não há banner de cookies: não há nada a consentir além do próprio serviço.",
+          "O advoc.me usa cookies e armazenamentos locais necessários ao funcionamento e uma única ferramenta de publicidade, o Pixel da Meta, que só é carregada nas páginas de apresentação da plataforma (a página inicial, a de criar conta, a de começar o perfil e a de planos) e só se você aceitar. Nos perfis dos advogados e nas páginas de escritório nada disso é carregado, e o visitante de um perfil não tem nada a consentir.",
         ],
       },
       {
@@ -447,7 +448,7 @@ export const LEGAL_DOCS: LegalDocContent[] = [
           "Proteção contra requisições forjadas: um segundo cookie, legível pela página, cujo valor precisa acompanhar toda escrita. Ele não identifica você; só prova que o pedido veio da página legítima.",
           "Entrar com o Google, se você usar: enquanto você passa pela tela do Google, um cookie HttpOnly temporário guarda o pedido em andamento — para conferir que a resposta que volta é a do pedido que partiu deste navegador — e, na volta, a confirmação do Google até a sua sessão abrir. Ele só é enviado às rotas de entrada com o Google e some em até 10 minutos.",
           "Painel administrativo: quem administra a plataforma tem cookies próprios de sessão, com as mesmas características.",
-          "Nenhum cookie é gravado no aparelho de quem apenas visita um perfil.",
+          "Nenhum cookie é gravado pelas páginas de perfil e de escritório.",
         ],
       },
       {
@@ -471,15 +472,25 @@ export const LEGAL_DOCS: LegalDocContent[] = [
         ],
       },
       {
-        heading: "4. O que NÃO usamos",
-        paragraphs: [
-          "Não empregamos cookies de rastreamento publicitário, ferramentas de análise de audiência de terceiros, perfis de comportamento nem venda de dados. As métricas de perfil são contagens de acontecimentos, sem identificar o visitante.",
+        heading: "4. Pixel da Meta (com o seu consentimento)",
+        bullets: [
+          "Para que serve: medir se os anúncios do próprio advoc.me no Facebook e no Instagram trazem pessoas à plataforma. Não é usado para anunciar nada em nome dos advogados.",
+          "Onde: só na página inicial, na de criar conta, na de começar o perfil e na de planos. Nunca no perfil de um advogado, na página de um escritório, no agendamento, na denúncia nem no pagamento.",
+          "O que vai para a Meta: que a página foi aberta, o endereço dela e os dados técnicos que o navegador envia em qualquer acesso (endereço IP e identificação do navegador). A Meta grava no seu navegador o cookie _fbp e pode associar a visita à sua conta do Facebook ou do Instagram, sob a política dela, o que pode envolver transferência internacional (LGPD, art. 33). Não enviamos o seu e-mail, o seu nome, o conteúdo do seu perfil nem o que você digita: a coleta automática de cliques e de campos de formulário vai desligada.",
+          "Base legal: o seu consentimento (LGPD, art. 7º, I). Sem a sua escolha, o pixel não é carregado. Você pode aceitar, recusar ou mudar de ideia quando quiser, no quadro do início desta página.",
+          "A sua escolha fica guardada só neste navegador, no armazenamento local.",
         ],
       },
       {
-        heading: "5. Como controlar",
+        heading: "5. O que NÃO usamos",
         paragraphs: [
-          "Você pode apagar cookies e o armazenamento local pelo seu navegador. Como esses itens são necessários ao funcionamento, removê-los encerra a sua sessão — basta entrar de novo.",
+          "Fora o Pixel da Meta descrito acima, não empregamos cookies de rastreamento publicitário, ferramentas de análise de audiência de terceiros, perfis de comportamento nem venda de dados. As métricas de perfil são contagens de acontecimentos, sem identificar o visitante.",
+        ],
+      },
+      {
+        heading: "6. Como controlar",
+        paragraphs: [
+          "Você pode apagar cookies e o armazenamento local pelo seu navegador. Os cookies da conta são necessários ao funcionamento, e removê-los encerra a sua sessão — basta entrar de novo. O Pixel da Meta você recusa ou retira no quadro do início desta página, sem perder nada do serviço.",
         ],
       },
     ],

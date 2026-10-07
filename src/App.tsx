@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth'
 import { sobDemanda } from '@/lib/sobDemanda'
 import { AvisoDeTermos } from '@/components/ui/AvisoDeTermos'
 import { AvisoDeEmail } from '@/components/ui/AvisoDeEmail'
+import { AvisoDeCookies, PixelDaMeta } from '@/components/ui/AvisoDeCookies'
 import { FalhaNaTela } from '@/components/ui/FalhaNaTela'
 // O perfil público é o produto — um minisite que abre por link compartilhado,
 // quase sempre num celular em rede ruim. Só ele entra no pacote inicial; todo
@@ -105,6 +106,10 @@ export default function App() {
           e cede a vez quando a dos Termos está na tela. */}
       <AvisoDeTermos />
       <AvisoDeEmail />
+      {/* Consentimento e Pixel da Meta: só nas páginas de venda, nunca nos
+          perfis (ver lib/metaPixel.ts). */}
+      <AvisoDeCookies />
+      <PixelDaMeta />
       {/* O fallback é o mesmo spinner das trocas de sessão — a espera de um
           pedaço lazy não deve piscar diferente da espera do /auth/me. */}
       <Suspense fallback={<Carregando />}>

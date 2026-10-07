@@ -4,6 +4,7 @@ import { getLegalDoc, LEGAL_DOCS } from '@/lib/legalContent'
 import { CONTACT_EMAIL } from '@/lib/legalIdentity'
 import { ArrowRight } from '@/components/ui/icons'
 import { Marca } from '@/components/ui/Marca'
+import { PreferenciaDeCookies } from '@/components/ui/AvisoDeCookies'
 
 // Renderiza a documentação jurídica DA PLATAFORMA (rota /legal/:slug). Sem :slug,
 // mostra o índice. Conteúdo em lib/legalContent.ts. Mantém a identidade visual sóbria.
@@ -70,6 +71,7 @@ export default function LegalPage() {
                       ))}
                     </ul>
                   )}
+                  {doc.slug === 'cookies' && i === 0 && <PreferenciaDeCookies />}
                 </section>
               ))}
             </div>
