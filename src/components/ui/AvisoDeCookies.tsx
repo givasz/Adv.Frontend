@@ -12,8 +12,12 @@ import {
 // lib/metaPixel.ts). Só aparece onde o pixel pode medir; no perfil de um
 // advogado não há nada a consentir, porque lá nada é carregado.
 //
-// Faixa no topo, como a dos Termos (sem modais): empurra a página, não cobre.
+// Aviso no rodapé, no formato que todo site usa: o texto da faixa antiga
+// ("Usamos o Pixel da Meta… nunca nos perfis") assustava mais do que informava,
+// e no topo empurrava a home para baixo. Ele não bloqueia a página: dá para ler
+// e rolar sem responder, e sem resposta o pixel simplesmente não carrega.
 // "Recusar" tem o mesmo peso de "Aceitar" — recusa escondida não é escolha.
+// O detalhe (o que é, onde roda, para quem vai) fica na Política de Cookies.
 
 function useEscolha() {
   const [escolha, setEscolha] = useState(escolhaDeCookies);
@@ -27,16 +31,20 @@ export function AvisoDeCookies() {
   if (escolha !== null || !rotaComPixel(pathname)) return null;
 
   return (
-    <div className="border-b border-ink/10 bg-paper-soft">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-3">
-        <p className="text-[13px] leading-snug text-ink-soft">
-          Usamos o Pixel da Meta nesta página para medir os nossos anúncios.
-          Nunca nos perfis dos advogados.{" "}
+    <div
+      role="region"
+      aria-label="Aviso de cookies"
+      className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    >
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl2 border border-ink/10 bg-paper px-4 py-3 shadow-lg">
+        <p className="min-w-0 flex-1 basis-60 text-[13px] leading-snug text-ink-soft">
+          Usamos cookies para o site funcionar bem e para medir os nossos
+          anúncios.{" "}
           <Link
             to="/legal/cookies"
             className="font-semibold text-burgundy hover:underline"
           >
-            Saiba mais
+            Política de cookies
           </Link>
         </p>
         <BotoesDeEscolha />
