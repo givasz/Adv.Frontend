@@ -1,6 +1,6 @@
 // PIXEL DA META — medição dos anúncios do próprio advoc.me.
 //
-// O código que a Meta manda colar no <head> não serve aqui, por três motivos:
+// O código que a Meta manda colar no <head> não serve aqui, por dois motivos:
 //
 //   1. O CSP (netlify.toml, `script-src 'self'`) bloqueia <script> inline em
 //      silêncio. Colado no index.html, o pixel simplesmente não rodaria.
@@ -8,14 +8,20 @@
 //      as meta tags). Colado lá, o pixel mandaria à Meta cada visita de quem
 //      procura um advogado — dado de terceiro que orbita o sigilo, que a Política
 //      de Privacidade promete não coletar.
-//   3. Cookie de publicidade exige consentimento (LGPD, art. 7º, I; guia de
-//      cookies da ANPD). Sem a escolha da pessoa, nada é carregado.
 //
-// Por isso: o script só é buscado nas ROTAS_COM_PIXEL, e só depois de a pessoa
-// aceitar na faixa (AvisoDeCookies). Uma vez carregado ele fica na memória da
-// aba, mas não envia nada sozinho: o rastreio automático de troca de rota e a
-// coleta automática de botões e formulários vão desligados abaixo, e o
-// PageView só é disparado pelo PixelDaMeta nas rotas da lista.
+// Por isso o script só é buscado nas ROTAS_COM_PIXEL. Uma vez carregado ele fica
+// na memória da aba, mas não envia nada sozinho: o rastreio automático de troca
+// de rota e a coleta automática de botões e formulários vão desligados abaixo, e
+// o PageView só é disparado pelo PixelDaMeta nas rotas da lista.
+//
+// AVISO, NÃO PEDIDO (decisão do dono do produto em 07/10/2026). Até então o
+// pixel esperava o "Aceitar"; quem ignorava o aviso — a maioria — não era
+// medido, e os anúncios ficavam sem número. Agora ele carrega na hora nas rotas
+// da lista, com base no legítimo interesse (LGPD, art. 7º, IX), e o aviso
+// informa e oferece "Recusar". Recusar é oposição: o pixel para de enviar e o
+// cookie _fbp é apagado. O guia de cookies da ANPD prefere consentimento para
+// cookie de publicidade; a escolha foi feita sabendo disso, e as Políticas de
+// Cookies e de Privacidade descrevem exatamente este comportamento.
 
 export const META_PIXEL_ID = '978105135326195'
 
@@ -60,7 +66,10 @@ export function gravarEscolha(escolha: Escolha) {
   } catch {
     // Navegador sem armazenamento: a escolha vale só para esta aba.
   }
-  if (escolha === 'recusado') revogar()
+  if (typeof window !== 'undefined') {
+    if (escolha === 'recusado') revogar()
+    else window.fbq?.('consent', 'grant')
+  }
   ouvintes.forEach((fn) => fn())
 }
 
@@ -117,13 +126,33 @@ function carregar() {
   fbq('init', META_PIXEL_ID)
 }
 
+// A última página contada. Trocar a escolha refaz o efeito do PixelDaMeta na
+// MESMA página — e o "Entendi" contava a home duas vezes em menos de 2 s, o que
+// a extensão de diagnóstico acusou como evento duplicado. Uma página só conta
+// de novo quando a pessoa sai dela e volta.
+let ultimaContada: string | null = null
+
 function revogar() {
+  ultimaContada = null
   window.fbq?.('consent', 'revoke')
+  // O _fbp é gravado pela Meta no domínio do site (com e sem o ponto inicial,
+  // conforme o navegador); apaga nas formas possíveis.
+  if (typeof document === 'undefined') return
+  const dominio = location.hostname.replace(/^www\./, '')
+  for (const d of ['', `; domain=${dominio}`, `; domain=.${dominio}`]) {
+    document.cookie = `_fbp=; Max-Age=0; path=/${d}`
+  }
 }
 
-/** Registra a visita da página atual — só com aceite e só nas rotas da lista. */
+/** Registra a visita da página atual — nas rotas da lista, salvo recusa. */
 export function registrarVisita(pathname: string) {
-  if (escolhaDeCookies() !== 'aceito' || !rotaComPixel(pathname)) return
+  if (escolhaDeCookies() === 'recusado') return
+  if (!rotaComPixel(pathname)) {
+    ultimaContada = null
+    return
+  }
+  if (pathname === ultimaContada) return
+  ultimaContada = pathname
   carregar()
   // `trackSingle`, e não `track`: com o disablePushState ligado, o fbevents
   // descarta todo PageView de `track` depois do primeiro da carga — a segunda

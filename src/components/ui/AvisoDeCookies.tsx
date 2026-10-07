@@ -8,15 +8,16 @@ import {
   rotaComPixel,
 } from "@/lib/metaPixel";
 
-// A FAIXA DE COOKIES — o consentimento que o Pixel da Meta exige (ver
-// lib/metaPixel.ts). Só aparece onde o pixel pode medir; no perfil de um
-// advogado não há nada a consentir, porque lá nada é carregado.
+// O AVISO DE COOKIES do Pixel da Meta (ver lib/metaPixel.ts). Só aparece onde o
+// pixel mede; no perfil de um advogado não há nada a avisar, porque lá nada é
+// carregado. É aviso com direito de oposição: o pixel já roda, "Entendi" só
+// fecha, "Recusar" desliga e apaga o cookie.
 //
 // Aviso no rodapé, no formato que todo site usa: o texto da faixa antiga
 // ("Usamos o Pixel da Meta… nunca nos perfis") assustava mais do que informava,
 // e no topo empurrava a home para baixo. Ele não bloqueia a página: dá para ler
-// e rolar sem responder, e sem resposta o pixel simplesmente não carrega.
-// "Recusar" tem o mesmo peso de "Aceitar" — recusa escondida não é escolha.
+// e rolar sem responder. "Recusar" fica à vista, no mesmo tamanho do
+// "Entendi" — oposição escondida não é oposição.
 // O detalhe (o que é, onde roda, para quem vai) fica na Política de Cookies.
 
 function useEscolha() {
@@ -53,7 +54,7 @@ export function AvisoDeCookies() {
   );
 }
 
-function BotoesDeEscolha() {
+function BotoesDeEscolha({ sim = "Entendi" }: { sim?: string }) {
   return (
     <div className="flex items-center gap-2">
       <button
@@ -68,7 +69,7 @@ function BotoesDeEscolha() {
         onClick={() => gravarEscolha("aceito")}
         className="btn-primary !py-2 !text-[13px]"
       >
-        Aceitar
+        {sim}
       </button>
     </div>
   );
@@ -79,19 +80,19 @@ export function PreferenciaDeCookies() {
   const escolha = useEscolha();
   const texto =
     escolha === "aceito"
-      ? "Você aceitou o Pixel da Meta neste navegador."
+      ? "O Pixel da Meta está ligado neste navegador."
       : escolha === "recusado"
-        ? "Você recusou o Pixel da Meta neste navegador."
-        : "Você ainda não escolheu. Sem escolha, o pixel não é carregado.";
+        ? "Você recusou o Pixel da Meta neste navegador: ele não envia nada."
+        : "O Pixel da Meta está ligado neste navegador. Você pode recusar.";
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl2 border border-ink/10 bg-paper-soft/60 p-4">
       <p className="text-[13.5px] text-ink-soft">{texto}</p>
-      <BotoesDeEscolha />
+      <BotoesDeEscolha sim="Permitir" />
     </div>
   );
 }
 
-/** Dispara o PageView a cada troca de rota permitida (depois do aceite). */
+/** Dispara o PageView a cada troca de rota permitida (salvo recusa). */
 export function PixelDaMeta() {
   const { pathname } = useLocation();
   const escolha = useEscolha();
