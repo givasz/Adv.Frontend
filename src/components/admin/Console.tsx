@@ -19,6 +19,7 @@ import {
   MessageIcon,
   ScaleIcon,
   SearchIcon,
+  ShareIcon,
   ShieldIcon,
   UserIcon,
 } from '@/components/ui/icons'
@@ -32,6 +33,7 @@ export type SecaoId =
   | 'contestacoes'
   | 'suporte'
   | 'advogados'
+  | 'parceiros'
   | 'historico'
   | 'levantamentos'
   | 'equipe'
@@ -102,6 +104,15 @@ export const SECOES: readonly Secao[] = [
     grupo: 'ferramentas',
     permissao: 'contas:ler',
     icone: SearchIcon,
+  },
+  {
+    id: 'parceiros',
+    label: 'Parceiros',
+    descricao:
+      'Programa Advocme Parceiros: quem foi convidado, o benefício de cada um e a situação das indicações. Recompensa só a indicação do software — nunca cliente ou contato.',
+    grupo: 'ferramentas',
+    permissao: 'parceiros:ler',
+    icone: ShareIcon,
   },
   {
     id: 'historico',

@@ -42,6 +42,7 @@ import { AiButton, AiGenerator } from '@/components/editor/AiGenerator'
 import { Card, Field, TextArea, TextInput, Toggle } from '@/components/editor/fields'
 import { InfoTip } from '@/components/editor/InfoTip'
 import { PlanShowcase } from '@/components/editor/PlanShowcase'
+import { avisoDoBeneficioNoPlano, planoQueVocePaga } from '@/lib/partners'
 import { AvisoCobranca } from '@/components/editor/AvisoCobranca'
 import { PlanChecklist } from '@/components/editor/PlanChecklist'
 import { FaqCard } from '@/components/editor/FaqCard'
@@ -770,7 +771,14 @@ export default function Editor() {
                   <AvisoCobranca profile={profile} className="mb-4" />
                   <PlanChecklist profile={profile} />
                   <Card title="Planos">
-                    <PlanShowcase plan={profile.plan} voltar={aqui} tema={tryTheme} />
+                    {/* Programa Parceiros: o Max é acesso adicional, não assinatura —
+                        a vitrine mostra o plano que a pessoa PAGA. */}
+                    {avisoDoBeneficioNoPlano(profile) && (
+                      <p className="mb-3 rounded-lg border border-brass/40 bg-brass/10 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
+                        {avisoDoBeneficioNoPlano(profile)}
+                      </p>
+                    )}
+                    <PlanShowcase plan={planoQueVocePaga(profile)} voltar={aqui} tema={tryTheme} />
                     <p className="text-[11.5px] leading-relaxed text-ink-faint">
                       Cobrança mensal, sem fidelidade. Você muda de plano quando quiser — nada do
                       que você escreveu é apagado, e seu endereço continua o mesmo.

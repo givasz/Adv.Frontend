@@ -45,6 +45,8 @@ const PlansPage = sobDemanda(() => import('./pages/PlansPage'))
 const CheckoutPage = sobDemanda(() => import('./pages/CheckoutPage'))
 const MudarPlanoPage = sobDemanda(() => import('./pages/MudarPlanoPage'))
 const MinhaAssinaturaPage = sobDemanda(() => import('./pages/MinhaAssinaturaPage'))
+const PartnersPage = sobDemanda(() => import('./pages/PartnersPage'))
+const ReferralPage = sobDemanda(() => import('./pages/ReferralPage'))
 
 // Rota escondida do console de administração — não linkada em nenhum lugar da
 // UI. O segmento vive em lib/adminPath.ts (fonte única, usada também pelo smoke).
@@ -150,6 +152,11 @@ export default function App() {
             Subir continua indo pelo checkout — são decisões diferentes. */}
         <Route path="/plano/mudar/:plano" element={<RequireAuth><MudarPlanoPage /></RequireAuth>} />
         <Route path="/assinatura" element={<RequireAuth><MinhaAssinaturaPage /></RequireAuth>} />
+        {/* Programa Advocme Parceiros: o painel do parceiro exige conta; o link
+            /r/:code é público e só leva ao cadastro, sem mostrar ninguém. As duas
+            vêm ANTES do catch-all /:slug — senão "r" seria lido como um perfil. */}
+        <Route path="/parceiros" element={<RequireAuth><PartnersPage /></RequireAuth>} />
+        <Route path="/r/:code" element={<ReferralPage />} />
         {/* Documentação jurídica da plataforma — antes do catch-all /:slug */}
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />

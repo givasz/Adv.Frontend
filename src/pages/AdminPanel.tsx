@@ -22,6 +22,7 @@ import AdvogadosTab from '@/components/admin/AdvogadosTab'
 import HistoricoTab from '@/components/admin/HistoricoTab'
 import LevantamentosTab from '@/components/admin/LevantamentosTab'
 import EquipeTab from '@/components/admin/EquipeTab'
+import PartnersTab from '@/components/admin/PartnersTab'
 import MinhaConta from '@/components/admin/MinhaConta'
 import SegundoFator from '@/components/admin/SegundoFator'
 import { Botao, entrada } from '@/components/admin/pecas'
@@ -253,6 +254,7 @@ function Painel({
   const podeDecidir = me.permissoes.includes('moderacao:decidir')
   const podeResponder = me.permissoes.includes('suporte:responder')
   const podeSancionar = me.permissoes.includes('contas:sancionar')
+  const podeGerirParceiros = me.permissoes.includes('parceiros:gerir')
 
   return (
     <Console me={me} secao={secao} onSecao={ir} onLogout={onLogout}>
@@ -264,6 +266,7 @@ function Painel({
       {secao === 'contestacoes' && <ContestacoesTab podeDecidir={podeDecidir} />}
       {secao === 'suporte' && <SuporteTab podeResponder={podeResponder} />}
       {secao === 'advogados' && <AdvogadosTab podeDecidir={podeDecidir} podeSancionar={podeSancionar} />}
+      {secao === 'parceiros' && <PartnersTab podeGerir={podeGerirParceiros} podeBuscarContas={me.permissoes.includes('contas:ler')} />}
       {secao === 'historico' && <HistoricoTab />}
       {secao === 'levantamentos' && <LevantamentosTab />}
       {secao === 'equipe' && <EquipeTab eu={me} />}

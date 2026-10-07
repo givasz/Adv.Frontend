@@ -20,6 +20,7 @@ import { ArrowRight, CalendarIcon, CheckIcon, MessageIcon, ShareIcon } from '@/c
 import { StepArt, STEP_HINT } from '@/components/painel/StepArt'
 import { AgendaCard } from '@/components/painel/AgendaCard'
 import { EscritorioCard } from '@/components/painel/EscritorioCard'
+import { ParceirosCard } from '@/components/painel/ParceirosCard'
 import { PainelHero } from '@/components/painel/PainelHero'
 import { SecaoAtalho, SecaoLinha } from '@/components/painel/SecaoTile'
 import { VisitasTile } from '@/components/painel/VisitasTile'
@@ -274,6 +275,10 @@ export default function Painel() {
             )}
           </div>
         </Grupo>
+
+        {/* Programa Advocme Parceiros — só para quem foi convidado ou participa.
+            Para o resto da base, o grupo nem aparece. */}
+        <ParceirosCard />
 
         {/* Escritório — criar, gerenciar ou responder a um convite */}
         <Grupo titulo="Escritório" subtitulo="A página da sociedade e os convites.">

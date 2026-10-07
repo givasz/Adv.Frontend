@@ -1028,6 +1028,11 @@ export const ROTAS_RESERVADAS = new Set([
   // caminho com a tela, e "assistente" é uma das palavras que mais alguém
   // tentaria como endereço num produto que vende um assistente.
   'assistente',
+  // Programa Advocme Parceiros: o painel do parceiro (/parceiros) e o link de
+  // indicação (/r/:code). Nenhum dos dois é perfil, e a borda não pode montar
+  // prévia de advogado para eles — o link do programa não é vitrine de ninguém.
+  'parceiros',
+  'r',
   'escritorio',
   '__preview',
   'api',

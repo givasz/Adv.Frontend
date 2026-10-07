@@ -287,6 +287,16 @@ export interface Profile {
    * Ver lib/assinatura.ts.
    */
   subscription?: Subscription
+  /**
+   * Programa Advocme Parceiros — só no perfil do próprio dono, e só quando a conta
+   * participa. É acesso ADICIONAL ao Max, não assinatura: `subscription` continua
+   * falando apenas de cobrança. Ver lib/partners.ts.
+   */
+  partnerBenefit?: {
+    status: 'invited' | 'active' | 'suspended' | 'ended'
+    benefitUntil: string | null
+    active: boolean
+  }
   /** tema visual escolhido pelo advogado — desbloqueado por plano (ver lib/themes.ts) */
   theme: ThemeId
   views?: number

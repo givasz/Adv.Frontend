@@ -34,6 +34,13 @@ export const NOME_ACAO: Record<string, string> = {
   'admin.trocar-senha': 'trocou a própria senha',
   'admin.totp-ligar': 'ligou o segundo fator',
   'admin.totp-desligar': 'desligou o segundo fator',
+  'parceiro.convidar': 'convidou uma conta para o Programa Parceiros',
+  'parceiro.suspender': 'suspendeu uma participação no Programa Parceiros',
+  'parceiro.reativar': 'reativou uma participação no Programa Parceiros',
+  'parceiro.encerrar': 'encerrou uma participação no Programa Parceiros',
+  'parceiro.ajustar-beneficio': 'ajustou os dias de benefício de um parceiro',
+  'referral.corrigir': 'corrigiu o parceiro de uma indicação',
+  'reward.revogar': 'revogou uma recompensa do Programa Parceiros',
 }
 
 /** As ações que TIRAM alguma coisa do ar merecem destaque na lista. */
@@ -44,6 +51,9 @@ const ASSUNTO: Record<string, { label: string; tom: Tom }> = {
   suporte: { label: 'Suporte', tom: 'info' },
   admin: { label: 'Acessos', tom: 'acento' },
   sessao: { label: 'Entrada', tom: 'neutro' },
+  parceiro: { label: 'Parceiros', tom: 'info' },
+  referral: { label: 'Parceiros', tom: 'info' },
+  reward: { label: 'Parceiros', tom: 'info' },
 }
 
 const FILTROS = [

@@ -712,3 +712,108 @@ export async function setTicketStatus(
     }),
   )
 }
+
+// ---- Programa Advocme Parceiros ----
+//
+// Leitura com `parceiros:ler` (owner, moderação, só leitura); toda escrita com
+// `parceiros:gerir`, motivo obrigatório e registro no histórico. O console nunca
+// decide a permissão: desenha o que o servidor disse que este papel abre.
+
+export type StatusDoParceiroAdmin = 'invited' | 'active' | 'suspended' | 'ended'
+
+export interface ParceiroNaLista {
+  id: string
+  status: StatusDoParceiroAdmin
+  codigo: string
+  nome: string
+  slug: string
+  userId: string
+  benefitUntil: string | null
+  invitedAt: string | null
+  activatedAt: string | null
+  suspendedAt: string | null
+  endedAt: string | null
+  cadastrados: number
+  conversoes: number
+}
+
+export interface FichaDoParceiro {
+  id: string
+  status: StatusDoParceiroAdmin
+  codigo: string
+  benefitUntil: string | null
+  beneficioAtivo: boolean
+  termsVersion: string
+  termsAcceptedAt: string | null
+  invitedAt: string | null
+  activatedAt: string | null
+  suspendedAt: string | null
+  endedAt: string | null
+  conta: null | {
+    userId: string
+    profileId: string
+    nome: string
+    slug: string
+    planoContratado: string
+    planoFinanceiro: string
+    planoEfetivo: string
+    situacaoCobranca: string
+    fimDoPeriodo: string | null
+  }
+  indicacoes: Trilha<{
+    id: string
+    attributedAt: string | null
+    convertedAt: string | null
+    disqualifiedAt: string | null
+    disqualificationReason: string
+    referredUserId: string | null
+    indicado: { nome: string; slug: string } | null
+    revisarOab: boolean
+    recompensa: { id: string; status: string } | null
+  }>
+  recompensas: {
+    id: string
+    type: 'initial' | 'referral' | 'manual'
+    status: 'pending' | 'confirmed' | 'revoked'
+    days: number
+    referralId: string | null
+    sourcePaymentId: string | null
+    eligibleAt: string | null
+    confirmedAt: string | null
+    revokedAt: string | null
+    reason: string
+    createdAt: string | null
+  }[]
+  historico: AdminAcao[]
+}
+
+export async function listarParceiros(
+  filtros: { status?: string; q?: string; cursor?: string; limite?: number } = {},
+): Promise<Trilha<ParceiroNaLista>> {
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(filtros)) if (v) q.set(k, String(v))
+  const cauda = q.toString() ? `?${q}` : ''
+  return json(await adminFetch(`/admin/partners${cauda}`))
+}
+
+export async function fichaDoParceiro(id: string, cursor?: string): Promise<FichaDoParceiro> {
+  return json(await adminFetch(`/admin/partners/${encodeURIComponent(id)}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`))
+}
+
+function postar<T>(caminho: string, corpo: unknown): Promise<T> {
+  return adminFetch(caminho, { method: 'POST', body: JSON.stringify(corpo) }).then((r) => json<T>(r))
+}
+
+export const acoesDoParceiro = {
+  convidar: (userId: string, reason: string) =>
+    postar<{ id: string; status: StatusDoParceiroAdmin }>(`/admin/users/${encodeURIComponent(userId)}/partner/invite`, { reason }),
+  suspender: (id: string, reason: string) => postar(`/admin/partners/${encodeURIComponent(id)}/suspend`, { reason }),
+  reativar: (id: string, reason: string) => postar(`/admin/partners/${encodeURIComponent(id)}/reactivate`, { reason }),
+  encerrar: (id: string, reason: string) => postar(`/admin/partners/${encodeURIComponent(id)}/end`, { reason }),
+  ajustar: (id: string, days: number, reason: string) =>
+    postar(`/admin/partners/${encodeURIComponent(id)}/adjust`, { days, reason }),
+  reatribuir: (referralId: string, partnerId: string, reason: string) =>
+    postar(`/admin/referrals/${encodeURIComponent(referralId)}/reassign`, { partnerId, reason }),
+  revogarRecompensa: (rewardId: string, reason: string) =>
+    postar(`/admin/partner-rewards/${encodeURIComponent(rewardId)}/revoke`, { reason }),
+}
