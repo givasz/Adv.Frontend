@@ -88,10 +88,23 @@ const CATEGORY_CASES: {
       'Escritório nº 1 em direito tributário',
       'Referência nacional em recuperação judicial',
       'O único advogado especialista da região',
+      // Plural — passou batido até a rev. 5 e foi parar num perfil publicado.
+      'Atendimento com os melhores conhecimentos do mercado',
+      'Oferecemos as melhores condições para o seu caso',
+      'Os melhores profissionais para a sua causa',
     ],
     permitidos: [
       'Advogado dedicado ao direito criminal',
       'Atuação consolidada em direito tributário',
+      // O plural tem usos consagrados que NÃO são comparação com ninguém.
+      'Defendo os melhores interesses de quem represento',
+      'Sigo as melhores práticas da advocacia',
+      'Busco as melhores soluções para cada caso',
+      // Acentuados: a exceção usava \w (ASCII), que não vê "ç"/"õ" — estes vinham
+      // BLOQUEANDO a publicação desde a rev. 4, e o mesmo texto sem acento passava.
+      'Busco a melhor solução para cada caso',
+      'Escolho a melhor opção disponível',
+      'Apresento as melhores opções ao cliente',
     ],
   },
   {
