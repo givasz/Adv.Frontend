@@ -5,13 +5,24 @@
 // símbolo. Regras de composição só empurram todo mundo para "Senha@123", que é
 // exatamente o tipo de senha que os ataques testam primeiro.
 //
-// Por isso aqui: mínimo de 8, lista de senhas manjadas, repetição, sequência de
-// teclado/alfabeto e uso do próprio e-mail ou do nome do site. Senha longa passa
-// sem precisar de firula; senha curta precisa ao menos variar os caracteres.
+// Por isso aqui: mínimo de 8, lista de senhas manjadas, senha que é SÓ repetição
+// ou SÓ sequência de teclado/alfabeto, e uso do próprio e-mail ou do nome do site.
+// Senha de 10+ passa sem firula; senha de 8 ou 9 precisa ao menos variar.
+//
+// Afrouxada em 08/10/2026 a pedido ("tá seguro, mas não precisa ser tão
+// difícil"): "maria1234" e "joaobarros" eram barradas por um trecho — o 1234
+// no fim, o "oab" escondido no nome. Agora a sequência só reprova quando
+// sobra pouca senha fora dela, e "OAB" saiu da lista de proibidos. O login
+// tem limite de tentativas e o hash é lento: o que importa é não cair num
+// dicionário, não obrigar composição.
 
 export const PASSWORD_MIN = 8
 /** Acima disso é abuso — e alguns algoritmos de hash truncam. */
 export const PASSWORD_MAX = 128
+/** A partir daqui, só letras (ou só números) já basta. */
+const SEM_MISTURA = 10
+/** Fora da sequência/repetição, precisa sobrar ao menos isto de senha própria. */
+const SOBRA_MINIMA = 4
 
 // As mais tentadas em ataque de dicionário, incluindo as brasileiras. Comparadas
 // já normalizadas (minúsculas, sem acento), então "Senha123" também cai aqui.
@@ -48,25 +59,37 @@ function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, '')
 }
 
-/** Corre uma sequência crescente/decrescente de 4+ caracteres (abcd, 4321). */
-function temSequencia(s: string): boolean {
+/**
+ * Quanto da senha sobra fora dos trechos "sem ideia própria": sequência
+ * crescente/decrescente (abcd, 4321), trecho de linha de teclado (qwer, lkjh)
+ * ou o mesmo caractere repetido (aaaa). Trecho com menos de 4 não conta.
+ */
+function trechoPrevisivel(s: string): { sobra: number; repeticao: boolean } {
   const t = normalize(s)
-  let subindo = 1
-  let descendo = 1
-  for (let i = 1; i < t.length; i++) {
-    const d = t.charCodeAt(i) - t.charCodeAt(i - 1)
-    subindo = d === 1 ? subindo + 1 : 1
-    descendo = d === -1 ? descendo + 1 : 1
-    if (subindo >= 4 || descendo >= 4) return true
+  const seq = new Array<boolean>(t.length).fill(false)
+  const rep = new Array<boolean>(t.length).fill(false)
+  const marca = (m: boolean[], ini: number, fim: number) => {
+    if (fim - ini >= 4) for (let k = ini; k < fim; k++) m[k] = true
   }
-  // trechos de linha de teclado (qwer, asdf) — não são sequência de código
-  for (const linha of LINHAS_TECLADO) {
-    for (let i = 0; i + 4 <= linha.length; i++) {
-      const trecho = linha.slice(i, i + 4)
-      if (t.includes(trecho) || t.includes([...trecho].reverse().join(''))) return true
+  // corridas: subindo (abcd), descendo (4321) e o mesmo caractere (aaaa)
+  for (const passo of [1, -1, 0]) {
+    let ini = 0
+    for (let i = 1; i <= t.length; i++) {
+      if (i < t.length && t.charCodeAt(i) - t.charCodeAt(i - 1) === passo) continue
+      marca(passo === 0 ? rep : seq, ini, i)
+      ini = i
     }
   }
-  return false
+  // trechos de linha de teclado (qwer, lkjh) — não são sequência de código
+  for (const linha of LINHAS_TECLADO) {
+    for (const l of [linha, [...linha].reverse().join('')]) {
+      for (let i = 0; i + 4 <= t.length; i++) if (l.includes(t.slice(i, i + 4))) marca(seq, i, i + 4)
+    }
+  }
+  const nSeq = seq.filter(Boolean).length
+  const nRep = rep.filter(Boolean).length
+  const coberto = seq.filter((x, i) => x || rep[i]).length
+  return { sobra: coberto ? t.length - coberto : Infinity, repeticao: nRep > nSeq }
 }
 
 /** Quantas classes de caractere a senha usa (minúscula, maiúscula, dígito, símbolo). */
@@ -100,22 +123,26 @@ export function passwordStrength(password: string, email = ''): PasswordStrength
   if (COMUNS.has(t)) {
     problems.push('Essa senha é das mais usadas no mundo — troque por outra.')
   }
-  if (/^(.)\1+$/.test(senha) || /(.)\1{3,}/.test(senha)) {
-    problems.push('Evite repetir o mesmo caractere várias vezes.')
-  }
-  if (temSequencia(senha)) {
-    problems.push('Evite sequências como 1234, abcd ou qwerty.')
+  // Só reprova quando a senha é QUASE TODA previsível: "maria1234" passa
+  // (sobra "maria"), "x1234567" e "qwertyui1" não.
+  const previsivel = trechoPrevisivel(senha)
+  if (previsivel.sobra < SOBRA_MINIMA) {
+    problems.push(
+      previsivel.repeticao
+        ? 'Evite repetir o mesmo caractere várias vezes.'
+        : 'Evite sequências como 1234, abcd ou qwerty.',
+    )
   }
   const local = normalize(email.split('@')[0] ?? '')
   if (local.length >= 4 && t.includes(local)) {
     problems.push('Não use o seu e-mail dentro da senha.')
   }
-  if (t.includes('advoc') || t.includes('oab')) {
-    problems.push('Não use o nome do site nem "OAB" na senha.')
+  if (t.includes('advoc')) {
+    problems.push('Não use o nome do site na senha.')
   }
   const nClasses = classes(senha)
-  // Senha curta precisa variar; senha longa não precisa — comprimento já basta.
-  if (senha.length < 12 && nClasses < 2) {
+  // Senha curta precisa variar; a partir de 10 o comprimento já basta.
+  if (senha.length < SEM_MISTURA && nClasses < 2) {
     problems.push('Misture letras com números ou símbolos.')
   }
 
@@ -127,7 +154,8 @@ export function passwordStrength(password: string, email = ''): PasswordStrength
   if (nClasses >= 2) score += 1
   if (nClasses >= 3) score += 1
   score = Math.min(4, score)
-  if (problems.length) score = Math.min(score, 1)
+  // Sem problema, a senha serve — a barra nunca mostra "fraca" para ela.
+  score = problems.length ? Math.min(score, 1) : Math.max(score, 2)
 
   const level: StrengthLevel =
     score <= 1 ? 'fraca' : score === 2 ? 'razoavel' : score === 3 ? 'boa' : 'forte'
@@ -135,7 +163,7 @@ export function passwordStrength(password: string, email = ''): PasswordStrength
     level
   ]
 
-  return { score, level, label, problems, acceptable: problems.length === 0 && score >= 2 }
+  return { score, level, label, problems, acceptable: problems.length === 0 }
 }
 
 /** Mensagem única para bloquear o cadastro — a primeira coisa a corrigir. */

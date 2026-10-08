@@ -15,15 +15,16 @@ describe('senha — o que NÃO passa', () => {
     }
   })
 
-  it('sequência de teclado ou de alfabeto', () => {
-    for (const s of ['qwertyui1', 'abcdefg9', 'x1234567', 'lkjhgfds1']) {
+  it('senha que é quase toda sequência de teclado ou de alfabeto', () => {
+    for (const s of ['qwertyui1', 'abcdefg9', 'x1234567', 'lkjhgfds1', '123456789a', 'asdf1234', 'aaaa1234']) {
       expect(ok(s), s).toBe(false)
     }
   })
 
   it('repetição do mesmo caractere', () => {
     expect(ok('aaaaaaaa')).toBe(false)
-    expect(ok('joaoooooo1')).toBe(false)
+    expect(ok('zzzzzzz9')).toBe(false)
+    expect(passwordProblem('zzzzzzz9')).toContain('repetir')
   })
 
   it('a senha derivada do próprio e-mail', () => {
@@ -32,18 +33,37 @@ describe('senha — o que NÃO passa', () => {
     expect(ok('marinasales9', 'marinasales@x.com')).toBe(false)
   })
 
-  it('o nome do site ou "OAB"', () => {
+  it('o nome do site', () => {
     expect(ok('advocme2026')).toBe(false)
-    expect(ok('minhaoab2026')).toBe(false)
   })
 
   it('só uma classe de caractere quando é curta', () => {
-    expect(ok('verdadeiro')).toBe(false) // 10 letras, sem número nem símbolo
+    expect(ok('tribunal')).toBe(false) // 8 letras, sem número nem símbolo
     expect(ok('93857261')).toBe(false) // só dígitos
   })
 })
 
 describe('senha — o que passa', () => {
+  // Afrouxada em 08/10/2026: um trecho previsível no meio de uma senha própria
+  // não reprova mais, e nada de "oab" escondido em nome barrar o cadastro.
+  it('nome com 1234 no fim — sobra senha fora da sequência', () => {
+    expect(ok('maria1234')).toBe(true)
+    expect(ok('Paulo2026')).toBe(true)
+  })
+
+  it('nome que contém "oab" por acaso', () => {
+    expect(ok('joaobarros7', 'contato@escritorio.adv.br')).toBe(true)
+  })
+
+  it('10 letras já bastam, sem número nem símbolo', () => {
+    expect(ok('verdadeiro')).toBe(true)
+    expect(ok('girassolazul')).toBe(true)
+  })
+
+  it('senha aceita nunca aparece como "fraca" na barra', () => {
+    expect(passwordStrength('verdadeiro').level).not.toBe('fraca')
+  })
+
   it('curta porém variada', () => {
     expect(ok('Chuva!47')).toBe(true)
     expect(ok('tribunal7x')).toBe(true)
