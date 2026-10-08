@@ -15,6 +15,7 @@ import { SubPage, caminhoDeVolta } from '@/components/ui/SubPage'
 import { AceiteDosTermos } from '@/components/auth/AceiteDosTermos'
 import { ArrowRight, LockIcon } from '@/components/ui/icons'
 import { concluirGoogle, urlEntrarComGoogle } from '@/lib/auth'
+import { registrarConversao } from '@/lib/metaPixel'
 
 /** Os códigos que o servidor manda na URL (ver `Recusa` no google.controller.ts). */
 const ERROS: Record<string, string> = {
@@ -52,6 +53,9 @@ export default function EntrarComGooglePage() {
       setEstado('aceite')
       return
     }
+    // Só a volta com o aceite dado cria conta; a primeira passada de quem já tem
+    // conta é login e não conta como cadastro.
+    if (aceitouTermos) registrarConversao('CompleteRegistration')
     // Mesma trava do `?next=` da tela de entrada: o destino atravessou o Google
     // e volta do servidor, mas quem decide se é interno é esta função.
     const next = caminhoDeVolta(r.next, '/painel')

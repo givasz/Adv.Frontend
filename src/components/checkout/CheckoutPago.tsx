@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Profile } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -26,6 +26,7 @@ import {
   LockIcon,
 } from "@/components/ui/icons";
 import { PlanoAtivado } from "./PlanoAtivado";
+import { registrarConversao } from "@/lib/metaPixel";
 import { CamposDoCartao, useCartao } from "./CamposDoCartao";
 
 // O CHECKOUT PAGO — cartão, Pix ou boleto, pelo Asaas.
@@ -503,6 +504,19 @@ export function CheckoutPago({
       await api.saveDraft({ ...perfil, theme: tema }).catch(() => {});
     }
   }
+
+  // Conversões da Meta (lib/metaPixel.ts). O início conta uma vez, quando o
+  // formulário aparece — quem já assina é levado para /assinatura antes disso — e
+  // nunca busca o script nesta tela do cartão. A assinatura conta quando o plano
+  // abre: aqui só se chega com o pagamento confirmado nesta aba.
+  const contouInicio = useRef(false);
+  useEffect(() => {
+    if (fase === "formulario" && !contouInicio.current) {
+      contouInicio.current = true;
+      registrarConversao("InitiateCheckout", { valor, soSeJaCarregado: true });
+    }
+    if (fase === "ativado") registrarConversao("Subscribe", { valor });
+  }, [fase, valor]);
 
   // Pix, boleto e cartão em análise: relê o perfil até o plano aparecer. Pausa com
   // a aba escondida (não há por que consultar o servidor para ninguém ver) e

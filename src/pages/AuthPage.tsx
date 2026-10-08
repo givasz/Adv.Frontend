@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { correioAtivo, login, signup, useAuth } from '@/lib/auth'
+import { registrarConversao } from '@/lib/metaPixel'
 import { passwordStrength } from '@/lib/passwordStrength'
 import { ArrowLeft, ArrowRight, CheckIcon, SparkIcon } from '@/components/ui/icons'
 import { caminhoDeVolta } from '@/components/ui/SubPage'
@@ -97,8 +98,10 @@ export default function AuthPage({ mode: initialMode }: { mode: Mode }) {
     setBusy(true)
     setError(null)
     try {
-      if (isSignup) await signup(email, password, name, remember, aceitou)
-      else await login(email, password, remember)
+      if (isSignup) {
+        await signup(email, password, name, remember, aceitou)
+        registrarConversao('CompleteRegistration')
+      } else await login(email, password, remember)
       navigate(next, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível concluir. Tente novamente.')

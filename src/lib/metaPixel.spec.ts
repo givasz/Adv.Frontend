@@ -110,6 +110,32 @@ describe('quando o pixel carrega', () => {
     expect(fbq.queue.filter((c) => c[0] === 'trackSingle')).toHaveLength(3)
   })
 
+  it('conversão leva o valor em reais, e só ela leva valor', async () => {
+    const m = await import('./metaPixel')
+    m.registrarConversao('CompleteRegistration')
+    m.registrarConversao('Subscribe', { valor: 49.9 })
+    const fbq = (window as { fbq?: { queue: unknown[][] } }).fbq!
+    const eventos = fbq.queue.filter((c) => c[0] === 'trackSingle').map((c) => c.slice(2))
+    expect(eventos).toEqual([['CompleteRegistration'], ['Subscribe', { value: 49.9, currency: 'BRL' }]])
+  })
+
+  it('na tela do cartão o script não é buscado do zero', async () => {
+    const m = await import('./metaPixel')
+    m.registrarConversao('InitiateCheckout', { valor: 49.9, soSeJaCarregado: true })
+    expect(scripts).toEqual([])
+    m.registrarVisita('/planos')
+    m.registrarConversao('InitiateCheckout', { valor: 49.9, soSeJaCarregado: true })
+    const fbq = (window as { fbq?: { queue: unknown[][] } }).fbq!
+    expect(fbq.queue.filter((c) => c[2] === 'InitiateCheckout')).toHaveLength(1)
+  })
+
+  it('recusa vale também para as conversões', async () => {
+    const m = await import('./metaPixel')
+    m.gravarEscolha('recusado')
+    m.registrarConversao('Subscribe', { valor: 49.9 })
+    expect(scripts).toEqual([])
+  })
+
   it('depois de recusar, não carrega', async () => {
     const m = await import('./metaPixel')
     m.gravarEscolha('recusado')

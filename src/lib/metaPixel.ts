@@ -159,3 +159,39 @@ export function registrarVisita(pathname: string) {
   // página visitada na mesma aba sumia (conferido no navegador em 07/10/2026).
   window.fbq?.('trackSingle', META_PIXEL_ID, 'PageView')
 }
+
+// ---------------------------------------------------------------------------
+// Conversões — os eventos padrão da Meta pelos quais a campanha otimiza.
+//
+// Só três momentos, todos da conta de quem está se tornando cliente — nunca de
+// um visitante de perfil:
+//   • CompleteRegistration — a conta foi criada (e-mail e senha, ou Google);
+//   • InitiateCheckout     — abriu o formulário de assinatura de um plano;
+//   • Subscribe            — o pagamento foi confirmado e o plano abriu.
+// Vai só o nome do evento e, na assinatura, o valor do plano em reais. Nada de
+// e-mail, nome ou identificador: a correspondência avançada fica desligada.
+
+export type Conversao = 'CompleteRegistration' | 'InitiateCheckout' | 'Subscribe'
+
+export function registrarConversao(
+  evento: Conversao,
+  {
+    valor,
+    soSeJaCarregado = false,
+  }: {
+    /** Valor mensal do plano, em reais. */
+    valor?: number
+    /**
+     * Não busca o script se ele ainda não veio. É o caso da tela do cartão: o
+     * pixel não é carregado do zero onde se digita número de cartão; se a pessoa
+     * chegou de uma página de venda, ele já está na aba e o evento sai.
+     */
+    soSeJaCarregado?: boolean
+  } = {},
+) {
+  if (escolhaDeCookies() === 'recusado') return
+  if (soSeJaCarregado && !iniciado) return
+  carregar()
+  if (valor === undefined) window.fbq?.('trackSingle', META_PIXEL_ID, evento)
+  else window.fbq?.('trackSingle', META_PIXEL_ID, evento, { value: valor, currency: 'BRL' })
+}
