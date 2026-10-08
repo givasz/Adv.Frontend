@@ -752,10 +752,19 @@ export const SNAPSHOT = 'data-advocme-estatico'
  * Tailwind (a folha do app ainda não chegou quando isto é pintado). Cores da
  * marca (tailwind.config.js), para a troca pelo React não ser um piscar de
  * branco para bege.
+ *
+ * O bloco nasce INVISÍVEL e só aparece se o app não montar em 3 s. Antes ele
+ * aparecia na hora, e quem abria o site via por um instante uma página "de
+ * texto puro" que não parecia o advoc.me (07/10/2026). O conteúdo continua no
+ * HTML, inteiro e idêntico ao que o React desenha: o robô o lê do mesmo jeito,
+ * e quem está sem JavaScript o vê depois da espera. Só o fundo bege aparece
+ * de imediato, que é o mesmo da página de verdade.
  */
 const ESTILO =
+  `@keyframes advocme-estatico-aparece{from{opacity:0}to{opacity:1}}` +
   `[${SNAPSHOT}]{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;` +
   `background:#f5f0e6;color:#1f1b17;min-height:100dvh;margin:0;padding:32px 20px 48px;line-height:1.55}` +
+  `[${SNAPSHOT}]>*{animation:advocme-estatico-aparece .3s 3s both}` +
   `[${SNAPSHOT}]>article,[${SNAPSHOT}]>section{max-width:640px;margin:0 auto}` +
   `[${SNAPSHOT}] h1{font-size:28px;line-height:1.15;margin:12px 0 4px}` +
   `[${SNAPSHOT}] h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;margin:28px 0 8px;color:#6b5f52}` +
@@ -772,8 +781,8 @@ function estilo(): string {
 /**
  * O perfil como HTML simples e semântico — o mesmo conteúdo que o React vai
  * desenhar, sem o React. Não é uma versão "para robô": é o que qualquer pessoa
- * vê por um instante até o app montar, e o que vê para sempre se o JavaScript
- * não rodar.
+ * vê se o app demorar a montar (ver ESTILO), e o que vê para sempre se o
+ * JavaScript não rodar.
  *
  * Num exemplo, nenhum link de contato: os dados são inventados (ver lib/exemplo.ts).
  */
