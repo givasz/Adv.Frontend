@@ -28,6 +28,7 @@ import {
   FAQ_LIMIT,
   FIRM_PRICING,
   precoDoPlano,
+  valorEmReais,
 } from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
 
@@ -234,7 +235,7 @@ export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: 'firm',
     name: 'Escritório',
-    price: `R$ ${FIRM_PRICING.basePrice}`,
+    price: `R$ ${valorEmReais(FIRM_PRICING.basePrice)}`,
     period: '/mês',
     pitch: 'Leve o advoc.me para toda a equipe.',
     items: [

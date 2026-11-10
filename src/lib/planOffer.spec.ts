@@ -65,7 +65,7 @@ describe('os números anunciados são os do produto', () => {
 
   it('o preço do escritório bate com FIRM_PRICING', () => {
     const firm = offerOf('firm')
-    expect(firm.price).toBe(`R$ ${FIRM_PRICING.basePrice}`)
+    expect(firm.price).toBe(`R$ 29,99`)
     expect(textos('firm')).toContain(`${FIRM_PRICING.includedSeats} advogados`)
     expect(textos('firm')).toContain(`R$ ${FIRM_PRICING.extraSeatPrice}/mês`)
   })

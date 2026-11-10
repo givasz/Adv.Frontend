@@ -154,7 +154,7 @@ export const PLAN_PRICE: Record<Exclude<Plan, 'free'>, number> = {
   premium: 14.9,
 }
 
-/** 7.9 → "7,90"; 99 → "99". Inteiro fica sem ",00" (o Escritório é R$ 99). */
+/** 7.9 → "7,90"; 20 → "20". Inteiro fica sem ",00" (o assento extra é R$ 20). */
 export function valorEmReais(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(2).replace('.', ',')
 }
@@ -165,10 +165,10 @@ export function precoDoPlano(plan: Plan): string {
 }
 
 // ---- Plano Escritório (espelha backend/src/plans.ts) ----
-// R$ 99/mês incluindo 5 advogados; +R$ 20/mês por advogado adicional.
-export const FIRM_PRICING = { basePrice: 99, includedSeats: 5, extraSeatPrice: 20 } as const
+// R$ 29,99/mês incluindo 5 advogados (desde 10/11/2026); +R$ 20/mês por advogado adicional.
+export const FIRM_PRICING = { basePrice: 29.99, includedSeats: 5, extraSeatPrice: 20 } as const
 
 export function firmMonthlyPrice(seats: number): number {
   const extra = Math.max(0, seats - FIRM_PRICING.includedSeats)
-  return FIRM_PRICING.basePrice + extra * FIRM_PRICING.extraSeatPrice
+  return Math.round((FIRM_PRICING.basePrice + extra * FIRM_PRICING.extraSeatPrice) * 100) / 100
 }

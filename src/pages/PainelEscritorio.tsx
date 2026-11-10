@@ -14,7 +14,7 @@ import {
 } from '@/lib/escritorioPainel'
 import { solicitacoesDoEscritorio } from '@/lib/agendaDigital'
 import { carregarMetricasDoEscritorio, type Metricas } from '@/lib/metricas'
-import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
+import { FIRM_PRICING, firmMonthlyPrice, valorEmReais } from '@/lib/plans'
 import { firmUrl, hostLabel } from '@/lib/publicUrl'
 import { copiarTexto } from '@/lib/copiar'
 import { slugify } from '@/lib/brFormat'
@@ -233,7 +233,7 @@ function Conteudo({ firm }: { firm: Firm }) {
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div>
               <h3 className="font-display text-[20px] font-semibold leading-tight text-ink sm:text-[22px]">
-                R$ {mensalidade}
+                R$ {valorEmReais(mensalidade)}
                 <span className="font-sans text-[13px] font-medium text-ink-faint"> /mês</span>
               </h3>
               <p className="mt-1 text-[12.5px] leading-snug text-ink-faint">
@@ -567,7 +567,7 @@ function Advogados({
           <span className="font-semibold text-ink">
             {usados} {usados === 1 ? 'integrante' : 'integrantes'}
           </span>{' '}
-          · {contratados} {contratados === 1 ? 'lugar' : 'lugares'} no plano · R$ {mensalidade}/mês
+          · {contratados} {contratados === 1 ? 'lugar' : 'lugares'} no plano · R$ {valorEmReais(mensalidade)}/mês
         </p>
         <Link
           to={editorDoEscritorio('advogados')}

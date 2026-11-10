@@ -11,7 +11,7 @@ import {
   type Firm,
   type FirmMember,
 } from '@/lib/escritorio'
-import { FIRM_PRICING, firmMonthlyPrice } from '@/lib/plans'
+import { FIRM_PRICING, firmMonthlyPrice, valorEmReais } from '@/lib/plans'
 import { Card, Field, TextArea, TextInput } from '@/components/editor/fields'
 import { OabNumberInput } from '@/components/editor/inputs'
 import { CidadeUfCampos } from '@/components/editor/CidadeInput'
@@ -623,7 +623,7 @@ export default function FirmEditor() {
           title="Advogados da sociedade"
           action={
             <span className="text-[12px] font-medium text-ink-faint">
-              {seatsUsed}/{seatsPurchased} assentos · R$ {price}/mês
+              {seatsUsed}/{seatsPurchased} assentos · R$ {valorEmReais(price)}/mês
             </span>
           }
         >
