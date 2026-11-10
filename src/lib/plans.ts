@@ -146,14 +146,22 @@ export function canUseNativeAgenda(plan: Plan): boolean {
 // Em REAIS (número), não em texto: quem formata é `precoDoPlano()`. Guardar
 // "R$ 29" como string espalha a decisão de formato junto com o valor, e foi
 // assim que as quatro cópias nasceram.
+//
+// Com centavos desde 10/11/2026 (R$ 7,90 e R$ 14,90). O teste de paridade do
+// backend (plans.spec.ts) lê este bloco e compara o número com o de lá.
 export const PLAN_PRICE: Record<Exclude<Plan, 'free'>, number> = {
-  pro: 29,
-  premium: 49,
+  pro: 7.9,
+  premium: 14.9,
+}
+
+/** 7.9 → "7,90"; 99 → "99". Inteiro fica sem ",00" (o Escritório é R$ 99). */
+export function valorEmReais(v: number): string {
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace('.', ',')
 }
 
 /** O preço como ele aparece na tela. `free` é o único que não é um número. */
 export function precoDoPlano(plan: Plan): string {
-  return plan === 'free' ? 'R$ 0' : `R$ ${PLAN_PRICE[plan]}`
+  return plan === 'free' ? 'R$ 0' : `R$ ${valorEmReais(PLAN_PRICE[plan])}`
 }
 
 // ---- Plano Escritório (espelha backend/src/plans.ts) ----

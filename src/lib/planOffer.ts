@@ -27,7 +27,6 @@ import {
   CHAR_LIMITS,
   FAQ_LIMIT,
   FIRM_PRICING,
-  PLAN_PRICE,
   precoDoPlano,
 } from './plans'
 import { THEMES, isThemeUnlocked } from './themes'
@@ -435,5 +434,5 @@ export const RESUMO_DA_COBRANCA = 'Cobrado por mês · cancele quando quiser'
 
 /** O preço do plano em uma frase completa, para leitores de tela e resumos. */
 export function precoMensal(plan: Exclude<Plan, 'free'>): string {
-  return `R$ ${PLAN_PRICE[plan]} por mês`
+  return `${precoDoPlano(plan)} por mês`
 }
